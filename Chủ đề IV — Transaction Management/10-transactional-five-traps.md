@@ -37,7 +37,7 @@ flowchart TD
 
 ## Bẫy 1 — "Annotation của tôi bị lơ": JDK Proxy vs CGLIB
 
-![Trap 1: hai cách duy nhất Spring dựng proxy — JDK Dynamic Proxy "anh em cùng interface" vs CGLIB "subclass con của bạn"; giới hạn nằm ở bytecode, không phải ở Spring](./images/transactional-jdk-proxy-vs-cglib.jpg)
+![Trap 1: hai cách duy nhất Spring dựng proxy — JDK Dynamic Proxy "anh em cùng interface" vs CGLIB "subclass con của bạn"; giới hạn nằm ở bytecode, không phải ở Spring](../images/transactional-jdk-proxy-vs-cglib.jpg)
 
 Spring có **đúng hai** cách tạo proxy, và giới hạn của mỗi cách nằm ở **bytecode của Java**, không phải ở Spring:
 
@@ -56,7 +56,7 @@ Annotation nằm chình ình trên method mà log không có dòng "begin transa
 
 ## Bẫy 2 — Đêm 2 giờ sáng: Connection bị giam suốt cả method
 
-![Trap 2: Connection captive từ BEGIN đến COMMIT — REST call 3000ms giữa hai câu SQL 5ms giam connection 3010ms cho 10ms việc thật; pool cạn, alert chỉ vào database](./images/transactional-captive-connection.jpg)
+![Trap 2: Connection captive từ BEGIN đến COMMIT — REST call 3000ms giữa hai câu SQL 5ms giam connection 3010ms cho 10ms việc thật; pool cạn, alert chỉ vào database](../images/transactional-captive-connection.jpg)
 
 Từ [tài liệu 09](./09-transactional-proxy-threadlocal.md): bước ① của gác cổng là *lấy Connection, cất vào locker*. Điều chưa nói rõ: **Connection bị giữ từ lúc method bắt đầu tới lúc method kết thúc** — không phải mượn-trong-lúc-chạy-SQL-rồi-trả.
 
@@ -79,7 +79,7 @@ Service kia chậm 3s  →  Connection ngồi tù 3s  →  nhân với N request
 
 ### Bẫy 2+ — `REQUIRES_NEW`: "transaction mới" = Connection thứ hai
 
-![REQUIRES_NEW: Connection #1 vẫn giữ nguyên trong tay, xin thêm Connection #2; lồng vào loop/parallel với pool 4: cả 4 thread giữ 1 chờ 1 — deadlock nằm ở connection pool, không phải database](./images/transactional-requires-new-two-connections.jpg)
+![REQUIRES_NEW: Connection #1 vẫn giữ nguyên trong tay, xin thêm Connection #2; lồng vào loop/parallel với pool 4: cả 4 thread giữ 1 chờ 1 — deadlock nằm ở connection pool, không phải database](../images/transactional-requires-new-two-connections.jpg)
 
 Giá trị propagation đã hẹn từ bài trước. `REQUIRES_NEW` = *không dùng ké transaction đang có, luôn mở cái mới*. Nghe gọn — nhưng cụ thể là:
 
@@ -107,7 +107,7 @@ Pool 4/4 đã phát hết — rỗng. Không ai trả, không ai đi tiếp.
 
 ## Bẫy 3 — `@Async` + `@Transactional`: hai trục thời gian
 
-![Trap 3: hai timeline — startup: AsyncAnnotationBeanPostProcessor đến SAU CÙNG nhưng chèn advisor vào ĐẦU chuỗi; runtime: async advisor bắn việc sang thread mới TRƯỚC, TransactionInterceptor chạy trên thread mới với locker rỗng](./images/transactional-async-two-timelines.jpg)
+![Trap 3: hai timeline — startup: AsyncAnnotationBeanPostProcessor đến SAU CÙNG nhưng chèn advisor vào ĐẦU chuỗi; runtime: async advisor bắn việc sang thread mới TRƯỚC, TransactionInterceptor chạy trên thread mới với locker rỗng](../images/transactional-async-two-timelines.jpg)
 
 M��t method có thể bị nhiều advice xếp chồng — `@Async` một cái, `@Transactional` một cái. **Không phải proxy bọc proxy như búp bê Nga** — chỉ có *một cái cổng*, nhiều người gác đứng **nối đuôi** ở đó; khách đi qua lần lượt. Câu hỏi sống còn: **ai đứng trước?** Muốn trả lời phải tách bạch **hai trục thời gian**:
 
@@ -132,7 +132,7 @@ request → ① async advisor: bắn công việc sang thread pool ✂️ ← S�
 
 ### Bẫy 3+ — Nhu cầu thật: "làm việc B sau khi A đã commit"
 
-![Cách sạch: publish event trong transaction, Spring giữ lại đến khi commit; @TransactionalEventListener(AFTER_COMMIT) — commit thì listener chạy, rollback thì không bao giờ](./images/transactional-after-commit-event.jpg)
+![Cách sạch: publish event trong transaction, Spring giữ lại đến khi commit; @TransactionalEventListener(AFTER_COMMIT) — commit thì listener chạy, rollback thì không bao giờ](../images/transactional-after-commit-event.jpg)
 
 Tạo đơn xong → gửi email, ghi audit, bắn Kafka — nhu cầu có thật. Nhét cú gửi email **vào trong** transaction thì có ngày transaction rollback mà email đã bay — *một email đã gửi thì không thu về được*:
 
@@ -161,7 +161,7 @@ class OrderMailer {
 
 ## Bẫy 4 — Checked exception → Spring **im lặng commit**; và sự thật về `readOnly`
 
-![Trap 4: RuntimeException/Error → rollback; IOException/BusinessException extends Exception → COMMIT; readOnly là lời hứa về ý định, không phải hàng rào chống ghi](./images/transactional-checked-exception-readonly.jpg)
+![Trap 4: RuntimeException/Error → rollback; IOException/BusinessException extends Exception → COMMIT; readOnly là lời hứa về ý định, không phải hàng rào chống ghi](../images/transactional-checked-exception-readonly.jpg)
 
 Cái đau nhất vì **im lặng nhất**. Mặc định Spring chỉ rollback với **`RuntimeException` và `Error`**:
 
@@ -185,7 +185,7 @@ public void transfer(...) throws IOException { ... }
 
 ## Bẫy 5 — `UnexpectedRollbackException`: cái dấu "hàng hỏng"
 
-![Trap 5: physical vs logical transaction — participant không có quyền rollback, chỉ có một cách báo hiệu: đóng dấu rollbackOnly lên transaction object dùng chung; commit time Spring thấy dấu → ném UnexpectedRollbackException](./images/transactional-unexpected-rollback.jpg)
+![Trap 5: physical vs logical transaction — participant không có quyền rollback, chỉ có một cách báo hiệu: đóng dấu rollbackOnly lên transaction object dùng chung; commit time Spring thấy dấu → ném UnexpectedRollbackException](../images/transactional-unexpected-rollback.jpg)
 
 Tên nghe "vô lý" nhưng lại rất có lý — với điều kiện tách được một khái niệm làm đôi:
 

@@ -39,7 +39,7 @@ sequenceDiagram
 
 ## 1. Nền móng: auto-commit và bản chất của một transaction
 
-![Auto-commit vs Transaction: mặc định mỗi câu lệnh tự commit ngay; transaction = tắt auto-commit, gom thành một khối, quyết định một lần](./images/transaction-autocommit-vs-transaction.jpg)
+![Auto-commit vs Transaction: mặc định mỗi câu lệnh tự commit ngay; transaction = tắt auto-commit, gom thành một khối, quyết định một lần](../images/transaction-autocommit-vs-transaction.jpg)
 
 Điều JDBC làm sẵn mà nhiều người quên: **mặc định `autoCommit = true`** — mỗi câu SQL bắn xuống database là **tự commit ngay khi chạy xong**. Ghi là ghi luôn, không đường lùi. Mỗi statement thực chất là một "transaction tí hon tự đóng".
 
@@ -62,7 +62,7 @@ Không có Spring, code tay sẽ là `try { conn.setAutoCommit(false); ...; conn
 
 ## 2. `@Transactional` chỉ là cái nhãn — sức mạnh nằm ở proxy
 
-![@Transactional is just a label — the power lives in the proxy: BeanPostProcessor đổi bean thật lấy AOP proxy ở chặng cuối bean lifecycle](./images/transactional-label-and-proxy.jpg)
+![@Transactional is just a label — the power lives in the proxy: BeanPostProcessor đổi bean thật lấy AOP proxy ở chặng cuối bean lifecycle](../images/transactional-label-and-proxy.jpg)
 
 `@Transactional` **không phải feature của Java, cũng không phải của database**. Nó là **metadata** — một cái nhãn dán lên method, tự thân không chạy nổi một dòng lệnh. Cơ chế thật diễn ra ở **chặng cuối của bean lifecycle**:
 
@@ -84,7 +84,7 @@ thực chất đang cầm proxy — bạn tưởng mình cầm service, bạn đ
 
 ## 3. Người gác cổng làm gì khi bạn gọi `save()`
 
-![Luồng đầy đủ: OrderController → AOP Proxy (TransactionInterceptor) → PlatformTransactionManager → DataSource → Connection setAutoCommit(false) → cất vào TransactionSynchronizationManager (ThreadLocal) → delegate bean thật → commit/rollback](./images/transactional-gatekeeper-interceptor-flow.jpg)
+![Luồng đầy đủ: OrderController → AOP Proxy (TransactionInterceptor) → PlatformTransactionManager → DataSource → Connection setAutoCommit(false) → cất vào TransactionSynchronizationManager (ThreadLocal) → delegate bean thật → commit/rollback](../images/transactional-gatekeeper-interceptor-flow.jpg)
 
 Hình dung proxy như **người gác cổng đứng bên ngoài căn nhà**: khách từ ngoài muốn vào phải qua cổng, và gác cổng làm thủ tục trước khi mở cửa. Thủ tục do `TransactionInterceptor` thực hiện, đúng ba bước:
 
@@ -103,7 +103,7 @@ Hình dung proxy như **người gác cổng đứng bên ngoài căn nhà**: kh
 
 ## 4. Transaction bound vào thread — cái tủ locker phòng gym
 
-![TransactionSynchronizationManager là ThreadLocal: mỗi thread một ngăn locker; cả chuỗi service → repo → repo dùng chung một Connection mà không truyền tham số](./images/transaction-threadlocal-locker.jpg)
+![TransactionSynchronizationManager là ThreadLocal: mỗi thread một ngăn locker; cả chuỗi service → repo → repo dùng chung một Connection mà không truyền tham số](../images/transaction-threadlocal-locker.jpg)
 
 `ThreadLocal` = dữ liệu thuộc về **thread hiện tại**, chỉ thread đó nhìn thấy — như **tủ locker cá nhân ở phòng gym**: mỗi người một ngăn, chìa khoá trong túi mình. (Đây cũng chính là cơ chế mà security context, MDC logging dựa vào — đã gặp ở [tài liệu 03](./03-sync-async-blocking-nonblocking.md) §5 khi bàn vì sao reactive làm chúng gãy.)
 
@@ -132,7 +132,7 @@ Và một hệ quả tưởng lạ hoá hiển nhiên: **A gọi B khác bean, c
 
 ## 5. Giải phẫu con bug đầu bài: self-invocation
 
-![Self-invocation: this.methodB() đi thẳng trong nhà, không qua proxy — không ai mở transaction, mỗi INSERT tự commit, câu 1 đã nằm trong DB khi câu 2 nổ](./images/transactional-self-invocation-bug.jpg)
+![Self-invocation: this.methodB() đi thẳng trong nhà, không qua proxy — không ai mở transaction, mỗi INSERT tự commit, câu 1 đã nằm trong DB khi câu 2 nổ](../images/transactional-self-invocation-bug.jpg)
 
 Ráp ba câu thần chú vào hiện trường:
 
@@ -159,7 +159,7 @@ Truy vết từng bước:
 
 ### Ba đường thoát
 
-![Ba cách thoát self-invocation: tách bean (rõ nhất), self-injection + @Lazy (chạy nhưng "ma quái"), TransactionTemplate (tường minh, không proxy)](./images/transactional-three-ways-out.jpg)
+![Ba cách thoát self-invocation: tách bean (rõ nhất), self-injection + @Lazy (chạy nhưng "ma quái"), TransactionTemplate (tường minh, không proxy)](../images/transactional-three-ways-out.jpg)
 
 ```java
 // ① TÁCH BEAN — khuyến nghị: lời gọi giờ đi TỪ NGOÀI vào, phải qua cổng
