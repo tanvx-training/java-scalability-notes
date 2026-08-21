@@ -21,15 +21,15 @@ Toàn bộ tiến độ lưu trong `localStorage` — không cần đăng nhập
 ## Chạy local
 
 ```bash
-./webapp/dev.sh        # http://localhost:8080 (cổng tùy chọn: ./webapp/dev.sh 3000)
+./webapp/dev.sh        # http://localhost:8888 (cổng tùy chọn: ./webapp/dev.sh 3000)
 ```
 
-Script copy `CKAD/*.md` vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn là `CKAD/`) rồi chạy `python3 -m http.server`.
+Script copy toàn bộ markdown của repo (`CKAD/`, `CKA/`, `CKS/`, các bài `Chủ đề *`) và `images/` vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn ở repo) rồi chạy `python3 -m http.server`.
 
 ## Deploy GitHub Pages
 
 Workflow `.github/workflows/deploy-pages.yml` tự build khi push `main`:
-stage `webapp/` + copy `CKAD/*.md` vào `content/` → upload artifact → deploy.
+stage `webapp/` + copy markdown & ảnh vào `content/` → upload artifact → deploy.
 
 Chỉ cần bật một lần: **Settings → Pages → Source: GitHub Actions**.
 

@@ -87,7 +87,7 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD** và w
 ### Chạy local
 
 ```bash
-./webapp/dev.sh          # mở http://localhost:8080
+./webapp/dev.sh          # mở http://localhost:8888
 ```
 
 ### Deploy lên GitHub Pages
