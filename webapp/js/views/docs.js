@@ -1,7 +1,9 @@
-// Trình xem tài liệu markdown: mục lục nổi, highlight code, copy nhanh.
+// Thư viện tài liệu đa lĩnh vực: mục lục nổi, highlight code, copy nhanh,
+// ảnh minh họa (đường dẫn tương đối được resolve theo file markdown)
+// và mermaid diagram (nạp lười từ CDN, offline thì hiển thị nguồn).
 
 import { h, pageHead, mdInto } from "../lib/ui.js";
-import { docs } from "../data/docs-index.js";
+import { docs, FIELDS } from "../data/docs-index.js";
 
 let observer = null;
 
@@ -17,43 +19,61 @@ export function render(root, params) {
   renderDoc(root, doc);
 }
 
+// ---------------- Trang danh mục ----------------
+
 function renderIndex(root) {
   const page = h("div", { class: "page" });
   page.append(pageHead(
-    "📚 Tài liệu",
-    "Bộ tài liệu CKAD tiếng Việt của repo — đọc trực tiếp với mục lục, code có nút copy. Trong phòng thi bạn được mở kubernetes.io/docs, hãy luyện đọc tài liệu song song."
+    "📚 Thư viện tài liệu",
+    `${docs.length} tài liệu thuộc ${Object.keys(FIELDS).length} lĩnh vực — đọc trực tiếp với mục lục, sơ đồ mermaid, ảnh minh họa và code có nút copy.`
   ));
 
-  const grid = h("div", { class: "grid" });
-  for (const d of docs) {
-    grid.append(
-      h("a", { class: "card card-link", href: `#/docs/${d.id}` },
-        h("div", { class: "flex" },
-          h("span", { style: "font-size:24px" }, d.icon),
-          h("div", { class: "grow" },
-            h("div", { class: "lab-title" }, d.title),
-            h("div", { class: "muted small" }, d.desc)),
-          h("span", { class: "faint" }, "Đọc →")),
-        h("div", { class: "chip-row", style: "margin-top:10px" },
-          d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))
-      )
+  for (const [fieldKey, field] of Object.entries(FIELDS)) {
+    const list = docs.filter((d) => d.field === fieldKey);
+    if (!list.length) continue;
+
+    page.append(
+      h("div", { class: "field-head" },
+        h("span", { class: "field-icon" }, field.icon),
+        h("div", {},
+          h("h2", { class: "mt0 mb0", style: "font-size:19px" }, field.label),
+          h("p", { class: "muted small", style: "margin:2px 0 0" }, field.desc)))
     );
+
+    const grid = h("div", { class: "grid", style: "margin-bottom:26px" });
+    for (const d of list) {
+      grid.append(
+        h("a", { class: "card card-link", href: `#/docs/${d.id}` },
+          h("div", { class: "flex" },
+            h("span", { style: "font-size:24px" }, d.icon),
+            h("div", { class: "grow" },
+              h("div", { class: "lab-title" }, d.title),
+              h("div", { class: "muted small" }, d.desc)),
+            h("span", { class: "faint" }, "Đọc →")),
+          h("div", { class: "chip-row", style: "margin-top:10px" },
+            d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))
+        )
+      );
+    }
+    page.append(grid);
   }
-  page.append(grid);
   root.append(page);
 }
 
+// ---------------- Trang đọc tài liệu ----------------
+
 async function renderDoc(root, doc) {
-  const idx = docs.indexOf(doc);
+  const field = FIELDS[doc.field];
   const prose = h("article", { class: "prose" },
     h("p", { class: "muted" }, "Đang tải tài liệu…"));
   const tocBox = h("nav", { class: "doc-toc" });
 
   const page = h("div", { class: "page page-wide" },
     h("div", { class: "breadcrumb" },
-      h("a", { href: "#/docs" }, "Tài liệu"), " / ", doc.title),
+      h("a", { href: "#/docs" }, "Tài liệu"), " / ",
+      field ? `${field.icon} ${field.label}` : "", " / ", doc.title),
     h("div", { class: "doc-layout" },
-      h("div", {}, prose, navRow(idx)),
+      h("div", {}, prose, navRow(doc)),
       tocBox)
   );
   root.append(page);
@@ -72,12 +92,14 @@ async function renderDoc(root, doc) {
         h("p", { class: "small" },
           "Khi chạy local, hãy khởi động bằng script ",
           h("code", {}, "webapp/dev.sh"),
-          " (script sẽ copy các file markdown từ thư mục CKAD/ vào webapp/content/ rồi mở server)."))
+          " (script sẽ copy các file markdown của repo vào webapp/content/ rồi mở server)."))
     );
     return;
   }
 
   const headings = mdInto(prose, text);
+  fixRelativePaths(prose, doc.file);
+  renderMermaidBlocks(prose);
 
   // Link neo nội bộ trong tài liệu (#muc-luc…) không được đụng vào hash router:
   // chặn click và cuộn tới heading tương ứng (chấp nhận slug kiểu GitHub "--").
@@ -123,15 +145,80 @@ async function renderDoc(root, doc) {
   }
 }
 
-function navRow(idx) {
-  const prev = docs[idx - 1];
-  const next = docs[idx + 1];
-  return h("div", { class: "flex spread", style: "margin-top:30px" },
+// Ảnh trong markdown dùng đường dẫn tương đối so với FILE (vd ../images/x.jpg);
+// trình duyệt lại resolve theo URL trang, nên phải sửa lại theo thư mục chứa file.
+function fixRelativePaths(prose, docFile) {
+  const dir = docFile.slice(0, docFile.lastIndexOf("/") + 1);
+  const base = new URL(dir, document.baseURI);
+  prose.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src") || "";
+    if (/^(https?:|data:|\/)/i.test(src)) return;
+    img.src = new URL(src, base).href;
+  });
+}
+
+// ---------------- Mermaid (nạp lười) ----------------
+
+let mermaidPromise = null;
+
+function loadMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import(
+      "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
+    ).then((m) => m.default);
+  }
+  return mermaidPromise;
+}
+
+async function renderMermaidBlocks(container) {
+  const blocks = container.querySelectorAll(".mermaid-block");
+  if (!blocks.length) return;
+
+  let mermaid;
+  try {
+    mermaid = await loadMermaid();
+  } catch {
+    // Offline / CDN lỗi — giữ nguyên khối nguồn làm fallback.
+    return;
+  }
+
+  const dark =
+    document.documentElement.getAttribute("data-theme") === "dark" ||
+    (!document.documentElement.getAttribute("data-theme") &&
+      matchMedia("(prefers-color-scheme: dark)").matches);
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: dark ? "dark" : "neutral",
+    securityLevel: "loose",
+    fontFamily: "inherit",
+  });
+
+  let n = 0;
+  for (const block of blocks) {
+    if (!block.isConnected) return; // đã điều hướng sang trang khác
+    const src = block.querySelector(".mermaid-src")?.textContent || "";
+    try {
+      const { svg } = await mermaid.render(`mmd-${Date.now()}-${n++}`, src);
+      block.innerHTML = svg;
+      block.classList.add("rendered");
+    } catch {
+      /* sơ đồ lỗi cú pháp — giữ nguồn */
+    }
+  }
+}
+
+function navRow(doc) {
+  const sameField = docs.filter((d) => d.field === doc.field);
+  const idx = sameField.indexOf(doc);
+  const prev = sameField[idx - 1];
+  const next = sameField[idx + 1];
+  const short = (t) => (t.length > 34 ? t.slice(0, 32) + "…" : t);
+  return h("div", { class: "flex spread", style: "margin-top:30px;gap:10px" },
     prev
-      ? h("a", { class: "btn", href: `#/docs/${prev.id}` }, `← ${prev.title.split(" — ")[0]}`)
+      ? h("a", { class: "btn", href: `#/docs/${prev.id}`, title: prev.title }, `← ${short(prev.title)}`)
       : h("span", {}),
     next
-      ? h("a", { class: "btn", href: `#/docs/${next.id}` }, `${next.title.split(" — ")[0]} →`)
+      ? h("a", { class: "btn", href: `#/docs/${next.id}`, title: next.title }, `${short(next.title)} →`)
       : h("span", {})
   );
 }

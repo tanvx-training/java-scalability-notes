@@ -9,7 +9,7 @@ Web app tĩnh (vanilla JS, **không cần build, không dependency**) phục v�
 | 🏠 Bảng điều khiển | Tổng quan tiến độ: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử |
 | 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) |
 | 🗺️ Lộ trình học | Checklist 8–10 tuần từ CKAD Study Guide, tick đến đâu lưu đến đó |
-| 📚 Tài liệu | Đọc 3 tài liệu CKAD của repo với mục lục nổi, highlight YAML/bash, nút copy |
+| 📚 Thư viện tài liệu | 17 tài liệu thuộc 2 lĩnh vực: Kubernetes (CKAD/CKA/CKS) + series blog Java & Spring Boot Scalability — mục lục nổi, highlight YAML/bash, mermaid diagram, ảnh minh họa, nút copy |
 | ⌨️ Tra cứu kubectl | 90 lệnh hay dùng, lọc tức thì theo từ khóa/nhóm, nhấn `/` để tìm |
 | 🃏 Flashcards | 84 thẻ, spaced repetition (Lại/Khó/Tốt/Dễ), phím tắt Space + 1–4 |
 | ✅ Trắc nghiệm | 110 câu có giải thích, lọc theo chứng chỉ/domain, chế độ ưu tiên câu sai |

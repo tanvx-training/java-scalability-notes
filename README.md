@@ -81,7 +81,8 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD** và w
 | [`CKAD/CKAD-Prerequisites.md`](./CKAD/CKAD-Prerequisites.md) | Kiến thức nền: Linux, vim, Docker, YAML |
 | [`CKAD/CKAD-Study-Guide.md`](./CKAD/CKAD-Study-Guide.md) | Lộ trình học 8–10 tuần + chiến lược làm bài thi |
 | [`CKAD/CKAD-Cheat-Sheet.md`](./CKAD/CKAD-Cheat-Sheet.md) | Tra cứu nhanh lệnh & YAML mẫu theo 20 chủ đề |
-| [`webapp/`](./webapp/) | **KubePrep** — web app học tập: lộ trình tương tác, đọc tài liệu, flashcards (spaced repetition), 110 câu trắc nghiệm, thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
+| [`CKA/`](./CKA/), [`CKS/`](./CKS/) | Study guide + cheat sheet cho CKA (quản trị cluster) và CKS (bảo mật) |
+| [`webapp/`](./webapp/) | **KubePrep** — web app học tập: lộ trình tương tác, thư viện tài liệu đa lĩnh vực (Kubernetes + toàn bộ series blog Java/Spring Boot Scalability ở trên), flashcards (spaced repetition), 110 câu trắc nghiệm, thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
 
 ### Chạy local
 

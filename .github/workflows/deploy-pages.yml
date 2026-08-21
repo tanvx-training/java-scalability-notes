@@ -29,10 +29,12 @@ jobs:
 
       - name: Build site (copy webapp + markdown content)
         run: |
-          mkdir -p _site/content
+          mkdir -p _site/content/java _site/content/images
           cp -r webapp/. _site/
           rm -f _site/dev.sh
-          cp CKAD/*.md _site/content/
+          cp CKAD/*.md CKA/*.md CKS/*.md _site/content/
+          cp "Chủ đề"*/*.md _site/content/java/
+          cp images/* _site/content/images/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

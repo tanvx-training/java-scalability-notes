@@ -84,7 +84,7 @@ export function render(root) {
       h("h2", { style: "margin:28px 0 12px;font-size:19px" }, "Khu vực học tập"),
       h("div", { class: "grid grid-2" },
         area("🎓", "Chứng chỉ K8s", "So sánh KCNA, KCSA, CKAD, CKA, CKS: hình thức thi, tỷ trọng domain và lộ trình gợi ý.", "#/certs"),
-        area("📚", "Tài liệu", "Study guide, cheat sheet và kiến thức nền tảng — render đẹp, có mục lục và copy nhanh.", "#/docs"),
+        area("📚", "Thư viện tài liệu", "Trọn bộ CKAD/CKA/CKS + series blog Java & Spring Boot Scalability (10 bài) — có mục lục, sơ đồ mermaid, copy nhanh.", "#/docs"),
         area("⌨️", "Tra cứu kubectl", "Gõ để lọc tức thì hàng chục lệnh hay dùng trong phòng thi.", "#/commands"),
         area("🃏", "Flashcards", `Ôn ${fl.total} thẻ theo phương pháp lặp lại ngắt quãng (spaced repetition).`, "#/flashcards"),
         area("✅", "Trắc nghiệm", `${qz.total} câu hỏi theo từng domain, có giải thích chi tiết từng câu.`, "#/quiz"),

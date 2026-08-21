@@ -108,6 +108,9 @@ function inline(text) {
   s = s.replace(/(^|[\s(>])\*([^*\n]+)\*(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>");
   s = s.replace(/~~([^~]+)~~/g, "<del>$1</del>");
 
+  // Cho phép riêng thẻ xuống dòng (hay dùng trong bảng của các bài blog).
+  s = s.replace(/&lt;br\s*\/?&gt;/gi, "<br />");
+
   s = s.replace(/\x00(\d+)\x00/g, (_, i) => codes[+i]);
   return s;
 }
@@ -154,7 +157,15 @@ export function renderMarkdown(md, opts = {}) {
       i++;
       while (i < lines.length && !/^```\s*$/.test(lines[i])) { buf.push(lines[i]); i++; }
       i++; // bỏ dòng đóng
-      out.push(codeBlockHtml(buf.join("\n"), lang));
+      if (lang.toLowerCase() === "mermaid") {
+        // Nguồn mermaid giữ trong <pre> (fallback khi chưa/không render được);
+        // docs view sẽ nạp mermaid và thay bằng SVG.
+        out.push(
+          `<div class="mermaid-block"><pre class="mermaid-src">${escapeHtml(buf.join("\n"))}</pre></div>`
+        );
+      } else {
+        out.push(codeBlockHtml(buf.join("\n"), lang));
+      }
       continue;
     }
 

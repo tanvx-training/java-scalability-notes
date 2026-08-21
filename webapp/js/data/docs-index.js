@@ -1,10 +1,25 @@
-// Danh mục tài liệu markdown hiển thị trong mục "Tài liệu".
-// File nguồn nằm ở thư mục CKAD/ của repo; khi deploy (hoặc chạy dev.sh)
-// chúng được copy vào webapp/content/.
+// Thư viện tài liệu — nhóm theo lĩnh vực.
+// File nguồn nằm trong repo (CKAD/, CKA/, CKS/, các thư mục "Chủ đề ...");
+// khi deploy (hoặc chạy dev.sh) chúng được copy vào webapp/content/.
+
+export const FIELDS = {
+  kubernetes: {
+    label: "Kubernetes & Chứng chỉ",
+    icon: "☸️",
+    desc: "Tài liệu luyện thi CKAD, CKA, CKS — dùng kèm flashcards, trắc nghiệm và labs của trang này.",
+  },
+  java: {
+    label: "Java & Spring Boot Scalability",
+    icon: "☕",
+    desc: "Series blog 10 bài về khả năng mở rộng của ứng dụng Java/Spring Boot trên Tomcat: từ TCP/kernel → Tomcat internals → JVM concurrency → capacity planning → transaction. Đọc theo thứ tự 01 → 10.",
+  },
+};
 
 export const docs = [
+  // ===== Kubernetes =====
   {
     id: "prerequisites",
+    field: "kubernetes",
     title: "Kiến thức nền tảng (Prerequisites)",
     file: "content/CKAD-Prerequisites.md",
     icon: "🧱",
@@ -13,6 +28,7 @@ export const docs = [
   },
   {
     id: "study-guide",
+    field: "kubernetes",
     title: "CKAD Study Guide — Lộ trình 8–10 tuần",
     file: "content/CKAD-Study-Guide.md",
     icon: "🎯",
@@ -21,10 +37,139 @@ export const docs = [
   },
   {
     id: "cheat-sheet",
+    field: "kubernetes",
     title: "CKAD Cheat Sheet — Tra cứu nhanh",
     file: "content/CKAD-Cheat-Sheet.md",
     icon: "⚡",
     desc: "Toàn bộ lệnh và YAML mẫu theo 20 chủ đề: Pods, Deployments, ConfigMaps, Ingress, NetworkPolicy, Helm…",
     tags: ["kubectl", "YAML", "Cheat sheet"],
+  },
+  {
+    id: "cka-study-guide",
+    field: "kubernetes",
+    title: "CKA Study Guide — Quản trị cluster",
+    file: "content/CKA-Study-Guide.md",
+    icon: "🛠️",
+    desc: "Lộ trình học CKA sau khi xong CKAD: cluster architecture, etcd backup, upgrade, troubleshooting.",
+    tags: ["CKA", "Lộ trình", "Admin"],
+  },
+  {
+    id: "cka-cheat-sheet",
+    field: "kubernetes",
+    title: "CKA Cheat Sheet — Tra cứu nhanh",
+    file: "content/CKA-Cheat-Sheet.md",
+    icon: "🔧",
+    desc: "Lệnh và quy trình riêng của CKA: kubeadm, etcd snapshot, node maintenance, static pods, scheduling.",
+    tags: ["CKA", "kubeadm", "etcd"],
+  },
+  {
+    id: "cks-study-guide",
+    field: "kubernetes",
+    title: "CKS Study Guide — Bảo mật Kubernetes",
+    file: "content/CKS-Study-Guide.md",
+    icon: "🔐",
+    desc: "Lộ trình học CKS (yêu cầu CKA còn hiệu lực): hardening, supply chain security, runtime security.",
+    tags: ["CKS", "Security", "Lộ trình"],
+  },
+  {
+    id: "cks-cheat-sheet",
+    field: "kubernetes",
+    title: "CKS Cheat Sheet — Tra cứu nhanh",
+    file: "content/CKS-Cheat-Sheet.md",
+    icon: "🛡️",
+    desc: "Phần riêng của CKS: Pod Security Admission, AppArmor/seccomp, trivy, falco, audit logging…",
+    tags: ["CKS", "Security", "Cheat sheet"],
+  },
+
+  // ===== Java & Spring Boot Scalability (đọc theo thứ tự) =====
+  {
+    id: "java-01",
+    field: "java",
+    title: "01 — Hành trình một request: từ TCP handshake đến Worker Thread",
+    file: "content/java/01-connection-request-flow.md",
+    icon: "🔌",
+    desc: "3-way handshake, SYN/Accept Queue, Acceptor + LimitLatch, Poller/epoll (C10K), keep-alive, bảng \"5 cánh cửa\".",
+    tags: ["TCP", "Tomcat", "Kernel"],
+  },
+  {
+    id: "java-02",
+    field: "java",
+    title: "02 — Giải phẫu các Timeout",
+    file: "content/java/02-timeouts-and-exceptions.md",
+    icon: "⏲️",
+    desc: "Connect timed out, Connection refused, Read timed out, Connection reset — ai là người ngắt, retry + idempotency, timeout budget.",
+    tags: ["Timeout", "Retry", "Debug"],
+  },
+  {
+    id: "java-03",
+    field: "java",
+    title: "03 — Synchronous ≠ Blocking, Asynchronous ≠ Non-blocking",
+    file: "content/java/03-sync-async-blocking-nonblocking.md",
+    icon: "🔀",
+    desc: "Hai trục độc lập, cơ chế từng ô (socketRead0, Selector, event loop), bẫy @Async + JDBC, cây quyết định chọn mô hình.",
+    tags: ["Concurrency", "@Async", "NIO"],
+  },
+  {
+    id: "java-04",
+    field: "java",
+    title: "04 — Java Thread Lifecycle & bí ẩn RUNNABLE",
+    file: "content/java/04-java-thread-lifecycle.md",
+    icon: "🧵",
+    desc: "6 trạng thái thread, ranh giới JVM/kernel (vì sao chờ DB vẫn RUNNABLE), đọc thread dump bằng pattern đỉnh stack.",
+    tags: ["Thread", "Thread dump", "JVM"],
+  },
+  {
+    id: "java-05",
+    field: "java",
+    title: "05 — Virtual Threads",
+    file: "content/java/05-virtual-threads.md",
+    icon: "🪶",
+    desc: "Mount/unmount/continuation, carrier pool, scale-not-speed, pinning + JEP 491, Semaphore thay pool, ScopedValue.",
+    tags: ["Virtual Threads", "Loom", "Java 21+"],
+  },
+  {
+    id: "java-06",
+    field: "java",
+    title: "06 — Tomcat Thread Pool Internals",
+    file: "content/java/06-tomcat-threadpool-taskqueue.md",
+    icon: "⚙️",
+    desc: "TaskQueue.offer() \"nói dối\" (thread-trước-queue-sau), queue vô hạn và cascading failure, van 2 tầng, Bulkhead vs rate limit.",
+    tags: ["Tomcat", "TaskQueue", "Bulkhead"],
+  },
+  {
+    id: "java-07",
+    field: "java",
+    title: "07 — Tomcat Thread Pool: pool size bao nhiêu là đủ?",
+    file: "content/java/07-threadpool-sizing.md",
+    icon: "📐",
+    desc: "Chi phí thật của thread, công thức Goetz core×U×(1+W/C), Little's Law → capacity, container-aware JVM, CFS throttling.",
+    tags: ["Sizing", "Little's Law", "Container"],
+  },
+  {
+    id: "java-08",
+    field: "java",
+    title: "08 — Database Connection Pool: pool size bao nhiêu là đủ?",
+    file: "content/java/08-database-connection-pool-sizing.md",
+    icon: "🗄️",
+    desc: "Chuỗi 5 phép tính từ 1600 RPS đến pool size, vì sao more-connections-is-slower, 4 ca giữ connection quá lâu kèm code fix.",
+    tags: ["HikariCP", "Sizing", "Database"],
+  },
+  {
+    id: "java-09",
+    field: "java",
+    title: "09 — @Transactional Part 1: AOP Proxy và ThreadLocal",
+    file: "content/java/09-transactional-proxy-threadlocal.md",
+    icon: "🏷️",
+    desc: "Tắt autoCommit, JDK Dynamic vs CGLIB proxy, TransactionInterceptor, Connection trong ThreadLocal, self-invocation.",
+    tags: ["@Transactional", "AOP", "Spring"],
+  },
+  {
+    id: "java-10",
+    field: "java",
+    title: "10 — @Transactional Part 2: Năm cái bẫy",
+    file: "content/java/10-transactional-five-traps.md",
+    icon: "🪤",
+    desc: "5 bẫy production: annotation bị lơ, captive connection, exception mismatch, event listener, deadlock REQUIRES_NEW.",
+    tags: ["@Transactional", "Production", "Bẫy"],
   },
 ];
