@@ -1,141 +1,17 @@
-// Lộ trình học CKAD 8–10 tuần — trích từ CKAD/CKAD-Study-Guide.md,
-// chuyển thành checklist tương tác (tiến độ lưu trong localStorage).
+// Lộ trình học CKAD 8–10 tuần — phát triển từ CKAD/CKAD-Study-Guide.md
+// thành giáo trình tương tác: mỗi mục là một bài học chi tiết (markdown),
+// mỗi tuần kèm tài nguyên liên quan (labs, quiz, tài liệu).
+//
+// Nội dung tách thành 3 phần để dễ bảo trì:
+//   roadmap-part1.js — Tuần 1–3 (nền tảng, Pods, Workloads)
+//   roadmap-part2.js — Tuần 4–5 (Configuration, Observability)
+//   roadmap-part3.js — Tuần 6–10 (Networking, Storage/Helm, luyện thi)
+//
+// LƯU Ý: id của tuần (w1…) và của mục (w1-1…) là khóa lưu tiến độ
+// trong localStorage — không được đổi.
 
-export const roadmap = [
-  {
-    id: "w1",
-    week: "Tuần 1",
-    title: "Nền tảng — Container & Kubernetes Architecture",
-    goal: "Hiểu Kubernetes là gì và tại sao cần nó.",
-    items: [
-      { id: "w1-1", text: "Ôn lại Docker: build image, Dockerfile, registry" },
-      { id: "w1-2", text: "Kiến trúc K8s: Control Plane (API Server, etcd, Scheduler, Controller Manager) vs Worker Node (kubelet, kube-proxy, runtime)" },
-      { id: "w1-3", text: "Cài môi trường lab: minikube / kind / Killercoda" },
-      { id: "w1-4", text: "Làm quen `kubectl`: `get`, `describe`, `create`, `delete`, `apply`" },
-      { id: "w1-5", text: "Tạo Pod đầu tiên bằng cả imperative (`kubectl run`) và declarative (YAML)" },
-    ],
-    practice: "Tạo/xóa 10 Pod khác nhau, đọc `kubectl describe pod` và hiểu từng section.",
-  },
-  {
-    id: "w2",
-    week: "Tuần 2",
-    title: "Pods chuyên sâu & Multi-Container Patterns",
-    goal: "Thành thạo Pod — đơn vị cơ bản nhất.",
-    items: [
-      { id: "w2-1", text: "Pod lifecycle & phases (Pending, Running, Succeeded, Failed)" },
-      { id: "w2-2", text: "Multi-container Pods: sidecar, init containers, adapter, ambassador" },
-      { id: "w2-3", text: "`command` vs `args` (tương ứng ENTRYPOINT vs CMD)" },
-      { id: "w2-4", text: "Environment variables trong Pod" },
-      { id: "w2-5", text: "Labels, Selectors, Annotations" },
-      { id: "w2-6", text: "Namespaces" },
-    ],
-    practice: "Tạo Pod có init container chờ service khác, Pod có sidecar ghi log chung volume.",
-  },
-  {
-    id: "w3",
-    week: "Tuần 3",
-    title: "Workloads — Deployments, Jobs, CronJobs",
-    goal: "Quản lý ứng dụng ở quy mô production.",
-    items: [
-      { id: "w3-1", text: "ReplicaSets — cơ chế duy trì số replica" },
-      { id: "w3-2", text: "Deployments: tạo, scale, update image" },
-      { id: "w3-3", text: "Rolling updates & rollbacks (`rollout status/undo/history`)" },
-      { id: "w3-4", text: "Strategies: RollingUpdate (maxSurge/maxUnavailable) vs Recreate" },
-      { id: "w3-5", text: "Blue/Green và Canary deployment bằng labels + services" },
-      { id: "w3-6", text: "Jobs: completions, parallelism, backoffLimit, activeDeadlineSeconds" },
-      { id: "w3-7", text: "CronJobs: cron syntax, concurrencyPolicy, successfulJobsHistoryLimit" },
-    ],
-    practice: "Deploy app, update image sai → quan sát lỗi → rollback. Tạo CronJob chạy mỗi phút.",
-  },
-  {
-    id: "w4",
-    week: "Tuần 4",
-    title: "Configuration — ConfigMaps, Secrets, Resources",
-    goal: "Chinh phục domain có tỷ trọng cao nhất (25%).",
-    items: [
-      { id: "w4-1", text: "ConfigMaps: tạo từ literal/file/env-file; inject qua env, envFrom, volume" },
-      { id: "w4-2", text: "Secrets: types (Opaque, docker-registry, tls); base64; inject qua env & volume" },
-      { id: "w4-3", text: "Resource requests & limits (CPU, memory); QoS classes" },
-      { id: "w4-4", text: "LimitRange & ResourceQuota theo namespace" },
-      { id: "w4-5", text: "SecurityContext: runAsUser, fsGroup, capabilities, allowPrivilegeEscalation, readOnlyRootFilesystem (Pod-level vs Container-level)" },
-      { id: "w4-6", text: "ServiceAccounts & gắn vào Pod" },
-      { id: "w4-7", text: "RBAC cơ bản: Role, RoleBinding, ClusterRole, ClusterRoleBinding; `kubectl auth can-i`" },
-    ],
-    practice: "Tạo app đọc config từ ConfigMap + Secret; giới hạn quyền bằng SecurityContext; tạo Role chỉ cho get/list pods.",
-  },
-  {
-    id: "w5",
-    week: "Tuần 5",
-    title: "Observability — Probes, Logging, Debugging",
-    goal: "Debug nhanh — kỹ năng sống còn trong phòng thi.",
-    items: [
-      { id: "w5-1", text: "Liveness probe: httpGet, exec, tcpSocket" },
-      { id: "w5-2", text: "Readiness & Startup probe — hiểu rõ sự khác biệt" },
-      { id: "w5-3", text: "Probe parameters: initialDelaySeconds, periodSeconds, failureThreshold" },
-      { id: "w5-4", text: "Logging: `kubectl logs` (multi-container, `--previous`, `-f`)" },
-      { id: "w5-5", text: "Debug workflow: `describe` → `events` → `logs` → `exec`" },
-      { id: "w5-6", text: "Metrics: `kubectl top pod/node`" },
-      { id: "w5-7", text: "Lỗi phổ biến: ImagePullBackOff, CrashLoopBackOff, Pending, OOMKilled" },
-      { id: "w5-8", text: "API deprecations: `kubectl api-resources`, `kubectl explain`" },
-    ],
-    practice: "Cố tình tạo Pod lỗi (sai image, thiếu resource, probe fail) rồi tự chẩn đoán và sửa.",
-  },
-  {
-    id: "w6",
-    week: "Tuần 6",
-    title: "Services & Networking",
-    goal: "Kết nối ứng dụng.",
-    items: [
-      { id: "w6-1", text: "Services: ClusterIP, NodePort, LoadBalancer, headless; port vs targetPort vs nodePort" },
-      { id: "w6-2", text: "DNS trong cluster: `<service>.<namespace>.svc.cluster.local`" },
-      { id: "w6-3", text: "Endpoints — cách Service tìm Pod qua selector" },
-      { id: "w6-4", text: "Ingress: rules, pathType (Prefix/Exact), TLS, ingressClassName" },
-      { id: "w6-5", text: "NetworkPolicies: ingress/egress, podSelector, namespaceSelector, ipBlock; default deny" },
-      { id: "w6-6", text: "Test kết nối: `kubectl run tmp --rm -it --image=busybox -- wget -qO- <svc>`" },
-    ],
-    practice: "Expose deployment bằng cả 3 loại service; viết NetworkPolicy chỉ cho frontend gọi backend.",
-  },
-  {
-    id: "w7",
-    week: "Tuần 7",
-    title: "Storage, Helm, Kustomize & Image Build",
-    goal: "Hoàn thiện các mảnh còn lại của curriculum.",
-    items: [
-      { id: "w7-1", text: "Volumes: emptyDir, hostPath, configMap, secret" },
-      { id: "w7-2", text: "PV & PVC: accessModes, storageClassName, binding" },
-      { id: "w7-3", text: "Helm: install/upgrade/rollback/uninstall, repo, `--set`, values.yaml, `helm template`" },
-      { id: "w7-4", text: "Kustomize: kustomization.yaml, bases/overlays, `kubectl apply -k`" },
-      { id: "w7-5", text: "Build container image bằng Docker/Podman; export image (`docker save`)" },
-      { id: "w7-6", text: "CRD & Operators (mức nhận biết: `kubectl get crd`, tạo custom resource)" },
-    ],
-    practice: "Tạo PVC gắn vào Pod; cài nginx bằng Helm; tạo overlay dev/prod bằng Kustomize.",
-  },
-  {
-    id: "w8",
-    week: "Tuần 8–9",
-    title: "Luyện thi cường độ cao",
-    goal: "Tốc độ + độ chính xác.",
-    items: [
-      { id: "w8-1", text: "Học thuộc imperative commands (xem trang Tra cứu kubectl)" },
-      { id: "w8-2", text: "Luyện `kubectl explain` và tra cứu nhanh kubernetes.io/docs" },
-      { id: "w8-3", text: "Làm lab trên Killercoda: killercoda.com/killer-shell-ckad" },
-      { id: "w8-4", text: "Giải mock exam, mỗi lần bấm giờ 2 tiếng nghiêm túc" },
-      { id: "w8-5", text: "Sau mỗi mock: review kỹ câu sai, làm lại đến khi thuần thục" },
-      { id: "w8-6", text: "Luyện vim: sửa YAML, copy/paste block, undo" },
-    ],
-    practice: "Chỉ tiêu: mỗi câu cơ bản (pod, deployment, service, configmap) hoàn thành dưới 2 phút.",
-  },
-  {
-    id: "w10",
-    week: "Tuần 10",
-    title: "Killer.sh & thi thật",
-    goal: "Tổng duyệt và thi.",
-    items: [
-      { id: "w10-1", text: "Làm killer.sh simulator (2 session tặng kèm khi đăng ký thi — khó hơn đề thật)" },
-      { id: "w10-2", text: "Review toàn bộ cheat sheet" },
-      { id: "w10-3", text: "Kiểm tra hệ thống thi: webcam, internet, phòng yên tĩnh, bàn trống, giấy tờ" },
-      { id: "w10-4", text: "Nghỉ ngơi đầy đủ trước ngày thi" },
-    ],
-    practice: "Đăng nhập sớm 30 phút trước giờ thi. Chúc bạn thi đậu! 🎉",
-  },
-];
+import { weeksPart1 } from "./roadmap-part1.js";
+import { weeksPart2 } from "./roadmap-part2.js";
+import { weeksPart3 } from "./roadmap-part3.js";
+
+export const roadmap = [...weeksPart1, ...weeksPart2, ...weeksPart3];

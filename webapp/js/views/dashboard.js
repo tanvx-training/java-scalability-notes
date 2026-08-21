@@ -90,7 +90,7 @@ export function render(root) {
         area("✅", "Trắc nghiệm", `${qz.total} câu hỏi theo từng domain, có giải thích chi tiết từng câu.`, "#/quiz"),
         area("⏱️", "Thi thử", "Mô phỏng áp lực phòng thi: bấm giờ, đánh dấu câu, chấm điểm theo domain.", "#/exam"),
         area("🧪", "Labs thực hành", `${labs.length} bài lab kiểu đề thật (CKAD 100% thực hành) kèm lời giải và cách verify.`, "#/labs"),
-        area("🗺️", "Lộ trình học", "Checklist 8–10 tuần từ Study Guide, tick đến đâu lưu đến đó.", "#/roadmap"),
+        area("🗺️", "Lộ trình học", "Giáo trình 8–10 tuần với 55 bài học chi tiết: lý thuyết dễ hiểu, lệnh mẫu, bẫy thường gặp — tick đến đâu lưu đến đó.", "#/roadmap"),
       ),
 
       h("p", { class: "faint", style: "margin-top:26px" },

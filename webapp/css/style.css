@@ -836,6 +836,43 @@ details.reveal .reveal-body { padding: 6px 16px 14px; }
 .check-item input { margin-top: 4px; accent-color: var(--accent); width: 16px; height: 16px; flex: none; cursor: pointer; }
 .check-item.done .check-text { color: var(--text-faint); text-decoration: line-through; }
 
+/* Bài học trong lộ trình */
+.lesson-item { border-bottom: 1px solid var(--border); }
+.lesson-item:last-of-type { border-bottom: none; }
+.lesson-row { display: flex; align-items: flex-start; gap: 8px; }
+.lesson-row input {
+  margin-top: 13px;
+  accent-color: var(--accent);
+  width: 16px; height: 16px;
+  flex: none;
+  cursor: pointer;
+}
+.lesson-toggle {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  padding: 9px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14.8px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lesson-toggle:hover { background: var(--bg-soft); }
+.lesson-item.done .check-text { color: var(--text-faint); text-decoration: line-through; }
+.chev { color: var(--text-faint); transition: transform .15s; margin-top: 2px; flex: none; }
+.chev.open { transform: rotate(90deg); }
+.lesson-body {
+  margin: 0 0 14px 25px;
+  padding: 2px 16px 8px;
+  border-left: 2px solid var(--accent-soft);
+  font-size: 14.5px;
+}
+.lesson-body .codeblock pre code { font-size: 12.5px; }
+.lesson-body h4 { margin: 14px 0 6px; }
+
 /* ---------- Cert cards ---------- */
 
 .cert-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
