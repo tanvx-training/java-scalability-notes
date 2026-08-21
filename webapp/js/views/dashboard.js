@@ -2,16 +2,21 @@
 
 import { h } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { roadmap } from "../data/roadmap.js";
+import { tracks } from "../data/roadmap.js";
 import { flashcards } from "../data/flashcards.js";
 import { questions } from "../data/questions.js";
 import { labs } from "../data/labs.js";
 
 function roadmapStats() {
   const checked = store.get("roadmap.checked", {});
-  const all = roadmap.flatMap((w) => w.items);
-  const done = all.filter((it) => checked[it.id]).length;
-  return { done, total: all.length, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
+  const per = tracks.map((t) => {
+    const items = t.weeks.flatMap((w) => w.items);
+    const done = items.filter((it) => checked[it.id]).length;
+    return { label: t.label, done, total: items.length, pct: items.length ? Math.round((done / items.length) * 100) : 0 };
+  });
+  const done = per.reduce((a, p) => a + p.done, 0);
+  const total = per.reduce((a, p) => a + p.total, 0);
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0, per };
 }
 
 function flashStats() {
@@ -75,7 +80,8 @@ export function render(root) {
       ),
 
       h("div", { class: "grid grid-4" },
-        statCard(`${rm.pct}%`, "Lộ trình hoàn thành", "#/roadmap", `${rm.done}/${rm.total} mục`),
+        statCard(`${rm.pct}%`, "Lộ trình hoàn thành", "#/roadmap",
+          rm.per.map((p) => `${p.label} ${p.pct}%`).join(" · ")),
         statCard(String(fl.due), "Flashcard đến hạn ôn", "#/flashcards", `${fl.fresh} thẻ chưa học · ${fl.total} tổng`),
         statCard(qz.acc == null ? "—" : `${qz.acc}%`, "Độ chính xác trắc nghiệm", "#/quiz", `đã gặp ${qz.seen}/${qz.total} câu`),
         statCard(ex.best == null ? "—" : `${ex.best}%`, "Điểm thi thử tốt nhất", "#/exam", ex.count ? `${ex.count} lượt thi` : "chưa thi lần nào"),
@@ -90,7 +96,7 @@ export function render(root) {
         area("✅", "Trắc nghiệm", `${qz.total} câu hỏi theo từng domain, có giải thích chi tiết từng câu.`, "#/quiz"),
         area("⏱️", "Thi thử", "Mô phỏng áp lực phòng thi: bấm giờ, đánh dấu câu, chấm điểm theo domain.", "#/exam"),
         area("🧪", "Labs thực hành", `${labs.length} bài lab kiểu đề thật (CKAD 100% thực hành) kèm lời giải và cách verify.`, "#/labs"),
-        area("🗺️", "Lộ trình học", "Giáo trình 8–10 tuần với 55 bài học chi tiết: lý thuyết dễ hiểu, lệnh mẫu, bẫy thường gặp — tick đến đâu lưu đến đó.", "#/roadmap"),
+        area("🗺️", "Lộ trình học", "3 giáo trình CKAD / CKA / CKS với 154 bài học chi tiết: lý thuyết dễ hiểu, lệnh mẫu, bẫy thường gặp — tick đến đâu lưu đến đó.", "#/roadmap"),
       ),
 
       h("p", { class: "faint", style: "margin-top:26px" },

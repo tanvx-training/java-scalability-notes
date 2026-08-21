@@ -1,20 +1,78 @@
-// Lộ trình học tương tác — giáo trình theo tuần: mỗi mục là một bài học
-// chi tiết (mở/đóng được), tick đến đâu tiến độ lưu đến đó (localStorage).
+// Lộ trình học đa track (CKAD / CKA / CKS) — giáo trình tương tác theo tuần:
+// mỗi mục là một bài học chi tiết (mở/đóng được), tiến độ lưu localStorage.
 
 import { h, pageHead, inlineMd, mdInto } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { roadmap } from "../data/roadmap.js";
+import { tracks, getTrack } from "../data/roadmap.js";
 
-export function render(root) {
+export function render(root, params) {
+  const track = getTrack(params[0]);
+  if (!track) return renderChooser(root);
+  renderTrack(root, track);
+}
+
+// ---------------- Trang chọn lộ trình ----------------
+
+function trackStats(track, checked) {
+  const items = track.weeks.flatMap((w) => w.items);
+  const done = items.filter((it) => checked[it.id]).length;
+  return { done, total: items.length, pct: items.length ? Math.round((done / items.length) * 100) : 0 };
+}
+
+function renderChooser(root) {
   const page = h("div", { class: "page" });
   const checked = store.get("roadmap.checked", {});
 
-  const allItems = roadmap.flatMap((w) => w.items);
+  page.append(pageHead(
+    "🗺️ Lộ trình học",
+    "Ba giáo trình tương tác — mỗi mục là một bài học chi tiết với ví dụ liên tưởng, lệnh mẫu và bẫy thường gặp. Thứ tự khuyến nghị: CKAD → CKA → CKS."
+  ));
+
+  page.append(
+    h("div", { class: "path-flow", style: "margin-bottom:18px" },
+      h("span", { class: "path-node" }, "🎯 CKAD"),
+      h("span", { class: "path-arrow" }, "→"),
+      h("span", { class: "path-node" }, "🛠️ CKA"),
+      h("span", { class: "path-arrow" }, "→"),
+      h("span", { class: "path-node" }, "🔐 CKS"))
+  );
+
+  const grid = h("div", { class: "grid" });
+  for (const track of tracks) {
+    const s = trackStats(track, checked);
+    const started = s.done > 0;
+    grid.append(
+      h("a", { class: "card card-link", href: `#/roadmap/${track.id}` },
+        h("div", { class: "flex", style: "align-items:flex-start" },
+          h("span", { style: "font-size:30px" }, track.icon),
+          h("div", { class: "grow", style: "min-width:0" },
+            h("div", { class: "flex flex-wrap" },
+              h("strong", { style: "font-size:17px" }, track.label),
+              h("span", { class: "muted small" }, track.name)),
+            h("p", { class: "muted small", style: "margin:6px 0" }, track.desc),
+            h("p", { class: "faint", style: "margin:0 0 8px" }, `ℹ️ ${track.prereq}`),
+            h("div", { class: "flex" },
+              h("div", { class: "progress green grow", style: "max-width:260px" },
+                h("span", { style: `width:${s.pct}%` })),
+              h("span", { class: "small", style: "font-weight:700" }, `${s.done}/${s.total} bài · ${s.pct}%`))),
+          h("span", { class: "btn btn-sm", style: "flex:none" },
+            started ? "Tiếp tục →" : "Bắt đầu →")))
+    );
+  }
+  page.append(grid);
+  root.append(page);
+}
+
+// ---------------- Trang giáo trình của một track ----------------
+
+function renderTrack(root, track) {
+  const page = h("div", { class: "page" });
+  const checked = store.get("roadmap.checked", {});
+
+  const allItems = track.weeks.flatMap((w) => w.items);
   const doneCount = () => allItems.filter((it) => checked[it.id]).length;
 
-  // Các callback đồng bộ tiến độ của từng tuần, gọi khi tick bất kỳ mục nào.
   const weekRefreshers = [];
-  // Mở bài học của một mục theo id (dùng cho nút "Tiếp tục học").
   const lessonOpeners = new Map();
 
   const progressBar = h("span", {});
@@ -27,23 +85,26 @@ export function render(root) {
     progressText.textContent = `${done}/${allItems.length} bài · ${pct}%`;
   }
 
-  page.append(pageHead(
-    "🗺️ Lộ trình học CKAD (8–10 tuần)",
-    "Giáo trình tương tác phát triển từ CKAD Study Guide: mỗi mục là một bài học chi tiết — bấm vào tiêu đề để mở nội dung, tick ô vuông khi đã nắm vững. Giả định học 1.5–2 giờ/ngày, 5–6 ngày/tuần."
-  ));
+  page.append(
+    h("div", { class: "breadcrumb" },
+      h("a", { href: "#/roadmap" }, "Lộ trình học"), " / ", track.label),
+    pageHead(
+      `${track.icon} Lộ trình ${track.label} (8–10 tuần)`,
+      `${track.desc} Bấm vào tiêu đề mỗi mục để mở bài học, tick ô vuông khi đã nắm vững. ${track.prereq}`
+    )
+  );
 
-  // ---- Thanh tiến độ tổng + Tiếp tục học ----
   const continueBtn = h("button", { class: "btn btn-primary btn-sm" }, "▶ Tiếp tục học");
   continueBtn.addEventListener("click", () => {
     const next = allItems.find((it) => !checked[it.id]);
-    if (!next) { alert("Bạn đã hoàn thành toàn bộ lộ trình! 🎉"); return; }
+    if (!next) { alert(`Bạn đã hoàn thành toàn bộ lộ trình ${track.label}! 🎉`); return; }
     lessonOpeners.get(next.id)?.();
   });
 
   page.append(
     h("div", { class: "card", style: "margin-bottom:16px" },
       h("div", { class: "flex spread" },
-        h("strong", {}, "Tiến độ tổng"),
+        h("strong", {}, `Tiến độ ${track.label}`),
         progressText),
       h("div", { class: "progress green", style: "margin-top:8px" }, progressBar),
       h("div", { class: "flex", style: "margin-top:12px" },
@@ -51,8 +112,9 @@ export function render(root) {
         h("button", {
           class: "btn btn-sm btn-danger",
           onclick: () => {
-            if (confirm("Xóa toàn bộ tiến độ lộ trình?")) {
-              store.set("roadmap.checked", {});
+            if (confirm(`Xóa tiến độ lộ trình ${track.label}? (Các lộ trình khác không bị ảnh hưởng)`)) {
+              for (const it of allItems) delete checked[it.id];
+              store.set("roadmap.checked", checked);
               location.reload();
             }
           },
@@ -60,10 +122,9 @@ export function render(root) {
     )
   );
 
-  // Tuần đầu tiên chưa hoàn thành sẽ được mở sẵn.
-  const firstOpen = roadmap.find((w) => w.items.some((it) => !checked[it.id]))?.id;
+  const firstOpen = track.weeks.find((w) => w.items.some((it) => !checked[it.id]))?.id;
 
-  for (const week of roadmap) {
+  for (const week of track.weeks) {
     const weekDone = () => week.items.filter((it) => checked[it.id]).length;
 
     const weekNum = h("div", { class: "week-num" }, week.week.replace("Tuần ", ""));
@@ -79,7 +140,6 @@ export function render(root) {
     }
     weekRefreshers.push(refreshWeek);
 
-    // Tài nguyên liên quan của tuần
     if (week.resources && week.resources.length) {
       body.append(
         h("div", { class: "chip-row", style: "margin-bottom:10px" },
@@ -118,7 +178,6 @@ export function render(root) {
     page.append(details);
   }
 
-  // ---- Một mục = một bài học mở/đóng được ----
   function buildLessonItem(item, weekDetails) {
     const cb = h("input", { type: "checkbox", title: "Đánh dấu đã nắm vững" });
     cb.checked = !!checked[item.id];
