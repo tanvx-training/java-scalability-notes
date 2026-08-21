@@ -8,7 +8,7 @@ import { tracks, getTrack } from "../data/roadmap.js";
 export function render(root, params) {
   const track = getTrack(params[0]);
   if (!track) return renderChooser(root);
-  renderTrack(root, track);
+  renderTrack(root, track, params[1]);
 }
 
 // ---------------- Trang chọn lộ trình ----------------
@@ -65,7 +65,7 @@ function renderChooser(root) {
 
 // ---------------- Trang giáo trình của một track ----------------
 
-function renderTrack(root, track) {
+function renderTrack(root, track, focusItemId) {
   const page = h("div", { class: "page" });
   const checked = store.get("roadmap.checked", {});
 
@@ -243,4 +243,9 @@ function renderTrack(root, track) {
 
   refreshProgress();
   root.append(page);
+
+  // Deep-link từ nơi khác (vd YAML mẫu → bài học): #/roadmap/<track>/<itemId>
+  if (focusItemId && lessonOpeners.has(focusItemId)) {
+    setTimeout(() => lessonOpeners.get(focusItemId)(), 60);
+  }
 }

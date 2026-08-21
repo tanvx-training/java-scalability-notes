@@ -961,6 +961,92 @@ details.reveal .reveal-body { padding: 6px 16px 14px; }
   white-space: pre;
 }
 
+/* ---------- Thực hành nhanh (reference hub) ---------- */
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
+}
+.tab-link {
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--text-soft);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.tab-link:hover { background: var(--bg-soft); text-decoration: none; color: var(--text); }
+.tab-link.on {
+  color: var(--accent-text);
+  border-bottom-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pin-btn {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-faint);
+  padding: 2px 4px;
+  border-radius: 6px;
+  flex: none;
+}
+.pin-btn:hover { color: var(--amber); background: var(--bg-soft); }
+.pin-btn.on { color: var(--amber); }
+
+.pin-head {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  color: var(--amber);
+  margin: 4px 0 8px;
+}
+
+.docs-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-soft);
+  padding: 7px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--teal);
+}
+
+.pb-steps { margin: 10px 0; padding-left: 24px; }
+.pb-steps > li { margin: 10px 0; }
+.pb-steps > li::marker { font-weight: 800; color: var(--accent-text); }
+.pb-verify {
+  font-size: 13px;
+  color: var(--green);
+  margin-top: 4px;
+}
+
+.examday-list { margin: 4px 0 8px; padding-left: 22px; }
+.examday-list li { margin: 4px 0; }
+.examday-list.danger li::marker { content: "✗ "; color: var(--red); }
+
+/* Chế độ gọn — mở nửa màn hình cạnh terminal: ẩn sidebar, thu mật độ. */
+body.compact-mode { font-size: 13.5px; }
+.compact-mode .sidebar {
+  transform: translateX(-105%);
+  transition: transform .22s ease;
+  box-shadow: var(--shadow-lg);
+}
+.compact-mode .sidebar.open { transform: translateX(0); }
+.compact-mode .backdrop.show { display: block; }
+.compact-mode .topbar { display: flex; }
+.compact-mode .main { margin-left: 0; padding: 14px clamp(10px, 2vw, 20px) 40px; }
+.compact-mode .card { padding: 12px 14px; }
+.compact-mode .cmd-row { padding: 9px 12px; margin-bottom: 7px; }
+.compact-mode .codeblock pre { padding: 9px 12px; }
+.compact-mode .codeblock pre code { font-size: 12px; }
+.compact-mode .page-head h1 { font-size: 21px; }
+.compact-mode .chip { padding: 4px 10px; font-size: 12px; }
+
 /* ---------- Misc ---------- */
 
 .fade-in { animation: fadeIn .18s ease; }

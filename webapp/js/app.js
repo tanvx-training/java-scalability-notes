@@ -23,6 +23,9 @@ const routes = {
   labs,
 };
 
+// Khôi phục "chế độ gọn" (ẩn sidebar, mật độ cao) nếu người dùng đã bật.
+if (store.get("ref.compact")) document.body.classList.add("compact-mode");
+
 const main = document.getElementById("main");
 const sidebar = document.getElementById("sidebar");
 const backdrop = document.getElementById("backdrop");

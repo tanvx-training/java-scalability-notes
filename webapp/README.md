@@ -10,7 +10,7 @@ Web app tĩnh (vanilla JS, **không cần build, không dependency**) phục v�
 | 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) |
 | 🗺️ Lộ trình học | 3 giáo trình CKAD / CKA / CKS (mỗi track 8–10 tuần), tổng 154 bài học chi tiết (lý thuyết dễ hiểu + lệnh/YAML mẫu + bẫy thường gặp), tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
 | 📚 Thư viện tài liệu | 17 tài liệu thuộc 2 lĩnh vực: Kubernetes (CKAD/CKA/CKS) + series blog Java & Spring Boot Scalability — mục lục nổi, highlight YAML/bash, mermaid diagram, ảnh minh họa, nút copy |
-| ⌨️ Tra cứu kubectl | 90 lệnh hay dùng, lọc tức thì theo từ khóa/nhóm, nhấn `/` để tìm |
+| ⚡ Thực hành nhanh | Trung tâm tra cứu khi làm lab: 130 lệnh (kubectl + kubeadm/etcdctl/crictl/trivy/falco…), 48 YAML mẫu đánh dấu field cần sửa, 16 quy trình thuộc lòng có chỉ tiêu thời gian, thẻ "Trước giờ thi" từng chứng chỉ. Ghim mục hay dùng, lọc theo chứng chỉ, chế độ gọn mở cạnh terminal, mỗi mục kèm gợi ý tra kubernetes.io/docs và link sang bài học lộ trình |
 | 🃏 Flashcards | 84 thẻ, spaced repetition (Lại/Khó/Tốt/Dễ), phím tắt Space + 1–4 |
 | ✅ Trắc nghiệm | 110 câu có giải thích, lọc theo chứng chỉ/domain, chế độ ưu tiên câu sai |
 | ⏱️ Thi thử | Bấm giờ, đánh dấu câu, lấy mẫu theo tỷ trọng domain CKAD, chấm điểm theo domain, lưu lịch sử |

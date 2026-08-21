@@ -81,6 +81,9 @@ export const TOPICS = {
 // Nhóm lệnh cho trang tra cứu kubectl.
 export const COMMAND_CATEGORIES = {
   setup: { label: "Setup & Context" },
+  cluster: { label: "Cluster Admin (kubeadm, etcd)" },
+  node: { label: "Node & Runtime" },
+  sectools: { label: "Security Tools" },
   pods: { label: "Pods" },
   workloads: { label: "Deployments, Jobs, CronJobs" },
   config: { label: "ConfigMaps & Secrets" },
