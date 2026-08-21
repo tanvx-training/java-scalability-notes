@@ -3,3 +3,6 @@
 .DS_Store
 *.tmp
 temp/
+
+# KubePrep: nội dung markdown được copy vào lúc chạy dev.sh / deploy
+webapp/content/

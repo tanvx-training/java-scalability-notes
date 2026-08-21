@@ -70,4 +70,31 @@ flowchart TD
 
 Thư mục [`images/`](./images/) — 10 hình được nhúng đúng ngữ cảnh trong từng tài liệu.
 
+---
+
+## ☸️ Kubernetes — Học & luyện thi chứng chỉ (KubePrep)
+
+Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD** và web app **KubePrep** để học/ôn tập/thi thử:
+
+| Thành phần | Mô tả |
+|---|---|
+| [`CKAD/CKAD-Prerequisites.md`](./CKAD/CKAD-Prerequisites.md) | Kiến thức nền: Linux, vim, Docker, YAML |
+| [`CKAD/CKAD-Study-Guide.md`](./CKAD/CKAD-Study-Guide.md) | Lộ trình học 8–10 tuần + chiến lược làm bài thi |
+| [`CKAD/CKAD-Cheat-Sheet.md`](./CKAD/CKAD-Cheat-Sheet.md) | Tra cứu nhanh lệnh & YAML mẫu theo 20 chủ đề |
+| [`webapp/`](./webapp/) | **KubePrep** — web app học tập: lộ trình tương tác, đọc tài liệu, flashcards (spaced repetition), 110 câu trắc nghiệm, thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
+
+### Chạy local
+
+```bash
+./webapp/dev.sh          # mở http://localhost:8080
+```
+
+### Deploy lên GitHub Pages
+
+1. Push lên nhánh `main` — workflow [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml) tự chạy.
+2. Làm **một lần duy nhất**: vào **Settings → Pages → Build and deployment → Source** chọn **GitHub Actions**.
+3. App sẽ có tại `https://<username>.github.io/<repo>/`.
+
+Tiến độ học (lộ trình, flashcards, điểm thi thử…) được lưu trong `localStorage` của trình duyệt — không cần backend.
+
 

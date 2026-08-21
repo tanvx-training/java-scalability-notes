@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KubePrep — Học · Ôn tập · Luyện thi Kubernetes</title>
+  <meta name="description" content="Ứng dụng học, ôn tập và luyện thi các chứng chỉ Kubernetes (CKAD, CKA, CKS, KCNA, KCSA): tài liệu, lộ trình, flashcards, trắc nghiệm, thi thử và labs thực hành." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%98%B8%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script>
+    // Đặt theme trước khi render để tránh chớp màu (FOUC).
+    (function () {
+      try {
+        // store.js lưu giá trị dạng JSON nên cần bỏ dấu nháy kép.
+        var t = (localStorage.getItem("kubeprep.theme") || "").replace(/"/g, "");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) { /* private mode */ }
+    })();
+  </script>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="icon-btn" id="menu-btn" aria-label="Mở menu">☰</button>
+      <a class="topbar-brand" href="#/">☸️ KubePrep</a>
+      <button class="icon-btn" id="theme-btn-mobile" aria-label="Đổi giao diện sáng/tối">◐</button>
+    </header>
+
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#/">
+        <span class="brand-logo">☸️</span>
+        <span class="brand-text">
+          <strong>KubePrep</strong>
+          <small>Học · Ôn tập · Luyện thi K8s</small>
+        </span>
+      </a>
+
+      <nav class="nav">
+        <div class="nav-group">
+          <div class="nav-title">Tổng quan</div>
+          <a class="nav-link" href="#/" data-route="dashboard"><span class="nav-ico">🏠</span> Bảng điều khiển</a>
+          <a class="nav-link" href="#/certs" data-route="certs"><span class="nav-ico">🎓</span> Chứng chỉ K8s</a>
+          <a class="nav-link" href="#/roadmap" data-route="roadmap"><span class="nav-ico">🗺️</span> Lộ trình học</a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-title">Học &amp; tham khảo</div>
+          <a class="nav-link" href="#/docs" data-route="docs"><span class="nav-ico">📚</span> Tài liệu</a>
+          <a class="nav-link" href="#/commands" data-route="commands"><span class="nav-ico">⌨️</span> Tra cứu kubectl</a>
+        </div>
+        <div class="nav-group">
+          <div class="nav-title">Luyện tập</div>
+          <a class="nav-link" href="#/flashcards" data-route="flashcards"><span class="nav-ico">🃏</span> Flashcards</a>
+          <a class="nav-link" href="#/quiz" data-route="quiz"><span class="nav-ico">✅</span> Trắc nghiệm</a>
+          <a class="nav-link" href="#/exam" data-route="exam"><span class="nav-ico">⏱️</span> Thi thử</a>
+          <a class="nav-link" href="#/labs" data-route="labs"><span class="nav-ico">🧪</span> Labs thực hành</a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-sm" id="theme-btn">◐ Sáng / Tối</button>
+        <a class="muted-link" href="https://kubernetes.io/docs/" target="_blank" rel="noopener">kubernetes.io/docs ↗</a>
+      </div>
+    </aside>
+    <div class="backdrop" id="backdrop"></div>
+
+    <main class="main" id="main" tabindex="-1">
+      <noscript>Ứng dụng cần JavaScript để hoạt động.</noscript>
+    </main>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
