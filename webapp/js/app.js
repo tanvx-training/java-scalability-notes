@@ -69,7 +69,15 @@ function onFieldChange(id) {
   if (!setCurrentField(id)) return;
   renderFieldSwitch();
   renderNav();
-  navigate();
+  // Hash hiện tại có thể trỏ tới bản ghi của lĩnh vực khác (vd #/roadmap/cka).
+  // Giữ nguyên thì navigate() sẽ suy ngược lĩnh vực từ nó và huỷ lựa chọn vừa
+  // rồi của người dùng. Bỏ tham số: giữ lại view nếu lĩnh vực mới có module đó,
+  // không thì về bảng điều khiển.
+  const { name } = parseHash();
+  const target = moduleAllowed(id, name) ? name : "dashboard";
+  const nextHash = target === "dashboard" ? "#/" : `#/${target}`;
+  if (location.hash !== nextHash) location.hash = nextHash; // hashchange -> navigate()
+  else navigate();                                          // hash không đổi -> gọi thẳng
 }
 
 const fieldSwitch = document.getElementById("field-switch");
