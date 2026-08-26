@@ -29,6 +29,8 @@ const EXPECTED = {
     "roadmap-items:kubernetes": 154,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
+    // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.
+    "docs:java": 10,
   },
 };
 
@@ -409,6 +411,22 @@ await check("Câu hỏi sysprog phân bổ đúng theo domain", () => {
     .filter(([k, v]) => (got[k] ?? 0) !== v)
     .map(([k, v]) => `${k}: kỳ vọng ${v}, thực tế ${got[k] ?? 0}`);
   expect(!bad.length, bad.join("; "));
+});
+
+// N3 — bảng kỳ vọng phải phủ mọi lĩnh vực khai docs/roadmap.
+// Vòng kiểm đếm bên dưới chỉ so những key CÓ MẶT trong EXPECTED, nên một lĩnh
+// vực mới quên khai key sẽ trôi tự do: xoá sạch dữ liệu của nó vẫn xanh.
+await check("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    if (f.modules.includes("docs") && !(`docs:${id}` in EXPECTED.counts)) {
+      bad.push(`thiếu "docs:${id}"`);
+    }
+    if (f.modules.includes("roadmap") && !(`roadmap-items:${id}` in EXPECTED.counts)) {
+      bad.push(`thiếu "roadmap-items:${id}"`);
+    }
+  }
+  expect(!bad.length, `${bad.join("; ")} trong EXPECTED.counts`);
 });
 
 // Bảng kỳ vọng
