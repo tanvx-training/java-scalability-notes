@@ -1,22 +1,32 @@
-# ☸️ KubePrep — Học · Ôn tập · Luyện thi chứng chỉ Kubernetes
+# 📚 DevPrep — Học · Ôn tập · Luyện thi
 
-Web app tĩnh (vanilla JS, **không cần build, không dependency**) phục vụ học và luyện thi các chứng chỉ Kubernetes của CNCF, trọng tâm là **CKAD**.
+Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một nền tảng học đa lĩnh vực: **Kubernetes & chứng chỉ** (CKAD, CKA, CKS), **Lập trình hệ thống** (bản dịch tiếng Việt System Programming Coursebook, UIUC CS 241) và **Java & Spring Boot Scalability**. Một bộ chọn lĩnh vực ở sidebar chuyển toàn bộ giao diện — nav, lộ trình, tài liệu, flashcards, trắc nghiệm — sang đúng nội dung của lĩnh vực đang chọn.
 
 ## Tính năng
 
 | Trang | Nội dung |
 |---|---|
-| 🏠 Bảng điều khiển | Tổng quan tiến độ: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử |
-| 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) |
-| 🗺️ Lộ trình học | 3 giáo trình CKAD / CKA / CKS (mỗi track 8–10 tuần), tổng 154 bài học chi tiết (lý thuyết dễ hiểu + lệnh/YAML mẫu + bẫy thường gặp), tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
-| 📚 Thư viện tài liệu | 17 tài liệu thuộc 2 lĩnh vực: Kubernetes (CKAD/CKA/CKS) + series blog Java & Spring Boot Scalability — mục lục nổi, highlight YAML/bash, mermaid diagram, ảnh minh họa, nút copy |
-| ⚡ Thực hành nhanh | Trung tâm tra cứu khi làm lab: 130 lệnh (kubectl + kubeadm/etcdctl/crictl/trivy/falco…), 48 YAML mẫu đánh dấu field cần sửa, 16 quy trình thuộc lòng có chỉ tiêu thời gian, thẻ "Trước giờ thi" từng chứng chỉ. Ghim mục hay dùng, lọc theo chứng chỉ, chế độ gọn mở cạnh terminal, mỗi mục kèm gợi ý tra kubernetes.io/docs và link sang bài học lộ trình |
-| 🃏 Flashcards | 84 thẻ, spaced repetition (Lại/Khó/Tốt/Dễ), phím tắt Space + 1–4 |
-| ✅ Trắc nghiệm | 110 câu có giải thích, lọc theo chứng chỉ/domain, chế độ ưu tiên câu sai |
-| ⏱️ Thi thử | Bấm giờ, đánh dấu câu, lấy mẫu theo tỷ trọng domain CKAD, chấm điểm theo domain, lưu lịch sử |
-| 🧪 Labs | 22 bài thực hành kiểu đề thật, có gợi ý, lời giải ẩn, lệnh verify, đồng hồ bấm giờ |
+| 🏠 Bảng điều khiển | Tổng quan tiến độ của lĩnh vực đang chọn: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử |
+| 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) — riêng lĩnh vực Kubernetes |
+| 🗺️ Lộ trình học | 4 giáo trình: CKAD, CKA, CKS (mỗi track 8–10 tuần) và System Programming (10 tuần) — tổng **204 mục** (154 bài K8s + 50 mục sysprog), lý thuyết dễ hiểu + lệnh/YAML/code mẫu + bẫy thường gặp, tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
+| 📚 Thư viện tài liệu | **35 tài liệu** thuộc 3 lĩnh vực (7 Kubernetes, 18 System Programming, 10 Java & Spring Boot Scalability) — mục lục nổi, highlight yaml/bash/c, mermaid diagram, ảnh minh họa, nút copy |
+| ⚡ Thực hành nhanh | Trung tâm tra cứu khi làm lab Kubernetes: lệnh, YAML mẫu đánh dấu field cần sửa, quy trình thuộc lòng có chỉ tiêu thời gian, thẻ "Trước giờ thi" từng chứng chỉ. Ghim mục hay dùng, lọc theo chứng chỉ, chế độ gọn mở cạnh terminal |
+| 🃏 Flashcards | **174 thẻ** (84 Kubernetes + 90 System Programming), spaced repetition (Lại/Khó/Tốt/Dễ), phím tắt Space + 1–4 |
+| ✅ Trắc nghiệm | **220 câu** (110 Kubernetes + 110 System Programming) có giải thích, lọc theo chứng chỉ/domain, chế độ ưu tiên câu sai |
+| ⏱️ Thi thử | Bấm giờ, đánh dấu câu, lấy mẫu theo tỷ trọng domain CKAD, chấm điểm theo domain, lưu lịch sử — riêng lĩnh vực Kubernetes |
+| 🧪 Labs | 22 bài thực hành kiểu đề thật, có gợi ý, lời giải ẩn, lệnh verify, đồng hồ bấm giờ — riêng lĩnh vực Kubernetes |
 
 Toàn bộ tiến độ lưu trong `localStorage` — không cần đăng nhập, không backend.
+
+### Bộ chọn lĩnh vực
+
+Sidebar có một bộ chọn lĩnh vực (`Kubernetes & Chứng chỉ` / `Lập trình hệ thống` / `Java & Spring Boot Scalability`). Chọn một lĩnh vực sẽ:
+
+- Đổi các mục nav còn lại — chỉ hiện trang có dữ liệu thật cho lĩnh vực đó (ví dụ Java chỉ có Bảng điều khiển + Tài liệu, chưa có flashcards/trắc nghiệm riêng).
+- Lọc lại dữ liệu ở mọi trang dùng chung (Bảng điều khiển, Lộ trình, Tài liệu, Flashcards, Trắc nghiệm) theo đúng lĩnh vực.
+- Lưu lựa chọn vào `localStorage` để lần sau mở app vẫn ở đúng lĩnh vực đó.
+
+Bản ghi Kubernetes không khai trường `field` tường minh — được coi mặc định là `kubernetes`, nên dữ liệu Kubernetes hiện có không cần sửa lại.
 
 ## Chạy local
 
@@ -24,30 +34,49 @@ Toàn bộ tiến độ lưu trong `localStorage` — không cần đăng nhập
 ./webapp/dev.sh        # http://localhost:8888 (cổng tùy chọn: ./webapp/dev.sh 3000)
 ```
 
-Script copy toàn bộ markdown của repo (`CKAD/`, `CKA/`, `CKS/`, các bài `Chủ đề *`) và `images/` vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn ở repo) rồi chạy `python3 -m http.server`.
+Script gọi `build-content.sh` để copy toàn bộ markdown của repo (`CKAD/`, `CKA/`, `CKS/`, `System_Programming_VI/`, các bài `Chủ đề *`) và ảnh minh họa vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn ở repo) rồi chạy `python3 -m http.server`.
 
 ## Deploy GitHub Pages
 
 Workflow `.github/workflows/deploy-pages.yml` tự build khi push `main`:
-stage `webapp/` + copy markdown & ảnh vào `content/` → upload artifact → deploy.
+stage `webapp/` + `build-content.sh` copy markdown & ảnh vào `content/` → upload artifact → deploy.
 
 Chỉ cần bật một lần: **Settings → Pages → Source: GitHub Actions**.
+
+## Kiểm tra dữ liệu
+
+```bash
+./webapp/build-content.sh webapp/content
+node webapp/check-data.mjs
+```
+
+Kiểm id trùng, link `#/docs` hỏng, khoá phân loại sai và số lượng bản ghi.
+Chạy trước mỗi lần commit dữ liệu mới.
 
 ## Cấu trúc mã
 
 ```
 webapp/
 ├── index.html            # shell: sidebar, topbar, theme boot
+├── package.json          # {"type": "module"} — khai module ES tường minh cho check-data.mjs
+├── build-content.sh      # copy markdown + ảnh từ repo vào content/ (dùng bởi dev.sh, CI)
+├── check-data.mjs        # kiểm 23 bất biến dữ liệu (id trùng, link hỏng, số lượng…)
 ├── css/style.css         # design system (light/dark, components)
 ├── js/app.js             # hash router + theme + sidebar mobile
 ├── js/lib/
-│   ├── markdown.js       # render markdown + highlight yaml/bash
+│   ├── field.js          # lĩnh vực đang chọn: đọc/ghi localStorage
+│   ├── markdown.js       # render markdown + highlight yaml/bash/c
 │   ├── store.js          # localStorage có namespace
 │   └── ui.js             # DOM helper, badge, copy code…
-├── js/data/              # meta, certs, roadmap, docs-index,
-│   …                     # questions (110), flashcards (84), commands (90), labs (22)
+├── js/data/
+│   ├── fields.js         # khai 3 lĩnh vực: label, icon, module nào bật
+│   ├── index.js          # lớp truy cập dữ liệu lọc theo lĩnh vực
+│   ├── meta.js, certs.js, roadmap.js, docs-index.js, …
+│   ├── sysprog-roadmap-part*.js, sysprog-flashcards.js,
+│   │   sysprog-questions-part*.js   # dữ liệu lĩnh vực System Programming
+│   └── …                 # roadmap-part*, questions, flashcards, commands, labs (Kubernetes)
 └── js/views/             # dashboard, certs, roadmap, docs, commands,
                           # flashcards, quiz, exam, labs
 ```
 
-Muốn thêm câu hỏi/flashcard/lab: sửa file tương ứng trong `js/data/` theo đúng schema có sẵn ở đầu mỗi file — không cần đụng vào code view.
+Muốn thêm câu hỏi/flashcard/lab: sửa file tương ứng trong `js/data/` theo đúng schema có sẵn ở đầu mỗi file, chạy `node webapp/check-data.mjs` để kiểm — không cần đụng vào code view.

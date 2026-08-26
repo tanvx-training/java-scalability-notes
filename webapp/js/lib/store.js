@@ -1,5 +1,8 @@
 // Lưu trữ tiến độ học tập trong localStorage (JSON, có namespace).
-
+//
+// ⚠️ KHÔNG ĐỔI `NS`. App đã đổi tên KubePrep → DevPrep nhưng namespace phải
+// giữ nguyên "kubeprep." — đổi prefix sẽ làm mọi người dùng hiện tại mất sạch
+// tiến độ lộ trình, lịch sử flashcard và điểm thi thử.
 const NS = "kubeprep.";
 
 function safeParse(raw, fallback) {

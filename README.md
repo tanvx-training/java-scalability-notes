@@ -47,6 +47,11 @@ flowchart TD
 * **Software Architect / Tech Lead:** [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md) → [07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md) → [08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) → [05](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/05-virtual-threads.md) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) *(Nắm System Sizing, Architectural Limits, Virtual Threads và Ranh giới Transaction)*.
 * **Đang chữa cháy production:** [02](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/02-timeouts-and-exceptions.md) (tra lỗi socket/timeout) → [04](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/04-java-thread-lifecycle.md) §6 (đọc Thread Dump) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) (check cạn connection do Transaction) → [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md)/[07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md)/[08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) (tuỳ điểm nghẽn).
 
+### System Programming — Lập trình hệ thống (UIUC CS 241)
+| # | Tài liệu | Nội dung chính |
+|---|---|---|
+| — | [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt đầy đủ **System Programming Coursebook** (University of Illinois, CS 241 — B. Venkatesh, L. Angrave et al.), giấy phép **CC BY 4.0**. 18 chương: C, tiến trình, bộ cấp phát bộ nhớ, luồng, đồng bộ hoá, deadlock, bộ nhớ ảo & IPC, lập lịch, mạng, hệ thống tệp, tín hiệu, bảo mật và các chủ đề nâng cao. Xem [mục lục đầy đủ](./System_Programming_VI/README.md). |
+
 ## 📊 Bảng tra cứu Prometheus & Micrometer Metrics cốt lõi
 
 | Tầng / Chủ đề | Metrics quan trọng | Mô tả & Cảnh báo cần đặt Alert |
@@ -72,9 +77,9 @@ Thư mục [`images/`](./images/) — 10 hình được nhúng đúng ngữ cả
 
 ---
 
-## ☸️ Kubernetes — Học & luyện thi chứng chỉ (KubePrep)
+## 📚 DevPrep — nền tảng học đa lĩnh vực
 
-Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD** và web app **KubePrep** để học/ôn tập/thi thử:
+Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook** và web app **DevPrep** để học/ôn tập/thi thử cả ba lĩnh vực:
 
 | Thành phần | Mô tả |
 |---|---|
@@ -82,7 +87,8 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD** và w
 | [`CKAD/CKAD-Study-Guide.md`](./CKAD/CKAD-Study-Guide.md) | Lộ trình học 8–10 tuần + chiến lược làm bài thi |
 | [`CKAD/CKAD-Cheat-Sheet.md`](./CKAD/CKAD-Cheat-Sheet.md) | Tra cứu nhanh lệnh & YAML mẫu theo 20 chủ đề |
 | [`CKA/`](./CKA/), [`CKS/`](./CKS/) | Study guide + cheat sheet cho CKA (quản trị cluster) và CKS (bảo mật) |
-| [`webapp/`](./webapp/) | **KubePrep** — web app học tập: lộ trình tương tác, thư viện tài liệu đa lĩnh vực (Kubernetes + toàn bộ series blog Java/Spring Boot Scalability ở trên), flashcards (spaced repetition), 110 câu trắc nghiệm, thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
+| [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt System Programming Coursebook (UIUC CS 241), 18 chương, CC BY 4.0 |
+| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability): lộ trình tương tác (4 giáo trình, 204 mục), thư viện tài liệu (35 tài liệu), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
 
 ### Chạy local
 
