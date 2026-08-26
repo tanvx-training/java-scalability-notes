@@ -30,6 +30,11 @@ Bộ ghi chú nghiên cứu về khả năng mở rộng (scalability) của ứ
 | 09 | [Proxy & ThreadLocal trong @Transactional](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/09-transactional-proxy-threadlocal.md) | Tắt `autoCommit`, cơ chế AOP Proxy (JDK Dynamic vs CGLIB), `TransactionInterceptor`, cất Connection vào `ThreadLocal` via `TransactionSynchronizationManager`, lý do self-invocation lơ annotation |
 | 10 | [Năm cái bẫy @Transactional](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) | 5 bẫy production: Annotation bị lơ, Captive Connection (I/O REST call trong Transaction), Exception Mismatch (Unchecked vs Checked), Transactional Event Listener, Deadlock `REQUIRES_NEW` |
 
+### System Programming — Lập trình hệ thống (UIUC CS 241)
+| # | Tài liệu | Nội dung chính |
+|---|---|---|
+| — | [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt đầy đủ **System Programming Coursebook** (University of Illinois, CS 241 — B. Venkatesh, L. Angrave et al.), giấy phép **CC BY 4.0**. 18 chương: C, tiến trình, bộ cấp phát bộ nhớ, luồng, đồng bộ hoá, deadlock, bộ nhớ ảo & IPC, lập lịch, mạng, hệ thống tệp, tín hiệu, bảo mật và các chủ đề nâng cao. Xem [mục lục đầy đủ](./System_Programming_VI/README.md). |
+
 ## Phương pháp tiếp thu & Lộ trình đọc
 
 ### 🔄 Vòng xoay tiếp thu 4 bước (Learning Flywheel)
@@ -46,11 +51,6 @@ flowchart TD
 * **SRE / DevOps Engineer:** [01](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/01-connection-request-flow.md) → [02](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/02-timeouts-and-exceptions.md) → [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md) → [07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md) *(Nắm Kernel Queue, Timeouts, OS Limits và Container Throttling)*.
 * **Software Architect / Tech Lead:** [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md) → [07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md) → [08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) → [05](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/05-virtual-threads.md) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) *(Nắm System Sizing, Architectural Limits, Virtual Threads và Ranh giới Transaction)*.
 * **Đang chữa cháy production:** [02](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/02-timeouts-and-exceptions.md) (tra lỗi socket/timeout) → [04](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/04-java-thread-lifecycle.md) §6 (đọc Thread Dump) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) (check cạn connection do Transaction) → [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md)/[07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md)/[08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) (tuỳ điểm nghẽn).
-
-### System Programming — Lập trình hệ thống (UIUC CS 241)
-| # | Tài liệu | Nội dung chính |
-|---|---|---|
-| — | [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt đầy đủ **System Programming Coursebook** (University of Illinois, CS 241 — B. Venkatesh, L. Angrave et al.), giấy phép **CC BY 4.0**. 18 chương: C, tiến trình, bộ cấp phát bộ nhớ, luồng, đồng bộ hoá, deadlock, bộ nhớ ảo & IPC, lập lịch, mạng, hệ thống tệp, tín hiệu, bảo mật và các chủ đề nâng cao. Xem [mục lục đầy đủ](./System_Programming_VI/README.md). |
 
 ## 📊 Bảng tra cứu Prometheus & Micrometer Metrics cốt lõi
 
