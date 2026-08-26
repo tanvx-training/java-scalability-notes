@@ -34,9 +34,19 @@ export const FIELDS = {
     modules: ["dashboard", "docs"],
     // Không có nguồn ngoài phù hợp cho series này — bỏ qua thay vì bịa link.
   },
+  "spring-security": {
+    label: "Spring Security",
+    icon: "🔒",
+    desc: "Bản dịch tiếng Việt Spring Security in Action, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — xác thực, phân quyền, CSRF/CORS, OAuth 2 & OIDC, ứng dụng phản ứng và kiểm thử cấu hình bảo mật.",
+    certFilter: false,
+    // Mở dần theo dữ liệu: "docs" thêm ở Task 2, "roadmap" ở Task 4.
+    // Khai sớm là bất biến #7 báo đỏ.
+    modules: ["dashboard"],
+    externalRef: { label: "docs.spring.io/spring-security", href: "https://docs.spring.io/spring-security/reference/" },
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "spring-security"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.
