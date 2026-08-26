@@ -185,6 +185,7 @@ function renderSession(root, cards) {
     progressText.textContent = `Thẻ ${done + 1}/${total}`;
     progressBar.style.width = `${(done / total) * 100}%`;
     gradeRow.style.visibility = "hidden";
+    gradeBtns(card); // đổ 4 nút chấm điểm cho đúng thẻ đang hiện
     stage.innerHTML = "";
 
     const topic = TOPICS[card.topic];
