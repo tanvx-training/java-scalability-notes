@@ -11,10 +11,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$DIR")"
 PORT="${1:-${PORT:-8888}}"
 
-mkdir -p "$DIR/content/java" "$DIR/content/images"
-cp "$REPO"/CKAD/*.md "$REPO"/CKA/*.md "$REPO"/CKS/*.md "$DIR/content/"
-cp "$REPO/Chủ đề"*/*.md "$DIR/content/java/"
-cp "$REPO"/images/* "$DIR/content/images/"
+"$DIR/build-content.sh" "$DIR/content"
 
 echo "▶ KubePrep: http://localhost:$PORT"
 cd "$DIR"
