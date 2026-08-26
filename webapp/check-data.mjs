@@ -221,6 +221,29 @@ await check("navFor() lọc đúng và bỏ nhóm rỗng", () => {
   expect(moduleAllowed("khong-ton-tai", "docs") === false, "lĩnh vực lạ phải trả false");
 });
 
+await check("Mọi DOMAINS/TOPICS khai field hợp lệ", () => {
+  const bad = [];
+  for (const [k, d] of Object.entries(DOMAINS))
+    if (!d.field) bad.push(`DOMAINS.${k} thiếu field`);
+    else if (!FIELDS[d.field]) bad.push(`DOMAINS.${k}.field="${d.field}" không tồn tại`);
+  for (const [k, t] of Object.entries(TOPICS))
+    if (!t.field) bad.push(`TOPICS.${k} thiếu field`);
+    else if (!FIELDS[t.field]) bad.push(`TOPICS.${k}.field="${t.field}" không tồn tại`);
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("Accessor lọc đúng theo lĩnh vực", async () => {
+  const api = await import("./js/data/index.js");
+  const total = api.allQuestions.length;
+  const sum = FIELD_ORDER.reduce((n, f) => n + api.getQuestions(f).length, 0);
+  expect(sum === total, `tổng theo lĩnh vực (${sum}) lệch tổng thật (${total})`);
+  expect(api.getDocs("java").every((d) => d.field === "java"), "getDocs('java') lẫn lĩnh vực khác");
+  expect(api.fieldOfRecord({}) === "kubernetes", "bản ghi không có field phải mặc định kubernetes");
+  expect(api.fieldOfDoc("java-01") === "java", "fieldOfDoc('java-01') phải là java");
+  expect(api.fieldOfTrack("ckad") === "kubernetes", "fieldOfTrack('ckad') phải là kubernetes");
+  expect(api.fieldOfDoc("khong-ton-tai") === null, "doc id lạ phải trả null");
+});
+
 // Bảng kỳ vọng
 await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
   const actual = {};
