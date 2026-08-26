@@ -1,5 +1,6 @@
-// Lộ trình học 3 chứng chỉ — mỗi track là một giáo trình tương tác:
-// mỗi mục là một bài học chi tiết (markdown), mỗi tuần kèm tài nguyên liên quan.
+// Lộ trình học nhiều track (3 chứng chỉ Kubernetes, đọc sách Kubernetes in
+// Action, lập trình hệ thống) — mỗi track là một giáo trình tương tác: mỗi
+// mục là một bài học chi tiết (markdown), mỗi tuần kèm tài nguyên liên quan.
 //
 // Nội dung tách file theo track/tuần để dễ bảo trì:
 //   CKAD: roadmap-part{1,2,3}.js      (Tuần 1–3 / 4–5 / 6–10) — 55 bài
@@ -8,8 +9,8 @@
 //   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
 //   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1…) và id mục (w1-1, cka-w1-1, sp-w1-1…)
-// là khóa lưu tiến độ trong localStorage — không được đổi.
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1…) và id mục (w1-1, cka-w1-1,
+// sp-w1-1, kb-w1-1…) là khóa lưu tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
 import { weeksPart2 } from "./roadmap-part2.js";
