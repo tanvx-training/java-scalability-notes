@@ -8,8 +8,8 @@ Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một 
 |---|---|
 | 🏠 Bảng điều khiển | Tổng quan tiến độ của lĩnh vực đang chọn: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử |
 | 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) — riêng lĩnh vực Kubernetes |
-| 🗺️ Lộ trình học | 4 giáo trình: CKAD, CKA, CKS (mỗi track 8–10 tuần) và System Programming (10 tuần) — tổng **204 mục** (154 bài K8s + 50 mục sysprog), lý thuyết dễ hiểu + lệnh/YAML/code mẫu + bẫy thường gặp, tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
-| 📚 Thư viện tài liệu | **35 tài liệu** thuộc 3 lĩnh vực (7 Kubernetes, 18 System Programming, 10 Java & Spring Boot Scalability) — mục lục nổi, highlight yaml/bash/c, mermaid diagram, ảnh minh họa, nút copy |
+| 🗺️ Lộ trình học | 5 giáo trình: CKAD, CKA, CKS (mỗi track 8–10 tuần), System Programming (10 tuần) và lộ trình đọc *Kubernetes in Action* (9 tuần, bám theo 17 chương sách) — tổng **234 mục** (154 bài K8s + 50 mục sysprog + 30 mục đọc sách), lý thuyết dễ hiểu + lệnh/YAML/code mẫu + bẫy thường gặp, tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
+| 📚 Thư viện tài liệu | **52 tài liệu** thuộc 3 lĩnh vực (24 Kubernetes, 18 System Programming, 10 Java & Spring Boot Scalability) — mục lục nổi, highlight yaml/bash/c, mermaid diagram, ảnh minh họa, nút copy |
 | ⚡ Thực hành nhanh | Trung tâm tra cứu khi làm lab Kubernetes: lệnh, YAML mẫu đánh dấu field cần sửa, quy trình thuộc lòng có chỉ tiêu thời gian, thẻ "Trước giờ thi" từng chứng chỉ. Ghim mục hay dùng, lọc theo chứng chỉ, chế độ gọn mở cạnh terminal |
 | 🃏 Flashcards | **174 thẻ** (84 Kubernetes + 90 System Programming), spaced repetition (Lại/Khó/Tốt/Dễ), phím tắt Space + 1–4 |
 | ✅ Trắc nghiệm | **220 câu** (110 Kubernetes + 110 System Programming) có giải thích, lọc theo chứng chỉ/domain, chế độ ưu tiên câu sai |
@@ -60,7 +60,7 @@ webapp/
 ├── index.html            # shell: sidebar, topbar, theme boot
 ├── package.json          # {"type": "module"} — khai module ES tường minh cho check-data.mjs
 ├── build-content.sh      # copy markdown + ảnh từ repo vào content/ (dùng bởi dev.sh, CI)
-├── check-data.mjs        # kiểm 23 bất biến dữ liệu (id trùng, link hỏng, số lượng…)
+├── check-data.mjs        # kiểm 28 bất biến dữ liệu (id trùng, link hỏng, số lượng…)
 ├── css/style.css         # design system (light/dark, components)
 ├── js/app.js             # hash router + theme + sidebar mobile
 ├── js/lib/
@@ -74,6 +74,7 @@ webapp/
 │   ├── meta.js, certs.js, roadmap.js, docs-index.js, …
 │   ├── sysprog-roadmap-part*.js, sysprog-flashcards.js,
 │   │   sysprog-questions-part*.js   # dữ liệu lĩnh vực System Programming
+│   ├── k8sbook-roadmap-part*.js, k8sbook-crossref.js  # sách Kubernetes in Action
 │   └── …                 # roadmap-part*, questions, flashcards, commands, labs (Kubernetes)
 └── js/views/             # dashboard, certs, roadmap, docs, commands,
                           # flashcards, quiz, exam, labs

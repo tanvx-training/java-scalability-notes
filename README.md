@@ -88,7 +88,8 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 | [`CKAD/CKAD-Cheat-Sheet.md`](./CKAD/CKAD-Cheat-Sheet.md) | Tra cứu nhanh lệnh & YAML mẫu theo 20 chủ đề |
 | [`CKA/`](./CKA/), [`CKS/`](./CKS/) | Study guide + cheat sheet cho CKA (quản trị cluster) và CKS (bảo mật) |
 | [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt System Programming Coursebook (UIUC CS 241), 18 chương, CC BY 4.0 |
-| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability): lộ trình tương tác (4 giáo trình, 204 mục), thư viện tài liệu (35 tài liệu), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
+| [`k8s-ebook/`](./k8s-ebook/) | Bản dịch tiếng Việt *Kubernetes in Action*, ấn bản 2 (Marko Lukša, Manning) — 17 chương, 184 hình. Đọc trong app ở lĩnh vực Kubernetes. |
+| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability): lộ trình tương tác (5 giáo trình, 234 mục), thư viện tài liệu (52 tài liệu), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
 
 ### Chạy local
 
