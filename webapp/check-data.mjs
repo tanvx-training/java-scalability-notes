@@ -197,6 +197,18 @@ await check("k8sbookCrossref trỏ tới tuần và tài liệu có thật", () 
 });
 
 // N2 — merge phải NỐI vào resources, không ghi đè.
+//
+// Khẳng định định danh đối tượng (raw !== now) đứng trước hai vòng kiểm nội
+// dung vì lý do sau: import() trong cùng một tiến trình Node trả về CÙNG MỘT
+// module instance cho cùng một đường dẫn, nên `rawWeeks` (nạp trực tiếp từ
+// *-roadmap-part*.js) và `tracks` (nạp qua roadmap.js) có thể trỏ tới đúng
+// một object tuần. Nếu withBookRefs mutate tại chỗ (`w.resources.push(...);
+// return w;`) thay vì trả tuần mới, "tuần thô" bị sửa lây theo — hai vòng
+// kiểm nội dung bên dưới khi đó so sánh một object với chính nó và luôn
+// xanh, im lặng vô hiệu hoá N2. Đây là bản sao chính xác lớp lỗi mà N1 (tuần
+// không tồn tại) và N3 ở Task 3 (bảng kỳ vọng bỏ sót key) được sinh ra để
+// chặn: một chỗ hổng khiến bất biến trông như đang chạy nhưng không còn bắt
+// được gì.
 await check("Merge crossref giữ nguyên resource gốc và thêm đủ chip sách", () => {
   const merged = new Map(
     tracks.flatMap((t) => t.weeks).map((w) => [w.id, w]));
@@ -205,6 +217,10 @@ await check("Merge crossref giữ nguyên resource gốc và thêm đủ chip s�
     const raw = rawWeeks.get(weekId);
     const now = merged.get(weekId);
     if (!raw || !now) continue; // N1 đã báo
+    if (raw === now) {
+      bad.push(`tuần "${weekId}": withBookRefs trả về chính đối tượng gốc (mutate tại chỗ) — N2 mất hiệu lực`);
+      continue;
+    }
     for (const r of raw.resources ?? []) {
       if (!(now.resources ?? []).some((x) => x.href === r.href)) {
         bad.push(`tuần "${weekId}" mất resource gốc "${r.href}"`);
