@@ -69,18 +69,20 @@ export function render(root) {
   const ex = examStats();
   const has = (m) => moduleAllowed(fieldKey, m);
 
+  const fieldNames = FIELD_ORDER.map((id) => FIELDS[id].label).join(", ");
+
   const page = h("div", { class: "page" },
     h("div", { class: "hero" },
       h("h1", {}, "📚 DevPrep — học, ôn tập và luyện thi"),
       h("p", {},
-        "Ba lĩnh vực: Kubernetes & chứng chỉ, Lập trình hệ thống, Java & Spring Boot Scalability. ",
+        `${FIELD_ORDER.length} lĩnh vực: ${fieldNames}. `,
         "Chọn lĩnh vực ở thanh bên để đổi nội dung. Tiến độ được lưu ngay trên trình duyệt của bạn."),
       h("div", { class: "flex flex-wrap", style: "margin-top:16px" },
         has("roadmap") ? h("a", { class: "btn btn-primary", href: "#/roadmap" }, "🗺️ Bắt đầu lộ trình") : null,
         has("exam") ? h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử ngay") : null,
         h("a", { class: "btn", href: "#/docs" }, "📚 Đọc tài liệu"))));
 
-  // Dải tổng quan 3 lĩnh vực
+  // Dải tổng quan mọi lĩnh vực (số lượng & thứ tự lấy từ FIELD_ORDER, không hardcode)
   const overview = h("div", { class: "grid grid-3", style: "margin-bottom:22px" });
   for (const id of FIELD_ORDER) {
     const f = FIELDS[id];
