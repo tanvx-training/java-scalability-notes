@@ -32,6 +32,8 @@ const EXPECTED = {
     "questions:kubernetes": 110,
     // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.
     "docs:java": 10,
+    // Lĩnh vực Spring Security — 21 chương Spring Security in Action
+    "docs:spring-security": 21,
   },
 };
 
