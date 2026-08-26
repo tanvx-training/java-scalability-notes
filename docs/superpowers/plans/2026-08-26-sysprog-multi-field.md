@@ -867,6 +867,7 @@ EOF
 ### Task 5: Sidebar sinh từ registry + bộ chọn lĩnh vực
 
 **Files:**
+- Create: `webapp/js/lib/field.js`
 - Modify: `webapp/index.html:38-60` (khối `<nav class="nav">`)
 - Modify: `webapp/js/app.js`
 - Modify: `webapp/css/style.css` (thêm style bộ chọn lĩnh vực)
@@ -1108,6 +1109,7 @@ EOF
 **Files:**
 - Modify: `webapp/js/data/docs-index.js`
 - Modify: `webapp/js/views/docs.js:1-62`
+- Modify: `webapp/js/data/fields.js` (thêm `"docs"` vào `modules` của `sysprog` — Step 6)
 - Modify: `webapp/check-data.mjs` (bảng kỳ vọng)
 
 **Interfaces:**
@@ -1454,6 +1456,7 @@ EOF
 **Files:**
 - Modify: `webapp/js/views/dashboard.js`
 - Modify: `webapp/js/views/roadmap.js:1-66`
+- Modify: `webapp/css/style.css` (thêm `.card-active` — Step 5)
 
 **Interfaces:**
 - Consumes: `currentField()` từ `app.js`; `getTracks`, `getFlashcards`, `getQuestions`, `getDocs` từ `index.js`; `FIELDS`, `FIELD_ORDER`, `moduleAllowed` từ `fields.js`.
@@ -2033,7 +2036,6 @@ EOF
 
 **Files:**
 - Create: `webapp/js/data/sysprog-flashcards.js`
-- Modify: `webapp/js/data/flashcards.js` (không đổi nội dung — chỉ xác nhận export giữ nguyên)
 - Modify: `webapp/js/data/index.js` (gộp nguồn flashcard)
 - Modify: `webapp/js/views/flashcards.js`
 - Modify: `webapp/js/data/fields.js` (thêm `"flashcards"`)
