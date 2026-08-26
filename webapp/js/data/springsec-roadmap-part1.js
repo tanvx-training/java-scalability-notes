@@ -194,14 +194,14 @@ export const springsecWeeksPart1 = [
       },
       {
         id: "ss-w4-2",
-        text: "Các bộ lọc Spring Security cung cấp sẵn",
+        text: "Kế thừa lớp trừu tượng của Spring Security để viết bộ lọc",
         lesson: `**Mục tiêu.** Biết khi nào nên kế thừa một lớp trừu tượng của Spring Security thay vì triển khai thẳng giao diện \`Filter\`.
 
-**Đọc.** [§5.5 Các triển khai bộ lọc do Spring Security cung cấp](#/docs/springsec-05) — mục ngắn: \`GenericFilterBean\`, \`OncePerRequestFilter\`, Đoạn mã 5.9 và ba gạch đầu dòng quan sát ở cuối. Đọc xong thì quay lại danh sách bộ lọc dựng sẵn ở §5.1 để đối chiếu.
+**Đọc.** [§5.5 Các triển khai bộ lọc do Spring Security cung cấp](#/docs/springsec-05) — mục ngắn, đọc trọn vẹn: \`GenericFilterBean\`, \`OncePerRequestFilter\`, Đoạn mã 5.9 (viết lại bộ lọc ghi nhật ký của §5.3), và ba gạch đầu dòng quan sát ở cuối. Chú ý gạch cuối cùng, về yêu cầu bất đồng bộ và yêu cầu điều phối lỗi.
 
-**Bẫy.** Đọc tên mục rồi trông đợi một bảng kê mọi bộ lọc Spring Security có. §5.5 nói về các **lớp trừu tượng để bạn kế thừa**, không phải danh mục bộ lọc; muốn xem tên vài bộ lọc dựng sẵn thì §5.1 mới là chỗ có, với \`BasicAuthenticationFilter\`, \`CsrfFilter\` và \`CorsFilter\`. Bẫy thứ hai: kế thừa \`GenericFilterBean\` theo quán tính. Tác giả nói thẳng ông đã thấy quá nhiều lập trình viên làm vậy cho những tính năng chẳng cần gì thêm, và khuyên giữ triển khai đơn giản nhất có thể.
+**Bẫy.** Tin rằng một bộ lọc đã nằm trong chuỗi thì chạy đúng một lần cho mỗi yêu cầu. §5.5 nói thẳng: khi bạn thêm một bộ lọc vào chuỗi, **framework không đảm bảo nó chỉ được gọi duy nhất một lần** — đó chính là lý do \`OncePerRequestFilter\` tồn tại, và là lý do bộ lọc ghi nhật ký ở §5.3 có thể ghi trùng cùng một yêu cầu. Bẫy thứ hai là chọn nhầm lớp cha: kế thừa \`GenericFilterBean\` theo quán tính. Tác giả nói ông đã thấy quá nhiều lập trình viên làm vậy cho những tính năng chẳng đòi hỏi thêm gì, và khi được hỏi tại sao thì chính họ cũng không biết.
 
-**Tự kiểm tra.** Tên gọi \`OncePerRequestFilter\` bảo đảm điều gì mà một \`Filter\` thường không bảo đảm? Và theo mặc định, nó có được áp dụng cho các yêu cầu bất đồng bộ không?`,
+**Tự kiểm tra.** Khi kế thừa \`OncePerRequestFilter\`, bạn ghi đè phương thức nào thay cho \`doFilter()\`? Và nếu muốn một bộ lọc đã nằm trong chuỗi bỏ qua một số yêu cầu nhất định, §5.5 chỉ bạn ghi đè phương thức nào?`,
       },
       {
         id: "ss-w4-3",
