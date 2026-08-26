@@ -1,5 +1,8 @@
-// Lộ trình học đa track (CKAD / CKA / CKS) — giáo trình tương tác theo tuần:
-// mỗi mục là một bài học chi tiết (mở/đóng được), tiến độ lưu localStorage.
+// Lộ trình học đa track — nay là 6 track thuộc 3 lĩnh vực: CKAD, CKA, CKS và đọc
+// Kubernetes in Action (Kubernetes), đọc System Programming Coursebook (Lập trình
+// hệ thống), đọc Spring Security in Action (Spring Security) — giáo trình tương
+// tác theo tuần: mỗi mục là một bài học chi tiết (mở/đóng được), tiến độ lưu
+// localStorage.
 
 import { h, pageHead, inlineMd, mdInto } from "../lib/ui.js";
 import { store } from "../lib/store.js";
