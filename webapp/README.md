@@ -1,6 +1,6 @@
 # 📚 DevPrep — Học · Ôn tập · Luyện thi
 
-Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một nền tảng học đa lĩnh vực: **Kubernetes & chứng chỉ** (CKAD, CKA, CKS), **Lập trình hệ thống** (bản dịch tiếng Việt System Programming Coursebook, UIUC CS 241) và **Java & Spring Boot Scalability**. Một bộ chọn lĩnh vực ở sidebar chuyển toàn bộ giao diện — nav, lộ trình, tài liệu, flashcards, trắc nghiệm — sang đúng nội dung của lĩnh vực đang chọn.
+Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một nền tảng học đa lĩnh vực: **Kubernetes & chứng chỉ** (CKAD, CKA, CKS, bản dịch tiếng Việt *Kubernetes in Action*), **Lập trình hệ thống** (bản dịch tiếng Việt System Programming Coursebook, UIUC CS 241) và **Java & Spring Boot Scalability**. Một bộ chọn lĩnh vực ở sidebar chuyển toàn bộ giao diện — nav, lộ trình, tài liệu, flashcards, trắc nghiệm — sang đúng nội dung của lĩnh vực đang chọn.
 
 ## Tính năng
 
@@ -34,7 +34,7 @@ Bản ghi Kubernetes không khai trường `field` tường minh — được co
 ./webapp/dev.sh        # http://localhost:8888 (cổng tùy chọn: ./webapp/dev.sh 3000)
 ```
 
-Script gọi `build-content.sh` để copy toàn bộ markdown của repo (`CKAD/`, `CKA/`, `CKS/`, `System_Programming_VI/`, các bài `Chủ đề *`) và ảnh minh họa vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn ở repo) rồi chạy `python3 -m http.server`.
+Script gọi `build-content.sh` để copy toàn bộ markdown của repo (`CKAD/`, `CKA/`, `CKS/`, `System_Programming_VI/`, `k8s-ebook/`, các bài `Chủ đề *`) và ảnh minh họa vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn ở repo) rồi chạy `python3 -m http.server`.
 
 ## Deploy GitHub Pages
 

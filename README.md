@@ -79,7 +79,7 @@ Thư mục [`images/`](./images/) — 10 hình được nhúng đúng ngữ cả
 
 ## 📚 DevPrep — nền tảng học đa lĩnh vực
 
-Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook** và web app **DevPrep** để học/ôn tập/thi thử cả ba lĩnh vực:
+Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action** và web app **DevPrep** để học/ôn tập/thi thử cả ba lĩnh vực:
 
 | Thành phần | Mô tả |
 |---|---|
