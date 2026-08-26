@@ -33,7 +33,7 @@ export const k8sbookWeeksPart1 = [
 
 **Bẫy.** Nghĩ container là "máy ảo nhẹ". Container **không có kernel riêng** — mọi container trên một máy dùng chung kernel của host. Đó vừa là lý do nó nhẹ, vừa là lý do ranh giới bảo mật của nó yếu hơn máy ảo, và là lý do bạn không chạy được container Linux trên kernel Windows mà không có một máy ảo ở giữa.
 
-**Tự kiểm tra.** Nếu hai container trên cùng một node dùng chung kernel, điều gì ngăn tiến trình trong container A nhìn thấy tiến trình của container B?`,
+**Tự kiểm tra.** Mọi container trên một máy đều dùng chung kernel của host. Theo §2.1, ranh giới đó gây ra hai bất lợi — một về bảo mật, một về khả năng đem image sang máy khác chạy — và vì sao máy ảo ít dính cả hai?`,
       },
       {
         id: "kb-w1-2",
