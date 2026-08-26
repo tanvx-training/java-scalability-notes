@@ -20,7 +20,7 @@ const K8S_ONLY_MODULES = ["certs", "commands", "exam", "labs"];
 const EXPECTED = {
   counts: {
     "docs:sysprog": 18,
-    "roadmap-items:sysprog": 22,
+    "roadmap-items:sysprog": 50,
   },
 };
 

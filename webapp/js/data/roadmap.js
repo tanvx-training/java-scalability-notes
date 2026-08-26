@@ -19,6 +19,7 @@ import { ckaWeeksPart3 } from "./cka-roadmap-part3.js";
 import { cksWeeksPart1 } from "./cks-roadmap-part1.js";
 import { cksWeeksPart2 } from "./cks-roadmap-part2.js";
 import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
+import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 
 export const tracks = [
   {
@@ -56,7 +57,7 @@ export const tracks = [
     name: "Lập trình hệ thống (UIUC CS 241)",
     desc: "Kế hoạch học 10 tuần bám theo giáo trình: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc trong sách, bẫy thường gặp và câu tự kiểm tra.",
     prereq: "Yêu cầu: biết lập trình cơ bản và dùng được terminal Linux. Không cần biết C trước.",
-    weeks: [...sysprogWeeksPart1],
+    weeks: [...sysprogWeeksPart1, ...sysprogWeeksPart2],
   },
 ];
 
