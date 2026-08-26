@@ -158,6 +158,49 @@ await check("Mỗi câu hỏi có 4 lựa chọn, answer hợp lệ, có giải 
   expect(!bad.length, `sai hình dạng: ${bad.map((q) => q.id).join(", ")}`);
 });
 
+// #6b — độ dài lựa chọn không được tố cáo đáp án.
+//
+// Chỉ áp cho ngân hàng sysprog: ngân hàng Kubernetes có sẵn từ trước và không
+// thuộc phạm vi ràng buộc này. Hai luật:
+//   1. Không lựa chọn nào dài quá 1.6 lần lựa chọn dài nhất còn lại.
+//   2. Trên toàn bộ ngân hàng, đáp án đúng là lựa chọn dài nhất ở tối đa 45%
+//      số câu (ngẫu nhiên thuần tuý là 25%; phần dôi ra dành cho những đáp án
+//      thật sự cần thêm mệnh đề bổ nghĩa).
+// Sửa bằng cách rút gọn đáp án đúng (chi tiết chuyển vào `explanation`) hoặc
+// viết phương án nhiễu thành mệnh đề đầy đủ — đừng độn chữ cho dài ra.
+const OPTION_LEN_MAX_RATIO = 1.6;
+const OPTION_LEN_KEY_LONGEST_SHARE = 0.45;
+
+await check("Độ dài lựa chọn không tố cáo đáp án (sysprog)", () => {
+  const bank = questions.filter((q) => fieldOf(q) === "sysprog");
+  if (!bank.length) return SKIP;
+
+  const bad = [];
+  let keyLongest = 0;
+  for (const q of bank) {
+    const len = (q.options ?? []).map((o) => String(o).length);
+    if (len.length < 2) continue;
+    const desc = [...len].sort((a, b) => b - a);
+    const ratio = desc[0] / desc[1];
+    if (ratio > OPTION_LEN_MAX_RATIO) {
+      bad.push(`${q.id}: ${desc[0]} vs ${desc[1]} ký tự = ${ratio.toFixed(2)}×`);
+    }
+    // "Dài nhất" chỉ tính khi đáp án dài nhất một cách duy nhất — hoà thì không
+    // còn là dấu hiệu nhận biết nữa.
+    if (len[q.answer] === desc[0] && len.filter((n) => n === desc[0]).length === 1) {
+      keyLongest++;
+    }
+  }
+  if (bad.length) {
+    throw new Error(
+      `lựa chọn dài quá ${OPTION_LEN_MAX_RATIO}× lựa chọn dài nhì: ${bad.join("; ")}`);
+  }
+
+  const cap = Math.floor(bank.length * OPTION_LEN_KEY_LONGEST_SHARE);
+  expect(keyLongest <= cap,
+    `đáp án đúng là lựa chọn dài nhất ở ${keyLongest}/${bank.length} câu, vượt trần ${cap}`);
+});
+
 // #5 — modules trỏ tới view có thật
 const { FIELDS, FIELD_ORDER, DEFAULT_FIELD, navFor, moduleAllowed } =
   await import("./js/data/fields.js");
