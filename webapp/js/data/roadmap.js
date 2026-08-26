@@ -22,6 +22,7 @@ import { cksWeeksPart2 } from "./cks-roadmap-part2.js";
 import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
 import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
+import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
 
 export const tracks = [
   {
@@ -63,7 +64,7 @@ export const tracks = [
     durationWeeks: 9,
     desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra. Bổ trợ chiều sâu cho ba giáo trình chứng chỉ.",
     prereq: "Yêu cầu: biết dùng terminal Linux và Docker cơ bản. Không cần biết Kubernetes trước.",
-    weeks: [...k8sbookWeeksPart1],
+    weeks: [...k8sbookWeeksPart1, ...k8sbookWeeksPart2],
   },
   {
     id: "sysprog",

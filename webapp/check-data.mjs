@@ -26,7 +26,7 @@ const EXPECTED = {
     // Nội dung Kubernetes có từ trước — chốt luôn để xoá/thiếu bản ghi không
     // âm thầm lọt qua (vd xoá bớt câu hỏi vẫn qua đủ 23 bất biến trước đây).
     "docs:kubernetes": 24,
-    "roadmap-items:kubernetes": 172,
+    "roadmap-items:kubernetes": 184,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
     // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.
