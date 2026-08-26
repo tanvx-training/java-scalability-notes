@@ -25,7 +25,7 @@ const EXPECTED = {
     "questions:sysprog": 110,
     // Nội dung Kubernetes có từ trước — chốt luôn để xoá/thiếu bản ghi không
     // âm thầm lọt qua (vd xoá bớt câu hỏi vẫn qua đủ 23 bất biến trước đây).
-    "docs:kubernetes": 7,
+    "docs:kubernetes": 24,
     "roadmap-items:kubernetes": 154,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
