@@ -21,6 +21,7 @@ const EXPECTED = {
   counts: {
     "docs:sysprog": 18,
     "roadmap-items:sysprog": 50,
+    "flashcards:sysprog": 90,
   },
 };
 
@@ -60,7 +61,7 @@ function dupes(ids) {
 const { DOMAINS, TOPICS } = await import("./js/data/meta.js");
 const { docs } = await import("./js/data/docs-index.js");
 const { tracks } = await import("./js/data/roadmap.js");
-const { flashcards } = await import("./js/data/flashcards.js");
+const { allFlashcards: flashcards } = await import("./js/data/index.js");
 const { questions } = await import("./js/data/questions.js");
 
 const allItems = tracks.flatMap((t) => t.weeks.flatMap((w) => w.items));
@@ -279,6 +280,18 @@ await check("Accessor lọc đúng theo lĩnh vực", async () => {
   expect(api.fieldOfDoc("java-01") === "java", "fieldOfDoc('java-01') phải là java");
   expect(api.fieldOfTrack("ckad") === "kubernetes", "fieldOfTrack('ckad') phải là kubernetes");
   expect(api.fieldOfDoc("khong-ton-tai") === null, "doc id lạ phải trả null");
+});
+
+await check("Flashcard sysprog phân bổ đúng theo chủ đề", () => {
+  const want = { "sp-c": 18, "sp-process": 12, "sp-concurrency": 20,
+                 "sp-deadlock": 10, "sp-memory-ipc": 12, "sp-io": 12, "sp-security": 6 };
+  const got = {};
+  for (const c of flashcards.filter((x) => fieldOf(x) === "sysprog"))
+    got[c.topic] = (got[c.topic] ?? 0) + 1;
+  const bad = Object.entries(want)
+    .filter(([k, v]) => (got[k] ?? 0) !== v)
+    .map(([k, v]) => `${k}: kỳ vọng ${v}, thực tế ${got[k] ?? 0}`);
+  expect(!bad.length, bad.join("; "));
 });
 
 // Bảng kỳ vọng

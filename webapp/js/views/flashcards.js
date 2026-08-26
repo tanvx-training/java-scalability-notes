@@ -3,7 +3,8 @@
 
 import { h, pageHead, inlineMd, codeNode, shuffle } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { flashcards } from "../data/flashcards.js";
+import { getFlashcards, getTopics } from "../data/index.js";
+import { currentField } from "../lib/field.js";
 import { TOPICS } from "../data/meta.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -38,6 +39,8 @@ export function render(root) {
 
 function renderSetup(root) {
   cleanup();
+  const fieldKey = currentField();
+  const flashcards = getFlashcards(fieldKey);
   const page = h("div", { class: "page" });
   const srs = store.get("flash.srs", {});
   const now = Date.now();
@@ -64,10 +67,11 @@ function renderSetup(root) {
   );
 
   // Chọn chủ đề
-  const selected = new Set(Object.keys(TOPICS));
+  const topics = getTopics(fieldKey);
+  const selected = new Set(topics.map(([k]) => k));
   const chipRow = h("div", { class: "chip-row", style: "margin:10px 0 16px" });
   const chips = new Map();
-  for (const [key, t] of Object.entries(TOPICS)) {
+  for (const [key, t] of topics) {
     const count = flashcards.filter((c) => c.topic === key).length;
     if (!count) continue;
     const chip = h("button", { class: "chip on" }, `${t.label} (${count})`);

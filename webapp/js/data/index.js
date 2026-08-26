@@ -8,11 +8,12 @@ import { DOMAINS, TOPICS } from "./meta.js";
 import { docs } from "./docs-index.js";
 import { tracks } from "./roadmap.js";
 import { flashcards } from "./flashcards.js";
+import { sysprogFlashcards } from "./sysprog-flashcards.js";
 import { questions } from "./questions.js";
 
 export const allDocs = docs;
 export const allTracks = tracks;
-export const allFlashcards = flashcards;
+export const allFlashcards = [...flashcards, ...sysprogFlashcards];
 export const allQuestions = questions;
 
 export function fieldOfRecord(rec) {
