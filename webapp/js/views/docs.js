@@ -145,6 +145,7 @@ function fixRelativePaths(prose, docFile) {
   const dir = docFile.slice(0, docFile.lastIndexOf("/") + 1);
   const base = new URL(dir, document.baseURI);
   prose.querySelectorAll("img").forEach((img) => {
+    img.loading = "lazy";
     const src = img.getAttribute("src") || "";
     if (/^(https?:|data:|\/)/i.test(src)) return;
     img.src = new URL(src, base).href;
