@@ -232,12 +232,46 @@ await check("Mọi DOMAINS/TOPICS khai field hợp lệ", () => {
   expect(!bad.length, bad.join("; "));
 });
 
+await check("field khai rõ (nếu có) phải là lĩnh vực tồn tại", () => {
+  const bad = [];
+  const scan = (arr, label) => {
+    for (const r of arr) {
+      if (r.field !== undefined && r.field !== null && !FIELDS[r.field]) {
+        bad.push(`${label} ${r.id} field="${r.field}" không tồn tại`);
+      }
+    }
+  };
+  scan(docs, "doc");
+  scan(tracks, "track");
+  scan(flashcards, "flashcard");
+  scan(questions, "question");
+  expect(!bad.length, bad.join("; "));
+});
+
 await check("Accessor lọc đúng theo lĩnh vực", async () => {
   const api = await import("./js/data/index.js");
-  const total = api.allQuestions.length;
-  const sum = FIELD_ORDER.reduce((n, f) => n + api.getQuestions(f).length, 0);
-  expect(sum === total, `tổng theo lĩnh vực (${sum}) lệch tổng thật (${total})`);
-  expect(api.getDocs("java").every((d) => d.field === "java"), "getDocs('java') lẫn lĩnh vực khác");
+  const sources = [
+    ["getDocs", api.getDocs, api.allDocs],
+    ["getTracks", api.getTracks, api.allTracks],
+    ["getFlashcards", api.getFlashcards, api.allFlashcards],
+    ["getQuestions", api.getQuestions, api.allQuestions],
+  ];
+  for (const [name, getX, allX] of sources) {
+    const seenAt = new Map(); // id -> lĩnh vực đầu tiên bản ghi xuất hiện
+    let count = 0;
+    for (const f of FIELD_ORDER) {
+      for (const r of getX(f)) {
+        expect(api.fieldOfRecord(r) === f,
+          `${name}("${f}") trả bản ghi ${r.id} nhưng fieldOfRecord(nó)="${api.fieldOfRecord(r)}"`);
+        expect(!seenAt.has(r.id),
+          `${name}: bản ghi ${r.id} xuất hiện ở cả "${seenAt.get(r.id)}" và "${f}"`);
+        seenAt.set(r.id, f);
+        count++;
+      }
+    }
+    expect(count === allX.length,
+      `${name}: tổng theo lĩnh vực (${count}) lệch tổng thật (${allX.length}) — bản ghi bị bỏ sót hoặc trùng`);
+  }
   expect(api.fieldOfRecord({}) === "kubernetes", "bản ghi không có field phải mặc định kubernetes");
   expect(api.fieldOfDoc("java-01") === "java", "fieldOfDoc('java-01') phải là java");
   expect(api.fieldOfTrack("ckad") === "kubernetes", "fieldOfTrack('ckad') phải là kubernetes");
