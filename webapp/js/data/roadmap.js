@@ -28,6 +28,7 @@ import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
 import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
+import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { k8sbookCrossref } from "./k8sbook-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 
@@ -109,7 +110,7 @@ export const tracks = [
     durationWeeks: 9,
     desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra.",
     prereq: "Yêu cầu: biết Java và Spring Boot cơ bản (REST controller, dependency injection). Không cần biết Spring Security trước.",
-    weeks: [...springsecWeeksPart1],
+    weeks: [...springsecWeeksPart1, ...springsecWeeksPart2],
   },
 ];
 
