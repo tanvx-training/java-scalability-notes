@@ -82,8 +82,14 @@ export function render(root) {
         has("exam") ? h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử ngay") : null,
         h("a", { class: "btn", href: "#/docs" }, "📚 Đọc tài liệu"))));
 
-  // Dải tổng quan mọi lĩnh vực (số lượng & thứ tự lấy từ FIELD_ORDER, không hardcode)
-  const overview = h("div", { class: "grid grid-3", style: "margin-bottom:22px" });
+  // Dải tổng quan mọi lĩnh vực (số lượng & thứ tự lấy từ FIELD_ORDER, không hardcode).
+  // Cột dùng auto-fit/minmax thay vì grid-N cố định: số ô tự co theo FIELD_ORDER.length,
+  // nên thêm một lĩnh vực thứ năm (hay hơn nữa) sẽ không còn làm thẻ cuối rơi xuống
+  // hàng riêng bỏ trống ô như khi còn hardcode grid-3.
+  const overview = h("div", {
+    class: "grid",
+    style: "margin-bottom:22px;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr))",
+  });
   for (const id of FIELD_ORDER) {
     const f = FIELDS[id];
     const parts = [`${getDocs(id).length} tài liệu`];
@@ -115,7 +121,14 @@ export function render(root) {
       ? statCard(ex.best == null ? "—" : `${ex.best}%`, "Điểm thi thử tốt nhất", "#/exam", ex.count ? `${ex.count} lượt thi` : "chưa thi lần nào")
       : null,
   ].filter(Boolean);
-  if (has("roadmap")) page.append(h("div", { class: "grid grid-4" }, cards));
+  // Số cột co theo cards.length (auto-fit/minmax) — lĩnh vực chỉ có roadmap (chưa có
+  // flashcards/quiz/exam, vd spring-security) chỉ sinh ra 1 thẻ và sẽ không còn lọt
+  // thỏm trong lưới 4 cột cố định.
+  if (has("roadmap")) {
+    page.append(h("div",
+      { class: "grid", style: "grid-template-columns:repeat(auto-fit, minmax(200px, 1fr))" },
+      cards));
+  }
 
   // Khu vực học tập — chỉ những module lĩnh vực này có
   const areas = [
