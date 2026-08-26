@@ -71,9 +71,9 @@ export const sysprogWeeksPart2 = [
 
 **Đọc.** [§7.2 Biến điều kiện](#/docs/sysprog-07) — đọc kỹ định nghĩa spurious wakeup. Sau đó đọc [§17.11 Câu chuyện kỳ lạ về những lần thức dậy giả](#/docs/sysprog-17) để hiểu vì sao hiện tượng này tồn tại có chủ đích, không phải bug của hệ điều hành.
 
-**Bẫy.** §17.11 chỉ ra hai lý do bị bỏ sót: (1) nếu \`signal\` được gọi mà không giữ mutex, có thể xảy ra một cách xen kẽ khiến \`wait\` bỏ lỡ tín hiệu dù về mặt kỹ thuật API vẫn "đúng" theo đặc tả; (2) một số hệ thống thời gian thực cố tình đánh thức sai để tránh chi phí đồng bộ hoá bên trong bản thân condition variable. Dùng \`if\` thay vì \`while\` giả định tín hiệu luôn đáng tin — sai cả hai lý do trên.
+**Bẫy.** §7.2 giải thích spurious wakeup không phải lỗi vặt: trên hệ nhiều CPU, kernel có thể không chắc một yêu cầu đánh thức đã bị mất, nên đánh thức thread để nó tự kiểm tra lại điều kiện — \`if\` bỏ qua đúng cơ chế an toàn này. Về việc cần mutex, §17.11 nêu hai lý do: (1) nếu condition variable tự lo đồng bộ hoá nội bộ, ta phải trả chi phí đó lần nữa dù đã có sẵn một mutex cho phần còn lại của mã; (2) với hệ thời gian thực, mutex phải được khoá TRƯỚC khi gọi \`pthread_cond_signal\`/\`broadcast\` để thread chờ có ưu tiên cao nhất được chạy trước.
 
-**Tự kiểm tra.** Theo Bảng 17.1 trong §17.11, tại sao gọi \`pthread_cond_signal\` mà KHÔNG giữ mutex trước đó có thể khiến thread đang chờ bỏ lỡ tín hiệu, dù đúng thứ tự signal-rồi-mới-wait?`,
+**Tự kiểm tra.** Theo §17.11, nếu một ứng dụng thời gian thực gọi \`pthread_cond_signal\` mà KHÔNG giữ mutex trước đó, điều gì có thể xảy ra với thứ tự các thread đang chờ được đánh thức?`,
       },
       {
         id: "sp-w6-6",
@@ -103,13 +103,13 @@ export const sysprogWeeksPart2 = [
       {
         id: "sp-w7-1",
         text: "Counting semaphore: sem_wait/sem_post, khác mutex chỗ nào",
-        lesson: `**Mục tiêu.** Giải thích đúng hai khác biệt giữa semaphore và mutex (ai được wait/post, và ai được unlock), và tự cài đặt được một counting semaphore tối giản bằng condition variable + mutex.
+        lesson: `**Mục tiêu.** Giải thích đúng hai khác biệt cốt lõi giữa semaphore và mutex (ai được gọi wait/post, và semaphore nào an toàn dùng trong signal handler), và tự cài đặt được một counting semaphore tối giản bằng condition variable + mutex.
 
-**Đọc.** [§7.5.1 Semaphore](#/docs/sysprog-07) và [§7.6 Cài đặt counting semaphore](#/docs/sysprog-07) — đọc kỹ cấu trúc \`sem_t\` (count + mutex + cv) và hai hàm \`sem_post\`/\`sem_wait\`.
+**Đọc.** [§7.1.5 Semaphore](#/docs/sysprog-07) — đọc kỹ đoạn "wait và post có thể được gọi từ các thread khác nhau" và mục "Tính an toàn với tín hiệu". Sau đó [§7.6 Cài đặt counting semaphore](#/docs/sysprog-07) — đọc kỹ cấu trúc \`sem_t\` (count + mutex + cv) và hai hàm \`sem_post\`/\`sem_wait\`.
 
-**Bẫy.** Sách giải thích vì sao không cài đặt semaphore trực tiếp bằng cách cẩu thả: "Chúng ta không muốn gọi \`malloc\` trong khi cài đặt một primitive, nếu không có thể bị deadlock!" — một primitive đồng bộ hoá không được phép tự mình phụ thuộc vào một primitive khác (heap allocator) có thể đang bị khoá bởi chính thread gọi nó. Ngoài ra, không như mutex (chỉ thread đã lock mới được unlock), \`sem_wait\`/\`sem_post\` có thể được gọi từ các thread khác nhau — đây là lý do semaphore dùng được cho producer-consumer còn mutex thì không.
+**Bẫy.** §7.1.5 nói rõ: "sem_post là một trong số ít hàm có thể dùng đúng đắn bên trong một signal handler; pthread_mutex_unlock thì không." Coi semaphore chỉ là "mutex có bộ đếm" nên tưởng hai thứ hoán đổi được cho nhau là sai — mutex có chủ sở hữu (chỉ thread đã lock mới unlock được), còn semaphore thì "một thread có thể mở khoá từ một thread khác". §7.6 cảnh báo thêm: cài đặt semaphore không được gọi \`malloc\` bên trong, "nếu không có thể bị deadlock!"
 
-**Tự kiểm tra.** Trong cài đặt \`sem_wait\` ở §7.6, vì sao vòng lặp kiểm tra \`while (s->count == 0)\` chứ không phải \`if\`, giống hệt lý do ở condition variable?`,
+**Tự kiểm tra.** Theo §7.1.5, vì sao gọi \`sem_post\` bên trong một signal handler là an toàn, trong khi gọi \`pthread_mutex_unlock\` ở đó lại không an toàn? Đặc điểm nào của mutex (mà semaphore không có) gây ra sự khác biệt này?`,
       },
       {
         id: "sp-w7-2",
@@ -208,7 +208,7 @@ export const sysprogWeeksPart2 = [
 
 **Đọc.** [§9.2 mmap](#/docs/sysprog-09) — đọc kỹ 9.2.1 (định nghĩa các cờ) và 9.2.3 (giao tiếp bằng mmap giữa cha–con qua \`MAP_ANONYMOUS\`).
 
-**Bẫy.** \`MAP_PRIVATE\` "chỉ hiển thị với chính process đó" — ghi vào vùng nhớ này KHÔNG đồng bộ trở lại file trên đĩa và KHÔNG được process khác nhìn thấy, dù ánh xạ ban đầu trỏ tới cùng một file. Ai đó cấp phát \`mmap(..., MAP_PRIVATE, fd, 0)\` rồi mong việc ghi vào bộ nhớ đó "tự lưu xuống file" sẽ ngạc nhiên khi file trên đĩa không hề đổi. Ngược lại, \`MAP_SHARED\` đồng bộ với file VÀ chia sẻ được giữa các process — nhưng \`PROT_WRITE\` chỉ hợp lệ nếu fd bên dưới cũng được mở với quyền ghi.
+**Bẫy.** §9.2.1 ghi rõ về \`PROT_WRITE\`: file descriptor bên dưới "phải được mở với quyền ghi, hoặc phải cung cấp một ánh xạ riêng tư (private mapping)" — tức \`MAP_PRIVATE\` cho phép ghi vào vùng nhớ ngay cả khi fd chỉ mở read-only, đúng vì sách mô tả nó "chỉ hiển thị với chính process đó" chứ không phải \`MAP_SHARED\` vốn "sẽ được đồng bộ với đối tượng file bên dưới". Ai cấp \`mmap(..., MAP_PRIVATE, fd, 0)\` rồi mong một process khác cũng mmap file đó nhìn thấy thay đổi của mình sẽ thất vọng — đó chính xác là điều "chỉ hiển thị với chính process đó" loại trừ.
 
 **Tự kiểm tra.** Trong ví dụ giao tiếp cha–con ở §9.2.3, tại sao phải dùng \`MAP_ANONYMOUS\` kèm \`fd = -1\` thay vì mmap một file thật, khi ta chỉ cần chia sẻ 100 số nguyên tạm thời giữa hai process?`,
       },
@@ -336,7 +336,7 @@ export const sysprogWeeksPart2 = [
 
 **Đọc.** [§12.3 Quyền và các bit](#/docs/sysprog-12) — đọc kỹ 12.3.3 (umask), 12.3.4 (setuid, phân biệt \`getuid\`/\`geteuid\`) và 12.3.5 (sticky bit).
 
-**Bẫy.** Bit setuid không đổi "ai đang chạy chương trình" (\`getuid\` vẫn trả về uid thật) mà chỉ đổi "effective user id" (\`geteuid\`) dùng để kiểm tra quyền lúc chạy — \`sudo\` chính là ví dụ kinh điển: \`-r-s--x--x root wheel .../sudo\`, một binary bất kỳ user nào cũng thực thi được (\`x\` cho other) nhưng chạy với quyền root nhờ bit \`s\`. Nhầm lẫn phổ biến: viết code kiểm tra quyền bằng \`getuid() == 0\` thay vì \`geteuid() == 0\` sẽ bỏ lỡ chính xác trường hợp setuid mà cơ chế này được thiết kế để phục vụ.
+**Bẫy.** Bit setuid không đổi "ai đang chạy chương trình" (\`getuid\` vẫn trả về uid thật) mà chỉ đổi "effective user id" (\`geteuid\`) dùng để kiểm tra quyền lúc chạy — \`sudo\` chính là ví dụ kinh điển: \`-r-s--x--x root wheel .../sudo\`, một binary bất kỳ user nào cũng thực thi được (\`x\` cho other) nhưng chạy với quyền root nhờ bit \`s\`. Hệ quả trực tiếp: sách nói rõ hai hàm phục vụ hai mục đích khác nhau — kiểm tra \`geteuid()\` để biết process đang thực sự hành động với quyền nào, còn kiểm tra \`getuid()\` để đảm bảo chỉ người dùng thật là root mới chạy được mã, bất kể setuid — dùng nhầm hàm cho mục đích kia sẽ vô hiệu hoá đúng cơ chế mà setuid được thiết kế để phục vụ.
 
 **Tự kiểm tra.** umask mặc định là 022 (octal). Một tệp được \`open\` với mode 666 (rw cho user/group/other) sẽ có quyền thực tế là bao nhiêu sau khi áp umask? Viết ra dạng octal và dạng \`rwxrwxrwx\`.`,
       },
