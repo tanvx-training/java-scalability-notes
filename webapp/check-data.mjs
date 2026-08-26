@@ -3,10 +3,11 @@
 //   node webapp/check-data.mjs
 //
 // Chạy webapp/build-content.sh webapp/content trước, nếu muốn kiểm cả bất biến
-// #2 (file tài liệu tồn tại trên đĩa). Không có bước này thì #2 được bỏ qua
-// kèm cảnh báo, không tính là lỗi.
+// #2 (file tài liệu tồn tại trên đĩa) và #2b (ảnh trong tài liệu tồn tại trên
+// đĩa). Không có bước này thì #2/#2b được bỏ qua kèm cảnh báo, không tính là
+// lỗi.
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -130,6 +131,45 @@ await check("Mọi docs[].file tồn tại trên đĩa", () => {
   expect(!missing.length, `thiếu file: ${missing.map((d) => d.file).join(", ")}`);
 });
 
+// #2b — Mọi ảnh markdown ![...](...)  trong docs[].file (đã build) phải tồn
+// tại trên đĩa.
+//
+// Không có bất biến này, đổi đích copy ảnh trong build-content.sh sang một
+// thư mục sai vẫn build thoát 0 và #2 cùng 27 bất biến còn lại vẫn xanh —
+// build-content.sh chỉ copy file, không đối chiếu với markdown trỏ tới đâu,
+// nên 184 ảnh vỡ lọt thẳng qua cổng chặn deploy. Cùng lớp lỗi với N1/N2/N3 ở
+// trên: một bước sinh ra ("copy ảnh") không có gì đối chiếu ngược lại dữ
+// liệu mà nó phục vụ.
+//
+// Quy tắc phân giải đường dẫn PHẢI khớp CHÍNH XÁC fixRelativePaths() trong
+// webapp/js/views/docs.js: đường dẫn tương đối resolve theo thư mục chứa
+// chính tệp markdown (không phải theo webapp/ hay theo content/); bỏ qua
+// đường dẫn tuyệt đối ("/...") và http(s):/data: — same regex, cố tình chép
+// lại để hai nơi không lệch nhau.
+const IMG_MD_RE = /!\[[^\]]*\]\(([^)]+)\)/g;
+await check("Mọi ảnh markdown trong docs[].file tồn tại trên đĩa", () => {
+  if (!contentBuilt) {
+    console.log("      (bỏ qua — chưa chạy build-content.sh)");
+    return SKIP;
+  }
+  const bad = [];
+  for (const d of docs) {
+    const full = join(DIR, d.file);
+    if (!existsSync(full)) continue; // #2 đã báo thiếu chính file markdown
+    const text = readFileSync(full, "utf8");
+    const fileDir = dirname(d.file); // vd "content/k8sbook" — theo docs-index, khớp cách fixRelativePaths() cắt docFile
+    for (const m of text.matchAll(IMG_MD_RE)) {
+      const src = m[1].trim();
+      if (/^(https?:|data:|\/)/i.test(src)) continue; // giống hệt điều kiện bỏ qua trong fixRelativePaths()
+      const resolved = join(fileDir, src);
+      if (!existsSync(join(DIR, resolved))) {
+        bad.push(`${d.id}: ảnh "${src}" không tồn tại (kỳ vọng ${resolved})`);
+      }
+    }
+  }
+  expect(!bad.length, `thiếu ${bad.length} ảnh:\n      ${bad.join("\n      ")}`);
+});
+
 // #3 — Link nội bộ trỏ tới doc có thật
 await check("Mọi link #/docs/<id> trỏ tới tài liệu có thật", () => {
   const ids = new Set(docs.map((d) => d.id));
@@ -175,6 +215,37 @@ await check("Link #/docs/<id> trong lộ trình khớp lĩnh vực với track",
     }
   }
   expect(!bad.length, `link khác lĩnh vực:\n      ${bad.join("\n      ")}`);
+});
+
+// #3c — Link #/roadmap/<trackId> phải trỏ tới track có thật.
+//
+// Đợt k8sbook lần này sinh ra 7 chip "Ôn lại: CKAD tuần …" (href
+// "#/roadmap/ckad") trong k8sbook-roadmap-part{1,2}.js — lớp link đầu tiên
+// thuộc dạng #/roadmap/<trackId> trong toàn bộ dữ liệu repo. #3/#3b chỉ quét
+// #/docs/<id>; một trackId gõ sai (vd "#/roadmap/ckadd") không văng lỗi, chỉ
+// khiến router rơi im lặng về trang chọn lộ trình.
+//
+// Viết thành bất biến RIÊNG thay vì nhét vào #3: không gian id ở đây là
+// track id (tracks.map(t => t.id)), khác hẳn doc id mà #3 đối chiếu — gộp
+// chung sẽ làm thông báo lỗi mơ hồ ("id không tồn tại" mà không rõ đang
+// thiếu doc hay thiếu track) và dễ đối chiếu nhầm không gian id.
+await check("Mọi link #/roadmap/<trackId> trỏ tới track có thật", () => {
+  const trackIds = new Set(tracks.map((t) => t.id));
+  const bad = [];
+  const scan = (text, where) => {
+    for (const m of String(text ?? "").matchAll(/#\/roadmap\/([A-Za-z0-9_-]+)/g)) {
+      if (!trackIds.has(m[1])) bad.push(`${where} → #/roadmap/${m[1]}`);
+    }
+  };
+  for (const t of tracks) {
+    for (const w of t.weeks) {
+      for (const r of w.resources ?? []) scan(r.href, `${w.id} resources`);
+      for (const it of w.items) scan(it.lesson, it.id);
+    }
+  }
+  for (const c of flashcards) scan(c.back, `${c.id} back`);
+  for (const q of questions) scan(q.explanation, `${q.id} explanation`);
+  expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
 // N1 — bảng liên kết chéo phải trỏ tới thứ có thật.
