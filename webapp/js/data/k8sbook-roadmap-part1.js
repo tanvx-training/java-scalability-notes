@@ -27,7 +27,7 @@ export const k8sbookWeeksPart1 = [
       {
         id: "kb-w1-1",
         text: "Container khác máy ảo ở đâu, và vì sao khác biệt đó quan trọng",
-        lesson: `**Mục tiêu.** Nói được vì sao khởi động một container nhanh hơn một máy ảo hàng chục lần, và điều đó đánh đổi lấy cái gì về mặt cách ly.
+        lesson: `**Mục tiêu.** Nói được vì sao khởi động một container nhanh hơn một máy ảo, và điều đó đánh đổi lấy cái gì về mặt cách ly.
 
 **Đọc.** [§2.1 Giới thiệu về container](#/docs/k8sbook-02) — đọc kỹ phần so sánh container với máy ảo. Chưa cần đọc §2.2 và §2.3 ở mục này.
 
