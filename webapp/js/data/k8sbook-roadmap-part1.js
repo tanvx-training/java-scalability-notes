@@ -44,7 +44,7 @@ export const k8sbookWeeksPart1 = [
 
 **Bẫy.** Build được image trên máy mình rồi cho rằng cụm cũng chạy được nó. Cụm kéo image từ **registry**, không phải từ ổ đĩa của bạn — image chỉ nằm ở local là node sẽ báo \`ImagePullBackOff\`. Ghi nhớ điều này ngay từ tuần 1, vì tuần 2 bạn sẽ gặp đúng lỗi đó.
 
-**Tự kiểm tra.** Vì sao thứ tự các lệnh trong Dockerfile ảnh hưởng tới tốc độ build lần thứ hai, dù kết quả cuối cùng giống hệt nhau?`,
+**Tự kiểm tra.** \`docker history\` liệt kê layer nào ứng với chỉ thị nào trong Dockerfile của bạn, và vì sao xoá một tệp ở chỉ thị sau không làm image nhỏ đi?`,
       },
       {
         id: "kb-w1-3",
