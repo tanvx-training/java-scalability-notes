@@ -6,6 +6,7 @@
 //   CKA : cka-roadmap-part{1,2,3}.js  (Tuần 1–3 / 4–6 / 7–10) — 55 bài
 //   CKS : cks-roadmap-part{1,2}.js    (Tuần 1–4 / 5–10)       — 44 bài
 //   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
+//   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
 //
 // LƯU Ý: id tuần (w1, cka-w1, sp-w1…) và id mục (w1-1, cka-w1-1, sp-w1-1…)
 // là khóa lưu tiến độ trong localStorage — không được đổi.
@@ -20,6 +21,7 @@ import { cksWeeksPart1 } from "./cks-roadmap-part1.js";
 import { cksWeeksPart2 } from "./cks-roadmap-part2.js";
 import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
 import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
+import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 
 export const tracks = [
   {
@@ -51,6 +53,17 @@ export const tracks = [
     desc: "Bảo mật chuyên sâu: CIS benchmark, hardening, supply chain (Trivy), runtime security (Falco), audit logging.",
     prereq: "Bắt buộc: đang giữ chứng chỉ CKA còn hiệu lực mới được thi.",
     weeks: [...cksWeeksPart1, ...cksWeeksPart2],
+  },
+  {
+    id: "k8sbook",
+    field: "kubernetes",
+    label: "Kubernetes in Action",
+    icon: "📖",
+    name: "Đọc Kubernetes in Action (ấn bản 2)",
+    durationWeeks: 9,
+    desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra. Bổ trợ chiều sâu cho ba giáo trình chứng chỉ.",
+    prereq: "Yêu cầu: biết dùng terminal Linux và Docker cơ bản. Không cần biết Kubernetes trước.",
+    weeks: [...k8sbookWeeksPart1],
   },
   {
     id: "sysprog",
