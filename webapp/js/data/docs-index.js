@@ -627,7 +627,7 @@ export const docs = [
     title: "SSIA 15 — Máy chủ tài nguyên OAuth 2",
     file: "content/springsec/15-trien-khai-mot-may-chu-tai-nguyen-oauth-2.md",
     icon: "🗝️",
-    desc: "JWT tuỳ chỉnh, xác thực token qua cơ chế introspection, và hệ thống đa khách thuê. Mục 15.1 thiếu trong bản PDF gốc.",
+    desc: "JWT tuỳ chỉnh, xác thực token qua cơ chế introspection, và hệ thống đa khách thuê. Bản PDF gốc thiếu cả phần mở đầu Chương 15 lẫn toàn bộ mục 15.1.",
     tags: ["Spring Security in Action", "Resource server", "JWT"],
   },
   {

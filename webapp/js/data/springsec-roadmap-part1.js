@@ -278,7 +278,7 @@ export const springsecWeeksPart1 = [
         text: "Bộ khớp yêu cầu bằng biểu thức chính quy",
         lesson: `**Mục tiêu.** Nhận ra lúc biểu thức đường dẫn hết đủ dùng, và viết được một bộ khớp regex cho quy tắc nhìn vào nhiều biến đường dẫn cùng lúc.
 
-**Đọc.** [§8.3 Sử dụng biểu thức chính quy với bộ khớp yêu cầu](#/docs/springsec-08) — bắt đầu từ ví dụ \`/email/{email:...}\` viết regex ngay bên trong biểu thức đường dẫn, rồi sang dự án \`ssia-ch8-ex6\` với endpoint \`/video/{country}/{language}\` và Đoạn mã 8.13. Chạy thử cả hai người dùng John và Jane trên vài tổ hợp quốc gia — ngôn ngữ.
+**Đọc.** [§8.3 Sử dụng biểu thức chính quy với bộ khớp yêu cầu](#/docs/springsec-08) — bắt đầu từ ví dụ \`/email/{email:...}\` viết regex ngay bên trong biểu thức đường dẫn, rồi sang endpoint \`/video/{country}/{language}\` và Đoạn mã 8.13 (nguồn tự mâu thuẫn về tên dự án ví dụ ở đoạn này — §8.3 gán \`/video\` cho cả \`ssia-ch8-ex5\` lẫn \`ssia-ch8-ex6\` ở hai chỗ khác nhau, còn \`/email\` mới là ví dụ thực sự nằm trong \`ssia-ch8-ex6\`; đừng lấy tên dự án làm chuẩn). Chạy thử cả hai người dùng John và Jane trên vài tổ hợp quốc gia — ngôn ngữ.
 
 **Bẫy.** Dùng regex ở mọi chỗ vì nó mạnh hơn. Sách nói thẳng điểm yếu lớn nhất của regex là khó đọc, và phần lớn trường hợp biểu thức đường dẫn là đủ; chỉ chuyển sang regex khi quy tắc phải soi nhiều khuôn mẫu đường dẫn và nhiều biến đường dẫn cùng lúc. Bẫy thứ hai: tưởng yêu cầu không khớp bộ khớp sẽ rơi vào 404. Trong ví dụ \`/email/{email:...}\`, gọi với \`jane@example.net\` trả về **401 Unauthorized** — nó không khớp quy tắc \`permitAll()\` nên rơi xuống \`anyRequest().denyAll()\` đứng sau.
 
