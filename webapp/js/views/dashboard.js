@@ -2,14 +2,14 @@
 
 import { h } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { tracks } from "../data/roadmap.js";
-import { flashcards } from "../data/flashcards.js";
-import { questions } from "../data/questions.js";
+import { getTracks, getFlashcards, getQuestions, getDocs } from "../data/index.js";
+import { FIELDS, FIELD_ORDER, moduleAllowed } from "../data/fields.js";
 import { labs } from "../data/labs.js";
+import { currentField } from "../lib/field.js";
 
-function roadmapStats() {
+function roadmapStats(fieldKey) {
   const checked = store.get("roadmap.checked", {});
-  const per = tracks.map((t) => {
+  const per = getTracks(fieldKey).map((t) => {
     const items = t.weeks.flatMap((w) => w.items);
     const done = items.filter((it) => checked[it.id]).length;
     return { label: t.label, done, total: items.length, pct: items.length ? Math.round((done / items.length) * 100) : 0 };
@@ -19,29 +19,31 @@ function roadmapStats() {
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0, per };
 }
 
-function flashStats() {
+function flashStats(fieldKey) {
   const srs = store.get("flash.srs", {});
   const now = Date.now();
+  const cards = getFlashcards(fieldKey);
   let due = 0, learned = 0;
-  for (const c of flashcards) {
+  for (const c of cards) {
     const e = srs[c.id];
     if (!e) continue;
     learned++;
     if (e.due <= now) due++;
   }
-  return { due, learned, fresh: flashcards.length - learned, total: flashcards.length };
+  return { due, learned, fresh: cards.length - learned, total: cards.length };
 }
 
-function quizStats() {
+function quizStats(fieldKey) {
   const stats = store.get("quiz.stats", {});
+  const qs = getQuestions(fieldKey);
   let seen = 0, correct = 0;
-  for (const q of questions) {
+  for (const q of qs) {
     const s = stats[q.id];
     if (!s || !s.seen) continue;
     seen++;
     if (s.correct > 0) correct++;
   }
-  return { seen, correct, total: questions.length, acc: seen ? Math.round((correct / seen) * 100) : null };
+  return { seen, correct, total: qs.length, acc: seen ? Math.round((correct / seen) * 100) : null };
 }
 
 function examStats() {
@@ -59,50 +61,77 @@ function statCard(num, label, href, extra) {
 }
 
 export function render(root) {
-  const rm = roadmapStats();
-  const fl = flashStats();
-  const qz = quizStats();
+  const fieldKey = currentField();
+  const field = FIELDS[fieldKey];
+  const rm = roadmapStats(fieldKey);
+  const fl = flashStats(fieldKey);
+  const qz = quizStats(fieldKey);
   const ex = examStats();
+  const has = (m) => moduleAllowed(fieldKey, m);
 
-  root.append(
-    h("div", { class: "page" },
-      h("div", { class: "hero" },
-        h("h1", {}, "☸️ KubePrep — luyện thi chứng chỉ Kubernetes"),
-        h("p", {},
-          "Học theo lộ trình, tra cứu tài liệu và lệnh kubectl, ghi nhớ bằng flashcards, ",
-          "kiểm tra kiến thức với trắc nghiệm, thi thử có bấm giờ và labs mô phỏng đề thật. ",
-          "Tiến độ được lưu ngay trên trình duyệt của bạn."),
-        h("div", { class: "flex flex-wrap", style: "margin-top:16px" },
-          h("a", { class: "btn btn-primary", href: "#/roadmap" }, "🗺️ Bắt đầu lộ trình"),
-          h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử ngay"),
-          h("a", { class: "btn", href: "#/docs" }, "📚 Đọc tài liệu"),
-        )
-      ),
+  const page = h("div", { class: "page" },
+    h("div", { class: "hero" },
+      h("h1", {}, "📚 DevPrep — học, ôn tập và luyện thi"),
+      h("p", {},
+        "Ba lĩnh vực: Kubernetes & chứng chỉ, Lập trình hệ thống, Java & Spring Boot Scalability. ",
+        "Chọn lĩnh vực ở thanh bên để đổi nội dung. Tiến độ được lưu ngay trên trình duyệt của bạn."),
+      h("div", { class: "flex flex-wrap", style: "margin-top:16px" },
+        has("roadmap") ? h("a", { class: "btn btn-primary", href: "#/roadmap" }, "🗺️ Bắt đầu lộ trình") : null,
+        has("exam") ? h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử ngay") : null,
+        h("a", { class: "btn", href: "#/docs" }, "📚 Đọc tài liệu"))));
 
-      h("div", { class: "grid grid-4" },
-        statCard(`${rm.pct}%`, "Lộ trình hoàn thành", "#/roadmap",
-          rm.per.map((p) => `${p.label} ${p.pct}%`).join(" · ")),
-        statCard(String(fl.due), "Flashcard đến hạn ôn", "#/flashcards", `${fl.fresh} thẻ chưa học · ${fl.total} tổng`),
-        statCard(qz.acc == null ? "—" : `${qz.acc}%`, "Độ chính xác trắc nghiệm", "#/quiz", `đã gặp ${qz.seen}/${qz.total} câu`),
-        statCard(ex.best == null ? "—" : `${ex.best}%`, "Điểm thi thử tốt nhất", "#/exam", ex.count ? `${ex.count} lượt thi` : "chưa thi lần nào"),
-      ),
+  // Dải tổng quan 3 lĩnh vực
+  const overview = h("div", { class: "grid grid-3", style: "margin-bottom:22px" });
+  for (const id of FIELD_ORDER) {
+    const f = FIELDS[id];
+    const parts = [`${getDocs(id).length} tài liệu`];
+    const t = getTracks(id).reduce((n, x) => n + x.weeks.flatMap((w) => w.items).length, 0);
+    if (t) parts.push(`${t} bài học`);
+    const c = getFlashcards(id).length;
+    if (c) parts.push(`${c} thẻ`);
+    const q = getQuestions(id).length;
+    if (q) parts.push(`${q} câu hỏi`);
+    overview.append(
+      h("div", { class: `card${id === fieldKey ? " card-active" : ""}` },
+        h("div", { class: "flex" },
+          h("span", { style: "font-size:22px" }, f.icon),
+          h("strong", {}, f.label)),
+        h("p", { class: "muted small", style: "margin:8px 0 0" }, parts.join(" · "))));
+  }
+  page.append(overview);
 
-      h("h2", { style: "margin:28px 0 12px;font-size:19px" }, "Khu vực học tập"),
-      h("div", { class: "grid grid-2" },
-        area("🎓", "Chứng chỉ K8s", "So sánh KCNA, KCSA, CKAD, CKA, CKS: hình thức thi, tỷ trọng domain và lộ trình gợi ý.", "#/certs"),
-        area("📚", "Thư viện tài liệu", "Trọn bộ CKAD/CKA/CKS + series blog Java & Spring Boot Scalability (10 bài) — có mục lục, sơ đồ mermaid, copy nhanh.", "#/docs"),
-        area("⚡", "Thực hành nhanh", "Tra cứu khi làm lab: 130 lệnh, 48 YAML mẫu, 16 quy trình thuộc lòng, thẻ trước giờ thi — có ghim và chế độ gọn cạnh terminal.", "#/commands"),
-        area("🃏", "Flashcards", `Ôn ${fl.total} thẻ theo phương pháp lặp lại ngắt quãng (spaced repetition).`, "#/flashcards"),
-        area("✅", "Trắc nghiệm", `${qz.total} câu hỏi theo từng domain, có giải thích chi tiết từng câu.`, "#/quiz"),
-        area("⏱️", "Thi thử", "Mô phỏng áp lực phòng thi: bấm giờ, đánh dấu câu, chấm điểm theo domain.", "#/exam"),
-        area("🧪", "Labs thực hành", `${labs.length} bài lab kiểu đề thật (CKAD 100% thực hành) kèm lời giải và cách verify.`, "#/labs"),
-        area("🗺️", "Lộ trình học", "3 giáo trình CKAD / CKA / CKS với 154 bài học chi tiết: lý thuyết dễ hiểu, lệnh mẫu, bẫy thường gặp — tick đến đâu lưu đến đó.", "#/roadmap"),
-      ),
+  const cards = [
+    statCard(`${rm.pct}%`, "Lộ trình hoàn thành", "#/roadmap",
+      rm.per.map((p) => `${p.label} ${p.pct}%`).join(" · ") || "chưa có lộ trình"),
+    has("flashcards")
+      ? statCard(String(fl.due), "Flashcard đến hạn ôn", "#/flashcards", `${fl.fresh} thẻ chưa học · ${fl.total} tổng`)
+      : null,
+    has("quiz")
+      ? statCard(qz.acc == null ? "—" : `${qz.acc}%`, "Độ chính xác trắc nghiệm", "#/quiz", `đã gặp ${qz.seen}/${qz.total} câu`)
+      : null,
+    has("exam")
+      ? statCard(ex.best == null ? "—" : `${ex.best}%`, "Điểm thi thử tốt nhất", "#/exam", ex.count ? `${ex.count} lượt thi` : "chưa thi lần nào")
+      : null,
+  ].filter(Boolean);
+  if (has("roadmap")) page.append(h("div", { class: "grid grid-4" }, cards));
 
-      h("p", { class: "faint", style: "margin-top:26px" },
-        "💡 Mẹo: trong phòng thi CKAD bạn được mở kubernetes.io/docs — hãy luyện thói quen tra cứu nhanh ngay từ bây giờ.")
-    )
-  );
+  // Khu vực học tập — chỉ những module lĩnh vực này có
+  const areas = [
+    has("certs") ? area("🎓", "Chứng chỉ K8s", "So sánh KCNA, KCSA, CKAD, CKA, CKS: hình thức thi, tỷ trọng domain và lộ trình gợi ý.", "#/certs") : null,
+    area("📚", "Thư viện tài liệu", `${getDocs(fieldKey).length} tài liệu của lĩnh vực ${field.label} — mục lục nổi, sơ đồ mermaid, ảnh minh hoạ, copy nhanh.`, "#/docs"),
+    has("commands") ? area("⚡", "Thực hành nhanh", "Tra cứu khi làm lab: 130 lệnh, 48 YAML mẫu, 16 quy trình thuộc lòng, thẻ trước giờ thi.", "#/commands") : null,
+    has("flashcards") ? area("🃏", "Flashcards", `Ôn ${fl.total} thẻ theo phương pháp lặp lại ngắt quãng (spaced repetition).`, "#/flashcards") : null,
+    has("quiz") ? area("✅", "Trắc nghiệm", `${qz.total} câu hỏi có giải thích chi tiết từng câu.`, "#/quiz") : null,
+    has("exam") ? area("⏱️", "Thi thử", "Mô phỏng áp lực phòng thi: bấm giờ, đánh dấu câu, chấm điểm theo domain.", "#/exam") : null,
+    has("labs") ? area("🧪", "Labs thực hành", `${labs.length} bài lab kiểu đề thật kèm lời giải và cách verify.`, "#/labs") : null,
+    has("roadmap") ? area("🗺️", "Lộ trình học", `${rm.total} bài học chi tiết — tick đến đâu lưu đến đó.`, "#/roadmap") : null,
+  ].filter(Boolean);
+
+  page.append(
+    h("h2", { style: "margin:28px 0 12px;font-size:19px" }, "Khu vực học tập"),
+    h("div", { class: "grid grid-2" }, areas));
+
+  root.append(page);
 }
 
 function area(icon, title, desc, href) {

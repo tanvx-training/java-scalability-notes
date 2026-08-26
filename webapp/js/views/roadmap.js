@@ -4,6 +4,9 @@
 import { h, pageHead, inlineMd, mdInto } from "../lib/ui.js";
 import { store } from "../lib/store.js";
 import { tracks, getTrack } from "../data/roadmap.js";
+import { getTracks } from "../data/index.js";
+import { FIELDS } from "../data/fields.js";
+import { currentField } from "../lib/field.js";
 
 export function render(root, params) {
   const track = getTrack(params[0]);
@@ -20,25 +23,33 @@ function trackStats(track, checked) {
 }
 
 function renderChooser(root) {
+  const fieldKey = currentField();
+  const field = FIELDS[fieldKey];
+  const list = getTracks(fieldKey);
   const page = h("div", { class: "page" });
   const checked = store.get("roadmap.checked", {});
 
   page.append(pageHead(
     "🗺️ Lộ trình học",
-    "Ba giáo trình tương tác — mỗi mục là một bài học chi tiết với ví dụ liên tưởng, lệnh mẫu và bẫy thường gặp. Thứ tự khuyến nghị: CKAD → CKA → CKS."
+    list.length > 1
+      ? `${list.length} giáo trình tương tác của lĩnh vực ${field.label} — mỗi mục là một bài học, tick đến đâu lưu đến đó.`
+      : `Giáo trình tương tác của lĩnh vực ${field.label} — mỗi mục là một bài học, tick đến đâu lưu đến đó.`
   ));
 
-  page.append(
-    h("div", { class: "path-flow", style: "margin-bottom:18px" },
-      h("span", { class: "path-node" }, "🎯 CKAD"),
-      h("span", { class: "path-arrow" }, "→"),
-      h("span", { class: "path-node" }, "🛠️ CKA"),
-      h("span", { class: "path-arrow" }, "→"),
-      h("span", { class: "path-node" }, "🔐 CKS"))
-  );
+  // Dải thứ tự khuyến nghị chỉ có nghĩa với 3 chứng chỉ Kubernetes.
+  if (fieldKey === "kubernetes") {
+    page.append(
+      h("div", { class: "path-flow", style: "margin-bottom:18px" },
+        h("span", { class: "path-node" }, "🎯 CKAD"),
+        h("span", { class: "path-arrow" }, "→"),
+        h("span", { class: "path-node" }, "🛠️ CKA"),
+        h("span", { class: "path-arrow" }, "→"),
+        h("span", { class: "path-node" }, "🔐 CKS"))
+    );
+  }
 
   const grid = h("div", { class: "grid" });
-  for (const track of tracks) {
+  for (const track of list) {
     const s = trackStats(track, checked);
     const started = s.done > 0;
     grid.append(

@@ -287,6 +287,8 @@ h1, h2, h3, h4 { line-height: 1.3; color: var(--text); }
 .card-link { display: block; color: inherit; transition: border-color .15s, transform .15s; }
 .card-link:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-1px); }
 
+.card-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
 .grid { display: grid; gap: 14px; }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
