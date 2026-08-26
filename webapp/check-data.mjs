@@ -452,6 +452,37 @@ await check("Lĩnh vực khai quiz/flashcards/roadmap/docs thì phải có dữ 
   expect(!bad.length, bad.join("; "));
 });
 
+// #7c — chiều ngược của #7. #7 chỉ chặn "khai module mà không có dữ liệu"; chiều
+// ngược lại — "có dữ liệu mà không khai module" — bị bỏ ngỏ. Một lĩnh vực có bản ghi
+// docs/roadmap nhưng quên khai module tương ứng thì dữ liệu đó vẫn tồn tại trong
+// nguồn nhưng vô hình trong app (sidebar không hiện trang, không có đường vào), mà
+// #7 vẫn xanh vì #7 chỉ soát theo chiều modules → data, không soát chiều data →
+// modules. Tự chứng minh: đổi tạm modules của spring-security từ
+// ["dashboard","docs","roadmap"] về ["dashboard"] khiến 21 tài liệu và 30 mục lộ
+// trình không truy cập được từ UI, nhưng trước khi có bất biến này, check-data vẫn
+// 30/30 xanh.
+//
+// Giới hạn ở hai module "docs" và "roadmap" — đã kiểm thủ công cả 4 lĩnh vực hiện có
+// (kubernetes, sysprog, java, spring-security): không lĩnh vực nào có dữ liệu
+// flashcards/quiz "mồ côi" (có bản ghi nhưng không khai module), nên không có ca
+// thật nào để mở rộng bất biến sang hai module đó. Mở rộng mà không có ca thật kiểm
+// chứng dễ tạo bất biến đỏ oan cho một trường hợp hợp lệ chưa lường tới (vd dữ liệu
+// soạn trước, công bố module sau).
+await check("Lĩnh vực có dữ liệu docs/roadmap thì phải khai module tương ứng (chiều ngược của #7)", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    const hasDocs = docs.some((d) => fieldOf(d) === id);
+    const hasRoadmap = tracks.some((t) => fieldOf(t) === id);
+    if (hasDocs && !f.modules.includes("docs")) {
+      bad.push(`${id} có bản ghi docs nhưng không khai module "docs"`);
+    }
+    if (hasRoadmap && !f.modules.includes("roadmap")) {
+      bad.push(`${id} có track roadmap nhưng không khai module "roadmap"`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
 // #7b — module chỉ có dữ liệu Kubernetes không được khai ở lĩnh vực khác
 await check("Module chỉ dành cho Kubernetes không bị lĩnh vực khác khai", () => {
   const bad = [];
