@@ -4,6 +4,8 @@
 
 import { h, pageHead, mdInto } from "../lib/ui.js";
 import { docs, FIELDS } from "../data/docs-index.js";
+import { getDocs, fieldOfRecord } from "../data/index.js";
+import { currentField } from "../lib/field.js";
 
 let observer = null;
 
@@ -22,41 +24,33 @@ export function render(root, params) {
 // ---------------- Trang danh mục ----------------
 
 function renderIndex(root) {
+  const fieldKey = currentField();
+  const field = FIELDS[fieldKey];
+  const list = getDocs(fieldKey);
+
   const page = h("div", { class: "page" });
   page.append(pageHead(
-    "📚 Thư viện tài liệu",
-    `${docs.length} tài liệu thuộc ${Object.keys(FIELDS).length} lĩnh vực — đọc trực tiếp với mục lục, sơ đồ mermaid, ảnh minh họa và code có nút copy.`
+    `${field.icon} Thư viện tài liệu — ${field.label}`,
+    `${list.length} tài liệu — đọc trực tiếp với mục lục, sơ đồ mermaid, ảnh minh họa và code có nút copy.`
   ));
+  page.append(h("p", { class: "muted small", style: "margin:-8px 0 20px" }, field.desc));
 
-  for (const [fieldKey, field] of Object.entries(FIELDS)) {
-    const list = docs.filter((d) => d.field === fieldKey);
-    if (!list.length) continue;
-
-    page.append(
-      h("div", { class: "field-head" },
-        h("span", { class: "field-icon" }, field.icon),
-        h("div", {},
-          h("h2", { class: "mt0 mb0", style: "font-size:19px" }, field.label),
-          h("p", { class: "muted small", style: "margin:2px 0 0" }, field.desc)))
+  const grid = h("div", { class: "grid", style: "margin-bottom:26px" });
+  for (const d of list) {
+    grid.append(
+      h("a", { class: "card card-link", href: `#/docs/${d.id}` },
+        h("div", { class: "flex" },
+          h("span", { style: "font-size:24px" }, d.icon),
+          h("div", { class: "grow" },
+            h("div", { class: "lab-title" }, d.title),
+            h("div", { class: "muted small" }, d.desc)),
+          h("span", { class: "faint" }, "Đọc →")),
+        h("div", { class: "chip-row", style: "margin-top:10px" },
+          d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))
+      )
     );
-
-    const grid = h("div", { class: "grid", style: "margin-bottom:26px" });
-    for (const d of list) {
-      grid.append(
-        h("a", { class: "card card-link", href: `#/docs/${d.id}` },
-          h("div", { class: "flex" },
-            h("span", { style: "font-size:24px" }, d.icon),
-            h("div", { class: "grow" },
-              h("div", { class: "lab-title" }, d.title),
-              h("div", { class: "muted small" }, d.desc)),
-            h("span", { class: "faint" }, "Đọc →")),
-          h("div", { class: "chip-row", style: "margin-top:10px" },
-            d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))
-        )
-      );
-    }
-    page.append(grid);
   }
+  page.append(grid);
   root.append(page);
 }
 
@@ -208,7 +202,7 @@ async function renderMermaidBlocks(container) {
 }
 
 function navRow(doc) {
-  const sameField = docs.filter((d) => d.field === doc.field);
+  const sameField = getDocs(fieldOfRecord(doc));
   const idx = sameField.indexOf(doc);
   const prev = sameField[idx - 1];
   const next = sameField[idx + 1];

@@ -1,19 +1,11 @@
 // Thư viện tài liệu — nhóm theo lĩnh vực.
-// File nguồn nằm trong repo (CKAD/, CKA/, CKS/, các thư mục "Chủ đề ...");
-// khi deploy (hoặc chạy dev.sh) chúng được copy vào webapp/content/.
-
-export const FIELDS = {
-  kubernetes: {
-    label: "Kubernetes & Chứng chỉ",
-    icon: "☸️",
-    desc: "Tài liệu luyện thi CKAD, CKA, CKS — dùng kèm flashcards, trắc nghiệm và labs của trang này.",
-  },
-  java: {
-    label: "Java & Spring Boot Scalability",
-    icon: "☕",
-    desc: "Series blog 10 bài về khả năng mở rộng của ứng dụng Java/Spring Boot trên Tomcat: từ TCP/kernel → Tomcat internals → JVM concurrency → capacity planning → transaction. Đọc theo thứ tự 01 → 10.",
-  },
-};
+// File nguồn nằm trong repo (CKAD/, CKA/, CKS/, "Chủ đề …", System_Programming_VI/);
+// khi deploy (hoặc chạy dev.sh) chúng được copy vào webapp/content/ bởi
+// build-content.sh.
+//
+// FIELDS đã chuyển sang fields.js (nguồn sự thật duy nhất); re-export để các
+// import cũ không phải đổi.
+export { FIELDS } from "./fields.js";
 
 export const docs = [
   // ===== Kubernetes =====
@@ -171,5 +163,169 @@ export const docs = [
     icon: "🪤",
     desc: "5 bẫy production: annotation bị lơ, captive connection, exception mismatch, event listener, deadlock REQUIRES_NEW.",
     tags: ["@Transactional", "Production", "Bẫy"],
+  },
+
+  // ===== System Programming (bản dịch UIUC CS 241, CC BY 4.0) =====
+  {
+    id: "sysprog-01",
+    field: "sysprog",
+    title: "01 — Giới thiệu",
+    file: "content/sysprog/01-introduction.md",
+    icon: "📖",
+    desc: "Vì sao học lập trình hệ thống, cách dùng cuốn sách, quy ước ký hiệu và lời khuyên cho người mới.",
+    tags: ["Nhập môn", "CS 241"],
+  },
+  {
+    id: "sysprog-02",
+    field: "sysprog",
+    title: "02 — Kiến thức nền tảng",
+    file: "content/sysprog/02-background.md",
+    icon: "🧱",
+    desc: "Kiến trúc hệ thống, ranh giới user space / kernel space, môi trường làm việc, Valgrind và GDB.",
+    tags: ["Kiến trúc", "Valgrind", "GDB"],
+  },
+  {
+    id: "sysprog-03",
+    field: "sysprog",
+    title: "03 — Ngôn ngữ lập trình C",
+    file: "content/sysprog/03-c-programming-language.md",
+    icon: "🔤",
+    desc: "Cú pháp C, mô hình bộ nhớ (text/data/heap/stack), con trỏ, số học con trỏ và các lỗi kinh điển.",
+    tags: ["C", "Con trỏ", "Bộ nhớ"],
+  },
+  {
+    id: "sysprog-04",
+    field: "sysprog",
+    title: "04 — Tiến trình",
+    file: "content/sysprog/04-processes.md",
+    icon: "⚙️",
+    desc: "File descriptor, nội dung một process, fork/wait/exec và mẫu fork-exec-wait.",
+    tags: ["Process", "fork", "exec"],
+  },
+  {
+    id: "sysprog-05",
+    field: "sysprog",
+    title: "05 — Bộ cấp phát bộ nhớ",
+    file: "content/sysprog/05-memory-allocators.md",
+    icon: "🧮",
+    desc: "malloc/free/calloc/realloc, first–best–worst fit, tự xây allocator, buddy và SLUB.",
+    tags: ["malloc", "Allocator", "Phân mảnh"],
+  },
+  {
+    id: "sysprog-06",
+    field: "sysprog",
+    title: "06 — Luồng",
+    file: "content/sysprog/06-threads.md",
+    icon: "🧵",
+    desc: "Process khác thread ở đâu, bên trong một thread, pthread_create/join và race condition.",
+    tags: ["Thread", "pthread", "Race"],
+  },
+  {
+    id: "sysprog-07",
+    field: "sysprog",
+    title: "07 — Đồng bộ hoá",
+    file: "content/sysprog/07-synchronization.md",
+    icon: "🔒",
+    desc: "Mutex, condition variable, semaphore, barrier, ring buffer và các lời giải cho vùng găng.",
+    tags: ["Mutex", "Semaphore", "Ring buffer"],
+  },
+  {
+    id: "sysprog-08",
+    field: "sysprog",
+    title: "08 — Deadlock",
+    file: "content/sysprog/08-deadlock.md",
+    icon: "🪤",
+    desc: "Đồ thị cấp phát tài nguyên, bốn điều kiện Coffman, bài toán triết gia ăn tối và các lời giải.",
+    tags: ["Deadlock", "Coffman", "Livelock"],
+  },
+  {
+    id: "sysprog-09",
+    field: "sysprog",
+    title: "09 — Bộ nhớ ảo và IPC",
+    file: "content/sysprog/09-virtual-memory-and-ipc.md",
+    icon: "🗺️",
+    desc: "Dịch địa chỉ, page table, TLB, mmap, pipe và named pipe — bốn cách để process nói chuyện với nhau.",
+    tags: ["Bộ nhớ ảo", "mmap", "Pipe"],
+  },
+  {
+    id: "sysprog-10",
+    field: "sysprog",
+    title: "10 — Lập lịch",
+    file: "content/sysprog/10-scheduling.md",
+    icon: "📅",
+    desc: "Các thước đo hiệu quả (turnaround, response, waiting time) và thuật toán FCFS, SJF, RR, PS.",
+    tags: ["Scheduler", "Round Robin", "SJF"],
+  },
+  {
+    id: "sysprog-11",
+    field: "sysprog",
+    title: "11 — Lập trình mạng",
+    file: "content/sysprog/11-networking.md",
+    icon: "🌐",
+    desc: "Mô hình OSI, IP, TCP client/server, UDP, HTTP, I/O không chặn và remote procedure call.",
+    tags: ["TCP", "Socket", "Non-blocking"],
+  },
+  {
+    id: "sysprog-12",
+    field: "sysprog",
+    title: "12 — Hệ thống tệp",
+    file: "content/sysprog/12-filesystems.md",
+    icon: "💾",
+    desc: "inode, lưu dữ liệu trên đĩa, bit quyền, virtual filesystem, memory mapped IO và tính tin cậy.",
+    tags: ["inode", "Quyền", "VFS"],
+  },
+  {
+    id: "sysprog-13",
+    field: "sysprog",
+    title: "13 — Tín hiệu",
+    file: "content/sysprog/13-signals.md",
+    icon: "📡",
+    desc: "Gửi và xử lý signal, hàm async-signal-safe, signal mask, tín hiệu trong process con và thread.",
+    tags: ["Signal", "sigaction", "Mask"],
+  },
+  {
+    id: "sysprog-14",
+    field: "sysprog",
+    title: "14 — Bảo mật",
+    file: "content/sysprog/14-security.md",
+    icon: "🛡️",
+    desc: "Thuật ngữ và đạo đức bảo mật, lỗ hổng trong chương trình C (buffer overflow, format string), an ninh mạng.",
+    tags: ["Bảo mật", "Buffer overflow"],
+  },
+  {
+    id: "sysprog-15",
+    field: "sysprog",
+    title: "15 — Ôn tập",
+    file: "content/sysprog/15-review.md",
+    icon: "📝",
+    desc: "Ngân hàng câu hỏi ôn tập cho 10 mảng: C, process, bộ nhớ, threading, deadlock, IPC, filesystem, mạng, bảo mật, signal.",
+    tags: ["Ôn tập", "Bài tập"],
+  },
+  {
+    id: "sysprog-16",
+    field: "sysprog",
+    title: "16 — Chủ đề nâng cao",
+    file: "content/sysprog/16-honors-topics.md",
+    icon: "🎖️",
+    desc: "Các chủ đề mở rộng ngoài chương trình chuẩn của môn học.",
+    tags: ["Nâng cao"],
+  },
+  {
+    id: "sysprog-17",
+    field: "sysprog",
+    title: "17 — Phụ lục",
+    file: "content/sysprog/17-appendix.md",
+    icon: "📎",
+    desc: "Shell, stack smashing, biên dịch & liên kết, giải thuật Banker, mô hình Actor, spurious wakeup, trang man.",
+    tags: ["Phụ lục", "Tham khảo"],
+  },
+  {
+    id: "sysprog-18",
+    field: "sysprog",
+    title: "18 — Phân tích hậu sự cố",
+    file: "content/sysprog/18-post-mortems.md",
+    icon: "🔍",
+    desc: "16 sự cố thật: Shellshock, Heartbleed, Dirty COW, Meltdown, Spectre, Mars Pathfinder, AT&T 1990, Year 2038…",
+    tags: ["Post-mortem", "Sự cố thật"],
   },
 ];

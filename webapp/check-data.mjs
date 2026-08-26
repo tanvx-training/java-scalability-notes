@@ -18,7 +18,9 @@ const K8S_ONLY_MODULES = ["certs", "commands", "exam", "labs"];
 
 // ---- Bảng kỳ vọng: sửa Ở ĐÂY TRƯỚC khi viết dữ liệu mới ----
 const EXPECTED = {
-  counts: {},          // vd "flashcards:sysprog": 90
+  counts: {
+    "docs:sysprog": 18,
+  },
 };
 
 // ---- Khung chạy ----
