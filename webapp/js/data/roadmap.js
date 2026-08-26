@@ -5,9 +5,10 @@
 //   CKAD: roadmap-part{1,2,3}.js      (Tuần 1–3 / 4–5 / 6–10) — 55 bài
 //   CKA : cka-roadmap-part{1,2,3}.js  (Tuần 1–3 / 4–6 / 7–10) — 55 bài
 //   CKS : cks-roadmap-part{1,2}.js    (Tuần 1–4 / 5–10)       — 44 bài
+//   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
 //
-// LƯU Ý: id tuần (w1, cka-w1…) và id mục (w1-1, cka-w1-1…) là khóa lưu
-// tiến độ trong localStorage — không được đổi.
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1…) và id mục (w1-1, cka-w1-1, sp-w1-1…)
+// là khóa lưu tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
 import { weeksPart2 } from "./roadmap-part2.js";
@@ -17,6 +18,7 @@ import { ckaWeeksPart2 } from "./cka-roadmap-part2.js";
 import { ckaWeeksPart3 } from "./cka-roadmap-part3.js";
 import { cksWeeksPart1 } from "./cks-roadmap-part1.js";
 import { cksWeeksPart2 } from "./cks-roadmap-part2.js";
+import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
 
 export const tracks = [
   {
@@ -45,6 +47,16 @@ export const tracks = [
     desc: "Bảo mật chuyên sâu: CIS benchmark, hardening, supply chain (Trivy), runtime security (Falco), audit logging.",
     prereq: "Bắt buộc: đang giữ chứng chỉ CKA còn hiệu lực mới được thi.",
     weeks: [...cksWeeksPart1, ...cksWeeksPart2],
+  },
+  {
+    id: "sysprog",
+    field: "sysprog",
+    label: "System Programming",
+    icon: "🖥️",
+    name: "Lập trình hệ thống (UIUC CS 241)",
+    desc: "Kế hoạch học 10 tuần bám theo giáo trình: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc trong sách, bẫy thường gặp và câu tự kiểm tra.",
+    prereq: "Yêu cầu: biết lập trình cơ bản và dùng được terminal Linux. Không cần biết C trước.",
+    weeks: [...sysprogWeeksPart1],
   },
 ];
 
