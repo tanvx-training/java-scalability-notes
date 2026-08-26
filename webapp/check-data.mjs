@@ -12,6 +12,10 @@ import { fileURLToPath } from "node:url";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 
+// Các module mà view của chúng đọc dữ liệu Kubernetes cứng (không nhận field
+// làm tham số) — chỉ lĩnh vực "kubernetes" được khai những module này.
+const K8S_ONLY_MODULES = ["certs", "commands", "exam", "labs"];
+
 // ---- Bảng kỳ vọng: sửa Ở ĐÂY TRƯỚC khi viết dữ liệu mới ----
 const EXPECTED = {
   counts: {},          // vd "flashcards:sysprog": 90
@@ -163,10 +167,15 @@ await check("Mọi module của lĩnh vực là view có thật", () => {
   expect(!bad.length, `module không có view: ${bad.join(", ")}`);
 });
 
-await check("FIELD_ORDER khớp FIELDS và chứa DEFAULT_FIELD", () => {
-  expect(FIELD_ORDER.length === Object.keys(FIELDS).length,
-    `FIELD_ORDER (${FIELD_ORDER.length}) lệch FIELDS (${Object.keys(FIELDS).length})`);
-  for (const id of FIELD_ORDER) expect(FIELDS[id], `FIELD_ORDER có "${id}" không tồn tại trong FIELDS`);
+await check("FIELD_ORDER khớp FIELDS 1-1 (không trùng, không thiếu) và chứa DEFAULT_FIELD", () => {
+  const bad = [];
+  const dup = dupes(FIELD_ORDER);
+  if (dup.length) bad.push(`FIELD_ORDER trùng: ${dup.join(", ")}`);
+  for (const id of FIELD_ORDER) if (!FIELDS[id]) bad.push(`FIELD_ORDER có "${id}" không tồn tại trong FIELDS`);
+  const orderSet = new Set(FIELD_ORDER);
+  const missing = Object.keys(FIELDS).filter((id) => !orderSet.has(id));
+  if (missing.length) bad.push(`FIELD_ORDER thiếu: ${missing.join(", ")}`);
+  expect(!bad.length, bad.join("; "));
   expect(FIELDS[DEFAULT_FIELD], `DEFAULT_FIELD "${DEFAULT_FIELD}" không tồn tại`);
 });
 
@@ -181,6 +190,18 @@ await check("Lĩnh vực khai quiz/flashcards/roadmap/docs thì phải có dữ 
       quiz: questions.some((q) => fieldOf(q) === id),
     };
     for (const m of f.modules) if (m in has && !has[m]) bad.push(`${id} khai "${m}" nhưng không có dữ liệu`);
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// #7b — module chỉ có dữ liệu Kubernetes không được khai ở lĩnh vực khác
+await check("Module chỉ dành cho Kubernetes không bị lĩnh vực khác khai", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    if (id === "kubernetes") continue;
+    for (const m of f.modules) {
+      if (K8S_ONLY_MODULES.includes(m)) bad.push(`${id} khai "${m}" (chỉ dành riêng cho kubernetes)`);
+    }
   }
   expect(!bad.length, bad.join("; "));
 });
