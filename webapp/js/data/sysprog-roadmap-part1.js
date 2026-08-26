@@ -26,7 +26,7 @@ export const sysprogWeeksPart1 = [
         text: "Ranh giới user space / kernel space và vì sao system call đắt",
         lesson: `**Mục tiêu.** Giải thích được vì sao \`printf\` không phải system call còn \`write\` thì có, và điều đó ảnh hưởng gì tới hiệu năng.
 
-**Đọc.** [§2.1 Kiến trúc hệ thống](#/docs/sysprog-02) — đọc kỹ phần ranh giới hai không gian. Chưa cần nhớ danh sách system call.
+**Đọc.** [§3.4.2 System Call](#/docs/sysprog-03) — mượn trước một đoạn ngắn của Chương 3 (Ngôn ngữ C); tuần 2 bạn sẽ quay lại đọc trọn chương đó. Ở đây chỉ cần đọc đúng đoạn nói system call "rất tốn kém", và câu ngay sau nó ở §3.5.2 giải thích vì sao \`printf\` gọi \`write\` bên dưới. Chưa cần đọc phần còn lại của chương.
 
 **Bẫy.** Lẫn giữa **hàm thư viện C** (\`printf\`, \`malloc\` — chạy trong user space) và **system call** (\`write\`, \`brk\`/\`mmap\` — chuyển sang kernel). \`printf\` gọi \`write\` *bên dưới*, nhưng có buffer riêng — đó là lý do output đôi khi không ra đúng thứ tự bạn nghĩ khi chương trình crash.
 
@@ -212,7 +212,7 @@ export const sysprogWeeksPart1 = [
 
 **Bẫy.** File descriptor là một số nguyên chỉ có ý nghĩa **trong phạm vi một process** — fd số 3 ở process A và fd số 3 ở process B có thể trỏ tới hai thứ hoàn toàn khác nhau, dù cùng con số. Nhầm điều này khiến người mới nghĩ có thể "truyền" một fd sang process khác chỉ bằng cách gửi con số đó qua biến toàn cục — không hoạt động, vì bảng file descriptor là của riêng từng process.
 
-**Tự kiểm tra.** Vùng heap và vùng stack lớn lên theo hai hướng ngược nhau trong không gian địa chỉ — vì sao thiết kế theo cách đó, thay vì để cả hai lớn lên cùng một chiều?`,
+**Tự kiểm tra.** Sách nói việc cạn bộ nhớ heap phổ biến hơn trên hệ 32-bit so với 64-bit — vì sao không gian địa chỉ nhỏ hơn lại khiến "hết heap" dễ xảy ra hơn, ngay cả khi RAM vật lý của máy vẫn còn dư?`,
       },
       {
         id: "sp-w4-2",
