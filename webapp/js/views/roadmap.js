@@ -3,7 +3,7 @@
 
 import { h, pageHead, inlineMd, mdInto } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { tracks, getTrack } from "../data/roadmap.js";
+import { getTrack } from "../data/roadmap.js";
 import { getTracks } from "../data/index.js";
 import { FIELDS } from "../data/fields.js";
 import { currentField } from "../lib/field.js";
@@ -100,7 +100,7 @@ function renderTrack(root, track, focusItemId) {
     h("div", { class: "breadcrumb" },
       h("a", { href: "#/roadmap" }, "Lộ trình học"), " / ", track.label),
     pageHead(
-      `${track.icon} Lộ trình ${track.label} (8–10 tuần)`,
+      `${track.icon} Lộ trình ${track.label} (${track.durationWeeks} tuần)`,
       `${track.desc} Bấm vào tiêu đề mỗi mục để mở bài học, tick ô vuông khi đã nắm vững. ${track.prereq}`
     )
   );

@@ -3,7 +3,7 @@
 import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, diffBadge } from "../lib/ui.js";
 import { store } from "../lib/store.js";
 import { getQuestions, getDomains } from "../data/index.js";
-import { FIELDS } from "../data/fields.js";
+import { FIELDS, moduleAllowed } from "../data/fields.js";
 import { CERTS } from "../data/meta.js";
 import { currentField } from "../lib/field.js";
 
@@ -19,10 +19,10 @@ function renderSetup(root) {
   const questions = getQuestions(fieldKey);
   const page = h("div", { class: "page" });
 
-  page.append(pageHead(
-    "✅ Trắc nghiệm",
-    `${questions.length} câu hỏi có giải thích chi tiết. Chế độ luyện tập: biết đúng/sai ngay sau mỗi câu — phù hợp để học; muốn mô phỏng áp lực thật hãy dùng Thi thử.`
-  ));
+  const setupDesc = moduleAllowed(fieldKey, "exam")
+    ? `${questions.length} câu hỏi có giải thích chi tiết. Chế độ luyện tập: biết đúng/sai ngay sau mỗi câu — phù hợp để học; muốn mô phỏng áp lực thật hãy dùng Thi thử.`
+    : `${questions.length} câu hỏi có giải thích chi tiết. Chế độ luyện tập: biết đúng/sai ngay sau mỗi câu — phù hợp để học.`;
+  page.append(pageHead("✅ Trắc nghiệm", setupDesc));
 
   // Tầng lọc chứng chỉ chỉ có nghĩa với lĩnh vực Kubernetes.
   const certSel = new Set();

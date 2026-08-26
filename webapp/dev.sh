@@ -13,6 +13,6 @@ PORT="${1:-${PORT:-8888}}"
 
 "$DIR/build-content.sh" "$DIR/content"
 
-echo "▶ KubePrep: http://localhost:$PORT"
+echo "▶ DevPrep: http://localhost:$PORT"
 cd "$DIR"
 exec python3 -m http.server "$PORT"

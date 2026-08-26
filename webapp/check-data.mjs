@@ -23,6 +23,12 @@ const EXPECTED = {
     "roadmap-items:sysprog": 50,
     "flashcards:sysprog": 90,
     "questions:sysprog": 110,
+    // Nội dung Kubernetes có từ trước — chốt luôn để xoá/thiếu bản ghi không
+    // âm thầm lọt qua (vd xoá bớt câu hỏi vẫn qua đủ 23 bất biến trước đây).
+    "docs:kubernetes": 7,
+    "roadmap-items:kubernetes": 154,
+    "flashcards:kubernetes": 84,
+    "questions:kubernetes": 110,
   },
 };
 
@@ -127,6 +133,33 @@ await check("Mọi link #/docs/<id> trỏ tới tài liệu có thật", () => {
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
+// #3b — Link #/docs/<id> trong lộ trình phải cùng lĩnh vực với track đang chứa
+// nó. Bất biến #3 chỉ kiểm id có tồn tại, không kiểm nó có "lạc" sang lĩnh
+// vực khác — một link như vậy sẽ âm thầm đổi lĩnh vực đang chọn của người
+// dùng giữa chừng bài học (xem navigate() trong app.js: #/docs/<id> suy ra
+// lĩnh vực từ chính tài liệu đó).
+await check("Link #/docs/<id> trong lộ trình khớp lĩnh vực với track", () => {
+  const docField = new Map(docs.map((d) => [d.id, fieldOf(d)]));
+  const bad = [];
+  const scan = (text, where, trackField) => {
+    for (const m of String(text ?? "").matchAll(/#\/docs\/([A-Za-z0-9_-]+)/g)) {
+      const df = docField.get(m[1]);
+      // id không tồn tại đã bị bất biến #3 báo — ở đây chỉ xét id có thật.
+      if (df && df !== trackField) {
+        bad.push(`${where} → #/docs/${m[1]} (doc field="${df}", track field="${trackField}")`);
+      }
+    }
+  };
+  for (const t of tracks) {
+    const tf = fieldOf(t);
+    for (const w of t.weeks) {
+      for (const r of w.resources ?? []) scan(r.href, `${w.id} resources`, tf);
+      for (const it of w.items) scan(it.lesson, it.id, tf);
+    }
+  }
+  expect(!bad.length, `link khác lĩnh vực:\n      ${bad.join("\n      ")}`);
+});
+
 // #4 — Khoá phân loại hợp lệ và khớp lĩnh vực
 await check("question.domain hợp lệ và khớp field", () => {
   const bad = questions.filter((q) => {
@@ -199,6 +232,34 @@ await check("Độ dài lựa chọn không tố cáo đáp án (sysprog)", () =
   const cap = Math.floor(bank.length * OPTION_LEN_KEY_LONGEST_SHARE);
   expect(keyLongest <= cap,
     `đáp án đúng là lựa chọn dài nhất ở ${keyLongest}/${bank.length} câu, vượt trần ${cap}`);
+});
+
+// #6c — Không lựa chọn nào (kể cả của câu khác) được trùng y nguyên đáp án
+// đúng của một câu hỏi khác trong cùng lĩnh vực. Bất biến #6 chỉ soát trùng
+// lặp NỘI BỘ một câu; lỗi thực tế từng gặp là một phương án nhiễu của câu A
+// chép nguyên văn đáp án đúng của câu B — cả hai xuất hiện cùng một lượt thi,
+// dễ gây lộ đáp án chéo. Chỉ áp cho sysprog, cùng lý do với #6b (Kubernetes
+// có sẵn từ trước, ngoài phạm vi ràng buộc mới này).
+await check("Không lựa chọn nào trùng đáp án đúng của câu khác (sysprog)", () => {
+  const bank = questions.filter((q) => fieldOf(q) === "sysprog");
+  if (!bank.length) return SKIP;
+
+  const keys = bank
+    .map((q) => ({ id: q.id, key: String(q.options?.[q.answer] ?? "").trim() }))
+    .filter((k) => k.key);
+
+  const bad = [];
+  for (const q of bank) {
+    for (const opt of q.options ?? []) {
+      const text = String(opt).trim();
+      if (!text) continue;
+      for (const k of keys) {
+        if (k.id === q.id) continue;
+        if (text === k.key) bad.push(`${q.id} có lựa chọn trùng đáp án đúng của ${k.id}: "${text}"`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
 });
 
 // #5 — modules trỏ tới view có thật

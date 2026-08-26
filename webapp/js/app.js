@@ -69,6 +69,7 @@ function onFieldChange(id) {
   if (!setCurrentField(id)) return;
   renderFieldSwitch();
   renderNav();
+  renderFooterLink();
   // Hash hiện tại có thể trỏ tới bản ghi của lĩnh vực khác (vd #/roadmap/cka).
   // Giữ nguyên thì navigate() sẽ suy ngược lĩnh vực từ nó và huỷ lựa chọn vừa
   // rồi của người dùng. Bỏ tham số: giữ lại view nếu lĩnh vực mới có module đó,
@@ -82,6 +83,19 @@ function onFieldChange(id) {
 
 const fieldSwitch = document.getElementById("field-switch");
 const navEl = document.getElementById("nav");
+const refLink = document.getElementById("ref-link");
+
+// Link tham khảo ngoài ở chân sidebar — theo lĩnh vực hiện tại, ẩn nếu không có.
+function renderFooterLink() {
+  const ref = FIELDS[currentField()].externalRef;
+  if (!ref) {
+    refLink.hidden = true;
+    return;
+  }
+  refLink.href = ref.href;
+  refLink.textContent = `${ref.label} ↗`;
+  refLink.hidden = false;
+}
 
 function renderFieldSwitch() {
   const cur = currentField();
@@ -145,6 +159,7 @@ function navigate() {
   if (owner && setCurrentField(owner)) {
     renderFieldSwitch();
     renderNav();
+    renderFooterLink();
   }
 
   // Route không thuộc lĩnh vực đang chọn → về bảng điều khiển.
@@ -173,4 +188,5 @@ function navigate() {
 window.addEventListener("hashchange", navigate);
 renderFieldSwitch();
 renderNav();
+renderFooterLink();
 navigate();

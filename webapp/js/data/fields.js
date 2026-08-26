@@ -12,6 +12,9 @@ export const FIELDS = {
     certFilter: true,
     modules: ["dashboard", "certs", "roadmap", "docs", "commands",
               "flashcards", "quiz", "exam", "labs"],
+    // Liên kết tham khảo ngoài, hiện ở chân sidebar. Tuỳ chọn — bỏ qua nếu
+    // lĩnh vực không có nguồn ngoài phù hợp (xem "java" bên dưới).
+    externalRef: { label: "kubernetes.io/docs", href: "https://kubernetes.io/docs/" },
   },
   sysprog: {
     label: "Lập trình hệ thống",
@@ -21,6 +24,7 @@ export const FIELDS = {
     // Mở dần theo dữ liệu: "docs" thêm ở Task 6, "roadmap" Task 8,
     // "flashcards" Task 10, "quiz" Task 11. Khai sớm là bất biến #7 báo đỏ.
     modules: ["dashboard", "roadmap", "docs", "flashcards", "quiz"],
+    externalRef: { label: "illinois-cs241/coursebook", href: "https://github.com/illinois-cs241/coursebook" },
   },
   java: {
     label: "Java & Spring Boot Scalability",
@@ -28,6 +32,7 @@ export const FIELDS = {
     desc: "Series 10 bài về khả năng mở rộng của ứng dụng Java/Spring Boot trên Tomcat: TCP/kernel → Tomcat internals → JVM concurrency → capacity planning → transaction.",
     certFilter: false,
     modules: ["dashboard", "docs"],
+    // Không có nguồn ngoài phù hợp cho series này — bỏ qua thay vì bịa link.
   },
 };
 
