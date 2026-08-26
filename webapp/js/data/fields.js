@@ -39,9 +39,7 @@ export const FIELDS = {
     icon: "🔒",
     desc: "Bản dịch tiếng Việt Spring Security in Action, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — xác thực, phân quyền, CSRF/CORS, OAuth 2 & OIDC, ứng dụng phản ứng và kiểm thử cấu hình bảo mật.",
     certFilter: false,
-    // Mở dần theo dữ liệu: "docs" thêm ở Task 2, "roadmap" ở Task 3.
-    // Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard", "docs"],
+    modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "docs.spring.io/spring-security", href: "https://docs.spring.io/spring-security/reference/" },
   },
 };

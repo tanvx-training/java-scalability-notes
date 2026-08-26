@@ -1,6 +1,7 @@
 // Lộ trình học nhiều track (3 chứng chỉ Kubernetes, đọc sách Kubernetes in
-// Action, lập trình hệ thống) — mỗi track là một giáo trình tương tác: mỗi
-// mục là một bài học chi tiết (markdown), mỗi tuần kèm tài nguyên liên quan.
+// Action, lập trình hệ thống, đọc sách Spring Security in Action) — mỗi track
+// là một giáo trình tương tác: mỗi mục là một bài học chi tiết (markdown),
+// mỗi tuần kèm tài nguyên liên quan.
 //
 // Nội dung tách file theo track/tuần để dễ bảo trì:
 //   CKAD: roadmap-part{1,2,3}.js      (Tuần 1–3 / 4–5 / 6–10) — 55 bài
@@ -8,9 +9,11 @@
 //   CKS : cks-roadmap-part{1,2}.js    (Tuần 1–4 / 5–10)       — 44 bài
 //   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
 //   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
+//   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1…) và id mục (w1-1, cka-w1-1,
-// sp-w1-1, kb-w1-1…) là khóa lưu tiến độ trong localStorage — không được đổi.
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1…) và id mục (w1-1,
+// cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1…) là khóa lưu tiến độ trong
+// localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
 import { weeksPart2 } from "./roadmap-part2.js";
@@ -24,6 +27,7 @@ import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
 import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
+import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { k8sbookCrossref } from "./k8sbook-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 
@@ -95,6 +99,17 @@ export const tracks = [
     desc: "Kế hoạch học 10 tuần bám theo giáo trình: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc trong sách, bẫy thường gặp và câu tự kiểm tra.",
     prereq: "Yêu cầu: biết lập trình cơ bản và dùng được terminal Linux. Không cần biết C trước.",
     weeks: [...sysprogWeeksPart1, ...sysprogWeeksPart2],
+  },
+  {
+    id: "springsec",
+    field: "spring-security",
+    label: "Spring Security",
+    icon: "🔒",
+    name: "Đọc Spring Security in Action (ấn bản 2)",
+    durationWeeks: 9,
+    desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra.",
+    prereq: "Yêu cầu: biết Java và Spring Boot cơ bản (REST controller, dependency injection). Không cần biết Spring Security trước.",
+    weeks: [...springsecWeeksPart1],
   },
 ];
 
