@@ -364,7 +364,7 @@ if (pid < 0) {
     field: "sysprog",
     topic: "sp-process",
     front: "Vòng lặp tạo 10 process con dưới đây tạo ra bao nhiêu process, và vì sao?",
-    back: "**1024** process — một fork bomb. Tên chương trình bị gõ sai (`ehco`), nên `execlp` thất bại và process con **rơi xuống chạy tiếp vòng lặp**, mỗi vòng lại fork thêm. Cách sửa là đặt `exit` ngay sau exec để con chết khi exec hỏng. Nhớ `ulimit -u 40` khi thử nghiệm code fork, và `kill -9 -1` để cứu vãn tình thế. (§4.4.3)",
+    back: "**1024** process — một fork bomb. Tên chương trình bị gõ sai (`ehco`), nên `execlp` thất bại và process con **rơi xuống chạy tiếp vòng lặp**, mỗi vòng lại fork thêm. Cách sửa là đặt `exit` ngay sau exec để con chết khi exec hỏng. Nhớ `ulimit -u 40` khi thử nghiệm code fork, và `kill -9 -1` để cứu vãn tình thế. (§4.4.3, §4.4.1)",
     code: {
       lang: "c",
       text: `for (i = 0; i < 10; i++) {
@@ -507,13 +507,17 @@ pthread_exit(NULL); // chờ mọi thread xong
     id: "spf037",
     field: "sysprog",
     topic: "sp-concurrency",
-    front: "Hai thread cùng chạy `sum += 1` mười triệu lần — vì sao kết quả nhỏ hơn 20000000?",
-    back: "`sum += 1` không phải một thao tác nguyên tử: nó dịch thành **load – add – store**. Nếu hai thread cùng load giá trị 123, cả hai cộng 1 vào bản sao riêng rồi cùng ghi 124 trở lại, ta mất một lần đếm. Ngay cả khi biên dịch `-O2` gộp thành một lệnh `shl dword ptr [rdi]`, phần cứng vẫn có thể gặp race trừ khi thêm tiền tố `lock`. (§7 mở đầu, §6.5)",
+    front: "Hai thread cùng chạy `x += x` trên cùng một biến khởi tạo bằng 1 — vì sao `data` có thể bằng 2 thay vì 4?",
+    back: "Vì `x += x` không nguyên tử: khi không tối ưu hoá nó dịch thành **load – add – store**. Nếu hai thread xen kẽ hoàn toàn, cả hai cùng load 1, cùng nhân đôi, cùng ghi 2 trở lại — `data` bằng 2 chứ không phải 4. Biên dịch `-O2` gộp lại thành **một** lệnh duy nhất, nhưng vẫn không sửa được: bản thân phần cứng cũng có thể gặp race vì ta chưa bảo nó kiểm tra điều đó. Cách dễ nhất là thêm tiền tố `lock`. (§6.5)",
     code: {
       lang: "c",
-      text: `mov eax, DWORD PTR [rbp-4] ; load
-add eax, eax               ; add
-mov DWORD PTR [rbp-4], eax ; store`,
+      text: `; không tối ưu hoá
+mov eax, DWORD PTR [rbp-4] ;Loads int_ptr
+add eax, eax               ;Does the addition
+mov DWORD PTR [rbp-4], eax ;Stores it back
+
+; biên dịch với -O2
+shl dword ptr [rdi]        # Optimized way of doing the add`,
     },
   },
   {
@@ -954,7 +958,7 @@ if (child > 0) {
     field: "sysprog",
     topic: "sp-memory-ipc",
     front: "Sức chứa của pipe là bao nhiêu, và khi nào thao tác ghi vào pipe không còn nguyên tử?",
-    back: "Sức chứa đệm tuỳ hệ thống, **giá trị điển hình từ 4KiB tới 128KiB**. Ghi vào pipe là **atomic tới kích thước của pipe** — kernel có mutex nội bộ gắn với pipe. Ngoại lệ duy nhất là khi pipe sắp đầy: nếu hai process cùng ghi mà pipe chỉ đáp ứng được một lần ghi một phần thì lần ghi đó không còn nguyên tử. Cách tránh: tăng kích thước pipe, hoặc phổ biến hơn là thiết kế để pipe liên tục được đọc. (§9.3.2)",
+    back: "Sức chứa đệm tuỳ hệ thống, **giá trị điển hình từ 4KiB tới 128KiB**. Ghi vào pipe là **atomic tới kích thước của pipe** — kernel có mutex nội bộ gắn với pipe. Ngoại lệ duy nhất là khi pipe sắp đầy: nếu hai process cùng ghi mà pipe chỉ đáp ứng được một lần ghi một phần thì lần ghi đó không còn nguyên tử. Cách tránh: tăng kích thước pipe, hoặc phổ biến hơn là thiết kế để pipe liên tục được đọc. (§9.3, §9.3.2)",
     code: null,
   },
   {
@@ -970,7 +974,7 @@ if (child > 0) {
     field: "sysprog",
     topic: "sp-memory-ipc",
     front: "Mảng độ dài không ở cuối struct (`char c_str[0]`) dùng để làm gì?",
-    back: "Struct là **vùng nhớ liên tục**, và mảng độ dài không không chiếm byte nào — nó chỉ trỏ tới cuối struct. Nhờ vậy ta có thể `malloc(sizeof(string) + length + 1)` rồi dùng phần dư để chứa chuỗi ngay sau các trường. Đây là tối ưu hoá quan trọng thường thấy trong mã kernel: cách khác sẽ cần **hai** lời gọi cấp phát riêng biệt cho một việc phổ biến như thao tác chuỗi. (§3.6.1)",
+    back: "Struct là **vùng nhớ liên tục**, và mảng độ dài không không chiếm byte nào — nó chỉ trỏ tới cuối struct. Nhờ vậy ta có thể `malloc(sizeof(string) + length + 1)` rồi dùng phần dư để chứa chuỗi ngay sau các trường. Sách giới thiệu đây là **mẹo thường thấy trong rất nhiều mã kernel**, và là một tối ưu hoá quan trọng: cách khác sẽ cần **hai** lời gọi cấp phát bộ nhớ riêng biệt cho một việc phổ biến như thao tác chuỗi. (§3.6.1)",
     code: {
       lang: "c",
       text: `typedef struct {
