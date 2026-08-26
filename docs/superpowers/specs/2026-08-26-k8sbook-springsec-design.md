@@ -44,7 +44,7 @@ Sau khi xong: DevPrep có **4 lĩnh vực** (thêm `spring-security`), **6 giáo
 | D7 | `README.md` của hai ebook **không** thành mục docs | Đó là mục lục, app đã có trang danh sách tài liệu riêng — giống cách sysprog đã làm |
 | D8 | Chương 14 Spring Security **vẫn vào** danh mục dù nguồn thiếu thân chương | Bỏ hẳn tạo lỗ thủng số chương khó hiểu hơn; `desc` nói thẳng khiếm khuyết và lộ trình không giao bài dựa vào nó |
 | D9 | Giữ nguyên markdown nguồn, không sửa đường dẫn ảnh | `fixRelativePaths()` đã resolve tương đối theo thư mục chứa file; khuôn `content/<field>/images/…` của sysprog tái dùng nguyên vẹn |
-| D10 | Thêm `loading="lazy"` cho ảnh trong `fixRelativePaths()` | 12MB ảnh mới, chương 11 có 18 PNG tải cùng lúc. Một dòng, nằm đúng đoạn mã đang phải đụng, có lợi cho cả ảnh sysprog/Java sẵn có |
+| D10 | Thêm `loading="lazy"` cho ảnh trong `fixRelativePaths()` | 12MB ảnh mới, chương 2 và chương 6 mỗi chương có 18 PNG tải cùng lúc. Một dòng, nằm đúng đoạn mã đang phải đụng, có lợi cho cả ảnh sysprog/Java sẵn có |
 
 ## 3. Kiến trúc
 
@@ -225,7 +225,7 @@ không khai sớm, vì bất biến N3 chỉ đòi key cho lĩnh vực đã tồ
 ```
 
 - Bộ chọn lĩnh vực có 4 mục
-- `#/docs/k8sbook-11` hiện đủ 18 ảnh, mục lục nổi chạy
+- `#/docs/k8sbook-11` hiện đủ 13 ảnh, mục lục nổi chạy
 - `#/roadmap/k8sbook` mở được, tick tiến độ lưu lại sau reload
 - Tuần 3 của CKAD (`#/roadmap/ckad`) hiện chip sách, resource cũ vẫn còn nguyên
 - `#/docs/springsec-14` hiện rõ cảnh báo thiếu nguồn
