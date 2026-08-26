@@ -11,11 +11,12 @@ import { flashcards } from "./flashcards.js";
 import { sysprogFlashcards } from "./sysprog-flashcards.js";
 import { questions } from "./questions.js";
 import { sysprogQuestionsPart1 } from "./sysprog-questions-part1.js";
+import { sysprogQuestionsPart2 } from "./sysprog-questions-part2.js";
 
 export const allDocs = docs;
 export const allTracks = tracks;
 export const allFlashcards = [...flashcards, ...sysprogFlashcards];
-export const allQuestions = [...questions, ...sysprogQuestionsPart1];
+export const allQuestions = [...questions, ...sysprogQuestionsPart1, ...sysprogQuestionsPart2];
 
 export function fieldOfRecord(rec) {
   const f = rec?.field;

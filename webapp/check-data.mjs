@@ -22,7 +22,7 @@ const EXPECTED = {
     "docs:sysprog": 18,
     "roadmap-items:sysprog": 50,
     "flashcards:sysprog": 90,
-    "questions:sysprog": 60,
+    "questions:sysprog": 110,
   },
 };
 
@@ -332,6 +332,18 @@ await check("Flashcard sysprog phân bổ đúng theo chủ đề", () => {
   const got = {};
   for (const c of flashcards.filter((x) => fieldOf(x) === "sysprog"))
     got[c.topic] = (got[c.topic] ?? 0) + 1;
+  const bad = Object.entries(want)
+    .filter(([k, v]) => (got[k] ?? 0) !== v)
+    .map(([k, v]) => `${k}: kỳ vọng ${v}, thực tế ${got[k] ?? 0}`);
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("Câu hỏi sysprog phân bổ đúng theo domain", () => {
+  const want = { "sp-c": 22, "sp-process": 14, "sp-concurrency": 24,
+                 "sp-deadlock": 12, "sp-memory-ipc": 14, "sp-io": 16, "sp-security": 8 };
+  const got = {};
+  for (const q of questions.filter((x) => fieldOf(x) === "sysprog"))
+    got[q.domain] = (got[q.domain] ?? 0) + 1;
   const bad = Object.entries(want)
     .filter(([k, v]) => (got[k] ?? 0) !== v)
     .map(([k, v]) => `${k}: kỳ vọng ${v}, thực tế ${got[k] ?? 0}`);
