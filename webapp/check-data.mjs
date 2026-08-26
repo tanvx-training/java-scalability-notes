@@ -72,6 +72,21 @@ const { docs } = await import("./js/data/docs-index.js");
 const { tracks } = await import("./js/data/roadmap.js");
 const { allFlashcards: flashcards, allQuestions: questions } =
   await import("./js/data/index.js");
+const { k8sbookCrossref } = await import("./js/data/k8sbook-crossref.js");
+const { weeksPart1 } = await import("./js/data/roadmap-part1.js");
+const { weeksPart2 } = await import("./js/data/roadmap-part2.js");
+const { weeksPart3 } = await import("./js/data/roadmap-part3.js");
+const { ckaWeeksPart1 } = await import("./js/data/cka-roadmap-part1.js");
+const { ckaWeeksPart2 } = await import("./js/data/cka-roadmap-part2.js");
+const { ckaWeeksPart3 } = await import("./js/data/cka-roadmap-part3.js");
+const { cksWeeksPart1 } = await import("./js/data/cks-roadmap-part1.js");
+const { cksWeeksPart2 } = await import("./js/data/cks-roadmap-part2.js");
+
+// Tuần "thô" — trước khi roadmap.js merge crossref vào resources.
+const rawWeeks = new Map(
+  [...weeksPart1, ...weeksPart2, ...weeksPart3,
+   ...ckaWeeksPart1, ...ckaWeeksPart2, ...ckaWeeksPart3,
+   ...cksWeeksPart1, ...cksWeeksPart2].map((w) => [w.id, w]));
 
 const allItems = tracks.flatMap((t) => t.weeks.flatMap((w) => w.items));
 const fieldOf = (rec) => rec.field ?? "kubernetes";
@@ -160,6 +175,48 @@ await check("Link #/docs/<id> trong lộ trình khớp lĩnh vực với track",
     }
   }
   expect(!bad.length, `link khác lĩnh vực:\n      ${bad.join("\n      ")}`);
+});
+
+// N1 — bảng liên kết chéo phải trỏ tới thứ có thật.
+// Gõ nhầm id tuần là lỗi IM LẶNG: merge vào một tuần không tồn tại không ném
+// lỗi, chip chỉ đơn giản không bao giờ hiện ra.
+await check("k8sbookCrossref trỏ tới tuần và tài liệu có thật", () => {
+  const docIds = new Set(docs.map((d) => d.id));
+  const bad = [];
+  for (const [weekId, refs] of Object.entries(k8sbookCrossref)) {
+    if (!rawWeeks.has(weekId)) bad.push(`tuần "${weekId}" không tồn tại`);
+    if (weekId.startsWith("kb-w")) bad.push(`"${weekId}" là tuần của chính track k8sbook`);
+    const dup = dupes(refs);
+    if (dup.length) bad.push(`tuần "${weekId}" trùng: ${dup.join(", ")}`);
+    for (const id of refs) {
+      if (!id.startsWith("k8sbook-")) bad.push(`"${weekId}" → "${id}" không phải chương sách`);
+      else if (!docIds.has(id)) bad.push(`"${weekId}" → "${id}" không tồn tại`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// N2 — merge phải NỐI vào resources, không ghi đè.
+await check("Merge crossref giữ nguyên resource gốc và thêm đủ chip sách", () => {
+  const merged = new Map(
+    tracks.flatMap((t) => t.weeks).map((w) => [w.id, w]));
+  const bad = [];
+  for (const [weekId, refs] of Object.entries(k8sbookCrossref)) {
+    const raw = rawWeeks.get(weekId);
+    const now = merged.get(weekId);
+    if (!raw || !now) continue; // N1 đã báo
+    for (const r of raw.resources ?? []) {
+      if (!(now.resources ?? []).some((x) => x.href === r.href)) {
+        bad.push(`tuần "${weekId}" mất resource gốc "${r.href}"`);
+      }
+    }
+    for (const id of refs) {
+      if (!(now.resources ?? []).some((x) => x.href === `#/docs/${id}`)) {
+        bad.push(`tuần "${weekId}" thiếu chip sách "${id}"`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
 });
 
 // #4 — Khoá phân loại hợp lệ và khớp lĩnh vực

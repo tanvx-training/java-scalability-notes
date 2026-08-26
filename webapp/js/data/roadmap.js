@@ -23,6 +23,24 @@ import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
 import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
+import { k8sbookCrossref } from "./k8sbook-crossref.js";
+import { docs as allDocsRaw } from "./docs-index.js";
+
+// Nối chip "đọc thêm trong sách" vào resources của tuần, không ghi đè.
+// Nhãn lấy từ title của chính tài liệu để không phải viết tay lần thứ hai.
+const docTitle = new Map(allDocsRaw.map((d) => [d.id, d.title]));
+
+function withBookRefs(weeks) {
+  return weeks.map((w) => {
+    const refs = k8sbookCrossref[w.id];
+    if (!refs) return w;
+    const chips = refs.map((id) => ({
+      label: `📖 ${docTitle.get(id) ?? id}`,
+      href: `#/docs/${id}`,
+    }));
+    return { ...w, resources: [...(w.resources ?? []), ...chips] };
+  });
+}
 
 export const tracks = [
   {
@@ -33,7 +51,7 @@ export const tracks = [
     durationWeeks: 10,
     desc: "Góc nhìn developer: Pod, Deployment, config, networking của ứng dụng. Bắt đầu từ đây nếu bạn mới với Kubernetes.",
     prereq: "Yêu cầu: Docker, YAML, Linux cơ bản (xem tài liệu Kiến thức nền tảng).",
-    weeks: [...weeksPart1, ...weeksPart2, ...weeksPart3],
+    weeks: withBookRefs([...weeksPart1, ...weeksPart2, ...weeksPart3]),
   },
   {
     id: "cka",
@@ -43,7 +61,7 @@ export const tracks = [
     durationWeeks: 10,
     desc: "Góc nhìn admin: kubeadm, etcd backup/restore, cluster upgrade, troubleshooting mức node (30% đề thi).",
     prereq: "Khuyến nghị: học xong CKAD trước — khoảng 50% kiến thức trùng nhau.",
-    weeks: [...ckaWeeksPart1, ...ckaWeeksPart2, ...ckaWeeksPart3],
+    weeks: withBookRefs([...ckaWeeksPart1, ...ckaWeeksPart2, ...ckaWeeksPart3]),
   },
   {
     id: "cks",
@@ -53,7 +71,7 @@ export const tracks = [
     durationWeeks: 10,
     desc: "Bảo mật chuyên sâu: CIS benchmark, hardening, supply chain (Trivy), runtime security (Falco), audit logging.",
     prereq: "Bắt buộc: đang giữ chứng chỉ CKA còn hiệu lực mới được thi.",
-    weeks: [...cksWeeksPart1, ...cksWeeksPart2],
+    weeks: withBookRefs([...cksWeeksPart1, ...cksWeeksPart2]),
   },
   {
     id: "k8sbook",
