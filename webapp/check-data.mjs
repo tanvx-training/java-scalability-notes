@@ -20,6 +20,8 @@ const EXPECTED = {
 // ---- Khung chạy ----
 const failures = [];
 let checked = 0;
+let skipped = 0;
+const SKIP = Symbol("skip");
 
 function expect(cond, msg) {
   if (!cond) throw new Error(msg);
@@ -28,8 +30,13 @@ function expect(cond, msg) {
 async function check(name, fn) {
   checked++;
   try {
-    await fn();
-    console.log(`  ✓ ${name}`);
+    const result = await fn();
+    if (result === SKIP) {
+      skipped++;
+      console.log(`  – ${name} (bỏ qua)`);
+    } else {
+      console.log(`  ✓ ${name}`);
+    }
   } catch (err) {
     failures.push(`${name}: ${err.message}`);
     console.log(`  ✗ ${name}\n      ${err.message}`);
@@ -85,7 +92,7 @@ const contentBuilt = existsSync(join(DIR, "content"));
 await check("Mọi docs[].file tồn tại trên đĩa", () => {
   if (!contentBuilt) {
     console.log("      (bỏ qua — chưa chạy build-content.sh)");
-    return;
+    return SKIP;
   }
   const missing = docs.filter((d) => !existsSync(join(DIR, d.file)));
   expect(!missing.length, `thiếu file: ${missing.map((d) => d.file).join(", ")}`);
@@ -106,6 +113,8 @@ await check("Mọi link #/docs/<id> trỏ tới tài liệu có thật", () => {
       for (const it of w.items) scan(it.lesson, it.id);
     }
   }
+  for (const c of flashcards) scan(c.back, `${c.id} back`);
+  for (const q of questions) scan(q.explanation, `${q.id} explanation`);
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
@@ -127,8 +136,14 @@ await check("flashcard.topic hợp lệ và khớp field", () => {
 
 // #6 — Hình dạng câu hỏi
 await check("Mỗi câu hỏi có 4 lựa chọn, answer hợp lệ, có giải thích", () => {
+  const validOptions = (opts) => {
+    if (!Array.isArray(opts) || opts.length !== 4) return false;
+    const trimmed = opts.map((o) => (typeof o === "string" ? o.trim() : ""));
+    if (trimmed.some((o) => !o)) return false;
+    return new Set(trimmed).size === 4;
+  };
   const bad = questions.filter((q) =>
-    !Array.isArray(q.options) || q.options.length !== 4 ||
+    !validOptions(q.options) ||
     !Number.isInteger(q.answer) || q.answer < 0 || q.answer > 3 ||
     !q.explanation || !String(q.explanation).trim());
   expect(!bad.length, `sai hình dạng: ${bad.map((q) => q.id).join(", ")}`);
@@ -154,7 +169,9 @@ await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
 });
 
 // ---- Kết luận ----
-console.log(`\n${checked - failures.length}/${checked} bất biến đạt`);
+const passed = checked - failures.length - skipped;
+const skipNote = skipped ? `, ${skipped} bỏ qua (chưa chạy build-content.sh)` : "";
+console.log(`\n${passed}/${checked} bất biến đạt${skipNote}`);
 if (failures.length) {
   console.error(`\n${failures.length} lỗi:\n` + failures.map((f) => `  - ${f}`).join("\n"));
   process.exit(1);
