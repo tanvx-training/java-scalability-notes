@@ -7,9 +7,12 @@
 // GIỮ NGUYÊN id (ss-w<N> / ss-w<N>-<M>) — tiến độ localStorage lưu theo id này.
 //
 // Bản PDF gốc có một số dòng bị cắt cụt ở mép trang, được đánh dấu `[…]` ngay
-// trong tệp nguồn (xem cảnh báo đầu spring-security-vi/README.md). §2.2 là mục
-// dính nhiều nhất trong tuần 1–5. Ở những chỗ đó, bài học chỉ khẳng định phần
-// văn bản còn nguyên vẹn — tiêu đề mục, danh sách gạch đầu dòng, đoạn mã —
+// trong tệp nguồn (xem cảnh báo đầu spring-security-vi/README.md).
+//
+// Số dấu (đã trừ dòng chú thích đầu tệp): ch1: 0 · ch2: 42 · ch3: 0 · ch4: 2 ·
+// ch5: 1 · ch6: 4 · ch7: 10 · ch8: 23. §2.2 là mục dính nhiều nhất trong tuần
+// 1–5 (và của cả chương 2 nói chung). Ở những chỗ đó, bài học chỉ khẳng định
+// phần văn bản còn nguyên vẹn — tiêu đề mục, danh sách gạch đầu dòng, đoạn mã —
 // và nói rõ với người học rằng mục đó đọc sẽ vấp.
 
 export const springsecWeeksPart1 = [
@@ -245,7 +248,7 @@ export const springsecWeeksPart1 = [
         text: "Quyền hạn (authority) khác vai trò (role) ở đâu",
         lesson: `**Mục tiêu.** Phân biệt được quyền hạn với vai trò ở cả mức khái niệm lẫn mức mã nguồn, và chọn đúng phương thức cấu hình cho từng loại.
 
-**Đọc.** [§7.1 Giới hạn truy cập dựa trên quyền hạn và vai trò](#/docs/springsec-07) — §7.1.1 cho \`hasAuthority()\`, \`hasAnyAuthority()\` và \`access()\`; §7.1.2 cho \`hasRole()\`, \`hasAnyRole()\` và phép so sánh Đoạn mã 7.9 với Đoạn mã 7.11; §7.1.3 cho \`denyAll()\` cùng lý do tồn tại của nó. Khung "Tìm hiểu thêm về phương thức access()" cho bạn một ví dụ SpEL chặn truy cập theo giờ.
+**Đọc.** [§7.1 Giới hạn truy cập dựa trên quyền hạn và vai trò](#/docs/springsec-07) — §7.1.1 cho \`hasAuthority()\`, \`hasAnyAuthority()\` và \`access()\`; §7.1.2 cho \`hasRole()\`, \`hasAnyRole()\` và phép so sánh Đoạn mã 7.9 với Đoạn mã 7.11; §7.1.3 cho \`denyAll()\` cùng lý do tồn tại của nó. Khung "Tìm hiểu thêm về phương thức access()" cho bạn một ví dụ SpEL chặn truy cập theo giờ. Lưu ý trước: §7.1.1 là mục dính nhiều dòng bị cắt cụt \`[…]\` thứ ba toàn bản dịch (7 dấu, rơi chủ yếu vào chữ ký \`securityFilterChain(HttpSecurity http)\` của các đoạn mã), nên bám vào phần diễn giải văn xuôi quanh mỗi đoạn mã thay vì tin nguyên văn đoạn mã.
 
 **Bẫy.** Tiền tố \`ROLE_\`. Sách nói vai trò và quyền hạn dùng chung một khế ước \`GrantedAuthority\`, và ở tầng dưới **chính tiền tố \`ROLE_\` là dấu hiệu phân biệt hai thứ**. Từ đó sinh ra ba quy tắc rất dễ nhầm: khai bằng \`authorities()\` thì phải viết đủ \`ROLE_ADMIN\`; khai bằng \`roles()\` thì tuyệt đối không được kèm tiền tố, kèm vào là ném ngoại lệ; còn trong cấu hình thì gọi \`hasRole("ADMIN")\`, cũng không tiền tố.
 
@@ -267,7 +270,7 @@ export const springsecWeeksPart1 = [
         text: "Chọn yêu cầu để áp hạn chế phân quyền",
         lesson: `**Mục tiêu.** Chọn đúng biến thể \`requestMatchers()\` và viết đúng biểu thức đường dẫn cho cả một nhóm yêu cầu.
 
-**Đọc.** [§8.2 Lựa chọn các yêu cầu để áp dụng hạn chế phân quyền](#/docs/springsec-08) — dựng dự án \`ssia-ch8-ex2\` với bốn endpoint \`/a\` (GET và POST), \`/a/b\`, \`/a/b/c\`, rồi chạy hết các kịch bản cấu hình trong mục và ghi lại mã trạng thái mỗi lần. Kết lại bằng Bảng 8.1 ở cuối mục — bảng này đáng chép ra giấy dán cạnh màn hình.
+**Đọc.** [§8.2 Lựa chọn các yêu cầu để áp dụng hạn chế phân quyền](#/docs/springsec-08) — dựng dự án \`ssia-ch8-ex2\` với bốn endpoint \`/a\` (GET và POST), \`/a/b\`, \`/a/b/c\`, rồi chạy hết các kịch bản cấu hình trong mục và ghi lại mã trạng thái mỗi lần. Kết lại bằng Bảng 8.1 ở cuối mục — bảng này đáng chép ra giấy dán cạnh màn hình. Lưu ý trước: §8.2 là mục dính nhiều dòng bị cắt cụt \`[…]\` nhiều thứ nhì toàn bản dịch (11 dấu, rải trên cả chữ ký phương thức lẫn chú thích cuối dòng như \`// Đối với các yêu…\`), nên đọc bù bằng Bảng 8.1 mỗi khi một đoạn mã hoặc chú thích bị hụt.
 
 **Bẫy.** Lẫn \`*\` với \`**\`. Theo Bảng 8.1, \`/a/*\` thay cho **một** thành phần đường dẫn nên khớp \`/a/b\` nhưng không khớp \`/a/b/c\`; còn \`/a/**\` thay cho nhiều thành phần nên khớp cả \`/a\`, \`/a/b\` lẫn \`/a/b/c\`. Bẫy thứ hai: dùng biến thể \`requestMatchers(String... patterns)\` rồi ngầm hiểu nó chỉ áp cho GET — không kèm \`HttpMethod\` thì ràng buộc tự động áp cho **mọi** phương thức HTTP gọi tới đường dẫn đó.
 
