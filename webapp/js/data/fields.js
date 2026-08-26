@@ -20,7 +20,7 @@ export const FIELDS = {
     certFilter: false,
     // Mở dần theo dữ liệu: "docs" thêm ở Task 6, "roadmap" Task 8,
     // "flashcards" Task 10, "quiz" Task 11. Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard", "roadmap", "docs", "flashcards"],
+    modules: ["dashboard", "roadmap", "docs", "flashcards", "quiz"],
   },
   java: {
     label: "Java & Spring Boot Scalability",

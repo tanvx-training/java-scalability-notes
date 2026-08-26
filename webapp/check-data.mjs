@@ -22,6 +22,7 @@ const EXPECTED = {
     "docs:sysprog": 18,
     "roadmap-items:sysprog": 50,
     "flashcards:sysprog": 90,
+    "questions:sysprog": 60,
   },
 };
 
@@ -61,8 +62,8 @@ function dupes(ids) {
 const { DOMAINS, TOPICS } = await import("./js/data/meta.js");
 const { docs } = await import("./js/data/docs-index.js");
 const { tracks } = await import("./js/data/roadmap.js");
-const { allFlashcards: flashcards } = await import("./js/data/index.js");
-const { questions } = await import("./js/data/questions.js");
+const { allFlashcards: flashcards, allQuestions: questions } =
+  await import("./js/data/index.js");
 
 const allItems = tracks.flatMap((t) => t.weeks.flatMap((w) => w.items));
 const fieldOf = (rec) => rec.field ?? "kubernetes";

@@ -2,8 +2,10 @@
 
 import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, diffBadge } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { questions } from "../data/questions.js";
-import { DOMAINS, CERTS } from "../data/meta.js";
+import { getQuestions, getDomains } from "../data/index.js";
+import { FIELDS } from "../data/fields.js";
+import { CERTS } from "../data/meta.js";
+import { currentField } from "../lib/field.js";
 
 const OPT_KEYS = ["A", "B", "C", "D"];
 
@@ -12,6 +14,9 @@ export function render(root) {
 }
 
 function renderSetup(root) {
+  const fieldKey = currentField();
+  const field = FIELDS[fieldKey];
+  const questions = getQuestions(fieldKey);
   const page = h("div", { class: "page" });
 
   page.append(pageHead(
@@ -19,30 +24,33 @@ function renderSetup(root) {
     `${questions.length} câu hỏi có giải thích chi tiết. Chế độ luyện tập: biết đúng/sai ngay sau mỗi câu — phù hợp để học; muốn mô phỏng áp lực thật hãy dùng Thi thử.`
   ));
 
-  // Bộ lọc chứng chỉ
-  const certSel = new Set(["CKAD"]);
+  // Tầng lọc chứng chỉ chỉ có nghĩa với lĩnh vực Kubernetes.
+  const certSel = new Set();
   const certRow = h("div", { class: "chip-row", style: "margin:10px 0 16px" });
-  for (const key of Object.keys(CERTS)) {
-    const count = questions.filter((q) => q.cert === key).length;
-    if (!count) continue;
-    const chip = h("button", { class: `chip${certSel.has(key) ? " on" : ""}` }, `${key} (${count})`);
-    chip.addEventListener("click", () => {
-      if (certSel.has(key)) certSel.delete(key);
-      else certSel.add(key);
-      chip.classList.toggle("on", certSel.has(key));
-      syncDomains();
-    });
-    certRow.append(chip);
+  if (field.certFilter) {
+    certSel.add("CKAD");
+    for (const key of Object.keys(CERTS)) {
+      const count = questions.filter((q) => q.cert === key).length;
+      if (!count) continue;
+      const chip = h("button", { class: `chip${certSel.has(key) ? " on" : ""}` }, `${key} (${count})`);
+      chip.addEventListener("click", () => {
+        if (certSel.has(key)) certSel.delete(key);
+        else certSel.add(key);
+        chip.classList.toggle("on", certSel.has(key));
+        syncDomains();
+      });
+      certRow.append(chip);
+    }
   }
 
-  // Bộ lọc domain (phụ thuộc chứng chỉ đã chọn)
+  // Bộ lọc domain (phụ thuộc chứng chỉ đã chọn, nếu lĩnh vực có tầng đó)
   const domainSel = new Set();
   const domainRow = h("div", { class: "chip-row", style: "margin:10px 0 16px" });
   function syncDomains() {
     domainRow.innerHTML = "";
     domainSel.clear();
-    const visible = Object.entries(DOMAINS).filter(([key, d]) =>
-      certSel.has(d.cert) && questions.some((q) => q.domain === key));
+    const visible = getDomains(fieldKey).filter(([key, d]) =>
+      (!field.certFilter || certSel.has(d.cert)) && questions.some((q) => q.domain === key));
     for (const [key, d] of visible) {
       domainSel.add(key);
       const count = questions.filter((q) => q.domain === key).length;
@@ -72,7 +80,8 @@ function renderSetup(root) {
 
   const startBtn = h("button", { class: "btn btn-primary btn-lg" }, "Bắt đầu");
   startBtn.addEventListener("click", () => {
-    let pool = questions.filter((q) => certSel.has(q.cert) && domainSel.has(q.domain));
+    let pool = questions.filter((q) =>
+      (!field.certFilter || certSel.has(q.cert)) && domainSel.has(q.domain));
     if (!pool.length) { alert("Không có câu hỏi nào khớp bộ lọc."); return; }
     if (onlyWeak) {
       const stats = store.get("quiz.stats", {});
@@ -93,7 +102,8 @@ function renderSetup(root) {
 
   page.append(
     h("div", { class: "card" },
-      h("strong", {}, "Chứng chỉ"), certRow,
+      field.certFilter ? h("strong", {}, "Chứng chỉ") : null,
+      field.certFilter ? certRow : null,
       h("strong", {}, "Domain"), domainRow,
       h("div", { class: "flex flex-wrap", style: "margin-bottom:14px" }, countSel, weakChip),
       startBtn)
@@ -134,7 +144,8 @@ function renderSession(root, list) {
 
     const card = h("div", { class: "card" },
       h("div", { class: "flex flex-wrap", style: "margin-bottom:10px" },
-        certBadge(q.cert), domainBadge(q.domain), diffBadge(q.difficulty)),
+        q.cert ? certBadge(q.cert) : null,
+        domainBadge(q.domain), diffBadge(q.difficulty)),
       h("div", { style: "font-size:16px;font-weight:600", html: inlineMd(q.question) }));
 
     const codeEl = codeNode(q.code);
@@ -210,7 +221,8 @@ function renderSession(root, list) {
       for (const r of wrong) {
         const card = h("div", { class: "card", style: "margin-bottom:12px" },
           h("div", { class: "flex flex-wrap", style: "margin-bottom:8px" },
-            certBadge(r.q.cert), domainBadge(r.q.domain)),
+            r.q.cert ? certBadge(r.q.cert) : null,
+            domainBadge(r.q.domain)),
           h("div", { style: "font-weight:600", html: inlineMd(r.q.question) }));
         const codeEl = codeNode(r.q.code);
         if (codeEl) card.append(codeEl);
