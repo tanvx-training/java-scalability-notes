@@ -149,6 +149,57 @@ await check("Mỗi câu hỏi có 4 lựa chọn, answer hợp lệ, có giải 
   expect(!bad.length, `sai hình dạng: ${bad.map((q) => q.id).join(", ")}`);
 });
 
+// #5 — modules trỏ tới view có thật
+const { FIELDS, FIELD_ORDER, DEFAULT_FIELD, navFor, moduleAllowed } =
+  await import("./js/data/fields.js");
+
+await check("Mọi module của lĩnh vực là view có thật", () => {
+  const views = new Set(
+    readdirSync(join(DIR, "js/views")).map((f) => f.replace(/\.js$/, "")));
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    for (const m of f.modules) if (!views.has(m)) bad.push(`${id} → ${m}`);
+  }
+  expect(!bad.length, `module không có view: ${bad.join(", ")}`);
+});
+
+await check("FIELD_ORDER khớp FIELDS và chứa DEFAULT_FIELD", () => {
+  expect(FIELD_ORDER.length === Object.keys(FIELDS).length,
+    `FIELD_ORDER (${FIELD_ORDER.length}) lệch FIELDS (${Object.keys(FIELDS).length})`);
+  for (const id of FIELD_ORDER) expect(FIELDS[id], `FIELD_ORDER có "${id}" không tồn tại trong FIELDS`);
+  expect(FIELDS[DEFAULT_FIELD], `DEFAULT_FIELD "${DEFAULT_FIELD}" không tồn tại`);
+});
+
+// #7 — khai module nào thì phải có dữ liệu cho module đó
+await check("Lĩnh vực khai quiz/flashcards/roadmap/docs thì phải có dữ liệu", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    const has = {
+      docs: docs.some((d) => fieldOf(d) === id),
+      roadmap: tracks.some((t) => fieldOf(t) === id),
+      flashcards: flashcards.some((c) => fieldOf(c) === id),
+      quiz: questions.some((q) => fieldOf(q) === id),
+    };
+    for (const m of f.modules) if (m in has && !has[m]) bad.push(`${id} khai "${m}" nhưng không có dữ liệu`);
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("navFor() lọc đúng và bỏ nhóm rỗng", () => {
+  for (const id of FIELD_ORDER) {
+    const groups = navFor(id);
+    const ids = groups.flatMap((g) => g.items.map((i) => i.id));
+    const mods = FIELDS[id].modules;
+    expect(ids.length === mods.length,
+      `navFor("${id}") trả ${ids.length} mục, modules có ${mods.length}`);
+    for (const m of mods) expect(ids.includes(m), `navFor("${id}") thiếu "${m}"`);
+    for (const g of groups) expect(g.items.length > 0, `navFor("${id}") còn nhóm rỗng "${g.title}"`);
+  }
+  expect(moduleAllowed("java", "docs") === true, 'moduleAllowed("java","docs") phải là true');
+  expect(moduleAllowed("java", "labs") === false, 'moduleAllowed("java","labs") phải là false');
+  expect(moduleAllowed("khong-ton-tai", "docs") === false, "lĩnh vực lạ phải trả false");
+});
+
 // Bảng kỳ vọng
 await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
   const actual = {};
