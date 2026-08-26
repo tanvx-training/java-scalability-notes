@@ -1,0 +1,6 @@
+services:
+  kubeprep:
+    build: .
+    ports:
+      - "9020:80"
+    restart: unless-stopped
