@@ -18,7 +18,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build content
+        run: webapp/build-content.sh webapp/content
+
+      - name: Check data integrity
+        run: node webapp/check-data.mjs
+
   deploy:
+    needs: check
     runs-on: ubuntu-latest
     environment:
       name: github-pages
