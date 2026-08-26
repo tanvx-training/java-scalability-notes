@@ -1,6 +1,9 @@
 // KubePrep — shell của ứng dụng: router theo hash, theme, sidebar mobile.
 
 import { store } from "./lib/store.js";
+import { currentField, setCurrentField } from "./lib/field.js";
+import { FIELDS, FIELD_ORDER, navFor, moduleAllowed } from "./data/fields.js";
+import { fieldOfDoc, fieldOfTrack } from "./data/index.js";
 import * as dashboard from "./views/dashboard.js";
 import * as certs from "./views/certs.js";
 import * as roadmap from "./views/roadmap.js";
@@ -60,6 +63,60 @@ document.getElementById("menu-btn").addEventListener("click", () => {
 });
 backdrop.addEventListener("click", closeSidebar);
 
+// ---------- Lĩnh vực ----------
+
+function onFieldChange(id) {
+  if (!setCurrentField(id)) return;
+  renderFieldSwitch();
+  renderNav();
+  navigate();
+}
+
+const fieldSwitch = document.getElementById("field-switch");
+const navEl = document.getElementById("nav");
+
+function renderFieldSwitch() {
+  const cur = currentField();
+  fieldSwitch.innerHTML = "";
+  const sel = document.createElement("select");
+  sel.className = "select field-select";
+  sel.setAttribute("aria-label", "Chọn lĩnh vực học");
+  for (const id of FIELD_ORDER) {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = `${FIELDS[id].icon} ${FIELDS[id].label}`;
+    if (id === cur) opt.selected = true;
+    sel.append(opt);
+  }
+  sel.addEventListener("change", () => onFieldChange(sel.value));
+  fieldSwitch.append(sel);
+}
+
+function renderNav() {
+  const cur = currentField();
+  navEl.innerHTML = "";
+  for (const group of navFor(cur)) {
+    const g = document.createElement("div");
+    g.className = "nav-group";
+    const t = document.createElement("div");
+    t.className = "nav-title";
+    t.textContent = group.title;
+    g.append(t);
+    for (const item of group.items) {
+      const a = document.createElement("a");
+      a.className = "nav-link";
+      a.href = item.href;
+      a.dataset.route = item.id;
+      const ico = document.createElement("span");
+      ico.className = "nav-ico";
+      ico.textContent = item.icon;
+      a.append(ico, document.createTextNode(" " + item.label));
+      g.append(a);
+    }
+    navEl.append(g);
+  }
+}
+
 // ---------- Router ----------
 
 function parseHash() {
@@ -72,16 +129,28 @@ let currentView = null;
 
 function navigate() {
   const { name, params } = parseHash();
-  const view = routes[name] || routes.dashboard;
 
-  // Cho view đang mở cơ hội dọn dẹp (dừng timer thi thử...).
+  // Deep-link tới tài liệu/track của lĩnh vực khác → chuyển lĩnh vực theo nội dung.
+  let owner = null;
+  if (name === "docs" && params[0]) owner = fieldOfDoc(params[0]);
+  if (name === "roadmap" && params[0]) owner = fieldOfTrack(params[0]);
+  if (owner && setCurrentField(owner)) {
+    renderFieldSwitch();
+    renderNav();
+  }
+
+  // Route không thuộc lĩnh vực đang chọn → về bảng điều khiển.
+  let routeName = routes[name] ? name : "dashboard";
+  if (!moduleAllowed(currentField(), routeName)) routeName = "dashboard";
+  const view = routes[routeName];
+
   if (currentView && typeof currentView.cleanup === "function") {
     try { currentView.cleanup(); } catch { /* ignore */ }
   }
   currentView = view;
 
   document.querySelectorAll(".nav-link").forEach((a) => {
-    a.classList.toggle("active", a.dataset.route === (routes[name] ? name : "dashboard"));
+    a.classList.toggle("active", a.dataset.route === routeName);
   });
 
   closeSidebar();
@@ -89,9 +158,11 @@ function navigate() {
   const page = document.createElement("div");
   page.className = "fade-in";
   main.append(page);
-  view.render(page, params);
+  view.render(page, routeName === name ? params : []);
   window.scrollTo({ top: 0 });
 }
 
 window.addEventListener("hashchange", navigate);
+renderFieldSwitch();
+renderNav();
 navigate();
