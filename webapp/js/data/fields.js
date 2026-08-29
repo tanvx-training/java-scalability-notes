@@ -45,7 +45,7 @@ export const FIELDS = {
   "senior-java": {
     label: "Lộ trình Senior Java",
     icon: "🧭",
-    desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, 276 mục tick — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ.",
+    desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, 276 mục tick (mốc Java 17–21) — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ (mốc Java 25 / Spring Boot 4.1, tự đánh giá độc lập, không ánh xạ 1-1 với lộ trình).",
     certFilter: false,
     modules: ["dashboard", "docs", "roadmap", "tracker"],
     // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —

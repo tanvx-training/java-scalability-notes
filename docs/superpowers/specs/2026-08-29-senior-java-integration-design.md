@@ -1,6 +1,6 @@
 # Tích hợp lộ trình Senior Java vào DevPrep — thiết kế
 
-Ngày: 2026-08-29 · Trạng thái: đã duyệt thiết kế, chưa triển khai
+Ngày: 2026-08-29 · Trạng thái: đã triển khai
 
 ## 1. Bối cảnh
 

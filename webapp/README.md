@@ -6,7 +6,7 @@ Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một 
 
 | Trang | Nội dung |
 |---|---|
-| 🏠 Bảng điều khiển | Tổng quan tiến độ của lĩnh vực đang chọn: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử |
+| 🏠 Bảng điều khiển | Tổng quan tiến độ của lĩnh vực đang chọn: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử, ma trận năng lực |
 | 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) — riêng lĩnh vực Kubernetes |
 | 🗺️ Lộ trình học | 10 giáo trình: CKAD, CKA, CKS (mỗi track 8–10 tuần), System Programming (10 tuần), lộ trình đọc *Kubernetes in Action* (9 tuần, bám theo 17 chương sách), lộ trình đọc *Spring Security in Action* (9 tuần, bám theo 17 chương — lời giới thiệu, ch.14 và 2 phụ lục chỉ xuất hiện ở tài nguyên theo tuần, không phải mục Đọc chính) và 4 giai đoạn **Lộ trình Senior Java** (GĐ1–GĐ4, 24 tháng) — tổng **540 mục** (184 K8s + 50 mục sysprog + 30 mục đọc *Spring Security in Action* + 276 mục Senior Java: GĐ1 81, GĐ2 66, GĐ3 64, GĐ4 65), lý thuyết dễ hiểu + lệnh/YAML/code mẫu + bẫy thường gặp, tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
 | 📚 Thư viện tài liệu | **78 tài liệu** thuộc 5 lĩnh vực (24 Kubernetes, 18 System Programming, 10 Java & Spring Boot Scalability, 21 Spring Security, 5 Lộ trình Senior Java) — mục lục nổi, highlight yaml/bash/c, mermaid diagram, ảnh minh họa, nút copy |

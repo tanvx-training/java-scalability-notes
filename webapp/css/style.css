@@ -819,6 +819,7 @@ details.reveal .reveal-body { padding: 6px 16px 14px; }
 }
 
 /* ---------- Roadmap ---------- */
+/* .week-num/.week-card/.week-head cũng được views/tracker.js tái dùng cho ma trận năng lực. */
 
 .week-card { margin-bottom: 14px; }
 .week-head { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
