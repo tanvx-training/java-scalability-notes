@@ -824,8 +824,9 @@ details.reveal .reveal-body { padding: 6px 16px 14px; }
 .week-head { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
 .week-num {
   flex: none;
-  width: 42px; height: 42px;
-  border-radius: 50%;
+  min-width: 42px; height: 42px;
+  padding: 0 8px;
+  border-radius: 21px;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent-soft);
   color: var(--accent-text);

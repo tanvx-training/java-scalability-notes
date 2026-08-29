@@ -37,6 +37,7 @@ const EXPECTED = {
     "roadmap-items:spring-security": 30,
     // Lĩnh vực Lộ trình Senior Java — 5 tài liệu kế hoạch 24 tháng.
     "docs:senior-java": 5,
+    "roadmap-items:senior-java": 81,
   },
 };
 
@@ -251,6 +252,40 @@ await check("Mọi link #/roadmap/<trackId> trỏ tới track có thật", () =>
   for (const c of flashcards) scan(c.back, `${c.id} back`);
   for (const q of questions) scan(q.explanation, `${q.id} explanation`);
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
+});
+
+// #3d — Mỗi track sj-gd* phải kết thúc bằng đúng một khối "Nghiệm thu".
+//
+// Khối nghiệm thu là khối tuần duy nhất khai `badge`, và nó chứa các tiêu chí
+// cổng của giai đoạn. Đặt nhầm vị trí (không ở cuối) hay khai hai khối cùng
+// badge đều làm hỏng ý nghĩa "cổng cuối giai đoạn" mà không lỗi hiển thị nào
+// lộ ra — nên phải có bất biến riêng.
+await check("Mỗi track sj-gd* kết thúc bằng đúng một khối nghiệm thu", () => {
+  const bad = [];
+  for (const t of tracks.filter((x) => x.id.startsWith("sj-gd"))) {
+    const marked = t.weeks.filter((w) => w.badge === "✓");
+    if (marked.length !== 1) {
+      bad.push(`${t.id}: có ${marked.length} khối badge "✓", cần đúng 1`);
+      continue;
+    }
+    if (t.weeks[t.weeks.length - 1] !== marked[0]) {
+      bad.push(`${t.id}: khối nghiệm thu "${marked[0].id}" không nằm cuối track`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// #3e — Không khối tuần nào được rỗng mục.
+//
+// renderTrack() tính `d / week.items.length`; với mảng rỗng thì tỷ lệ ra NaN
+// (thanh tiến độ không vẽ) và `d === week.items.length` thành 0 === 0 nên ô
+// tuần bị tô "done" ngay từ đầu. Nguồn markdown của lộ trình Senior Java có
+// hai khối "Tuần 25–26" chỉ có văn xuôi, không bước đánh số — đây chính là
+// ca thật khiến bất biến này cần thiết.
+await check("Mọi khối tuần có ít nhất 1 mục", () => {
+  const bad = tracks.flatMap((t) =>
+    t.weeks.filter((w) => !w.items?.length).map((w) => `${t.id}/${w.id}`));
+  expect(!bad.length, `khối tuần rỗng: ${bad.join(", ")}`);
 });
 
 // N1 — bảng liên kết chéo phải trỏ tới thứ có thật.

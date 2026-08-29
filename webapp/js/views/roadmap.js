@@ -141,7 +141,8 @@ function renderTrack(root, track, focusItemId) {
   for (const week of track.weeks) {
     const weekDone = () => week.items.filter((it) => checked[it.id]).length;
 
-    const weekNum = h("div", { class: "week-num" }, week.week.replace("Tuần ", ""));
+    const weekNum = h("div", { class: "week-num" },
+      week.badge ?? week.week.replace("Tuần ", ""));
     const weekCount = h("span", { class: "faint", style: "white-space:nowrap" });
     const weekBar = h("span", {});
     const body = h("div", { style: "margin-top:12px" });
@@ -182,10 +183,18 @@ function renderTrack(root, track, focusItemId) {
       body.append(buildLessonItem(item, details));
     }
 
-    body.append(
-      h("div", { class: "explain-box", style: "margin-top:10px" },
-        h("span", { html: "🔨 <strong>Thực hành cuối tuần:</strong> " + inlineMd(week.practice) }))
-    );
+    if (week.practice) {
+      body.append(
+        h("div", { class: "explain-box", style: "margin-top:10px" },
+          h("span", { html: "🔨 <strong>Thực hành cuối tuần:</strong> " + inlineMd(week.practice) }))
+      );
+    }
+    if (week.doneWhen) {
+      body.append(
+        h("div", { class: "explain-box", style: "margin-top:10px" },
+          h("span", { html: "✅ <strong>Hoàn thành khi:</strong> " + inlineMd(week.doneWhen) }))
+      );
+    }
 
     if (week.id === firstOpen) details.setAttribute("open", "");
     refreshWeek();
