@@ -13,6 +13,9 @@
 //   SJ1 : senior-java-gd1.js (Tuần 1–26) — 81 mục
 //   SJ2 : senior-java-gd2.js (Tuần 1–26) — 66 mục
 //   SJ3 : senior-java-gd3.js (Tuần 1–26) — 64 mục
+//   SJ4 : senior-java-gd4.js (Tuần 1–26) — 65 mục
+//
+// Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
 // LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, sj-gd1-w1…) và id mục
 // (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, sj-gd1-w1-1…) là khóa lưu
@@ -35,6 +38,7 @@ import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java-gd1.js";
 import { seniorJavaGd2 } from "./senior-java-gd2.js";
 import { seniorJavaGd3 } from "./senior-java-gd3.js";
+import { seniorJavaGd4 } from "./senior-java-gd4.js";
 import { k8sbookCrossref } from "./k8sbook-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 
@@ -150,6 +154,17 @@ export const tracks = [
     desc: "Output bắt buộc: repo production-ready-platform dựng lại được từ số 0 trong 1 buổi (Terraform → EKS → Helm chart tự viết → HPA → monitoring), 1 chứng chỉ CKA hoặc AWS SAA, và 1 bài blog từ trải nghiệm thật.",
     prereq: "Yêu cầu: xong giai đoạn 2 ở mức ≥ 6/7 tiêu chí nghiệm thu. Ngân sách cloud khoảng 30–50 USD cho cả giai đoạn — đặt Budget alert 10 USD ngay khi có tài khoản AWS.",
     weeks: seniorJavaGd3,
+  },
+  {
+    id: "sj-gd4",
+    field: "senior-java",
+    label: "Giai đoạn 4",
+    icon: "🌐",
+    name: "Distributed Systems & System Design (tháng 18–24)",
+    durationWeeks: 26,
+    desc: "Output bắt buộc: 2 design doc được review với ít nhất 1 được triển khai, repo distributed-patterns-demo, pass 2 buổi mock system design mức Senior, và hồ sơ Senior hoàn chỉnh gồm CV, GitHub và ≥ 4 bài blog.",
+    prereq: "Yêu cầu: xong giai đoạn 3 ở mức ≥ 6/7 tiêu chí nghiệm thu. Sách nền của giai đoạn là DDIA — đọc Understanding Distributed Systems trước nếu thấy nặng.",
+    weeks: seniorJavaGd4,
   },
 ];
 
