@@ -30,11 +30,12 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w1",
     week: "Tuần 1–2",
     title: "Kafka nền tảng",
-    goal: "hiểu partition/consumer group/offset bằng thí nghiệm tự tay, không phải bằng định nghĩa.",
+    goal: "Hiểu partition/consumer group/offset bằng thí nghiệm tự tay, không phải bằng định nghĩa.",
     doneWhen: "3 thí nghiệm có log bằng chứng trong README; giải thích được LAG là gì và vì sao phải theo dõi.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "developer.confluent.io", href: "https://developer.confluent.io/" },
     ],
     items: [
       {
@@ -93,11 +94,12 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w2",
     week: "Tuần 3–4",
     title: "Idempotency & outbox — pattern ăn tiền của messaging",
-    goal: "cài 2 pattern quan trọng nhất của hệ event-driven, có test chứng minh.",
+    goal: "Cài 2 pattern quan trọng nhất của hệ event-driven, có test chứng minh.",
     doneWhen: "2 test chứng minh chạy xanh; message poison nằm trong DLT; giảng lại được dual-write cho junior bằng hình vẽ.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "microservices.io", href: "https://microservices.io/" },
     ],
     items: [
       {
@@ -158,11 +160,12 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w3",
     week: "Tuần 5–6",
     title: "Redis & caching",
-    goal: "cài cache-aside đo được hiệu quả, tự gây và chống được stampede.",
+    goal: "Cài cache-aside đo được hiệu quả, tự gây và chống được stampede.",
     doneWhen: `bảng benchmark trước/sau; ảnh "răng cưa" stampede trước fix và phẳng sau fix; nêu được rủi ro của cache (stale data, invalidation sai) chứ không chỉ lợi ích.`,
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "redis.io", href: "https://redis.io/" },
     ],
     items: [
       {
@@ -214,7 +217,7 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w4",
     week: "Tuần 7–8",
     title: "Resilience patterns",
-    goal: "thấy tận mắt circuit breaker cứu hệ thống, hiểu timeout là pattern số 1.",
+    goal: "Thấy tận mắt circuit breaker cứu hệ thống, hiểu timeout là pattern số 1.",
     doneWhen: `demo "không timeout làm chết cả service" tái hiện được; xem được breaker đổi trạng thái trên Grafana; trả lời được "khi nào KHÔNG nên retry".`,
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
@@ -270,7 +273,7 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w5",
     week: "Tuần 9–14",
     title: "Đọc DDIA có kỷ luật",
-    goal: "nắm phần lõi DDIA và biết soi hệ thống của mình qua lăng kính đó.",
+    goal: "Nắm phần lõi DDIA và biết soi hệ thống của mình qua lăng kính đó.",
     doneWhen: `6 ghi chú Feynman đều có mục "hệ thống của tôi"; kể được 3 ví dụ nối lý thuyết DDIA với lab đã tự làm.`,
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
@@ -319,11 +322,12 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w6",
     week: "Tuần 15–16",
     title: "Design doc #1 tại công ty",
-    goal: "viết và bảo vệ design doc đầu tiên — nghi thức trưởng thành của Senior.",
+    goal: "Viết và bảo vệ design doc đầu tiên — nghi thức trưởng thành của Senior.",
     doneWhen: "doc đã qua review thật, có phần phản hồi và quyết định cuối; việc triển khai đã bắt đầu.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "industrialempathy.com — 'Design Docs at Google'", href: "https://www.industrialempathy.com/" },
     ],
     items: [
       {
@@ -361,7 +365,7 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w7",
     week: "Tuần 17–18",
     title: "Luyện system design có phương pháp",
-    goal: "có framework trả lời và luyện 4 đề đầu đúng chuẩn phỏng vấn.",
+    goal: "Có framework trả lời và luyện 4 đề đầu đúng chuẩn phỏng vấn.",
     doneWhen: "4 đề có bản vẽ + ghi âm + bản tự chấm; làm chủ nhịp 45 phút không cháy giờ.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
@@ -403,7 +407,7 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w8",
     week: "Tuần 19–20",
     title: "4 đề nâng cao + design doc #2 + mentoring",
-    goal: "luyện 4 đề khó hơn, viết design doc #2, và bắt đầu mentoring chính thức.",
+    goal: "Luyện 4 đề khó hơn, viết design doc #2, và bắt đầu mentoring chính thức.",
     doneWhen: "tổng 8 đề đã luyện có ghi âm; doc #2 hoàn chỉnh; lịch mentoring chạy đều ≥ 3 tuần.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
@@ -438,10 +442,11 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w9",
     week: "Tuần 21–22",
     title: "Mock system design interview",
-    goal: "pass 2 buổi mock system design mức Senior và luyện bù đúng điểm yếu.",
+    goal: "Pass 2 buổi mock system design mức Senior và luyện bù đúng điểm yếu.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "interviewing.io", href: "https://interviewing.io/" },
     ],
     items: [
       {
@@ -465,7 +470,7 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w10",
     week: "Tuần 23–24",
     title: "Đóng gói hồ sơ",
-    goal: "đóng gói CV, GitHub và blog thành hồ sơ Senior hoàn chỉnh, chọn nước đi tiếp theo.",
+    goal: "Đóng gói CV, GitHub và blog thành hồ sơ Senior hoàn chỉnh, chọn nước đi tiếp theo.",
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
@@ -514,7 +519,7 @@ export const seniorJavaGd4 = [
     items: [
       {
         id: "sj-gd4-w11-1",
-        text: "Thiết kế notification system cho 10 triệu user trong 45 phút",
+        text: "Thiết kế notification system cho 10 triệu user trong 45 phút.",
         lesson: `**Cách tự chấm.** Trả lời thành tiếng, bấm giờ 45 phút và ghi âm. Nghe lại và soát theo bốn lỗi phổ biến mà nguồn nêu ở tuần 17–18: quên hỏi làm rõ yêu cầu, không ước lượng số, không bàn failure mode, không chốt trade-off mà chỉ liệt kê. Ấp úng chỗ nào thì quay lại tuần tương ứng.
 
 Tick khi trả lời trôi chảy không cần nhìn ghi chú.
