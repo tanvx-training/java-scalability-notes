@@ -41,7 +41,7 @@ Thêm vào `webapp/js/data/fields.js`:
   label: "Lộ trình Senior Java",
   icon: "🧭",
   desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, "
-      + "274 mục tick — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ.",
+      + "276 mục tick — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ.",
   certFilter: false,
   modules: ["dashboard", "roadmap", "docs", "tracker"],
   // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —
@@ -95,10 +95,16 @@ giai đoạn:
 | Track | Giai đoạn | Tuần | Bước | Nghiệm thu | Câu hỏi | Tổng mục |
 |---|---|---|---|---|---|---|
 | `sj-gd1` | Java & Spring chuyên sâu (tháng 1–6) | 13 | 65 | 6 | 10 | **81** |
-| `sj-gd2` | DevOps nền tảng (tháng 6–12) | 13 | 57 | 7 | — | **64** |
+| `sj-gd2` | DevOps nền tảng (tháng 6–12) | 13 | 57 + 2 | 7 | — | **66** |
 | `sj-gd3` | Kubernetes, AWS, Terraform (tháng 12–18) | 12 | 57 | 7 | — | **64** |
 | `sj-gd4` | Distributed systems & System design (tháng 18–24) | 11 | 48 | 7 | 10 | **65** |
-| | | **49** | **227** | **27** | **20** | **274** |
+| | | **49** | **229** | **27** | **20** | **276** |
+
+Hai khối "Tuần 25–26" (GĐ2 và GĐ4) trong nguồn **không có bước đánh số nào**, chỉ có văn
+xuôi. Khối tuần `items: []` làm `refreshWeek()` tính `0/0`: thanh tiến độ ra `NaN%` và ô
+tuần tự đánh dấu *done* ngay. Xử lý: GĐ2 tách văn xuôi của tuần đó thành **2 mục**
+("chấm checklist & review quý", "dùng buffer trả nợ tuần trễ") — cộng 2 vào cột Bước;
+GĐ4 nhận 10 câu tự kiểm tra nên đã đủ mục, không cần thêm.
 
 Cột **Tuần** đếm khối tuần có trong nguồn. Mỗi track còn có thêm một khối *Nghiệm thu*
 (mục 5.2), nên số khối `<details>` thực render là 14 / 14 / 13 / 12 — tổng **53**.
@@ -225,7 +231,7 @@ dùng có thể muốn đặt lại riêng. Namespace `kubeprep.` **giữ nguyê
 `app.js` thêm `tracker` vào `routes`, và mở rộng đoạn suy lĩnh vực ngược trong
 `navigate()` — hiện chỉ xử lý `docs` và `roadmap`. Không thêm thì deep-link
 `#/tracker/sj-m1` gửi cho người đang ở lĩnh vực khác sẽ bị `moduleAllowed` đá về bảng
-điều khiển. Thêm `fieldOfTrackerModule()` trong `data/index.js`, đối xứng `fieldOfTrack()`.
+điều khiển. Thêm `fieldOfMatrixModule()` trong `data/index.js`, đối xứng `fieldOfTrack()`.
 
 ## 7. Bảng điều khiển
 
@@ -253,10 +259,10 @@ bất biến **trước**, xác nhận chúng đỏ, rồi mới viết dữ li�
 
 ```
 docs:senior-java              5
-roadmap-items:senior-java     274
-tracker-modules:senior-java   6
-tracker-topics:senior-java    34
-tracker-criteria:senior-java  96
+roadmap-items:senior-java     276
+matrix-modules:senior-java    6
+matrix-topics:senior-java     34
+matrix-criteria:senior-java   96
 ```
 
 Mở rộng bất biến sẵn có:
@@ -276,8 +282,8 @@ Bất biến mới cho dạng dữ liệu ma trận:
 Bất biến mới cho dữ liệu lộ trình mới:
 
 - Mỗi track `sj-gd*` có đúng một khối tuần `badge: "✓"` (khối nghiệm thu) và nó nằm cuối.
-- Mọi liên kết `#/docs/…` trong `lesson` trỏ tới id tài liệu có thật **và cùng lĩnh vực**
-  — chặn đúng cái bẫy nhảy lĩnh vực nêu ở 5.3.
+- ~~Mọi liên kết `#/docs/…` cùng lĩnh vực~~ — **bất biến #3b đã có sẵn** và cưỡng chế đúng
+  luật này; không viết mới, chỉ dựa vào nó.
 
 ## 9. Tài liệu phải cập nhật
 
@@ -303,7 +309,7 @@ Bất biến mới cho dữ liệu lộ trình mới:
 | Rủi ro | Xử lý |
 |---|---|
 | Hai lộ trình lệch mốc công nghệ (Java 21 vs Java 25) gây hiểu nhầm | Đặt tên và mô tả phân vai rõ: *Lộ trình* = kế hoạch thực hiện, *Ma trận năng lực* = tự đánh giá. Không tuyên bố chúng ánh xạ với nhau |
-| 274 mục là track lớn nhất repo, khối lượng soạn `lesson` lớn | Chia 4 track, làm và nghiệm thu từng giai đoạn một |
+| 276 mục là track lớn nhất repo, khối lượng soạn `lesson` lớn | Chia 4 track, làm và nghiệm thu từng giai đoạn một |
 | Đổi id sau khi phát hành làm mất tiến độ người dùng | Chốt sơ đồ id ở mục 5.1 và 6.1 trước khi viết dữ liệu; bất biến kiểm tiền tố |
 | `roadmap-seed.yaml` chưa được git theo dõi ở kho nguồn | Chính là lý do chuyển hẳn nguồn sự thật sang tệp JS trong kho này |
 
