@@ -21,6 +21,7 @@ export const seniorJavaGd2 = [
     resources: [
       { label: "Giai đoạn 2 — bản đầy đủ", href: "#/docs/sj-02" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "linuxjourney.com", href: "https://linuxjourney.com/" },
     ],
     items: [
       {
@@ -86,6 +87,7 @@ export const seniorJavaGd2 = [
     resources: [
       { label: "Giai đoạn 2 — bản đầy đủ", href: "#/docs/sj-02" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "ssllabs.com/ssltest", href: "https://ssllabs.com/ssltest" },
     ],
     items: [
       {
@@ -142,6 +144,7 @@ export const seniorJavaGd2 = [
     resources: [
       { label: "Giai đoạn 2 — bản đầy đủ", href: "#/docs/sj-02" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "spring.io — hướng dẫn Spring Boot Docker", href: "https://spring.io/" },
     ],
     items: [
       {
@@ -439,6 +442,7 @@ export const seniorJavaGd2 = [
     resources: [
       { label: "Giai đoạn 2 — bản đầy đủ", href: "#/docs/sj-02" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "grafana.com/tutorials", href: "https://grafana.com/tutorials/" },
     ],
     items: [
       {
@@ -599,6 +603,10 @@ export const seniorJavaGd2 = [
     week: "Tuần 25–26",
     title: "Đánh giá & buffer",
     goal: "Chốt sổ giai đoạn và trả nợ các tuần bị trễ.",
+    resources: [
+      { label: "Giai đoạn 2 — bản đầy đủ", href: "#/docs/sj-02" },
+      { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+    ],
     items: [
       {
         id: "sj-gd2-w13-1",

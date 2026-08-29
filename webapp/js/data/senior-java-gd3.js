@@ -513,6 +513,8 @@ export const seniorJavaGd3 = [
     resources: [
       { label: "Giai đoạn 3 — bản đầy đủ", href: "#/docs/sj-03" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "kubernetes.io — docs", href: "https://kubernetes.io/docs/" },
+      { label: "killer.sh", href: "https://killer.sh/" },
     ],
     items: [
       {
