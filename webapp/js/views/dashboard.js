@@ -2,7 +2,7 @@
 
 import { h } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { getTracks, getFlashcards, getQuestions, getDocs } from "../data/index.js";
+import { getDocs, getFlashcards, getQuestions, getMatrices, getTracks } from "../data/index.js";
 import { FIELDS, FIELD_ORDER, moduleAllowed } from "../data/fields.js";
 import { labs } from "../data/labs.js";
 import { currentField } from "../lib/field.js";
@@ -17,6 +17,16 @@ function roadmapStats(fieldKey) {
   const done = per.reduce((a, p) => a + p.done, 0);
   const total = per.reduce((a, p) => a + p.total, 0);
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0, per };
+}
+
+function matrixStats(fieldKey) {
+  const checked = store.get("tracker.checked", {});
+  const all = getMatrices(fieldKey)
+    .flatMap((m) => m.modules)
+    .flatMap((m) => m.topics)
+    .flatMap((t) => t.checklist);
+  const done = all.filter((c) => checked[c.id]).length;
+  return { done, total: all.length, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
 }
 
 function flashStats(fieldKey) {
@@ -64,6 +74,7 @@ export function render(root) {
   const fieldKey = currentField();
   const field = FIELDS[fieldKey];
   const rm = roadmapStats(fieldKey);
+  const mx = matrixStats(fieldKey);
   const fl = flashStats(fieldKey);
   const qz = quizStats(fieldKey);
   const ex = examStats();
@@ -80,7 +91,8 @@ export function render(root) {
       h("div", { class: "flex flex-wrap", style: "margin-top:16px" },
         has("roadmap") ? h("a", { class: "btn btn-primary", href: "#/roadmap" }, "🗺️ Bắt đầu lộ trình") : null,
         has("exam") ? h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử ngay") : null,
-        h("a", { class: "btn", href: "#/docs" }, "📚 Đọc tài liệu"))));
+        has("docs") ? h("a", { class: "btn", href: "#/docs" }, "📚 Đọc tài liệu") : null,
+        has("tracker") ? h("a", { class: "btn", href: "#/tracker" }, "📊 Ma trận năng lực") : null)));
 
   // Dải tổng quan mọi lĩnh vực (số lượng & thứ tự lấy từ FIELD_ORDER, không hardcode).
   // Cột dùng auto-fit/minmax thay vì grid-N cố định: số ô tự co theo FIELD_ORDER.length,
@@ -92,13 +104,19 @@ export function render(root) {
   });
   for (const id of FIELD_ORDER) {
     const f = FIELDS[id];
-    const parts = [`${getDocs(id).length} tài liệu`];
+    const parts = [];
+    const nDocs = getDocs(id).length;
+    if (nDocs) parts.push(`${nDocs} tài liệu`);
     const t = getTracks(id).reduce((n, x) => n + x.weeks.flatMap((w) => w.items).length, 0);
     if (t) parts.push(`${t} bài học`);
     const c = getFlashcards(id).length;
     if (c) parts.push(`${c} thẻ`);
     const q = getQuestions(id).length;
     if (q) parts.push(`${q} câu hỏi`);
+    const cr = getMatrices(id)
+      .flatMap((m) => m.modules).flatMap((m) => m.topics)
+      .flatMap((t) => t.checklist).length;
+    if (cr) parts.push(`${cr} tiêu chí`);
     overview.append(
       h("div", { class: `card${id === fieldKey ? " card-active" : ""}` },
         h("div", { class: "flex" },
@@ -120,11 +138,14 @@ export function render(root) {
     has("exam")
       ? statCard(ex.best == null ? "—" : `${ex.best}%`, "Điểm thi thử tốt nhất", "#/exam", ex.count ? `${ex.count} lượt thi` : "chưa thi lần nào")
       : null,
+    has("tracker")
+      ? statCard(`${mx.pct}%`, "Ma trận năng lực", "#/tracker", `${mx.done}/${mx.total} tiêu chí`)
+      : null,
   ].filter(Boolean);
   // Số cột co theo cards.length (auto-fit/minmax) — lĩnh vực chỉ có roadmap (chưa có
   // flashcards/quiz/exam, vd spring-security) chỉ sinh ra 1 thẻ và sẽ không còn lọt
   // thỏm trong lưới 4 cột cố định.
-  if (has("roadmap")) {
+  if (has("roadmap") || has("tracker")) {
     page.append(h("div",
       { class: "grid", style: "grid-template-columns:repeat(auto-fit, minmax(200px, 1fr))" },
       cards));
@@ -133,13 +154,16 @@ export function render(root) {
   // Khu vực học tập — chỉ những module lĩnh vực này có
   const areas = [
     has("certs") ? area("🎓", "Chứng chỉ K8s", "So sánh KCNA, KCSA, CKAD, CKA, CKS: hình thức thi, tỷ trọng domain và lộ trình gợi ý.", "#/certs") : null,
-    area("📚", "Thư viện tài liệu", `${getDocs(fieldKey).length} tài liệu của lĩnh vực ${field.label} — mục lục nổi, sơ đồ mermaid, ảnh minh hoạ, copy nhanh.`, "#/docs"),
+    has("docs")
+      ? area("📚", "Thư viện tài liệu", `${getDocs(fieldKey).length} tài liệu của lĩnh vực ${field.label} — mục lục nổi, sơ đồ mermaid, ảnh minh hoạ, copy nhanh.`, "#/docs")
+      : null,
     has("commands") ? area("⚡", "Thực hành nhanh", "Tra cứu khi làm lab: 130 lệnh, 48 YAML mẫu, 16 quy trình thuộc lòng, thẻ trước giờ thi.", "#/commands") : null,
     has("flashcards") ? area("🃏", "Flashcards", `Ôn ${fl.total} thẻ theo phương pháp lặp lại ngắt quãng (spaced repetition).`, "#/flashcards") : null,
     has("quiz") ? area("✅", "Trắc nghiệm", `${qz.total} câu hỏi có giải thích chi tiết từng câu.`, "#/quiz") : null,
     has("exam") ? area("⏱️", "Thi thử", "Mô phỏng áp lực phòng thi: bấm giờ, đánh dấu câu, chấm điểm theo domain.", "#/exam") : null,
     has("labs") ? area("🧪", "Labs thực hành", `${labs.length} bài lab kiểu đề thật kèm lời giải và cách verify.`, "#/labs") : null,
     has("roadmap") ? area("🗺️", "Lộ trình học", `${rm.total} bài học chi tiết — tick đến đâu lưu đến đó.`, "#/roadmap") : null,
+    has("tracker") ? area("📊", "Ma trận năng lực", `${mx.total} tiêu chí tự đánh giá theo 4 cấp độ, nhóm theo ${getMatrices(fieldKey)[0]?.modules.length ?? 0} module năng lực.`, "#/tracker") : null,
   ].filter(Boolean);
 
   page.append(
