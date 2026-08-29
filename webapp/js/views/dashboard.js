@@ -127,8 +127,10 @@ export function render(root) {
   page.append(overview);
 
   const cards = [
-    statCard(`${rm.pct}%`, "Lộ trình hoàn thành", "#/roadmap",
-      rm.per.map((p) => `${p.label} ${p.pct}%`).join(" · ") || "chưa có lộ trình"),
+    has("roadmap")
+      ? statCard(`${rm.pct}%`, "Lộ trình hoàn thành", "#/roadmap",
+          rm.per.map((p) => `${p.label} ${p.pct}%`).join(" · ") || "chưa có lộ trình")
+      : null,
     has("flashcards")
       ? statCard(String(fl.due), "Flashcard đến hạn ôn", "#/flashcards", `${fl.fresh} thẻ chưa học · ${fl.total} tổng`)
       : null,
