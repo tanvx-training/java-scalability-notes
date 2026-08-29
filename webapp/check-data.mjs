@@ -120,6 +120,22 @@ await check("Id tuần lộ trình duy nhất (mọi track)", () => {
   const d = dupes(tracks.flatMap((t) => t.weeks.map((w) => w.id)));
   expect(!d.length, `id tuần trùng: ${d.join(", ")}`);
 });
+
+// Song sinh của "Id con của ma trận khớp tiền tố id cha" phía lộ trình. Id
+// mục chỉ được bảo vệ bởi tính duy nhất toàn cục ở trên — một mục
+// sj-gd2-w5-3 bị chép nhầm vào tuần sj-gd2-w6 vẫn qua lọt vì id đó vẫn duy
+// nhất, chỉ sai tiền tố tuần cha.
+await check("Id mục lộ trình khớp tiền tố id tuần cha", () => {
+  const bad = [];
+  for (const t of tracks) {
+    for (const w of t.weeks) {
+      for (const it of w.items) {
+        if (!it.id.startsWith(`${w.id}-`)) bad.push(`${it.id} không thuộc ${w.id}`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
 await check("Id track duy nhất", () => {
   const d = dupes(tracks.map((t) => t.id));
   expect(!d.length, `id track trùng: ${d.join(", ")}`);
@@ -667,6 +683,7 @@ await check("field khai rõ (nếu có) phải là lĩnh vực tồn tại", () 
   scan(tracks, "track");
   scan(flashcards, "flashcard");
   scan(questions, "question");
+  scan(matrices, "matrix");
   expect(!bad.length, bad.join("; "));
 });
 
@@ -677,6 +694,7 @@ await check("Accessor lọc đúng theo lĩnh vực", async () => {
     ["getTracks", api.getTracks, api.allTracks],
     ["getFlashcards", api.getFlashcards, api.allFlashcards],
     ["getQuestions", api.getQuestions, api.allQuestions],
+    ["getMatrices", api.getMatrices, api.allMatrices],
   ];
   for (const [name, getX, allX] of sources) {
     const seenAt = new Map(); // id -> lĩnh vực đầu tiên bản ghi xuất hiện
@@ -698,6 +716,8 @@ await check("Accessor lọc đúng theo lĩnh vực", async () => {
   expect(api.fieldOfDoc("java-01") === "java", "fieldOfDoc('java-01') phải là java");
   expect(api.fieldOfTrack("ckad") === "kubernetes", "fieldOfTrack('ckad') phải là kubernetes");
   expect(api.fieldOfDoc("khong-ton-tai") === null, "doc id lạ phải trả null");
+  expect(api.fieldOfMatrixModule("sj-m1") === "senior-java", "fieldOfMatrixModule('sj-m1') phải là senior-java");
+  expect(api.fieldOfMatrixModule("khong-ton-tai") === null, "matrix module id lạ phải trả null");
 });
 
 await check("Flashcard sysprog phân bổ đúng theo chủ đề", () => {
@@ -724,10 +744,10 @@ await check("Câu hỏi sysprog phân bổ đúng theo domain", () => {
   expect(!bad.length, bad.join("; "));
 });
 
-// N3 — bảng kỳ vọng phải phủ mọi lĩnh vực khai docs/roadmap.
+// N3 — bảng kỳ vọng phải phủ mọi lĩnh vực khai docs/roadmap/tracker.
 // Vòng kiểm đếm bên dưới chỉ so những key CÓ MẶT trong EXPECTED, nên một lĩnh
 // vực mới quên khai key sẽ trôi tự do: xoá sạch dữ liệu của nó vẫn xanh.
-await check("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap", () => {
+await check("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap/tracker", () => {
   const bad = [];
   for (const [id, f] of Object.entries(FIELDS)) {
     if (f.modules.includes("docs") && !(`docs:${id}` in EXPECTED.counts)) {
@@ -735,6 +755,11 @@ await check("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap", () => {
     }
     if (f.modules.includes("roadmap") && !(`roadmap-items:${id}` in EXPECTED.counts)) {
       bad.push(`thiếu "roadmap-items:${id}"`);
+    }
+    if (f.modules.includes("tracker")) {
+      for (const key of ["matrix-modules", "matrix-topics", "matrix-criteria"]) {
+        if (!(`${key}:${id}` in EXPECTED.counts)) bad.push(`thiếu "${key}:${id}"`);
+      }
     }
   }
   expect(!bad.length, `${bad.join("; ")} trong EXPECTED.counts`);
