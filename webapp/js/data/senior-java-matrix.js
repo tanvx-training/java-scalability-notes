@@ -18,16 +18,18 @@
 // trình trả lời "tuần này làm gì", ma trận này trả lời "tôi đang ở mức nào".
 // Hai tập cố tình KHÔNG liên kết chéo với nhau.
 //
-// Nguồn YAML là bản seed cho ứng dụng "senior-java-tracker" của tác giả — 6
-// chủ đề "Capstone M*" ở cuối mỗi module vốn viết cho việc nâng cấp chính
-// ứng dụng đó. Ở đây chỉ đổi phần nhắc trực tiếp tới "tracker" (tên riêng
-// của ứng dụng gốc) thành cách nói chung ("một ứng dụng thực tế" / "ứng dụng
-// của bạn") để tiêu chí áp dụng được cho bất kỳ dự án nào của người tự học,
-// giữ nguyên bản chất kỹ thuật của từng tiêu chí. Mọi tiêu chí KHÔNG thuộc
-// nhóm Capstone giữ nguyên văn 100% so với YAML nguồn — kể cả khi chúng cũng
-// nhắc tới "tracker" (đó là ví dụ minh hoạ trong tiêu chí, không phải ngữ
-// cảnh dự án capstone). Không mang sang progress/notes/bookmarks/timeline/
-// versionTags của dự án gốc — không thuộc phạm vi ma trận năng lực.
+// Nguồn YAML là bản seed cho ứng dụng "senior-java-tracker" của tác giả — cả
+// tiêu chí lẫn tiêu đề chủ đề/module (không riêng nhóm "Capstone M*") đôi khi
+// nhắc thẳng tới "tracker" như TÊN RIÊNG của ứng dụng gốc đó. Người đọc
+// DevPrep không có sẵn đúng ứng dụng ấy trước mặt — nó nằm ở một repo khác và
+// ngoài phạm vi tích hợp này — nên MỌI chỗ "tracker" được dùng làm tên hệ
+// thống cụ thể (không riêng Capstone) đã được đổi thành cách nói chung
+// ("ứng dụng" / "ứng dụng của bạn" / "ứng dụng chính"), giữ nguyên 100% phần
+// kỹ thuật của tiêu chí (JWT resource server, EXPLAIN ANALYZE, composite
+// index, master-replica, layered jar, kind, probes/ConfigMap/Secret, trace
+// id, ChatClient, MCP annotations…) — chỉ đổi danh từ chỉ dự án. Không mang
+// sang progress/notes/bookmarks/timeline/versionTags của dự án gốc — không
+// thuộc phạm vi ma trận năng lực.
 
 export const seniorJavaMatrix = {
   id: "senior-java-2026",
@@ -149,7 +151,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m2-t2-c1", level: 1, criteria: "Liệt kê các starter đã đổi tên (web->webmvc, restclient, flyway...) và lý do modular hóa auto-configure" },
-            { id: "sj-m2-t2-c2", level: 2, criteria: "Áp dụng annotation JSpecify (@Nullable, @NullMarked) cho một package của tracker và bật kiểm tra tĩnh" },
+            { id: "sj-m2-t2-c2", level: 2, criteria: "Áp dụng annotation JSpecify (@Nullable, @NullMarked) cho một package của ứng dụng và bật kiểm tra tĩnh" },
             { id: "sj-m2-t2-c3", level: 3, criteria: "Phân tích trade-off dùng modular starters vs spring-boot-starter-classic khi migrate hệ thống lớn" },
           ],
           resources: [
@@ -177,7 +179,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m2-t4-c1", level: 1, criteria: "Vẽ và giải thích filter chain của Spring Security, phân biệt authentication vs authorization" },
-            { id: "sj-m2-t4-c2", level: 2, criteria: "Bảo vệ tracker: đăng nhập, JWT resource server, phân quyền endpoint; thêm bảng users bằng migration mới" },
+            { id: "sj-m2-t4-c2", level: 2, criteria: "Bảo vệ ứng dụng: đăng nhập, JWT resource server, phân quyền endpoint; thêm bảng users bằng migration mới" },
             { id: "sj-m2-t4-c3", level: 3, criteria: "Phân tích trade-off session-based vs JWT (thu hồi token, kích thước, stateless)" },
           ],
           resources: [
@@ -189,7 +191,7 @@ export const seniorJavaMatrix = {
           title: "API versioning & HTTP Service Clients (mới trong Boot 4)",
           importance: "MEDIUM",
           checklist: [
-            { id: "sj-m2-t5-c1", level: 2, criteria: "Áp dụng cơ chế API versioning built-in của Framework 7 cho REST API của tracker" },
+            { id: "sj-m2-t5-c1", level: 2, criteria: "Áp dụng cơ chế API versioning built-in của Framework 7 cho REST API của ứng dụng" },
             { id: "sj-m2-t5-c2", level: 2, criteria: "Gọi một API ngoài bằng HTTP Service Client (interface + @HttpExchange) với auto-configuration của Boot 4" },
             { id: "sj-m2-t5-c3", level: 3, criteria: "So sánh RestClient vs WebClient vs HTTP interface client: khi nào dùng cái nào" },
           ],
@@ -202,7 +204,7 @@ export const seniorJavaMatrix = {
           title: "GraalVM Native Image",
           importance: "MEDIUM",
           checklist: [
-            { id: "sj-m2-t6-c1", level: 2, criteria: "Build tracker thành native executable, xử lý reflection hints cần thiết" },
+            { id: "sj-m2-t6-c1", level: 2, criteria: "Build ứng dụng thành native executable, xử lý reflection hints cần thiết" },
             { id: "sj-m2-t6-c2", level: 3, criteria: "Đo và phân tích trade-off native vs JIT: startup time, RSS memory, peak throughput, thời gian build" },
           ],
           resources: [
@@ -321,7 +323,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m4-t1-c1", level: 1, criteria: "Giải thích B-tree vs GIN vs partial index, selectivity và vì sao index không phải lúc nào cũng được dùng" },
-            { id: "sj-m4-t1-c2", level: 2, criteria: "Dùng EXPLAIN (ANALYZE, BUFFERS) phân tích query thống kê tiến độ của tracker rồi thêm composite index phù hợp — chính là index đã hoãn từ Phase 0" },
+            { id: "sj-m4-t1-c2", level: 2, criteria: "Dùng EXPLAIN (ANALYZE, BUFFERS) phân tích query thống kê tiến độ của ứng dụng rồi thêm composite index phù hợp — chính là index đã hoãn từ Phase 0" },
             { id: "sj-m4-t1-c3", level: 4, criteria: "Xây quy trình chẩn đoán slow query: pg_stat_statements, log, plan regression" },
           ],
           resources: [
@@ -334,7 +336,7 @@ export const seniorJavaMatrix = {
           importance: "MEDIUM",
           checklist: [
             { id: "sj-m4-t2-c1", level: 1, criteria: "Phân biệt partitioning vs sharding vs replication và vấn đề của mỗi loại" },
-            { id: "sj-m4-t2-c2", level: 2, criteria: "Dựng PostgreSQL master-replica local, cấu hình tracker đọc từ replica" },
+            { id: "sj-m4-t2-c2", level: 2, criteria: "Dựng PostgreSQL master-replica local, cấu hình ứng dụng đọc từ replica" },
             { id: "sj-m4-t2-c3", level: 3, criteria: "Phân tích cách chọn sharding key và hệ quả của resharding, hotspot, cross-shard query" },
           ],
           resources: [
@@ -391,7 +393,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m5-t1-c1", level: 1, criteria: "Giải thích image layers, build cache và lợi ích của multi-stage build" },
-            { id: "sj-m5-t1-c2", level: 2, criteria: "Viết Dockerfile multi-stage + layered jar cho tracker, tối ưu kích thước image" },
+            { id: "sj-m5-t1-c2", level: 2, criteria: "Viết Dockerfile multi-stage + layered jar cho ứng dụng, tối ưu kích thước image" },
             { id: "sj-m5-t1-c3", level: 3, criteria: "Phân tích JVM ergonomics trong container: memory limit, MaxRAMPercentage, CPU quota ảnh hưởng GC threads" },
           ],
           resources: [
@@ -403,7 +405,7 @@ export const seniorJavaMatrix = {
           title: "Kubernetes & Helm",
           importance: "HIGH",
           checklist: [
-            { id: "sj-m5-t2-c1", level: 2, criteria: "Deploy tracker + PostgreSQL + Redis lên cluster kind local với manifest chuẩn: probes, resources, ConfigMap/Secret" },
+            { id: "sj-m5-t2-c1", level: 2, criteria: "Deploy ứng dụng + PostgreSQL + Redis lên cluster kind local với manifest chuẩn: probes, resources, ConfigMap/Secret" },
             { id: "sj-m5-t2-c2", level: 2, criteria: "Đóng gói toàn bộ thành Helm chart có values cho môi trường" },
             { id: "sj-m5-t2-c3", level: 3, criteria: "Giải thích cách đặt requests/limits và hệ quả của thiếu/thừa với scheduling và OOMKill" },
           ],
@@ -417,8 +419,8 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m5-t3-c1", level: 1, criteria: "Giải thích ba trụ cột observability và khác biệt monitoring vs observability" },
-            { id: "sj-m5-t3-c2", level: 2, criteria: "Cài OpenTelemetry: trace một request xuyên tracker -> Kafka -> metadata-service với cùng trace id (tận dụng context propagation @Async của Boot 4.1)" },
-            { id: "sj-m5-t3-c3", level: 2, criteria: "Dựng Prometheus + Grafana dashboard cho tracker: latency percentiles, error rate, JVM metrics" },
+            { id: "sj-m5-t3-c2", level: 2, criteria: "Cài OpenTelemetry: trace một request xuyên ứng dụng chính -> Kafka -> metadata-service với cùng trace id (tận dụng context propagation @Async của Boot 4.1)" },
+            { id: "sj-m5-t3-c3", level: 2, criteria: "Dựng Prometheus + Grafana dashboard cho ứng dụng: latency percentiles, error rate, JVM metrics" },
             { id: "sj-m5-t3-c4", level: 4, criteria: "Truy vết một request chậm end-to-end từ dashboard đến root cause và viết note sự cố" },
           ],
           resources: [
@@ -462,7 +464,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m6-t1-c1", level: 1, criteria: "Giải thích các abstraction của Spring AI: ChatClient, model portability, tool calling, advisor" },
-            { id: "sj-m6-t1-c2", level: 2, criteria: "Kiểm tra trạng thái GA của Spring AI 2.0; tích hợp một LLM provider vào tracker qua ChatClient" },
+            { id: "sj-m6-t1-c2", level: 2, criteria: "Kiểm tra trạng thái GA của Spring AI 2.0; tích hợp một LLM provider vào ứng dụng qua ChatClient" },
           ],
           resources: [
             { url: "https://docs.spring.io/spring-ai/reference/", title: "Spring AI Reference", tags: ["spring-ai"] },
@@ -483,11 +485,11 @@ export const seniorJavaMatrix = {
         },
         {
           id: "sj-m6-t3",
-          title: "MCP: tracker thành công cụ cho AI agent",
+          title: "MCP: ứng dụng thành công cụ cho AI agent",
           importance: "MEDIUM",
           checklist: [
             { id: "sj-m6-t3-c1", level: 1, criteria: "Giải thích Model Context Protocol: server/client, tools, resources, transports" },
-            { id: "sj-m6-t3-c2", level: 2, criteria: "Phơi tracker thành MCP server: agent có thể đọc tiến độ, thêm note, đánh dấu checklist (Spring AI 2.x MCP annotations)" },
+            { id: "sj-m6-t3-c2", level: 2, criteria: "Phơi ứng dụng thành MCP server: agent có thể đọc tiến độ, thêm note, đánh dấu checklist (Spring AI 2.x MCP annotations)" },
             { id: "sj-m6-t3-c3", level: 3, criteria: "Phân tích khi nào dùng tool calling / MCP thay vì nhồi dữ liệu vào RAG context" },
           ],
           resources: [
