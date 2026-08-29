@@ -326,6 +326,28 @@ await check("Id con của ma trận khớp tiền tố id cha", () => {
   expect(!bad.length, bad.join("; "));
 });
 
+// Song sinh của #3e phía ma trận. renderMatrix() (views/tracker.js) tính
+// `d / modCriteria.length` cho thanh tiến độ module; với module không có
+// tiêu chí (topics rỗng, hoặc mọi topic có checklist rỗng) tỷ lệ ra NaN
+// (thanh không vẽ) và `d === modCriteria.length` thành 0 === 0 nên module
+// bị tô "done" ngay từ đầu, dù chưa tick gì. Bốn bất biến #8 phía trên chỉ
+// soát nội dung của topic/tiêu chí đã tồn tại (id, level, importance,
+// weight, url) và một đếm TỔNG (6/34/96) — đếm tổng không bắt được một
+// module rỗng nếu module khác bù đắp đủ số lượng. Chưa gặp ca thật (cả 6
+// module hiện có 12–21 tiêu chí), nhưng #3e ra đời chính từ một ca thật
+// tương tự bên lộ trình nên thêm bất biến này trước khi ma trận có module
+// rỗng, không phải sau.
+await check("Mọi module ma trận có ít nhất 1 chủ đề, mọi chủ đề có ít nhất 1 tiêu chí", () => {
+  const bad = [];
+  for (const m of matrixModules) {
+    if (!m.topics?.length) bad.push(`module ${m.id} không có chủ đề`);
+    for (const t of m.topics ?? []) {
+      if (!t.checklist?.length) bad.push(`chủ đề ${t.id} không có tiêu chí`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
 await check("Tiêu chí có level 1–4 và nội dung không rỗng", () => {
   const bad = matrixCriteria
     .filter((c) => ![1, 2, 3, 4].includes(c.level) || !String(c.criteria ?? "").trim())

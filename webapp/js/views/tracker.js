@@ -126,8 +126,8 @@ function renderMatrix(root, matrix, focusModuleId) {
     refreshers.push(() => {
       const d = modCriteria.filter((c) => checked[c.id]).length;
       modCount.textContent = `${d}/${modCriteria.length}`;
-      modBar.style.width = `${(d / modCriteria.length) * 100}%`;
-      modNum.classList.toggle("done", d === modCriteria.length);
+      modBar.style.width = `${modCriteria.length ? (d / modCriteria.length) * 100 : 0}%`;
+      modNum.classList.toggle("done", modCriteria.length > 0 && d === modCriteria.length);
     });
 
     const details = h("details", { class: "card week-card" },
