@@ -12,6 +12,7 @@
 //   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
 //   SJ1 : senior-java-gd1.js (Tuần 1–26) — 81 mục
 //   SJ2 : senior-java-gd2.js (Tuần 1–26) — 66 mục
+//   SJ3 : senior-java-gd3.js (Tuần 1–26) — 64 mục
 //
 // LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, sj-gd1-w1…) và id mục
 // (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, sj-gd1-w1-1…) là khóa lưu
@@ -33,6 +34,7 @@ import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java-gd1.js";
 import { seniorJavaGd2 } from "./senior-java-gd2.js";
+import { seniorJavaGd3 } from "./senior-java-gd3.js";
 import { k8sbookCrossref } from "./k8sbook-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 
@@ -137,6 +139,17 @@ export const tracks = [
     desc: "Output bắt buộc: pipeline CI/CD tự động hoá deploy tại công ty (hoặc bản mô phỏng 1:1) có số liệu trước/sau, repo springboot-cicd-observability, và 1 bài blog về hành trình tự động hoá.",
     prereq: "Yêu cầu: xong giai đoạn 1 ở mức ≥ 5/6 tiêu chí nghiệm thu. Cần thêm 1 VPS khoảng 5 USD/tháng và 1 domain rẻ.",
     weeks: seniorJavaGd2,
+  },
+  {
+    id: "sj-gd3",
+    field: "senior-java",
+    label: "Giai đoạn 3",
+    icon: "☸️",
+    name: "Kubernetes, AWS & Terraform (tháng 12–18)",
+    durationWeeks: 26,
+    desc: "Output bắt buộc: repo production-ready-platform dựng lại được từ số 0 trong 1 buổi (Terraform → EKS → Helm chart tự viết → HPA → monitoring), 1 chứng chỉ CKA hoặc AWS SAA, và 1 bài blog từ trải nghiệm thật.",
+    prereq: "Yêu cầu: xong giai đoạn 2 ở mức ≥ 6/7 tiêu chí nghiệm thu. Ngân sách cloud khoảng 30–50 USD cho cả giai đoạn — đặt Budget alert 10 USD ngay khi có tài khoản AWS.",
+    weeks: seniorJavaGd3,
   },
 ];
 
