@@ -118,7 +118,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m1-t6-c1", level: 2, criteria: "Bật virtual threads cho tầng HTTP của một ứng dụng thực tế, viết load test so sánh throughput trước/sau" },
-            { id: "sj-m1-t6-c2", level: 2, criteria: "Benchmark endpoint thống kê tiến độ bằng JMH, ghi lại kết quả vào notes" },
+            { id: "sj-m1-t6-c2", level: 2, criteria: "Benchmark endpoint thống kê tiến độ bằng JMH, ghi lại kết quả vào sổ tay học tập" },
             { id: "sj-m1-t6-c3", level: 2, criteria: "Bật GC log của ứng dụng đang chạy, phân tích và viết một ghi chú 'GC dưới tải'" },
           ],
           resources: [],
@@ -299,7 +299,7 @@ export const seniorJavaMatrix = {
         },
         {
           id: "sj-m3-t6",
-          title: "Capstone M3: bookmark-metadata-service qua Kafka",
+          title: "Capstone M3: dịch vụ trích metadata cho ứng dụng, qua Kafka",
           importance: "HIGH",
           checklist: [
             { id: "sj-m3-t6-c1", level: 2, criteria: "Tách service trích xuất metadata: ứng dụng chính publish bookmark.added (qua outbox), service fetch title/description rồi trả kết quả" },
@@ -374,7 +374,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m4-t5-c1", level: 2, criteria: "Thống kê tiến độ đi qua Redis cache, có metric hit/miss rate" },
-            { id: "sj-m4-t5-c2", level: 2, criteria: "Viết note ADR: benchmark trước/sau khi thêm index và cache, kèm số liệu" },
+            { id: "sj-m4-t5-c2", level: 2, criteria: "Viết ghi chú ADR: benchmark trước/sau khi thêm index và cache, kèm số liệu" },
           ],
           resources: [],
         },
@@ -421,7 +421,7 @@ export const seniorJavaMatrix = {
             { id: "sj-m5-t3-c1", level: 1, criteria: "Giải thích ba trụ cột observability và khác biệt monitoring vs observability" },
             { id: "sj-m5-t3-c2", level: 2, criteria: "Cài OpenTelemetry: trace một request xuyên ứng dụng chính -> Kafka -> metadata-service với cùng trace id (tận dụng context propagation @Async của Boot 4.1)" },
             { id: "sj-m5-t3-c3", level: 2, criteria: "Dựng Prometheus + Grafana dashboard cho ứng dụng: latency percentiles, error rate, JVM metrics" },
-            { id: "sj-m5-t3-c4", level: 4, criteria: "Truy vết một request chậm end-to-end từ dashboard đến root cause và viết note sự cố" },
+            { id: "sj-m5-t3-c4", level: 4, criteria: "Truy vết một request chậm end-to-end từ dashboard đến root cause và viết ghi chú sự cố" },
           ],
           resources: [
             { url: "https://opentelemetry.io/docs/", title: "OpenTelemetry Documentation", tags: ["observability"] },
@@ -455,7 +455,7 @@ export const seniorJavaMatrix = {
       id: "sj-m6",
       code: "M6",
       title: "Generative AI Systems Integration",
-      summary: "Spring AI 2.x (dòng tương thích Boot 4), RAG với pgvector, MCP, và prompt/context engineering — thực hành trên chính kho notes của bạn.",
+      summary: "Spring AI 2.x (dòng tương thích Boot 4), RAG với pgvector, MCP, và prompt/context engineering — thực hành trên chính sổ tay học tập của bạn.",
       weight: 14,
       topics: [
         {
@@ -476,7 +476,7 @@ export const seniorJavaMatrix = {
           importance: "HIGH",
           checklist: [
             { id: "sj-m6-t2-c1", level: 1, criteria: "Giải thích embeddings, similarity search và pipeline RAG chuẩn: ingest -> chunk -> embed -> retrieve -> generate" },
-            { id: "sj-m6-t2-c2", level: 2, criteria: "Index toàn bộ notes vào pgvector, xây tính năng 'hỏi đáp với ghi chú của tôi' có trích nguồn note" },
+            { id: "sj-m6-t2-c2", level: 2, criteria: "Index toàn bộ sổ tay học tập vào pgvector, xây tính năng 'hỏi đáp với ghi chú của tôi' có trích nguồn ghi chú" },
             { id: "sj-m6-t2-c3", level: 3, criteria: "Phân tích trade-off chunking strategy (kích thước, overlap, theo heading Markdown) lên chất lượng retrieval" },
           ],
           resources: [
@@ -489,7 +489,7 @@ export const seniorJavaMatrix = {
           importance: "MEDIUM",
           checklist: [
             { id: "sj-m6-t3-c1", level: 1, criteria: "Giải thích Model Context Protocol: server/client, tools, resources, transports" },
-            { id: "sj-m6-t3-c2", level: 2, criteria: "Phơi ứng dụng thành MCP server: agent có thể đọc tiến độ, thêm note, đánh dấu checklist (Spring AI 2.x MCP annotations)" },
+            { id: "sj-m6-t3-c2", level: 2, criteria: "Phơi ứng dụng thành MCP server: agent có thể đọc tiến độ, thêm ghi chú, đánh dấu checklist (Spring AI 2.x MCP annotations)" },
             { id: "sj-m6-t3-c3", level: 3, criteria: "Phân tích khi nào dùng tool calling / MCP thay vì nhồi dữ liệu vào RAG context" },
           ],
           resources: [
@@ -501,7 +501,7 @@ export const seniorJavaMatrix = {
           title: "Prompt & context engineering trong code",
           importance: "MEDIUM",
           checklist: [
-            { id: "sj-m6-t4-c1", level: 2, criteria: "Xây tính năng tự sinh câu hỏi ôn tập từ notes của một topic, output JSON có cấu trúc" },
+            { id: "sj-m6-t4-c1", level: 2, criteria: "Xây tính năng tự sinh câu hỏi ôn tập từ sổ tay học tập của một topic, output JSON có cấu trúc" },
             { id: "sj-m6-t4-c2", level: 3, criteria: "Tối ưu chi phí và chất lượng: quản lý context window, chọn model theo tác vụ, đo lường bằng bộ test câu hỏi" },
           ],
           resources: [],
@@ -511,7 +511,7 @@ export const seniorJavaMatrix = {
           title: "Capstone M6: trợ lý học tập trên chính ứng dụng của bạn",
           importance: "HIGH",
           checklist: [
-            { id: "sj-m6-t5-c1", level: 2, criteria: "Tính năng 'ôn tập hàng tuần': RAG tổng hợp những gì đã học, sinh quiz, lưu kết quả vào notes" },
+            { id: "sj-m6-t5-c1", level: 2, criteria: "Tính năng 'ôn tập hàng tuần': RAG tổng hợp những gì đã học, sinh quiz, lưu kết quả vào sổ tay học tập" },
             { id: "sj-m6-t5-c2", level: 4, criteria: "Viết ADR tổng kết kiến trúc AI: luồng dữ liệu, bảo mật (prompt injection từ nội dung bookmark), chi phí vận hành" },
           ],
           resources: [],
