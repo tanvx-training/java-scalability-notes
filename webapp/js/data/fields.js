@@ -42,9 +42,20 @@ export const FIELDS = {
     modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "docs.spring.io/spring-security", href: "https://docs.spring.io/spring-security/reference/" },
   },
+  "senior-java": {
+    label: "Lộ trình Senior Java",
+    icon: "🧭",
+    desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, 276 mục tick — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ.",
+    certFilter: false,
+    // Mở dần theo dữ liệu: "roadmap" thêm ở Task 2, "tracker" ở Task 7.
+    // Khai sớm là bất biến #7 báo đỏ.
+    modules: ["dashboard", "docs"],
+    // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —
+    // không nguồn ngoài nào bao hết, nên bỏ externalRef thay vì bịa link.
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "spring-security"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.

@@ -35,6 +35,8 @@ const EXPECTED = {
     // Lĩnh vực Spring Security — 21 chương Spring Security in Action
     "docs:spring-security": 21,
     "roadmap-items:spring-security": 30,
+    // Lĩnh vực Lộ trình Senior Java — 5 tài liệu kế hoạch 24 tháng.
+    "docs:senior-java": 5,
   },
 };
 

@@ -12,7 +12,7 @@ mkdir -p "$DEST"
 DEST="$(cd "$DEST" && pwd)"
 
 mkdir -p "$DEST/java" "$DEST/images" "$DEST/sysprog/images" \
-         "$DEST/k8sbook/images" "$DEST/springsec"
+         "$DEST/k8sbook/images" "$DEST/springsec" "$DEST/senior"
 
 cp "$REPO"/CKAD/*.md "$REPO"/CKA/*.md "$REPO"/CKS/*.md  "$DEST/"
 cp "$REPO/Chủ đề"*/*.md                                 "$DEST/java/"
@@ -22,3 +22,4 @@ cp "$REPO"/System_Programming_VI/images/*               "$DEST/sysprog/images/"
 cp "$REPO"/k8s-ebook/*.md                               "$DEST/k8sbook/"
 cp -R "$REPO"/k8s-ebook/images/.                        "$DEST/k8sbook/images/"
 cp "$REPO"/spring-security-vi/*.md                      "$DEST/springsec/"
+cp "$REPO"/senior-java-roadmap/*.md                      "$DEST/senior/"
