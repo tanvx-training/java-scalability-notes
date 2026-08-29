@@ -79,7 +79,7 @@ Thư mục [`images/`](./images/) — 10 hình được nhúng đúng ngữ cả
 
 ## 📚 DevPrep — nền tảng học đa lĩnh vực
 
-Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action**, bản dịch **Spring Security in Action** và web app **DevPrep** để học/ôn tập/thi thử cả bốn lĩnh vực:
+Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action**, bản dịch **Spring Security in Action**, **Lộ trình Senior Java** (chương trình tự học 24 tháng) và web app **DevPrep** để học/ôn tập/thi thử cả năm lĩnh vực:
 
 | Thành phần | Mô tả |
 |---|---|
@@ -90,7 +90,8 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 | [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt System Programming Coursebook (UIUC CS 241), 18 chương, CC BY 4.0 |
 | [`k8s-ebook/`](./k8s-ebook/) | Bản dịch tiếng Việt *Kubernetes in Action*, ấn bản 2 (Marko Lukša, Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 17 chương, 184 hình. Đọc trong app ở lĩnh vực Kubernetes. |
 | [`spring-security-vi/`](./spring-security-vi/) | Bản dịch tiếng Việt *Spring Security in Action*, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. Lời giới thiệu + 18 chương + 2 phụ lục (21 tệp). Đọc trong app ở lĩnh vực Spring Security. |
-| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability, Spring Security): lộ trình tương tác (6 giáo trình, 264 mục), thư viện tài liệu (73 tài liệu), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
+| [`senior-java-roadmap/`](./senior-java-roadmap/) | Kế hoạch tự học 24 tháng từ Mid-level lên Senior Java + DevOps: 4 giai đoạn (Java/Spring, DevOps, K8s/Cloud, System Design), 5 tài liệu. Đọc trong app ở lĩnh vực Lộ trình Senior Java, kèm ma trận năng lực 96 tiêu chí. |
+| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability, Spring Security, Lộ trình Senior Java): lộ trình tương tác (10 giáo trình, 540 mục), thư viện tài liệu (78 tài liệu), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
 
 ### Chạy local
 
