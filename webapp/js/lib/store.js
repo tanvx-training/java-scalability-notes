@@ -41,3 +41,4 @@ export const store = {
 // flash.srs             : { [cardId]: { reps, interval, due } }  (due = epoch ms)
 // quiz.stats            : { [questionId]: { seen, correct } }
 // exam.history          : [ { date, total, correct, pct, pass, byDomain } ]
+// tracker.checked       : { [criteriaId]: true }   (ma trận năng lực)

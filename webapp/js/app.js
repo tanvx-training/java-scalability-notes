@@ -3,7 +3,7 @@
 import { store } from "./lib/store.js";
 import { currentField, setCurrentField } from "./lib/field.js";
 import { FIELDS, FIELD_ORDER, navFor, moduleAllowed } from "./data/fields.js";
-import { fieldOfDoc, fieldOfTrack } from "./data/index.js";
+import { fieldOfDoc, fieldOfTrack, fieldOfMatrixModule } from "./data/index.js";
 import * as dashboard from "./views/dashboard.js";
 import * as certs from "./views/certs.js";
 import * as roadmap from "./views/roadmap.js";
@@ -13,6 +13,7 @@ import * as flashcards from "./views/flashcards.js";
 import * as quiz from "./views/quiz.js";
 import * as exam from "./views/exam.js";
 import * as labs from "./views/labs.js";
+import * as tracker from "./views/tracker.js";
 
 const routes = {
   dashboard,
@@ -24,6 +25,7 @@ const routes = {
   quiz,
   exam,
   labs,
+  tracker,
 };
 
 // Khôi phục "chế độ gọn" (ẩn sidebar, mật độ cao) nếu người dùng đã bật.
@@ -156,6 +158,7 @@ function navigate() {
   let owner = null;
   if (name === "docs" && params[0]) owner = fieldOfDoc(params[0]);
   if (name === "roadmap" && params[0]) owner = fieldOfTrack(params[0]);
+  if (name === "tracker" && params[0]) owner = fieldOfMatrixModule(params[0]);
   if (owner && setCurrentField(owner)) {
     renderFieldSwitch();
     renderNav();

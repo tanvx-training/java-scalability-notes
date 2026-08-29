@@ -552,6 +552,7 @@ await check("Lĩnh vực khai quiz/flashcards/roadmap/docs thì phải có dữ 
       roadmap: tracks.some((t) => fieldOf(t) === id),
       flashcards: flashcards.some((c) => fieldOf(c) === id),
       quiz: questions.some((q) => fieldOf(q) === id),
+      tracker: matrices.some((m) => fieldOf(m) === id),
     };
     for (const m of f.modules) if (m in has && !has[m]) bad.push(`${id} khai "${m}" nhưng không có dữ liệu`);
   }
@@ -584,6 +585,10 @@ await check("Lĩnh vực có dữ liệu docs/roadmap thì phải khai module t�
     }
     if (hasRoadmap && !f.modules.includes("roadmap")) {
       bad.push(`${id} có track roadmap nhưng không khai module "roadmap"`);
+    }
+    const hasMatrix = matrices.some((m) => fieldOf(m) === id);
+    if (hasMatrix && !f.modules.includes("tracker")) {
+      bad.push(`${id} có ma trận năng lực nhưng không khai module "tracker"`);
     }
   }
   expect(!bad.length, bad.join("; "));

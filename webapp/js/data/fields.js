@@ -47,9 +47,7 @@ export const FIELDS = {
     icon: "🧭",
     desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, 276 mục tick — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ.",
     certFilter: false,
-    // Mở dần theo dữ liệu: "tracker" thêm ở Task 7. Khai sớm là bất biến #7
-    // báo đỏ.
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "docs", "roadmap", "tracker"],
     // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —
     // không nguồn ngoài nào bao hết, nên bỏ externalRef thay vì bịa link.
   },
@@ -64,7 +62,8 @@ export const NAV_GROUPS = [
   { title: "Tổng quan", items: [
       { id: "dashboard",  label: "Bảng điều khiển", icon: "🏠", href: "#/" },
       { id: "certs",      label: "Chứng chỉ K8s",   icon: "🎓", href: "#/certs" },
-      { id: "roadmap",    label: "Lộ trình học",    icon: "🗺️", href: "#/roadmap" } ] },
+      { id: "roadmap",    label: "Lộ trình học",    icon: "🗺️", href: "#/roadmap" },
+      { id: "tracker",    label: "Ma trận năng lực", icon: "📊", href: "#/tracker" } ] },
   { title: "Học & tham khảo", items: [
       { id: "docs",       label: "Tài liệu",        icon: "📚", href: "#/docs" },
       { id: "commands",   label: "Thực hành nhanh", icon: "⚡", href: "#/commands" } ] },
