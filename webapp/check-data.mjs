@@ -37,7 +37,7 @@ const EXPECTED = {
     "roadmap-items:spring-security": 30,
     // Lĩnh vực Lộ trình Senior Java — 5 tài liệu kế hoạch 24 tháng.
     "docs:senior-java": 5,
-    "roadmap-items:senior-java": 81,
+    "roadmap-items:senior-java": 147,
   },
 };
 

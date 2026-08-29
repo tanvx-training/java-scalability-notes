@@ -11,6 +11,7 @@
 //   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
 //   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
 //   SJ1 : senior-java-gd1.js (Tuần 1–26) — 81 mục
+//   SJ2 : senior-java-gd2.js (Tuần 1–26) — 66 mục
 //
 // LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, sj-gd1-w1…) và id mục
 // (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, sj-gd1-w1-1…) là khóa lưu
@@ -31,6 +32,7 @@ import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
 import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java-gd1.js";
+import { seniorJavaGd2 } from "./senior-java-gd2.js";
 import { k8sbookCrossref } from "./k8sbook-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 
@@ -124,6 +126,17 @@ export const tracks = [
     desc: "Output bắt buộc: repo java-deep-dive ≥ 10 chủ đề có code và ghi chú Feynman, 2 case optimize thực tế tại công ty có số liệu trước/sau, và pass mock interview Java Senior.",
     prereq: "Yêu cầu: đang làm Java ở mức Mid-level, có dự án Spring Boot thật để áp dụng. Dành 8–10 giờ/tuần ngoài giờ làm.",
     weeks: seniorJavaGd1,
+  },
+  {
+    id: "sj-gd2",
+    field: "senior-java",
+    label: "Giai đoạn 2",
+    icon: "🔧",
+    name: "DevOps nền tảng (tháng 6–12)",
+    durationWeeks: 26,
+    desc: "Output bắt buộc: pipeline CI/CD tự động hoá deploy tại công ty (hoặc bản mô phỏng 1:1) có số liệu trước/sau, repo springboot-cicd-observability, và 1 bài blog về hành trình tự động hoá.",
+    prereq: "Yêu cầu: xong giai đoạn 1 ở mức ≥ 5/6 tiêu chí nghiệm thu. Cần thêm 1 VPS khoảng 5 USD/tháng và 1 domain rẻ.",
+    weeks: seniorJavaGd2,
   },
 ];
 
