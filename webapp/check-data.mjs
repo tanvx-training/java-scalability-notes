@@ -38,6 +38,10 @@ const EXPECTED = {
     // Lĩnh vực Lộ trình Senior Java — 5 tài liệu kế hoạch 24 tháng.
     "docs:senior-java": 5,
     "roadmap-items:senior-java": 276,
+    // Ma trận năng lực Senior Java — chuyển từ roadmap-seed.yaml.
+    "matrix-modules:senior-java": 6,
+    "matrix-topics:senior-java": 34,
+    "matrix-criteria:senior-java": 96,
   },
 };
 
@@ -77,7 +81,7 @@ function dupes(ids) {
 const { DOMAINS, TOPICS } = await import("./js/data/meta.js");
 const { docs } = await import("./js/data/docs-index.js");
 const { tracks } = await import("./js/data/roadmap.js");
-const { allFlashcards: flashcards, allQuestions: questions } =
+const { allFlashcards: flashcards, allQuestions: questions, allMatrices: matrices } =
   await import("./js/data/index.js");
 const { k8sbookCrossref } = await import("./js/data/k8sbook-crossref.js");
 const { weeksPart1 } = await import("./js/data/roadmap-part1.js");
@@ -96,6 +100,9 @@ const rawWeeks = new Map(
    ...cksWeeksPart1, ...cksWeeksPart2].map((w) => [w.id, w]));
 
 const allItems = tracks.flatMap((t) => t.weeks.flatMap((w) => w.items));
+const matrixModules = matrices.flatMap((m) => m.modules);
+const matrixTopics = matrixModules.flatMap((m) => m.topics);
+const matrixCriteria = matrixTopics.flatMap((t) => t.checklist);
 const fieldOf = (rec) => rec.field ?? "kubernetes";
 
 console.log("Kiểm tra dữ liệu DevPrep\n");
@@ -286,6 +293,68 @@ await check("Mọi khối tuần có ít nhất 1 mục", () => {
   const bad = tracks.flatMap((t) =>
     t.weeks.filter((w) => !w.items?.length).map((w) => `${t.id}/${w.id}`));
   expect(!bad.length, `khối tuần rỗng: ${bad.join(", ")}`);
+});
+
+// #8 — Bất biến của ma trận năng lực.
+//
+// Dạng dữ liệu này (module → chủ đề → tiêu chí) không đi qua bất kỳ bất biến
+// nào ở trên: chúng soát docs/tracks/flashcards/questions. Không có nhóm #8,
+// một tiêu chí thiếu `level` hay một module sai `weight` sẽ render lặng lẽ sai.
+await check("Id ma trận duy nhất và không đụng id lộ trình/tài liệu", () => {
+  const ids = [
+    ...matrixModules.map((m) => m.id),
+    ...matrixTopics.map((t) => t.id),
+    ...matrixCriteria.map((c) => c.id),
+  ];
+  const d = dupes(ids);
+  expect(!d.length, `id trùng trong ma trận: ${d.join(", ")}`);
+  const taken = new Set([...docs.map((x) => x.id), ...allItems.map((x) => x.id)]);
+  const clash = ids.filter((id) => taken.has(id));
+  expect(!clash.length, `id ma trận đụng id tài liệu/lộ trình: ${clash.join(", ")}`);
+});
+
+await check("Id con của ma trận khớp tiền tố id cha", () => {
+  const bad = [];
+  for (const m of matrixModules) {
+    for (const t of m.topics) {
+      if (!t.id.startsWith(`${m.id}-`)) bad.push(`${t.id} không thuộc ${m.id}`);
+      for (const c of t.checklist) {
+        if (!c.id.startsWith(`${t.id}-`)) bad.push(`${c.id} không thuộc ${t.id}`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("Tiêu chí có level 1–4 và nội dung không rỗng", () => {
+  const bad = matrixCriteria
+    .filter((c) => ![1, 2, 3, 4].includes(c.level) || !String(c.criteria ?? "").trim())
+    .map((c) => c.id);
+  expect(!bad.length, `tiêu chí sai level hoặc rỗng: ${bad.join(", ")}`);
+});
+
+await check("Mức quan trọng của chủ đề hợp lệ", () => {
+  const ok = ["HIGH", "MEDIUM", "LOW"];
+  const bad = matrixTopics.filter((t) => !ok.includes(t.importance)).map((t) => t.id);
+  expect(!bad.length, `importance sai: ${bad.join(", ")}`);
+});
+
+await check("Tổng trọng số các module của mỗi ma trận bằng 100", () => {
+  const bad = matrices
+    .map((m) => [m.id, m.modules.reduce((s, x) => s + x.weight, 0)])
+    .filter(([, sum]) => sum !== 100)
+    .map(([id, sum]) => `${id}: tổng weight = ${sum}`);
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("Tài nguyên của ma trận là URL http(s)", () => {
+  const bad = [];
+  for (const t of matrixTopics) {
+    for (const r of t.resources ?? []) {
+      if (!/^https?:\/\//.test(r.url ?? "")) bad.push(`${t.id} → ${r.url}`);
+    }
+  }
+  expect(!bad.length, `url không hợp lệ: ${bad.join(", ")}`);
 });
 
 // N1 — bảng liên kết chéo phải trỏ tới thứ có thật.
@@ -656,6 +725,14 @@ await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
     const f = fieldOf(t);
     actual[`roadmap-items:${f}`] =
       (actual[`roadmap-items:${f}`] ?? 0) + t.weeks.flatMap((w) => w.items).length;
+  }
+  for (const m of matrices) {
+    const f = fieldOf(m);
+    actual[`matrix-modules:${f}`] = (actual[`matrix-modules:${f}`] ?? 0) + m.modules.length;
+    actual[`matrix-topics:${f}`] =
+      (actual[`matrix-topics:${f}`] ?? 0) + m.modules.flatMap((x) => x.topics).length;
+    actual[`matrix-criteria:${f}`] = (actual[`matrix-criteria:${f}`] ?? 0)
+      + m.modules.flatMap((x) => x.topics).flatMap((t) => t.checklist).length;
   }
   const bad = Object.entries(EXPECTED.counts)
     .filter(([k, v]) => (actual[k] ?? 0) !== v)
