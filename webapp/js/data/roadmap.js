@@ -10,6 +10,7 @@
 //   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
 //   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
 //   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
+//   MCJ : modconc-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)       — 32 mục
 //   SJ1 : senior-java-gd1.js (Tuần 1–26) — 81 mục
 //   SJ2 : senior-java-gd2.js (Tuần 1–26) — 66 mục
 //   SJ3 : senior-java-gd3.js (Tuần 1–26) — 64 mục
@@ -17,8 +18,8 @@
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, sj-gd1-w1…) và id mục
-// (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, mc-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, mc-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
@@ -35,6 +36,7 @@ import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
 import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
+import { modconcWeeksPart1 } from "./modconc-roadmap-part1.js";
 import { seniorJavaGd1 } from "./senior-java-gd1.js";
 import { seniorJavaGd2 } from "./senior-java-gd2.js";
 import { seniorJavaGd3 } from "./senior-java-gd3.js";
@@ -165,6 +167,17 @@ export const tracks = [
     desc: "Output bắt buộc: 2 design doc được review với ít nhất 1 được triển khai, repo distributed-patterns-demo, pass 2 buổi mock system design mức Senior, và hồ sơ Senior hoàn chỉnh gồm CV, GitHub và ≥ 4 bài blog.",
     prereq: "Yêu cầu: xong giai đoạn 3 ở mức ≥ 6/7 tiêu chí nghiệm thu. Sách nền của giai đoạn là DDIA — đọc Understanding Distributed Systems trước nếu thấy nặng.",
     weeks: seniorJavaGd4,
+  },
+  {
+    id: "modconc",
+    field: "modern-concurrency",
+    label: "Modern Concurrency",
+    icon: "🧵",
+    name: "Đọc Modern Concurrency in Java",
+    durationWeeks: 9,
+    desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy thường gặp và câu tự kiểm tra.",
+    prereq: "Yêu cầu: biết Java cơ bản và đã từng dùng thread hoặc ExecutorService. Không cần biết trước virtual thread.",
+    weeks: [...modconcWeeksPart1],
   },
 ];
 
