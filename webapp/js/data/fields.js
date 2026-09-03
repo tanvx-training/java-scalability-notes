@@ -51,9 +51,19 @@ export const FIELDS = {
     // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —
     // không nguồn ngoài nào bao hết, nên bỏ externalRef thay vì bịa link.
   },
+  "modern-concurrency": {
+    label: "Modern Concurrency in Java",
+    icon: "🧵",
+    desc: "Bản dịch tiếng Việt Modern Concurrency in Java (O'Reilly, ISBN 9781098165406) — virtual thread, structured concurrency, scoped values, và chỗ đứng của reactive sau Loom.",
+    certFilter: false,
+    // Mở dần theo dữ liệu: "docs" thêm ở Task 3, "roadmap" ở Task 4.
+    // Khai sớm là bất biến #7 báo đỏ.
+    modules: ["dashboard"],
+    externalRef: { label: "openjdk.org — Project Loom", href: "https://wiki.openjdk.org/display/loom/Main" },
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-concurrency", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.
