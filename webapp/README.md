@@ -1,6 +1,6 @@
 # 📚 DevPrep — Học · Ôn tập · Luyện thi
 
-Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một nền tảng học đa lĩnh vực: **Kubernetes & chứng chỉ** (CKAD, CKA, CKS, bản dịch tiếng Việt *Kubernetes in Action*), **Lập trình hệ thống** (bản dịch tiếng Việt System Programming Coursebook, UIUC CS 241), **Java & Spring Boot Scalability**, **Spring Security** (bản dịch tiếng Việt *Spring Security in Action*, ấn bản 2, Laurențiu Spilcă, Manning 2024) và **Lộ trình Senior Java** (chương trình tự học 24 tháng). Một bộ chọn lĩnh vực ở sidebar chuyển toàn bộ giao diện — nav, lộ trình, tài liệu, flashcards, trắc nghiệm — sang đúng nội dung của lĩnh vực đang chọn.
+Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một nền tảng học đa lĩnh vực: **Kubernetes & chứng chỉ** (CKAD, CKA, CKS, bản dịch tiếng Việt *Kubernetes in Action*), **Lập trình hệ thống** (bản dịch tiếng Việt System Programming Coursebook, UIUC CS 241), **Java & Spring Boot Scalability**, **Spring Security** (bản dịch tiếng Việt *Spring Security in Action*, ấn bản 2, Laurențiu Spilcă, Manning 2024), **Modern Concurrency in Java** (bản dịch tiếng Việt, O'Reilly, ISBN 9781098165406) và **Lộ trình Senior Java** (chương trình tự học 24 tháng). Một bộ chọn lĩnh vực ở sidebar chuyển toàn bộ giao diện — nav, lộ trình, tài liệu, flashcards, trắc nghiệm — sang đúng nội dung của lĩnh vực đang chọn.
 
 ## Tính năng
 
@@ -8,8 +8,8 @@ Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một 
 |---|---|
 | 🏠 Bảng điều khiển | Tổng quan tiến độ của lĩnh vực đang chọn: lộ trình, flashcard đến hạn, độ chính xác trắc nghiệm, điểm thi thử, ma trận năng lực |
 | 🎓 Chứng chỉ K8s | So sánh KCNA / KCSA / CKAD / CKA / CKS + lộ trình gợi ý (kèm Kubestronaut) — riêng lĩnh vực Kubernetes |
-| 🗺️ Lộ trình học | 10 giáo trình: CKAD, CKA, CKS (mỗi track 8–10 tuần), System Programming (10 tuần), lộ trình đọc *Kubernetes in Action* (9 tuần, bám theo 17 chương sách), lộ trình đọc *Spring Security in Action* (9 tuần, bám theo 17 chương — lời giới thiệu, ch.14 và 2 phụ lục chỉ xuất hiện ở tài nguyên theo tuần, không phải mục Đọc chính) và 4 giai đoạn **Lộ trình Senior Java** (GĐ1–GĐ4, 24 tháng) — tổng **540 mục** (184 K8s + 50 mục sysprog + 30 mục đọc *Spring Security in Action* + 276 mục Senior Java: GĐ1 81, GĐ2 66, GĐ3 64, GĐ4 65), lý thuyết dễ hiểu + lệnh/YAML/code mẫu + bẫy thường gặp, tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
-| 📚 Thư viện tài liệu | **78 tài liệu** thuộc 5 lĩnh vực (24 Kubernetes, 18 System Programming, 10 Java & Spring Boot Scalability, 21 Spring Security, 5 Lộ trình Senior Java) — mục lục nổi, highlight yaml/bash/c, mermaid diagram, ảnh minh họa, nút copy |
+| 🗺️ Lộ trình học | 11 giáo trình: CKAD, CKA, CKS (mỗi track 8–10 tuần), System Programming (10 tuần), lộ trình đọc *Kubernetes in Action* (9 tuần, bám theo 17 chương sách), lộ trình đọc *Spring Security in Action* (9 tuần, bám theo 17 chương — lời giới thiệu, ch.14 và 2 phụ lục chỉ xuất hiện ở tài nguyên theo tuần, không phải mục Đọc chính), lộ trình đọc *Modern Concurrency in Java* (9 tuần, 32 mục, bám theo 8 chương sách) và 4 giai đoạn **Lộ trình Senior Java** (GĐ1–GĐ4, 24 tháng) — tổng **572 mục** (184 K8s + 50 mục sysprog + 30 mục đọc *Spring Security in Action* + 32 mục đọc *Modern Concurrency in Java* + 276 mục Senior Java: GĐ1 81, GĐ2 66, GĐ3 64, GĐ4 65), lý thuyết dễ hiểu + lệnh/YAML/code mẫu + bẫy thường gặp, tài nguyên liên quan theo tuần, nút "Tiếp tục học", tiến độ lưu riêng từng track |
+| 📚 Thư viện tài liệu | **86 tài liệu** thuộc 6 lĩnh vực (24 Kubernetes, 18 System Programming, 10 Java & Spring Boot Scalability, 21 Spring Security, 8 Modern Concurrency in Java, 5 Lộ trình Senior Java) — mục lục nổi, highlight yaml/bash/c, mermaid diagram, ảnh minh họa, nút copy |
 | 📊 Ma trận năng lực | 6 module / 34 chủ đề / **96 tiêu chí** đánh giá năng lực Senior Java, tick từng tiêu chí lưu tiến độ riêng — chỉ lĩnh vực Lộ trình Senior Java |
 | ⚡ Thực hành nhanh | Trung tâm tra cứu khi làm lab Kubernetes: lệnh, YAML mẫu đánh dấu field cần sửa, quy trình thuộc lòng có chỉ tiêu thời gian, thẻ "Trước giờ thi" từng chứng chỉ. Ghim mục hay dùng, lọc theo chứng chỉ, chế độ gọn mở cạnh terminal |
 | 🃏 Flashcards | **174 thẻ** (84 Kubernetes + 90 System Programming), spaced repetition (Lại/Khó/Tốt/Dễ), phím tắt Space + 1–4 |
@@ -21,9 +21,9 @@ Toàn bộ tiến độ lưu trong `localStorage` — không cần đăng nhập
 
 ### Bộ chọn lĩnh vực
 
-Sidebar có một bộ chọn lĩnh vực (`Kubernetes & Chứng chỉ` / `Lập trình hệ thống` / `Java & Spring Boot Scalability` / `Spring Security` / `Lộ trình Senior Java`). Chọn một lĩnh vực sẽ:
+Sidebar có một bộ chọn lĩnh vực (`Kubernetes & Chứng chỉ` / `Lập trình hệ thống` / `Java & Spring Boot Scalability` / `Modern Concurrency in Java` / `Spring Security` / `Lộ trình Senior Java`). Chọn một lĩnh vực sẽ:
 
-- Đổi các mục nav còn lại — chỉ hiện trang có dữ liệu thật cho lĩnh vực đó (ví dụ Java chỉ có Bảng điều khiển + Tài liệu; Spring Security có thêm Lộ trình học nên là Bảng điều khiển + Lộ trình + Tài liệu; Lộ trình Senior Java có 4 module — Bảng điều khiển + Tài liệu + Lộ trình + Ma trận năng lực — vì đây là lĩnh vực duy nhất bật module `tracker`. Các lĩnh vực trên đều chưa có flashcards/trắc nghiệm riêng).
+- Đổi các mục nav còn lại — chỉ hiện trang có dữ liệu thật cho lĩnh vực đó (ví dụ Java chỉ có Bảng điều khiển + Tài liệu; Spring Security có thêm Lộ trình học nên là Bảng điều khiển + Lộ trình + Tài liệu; Modern Concurrency in Java cũng có 3 module — Bảng điều khiển + Lộ trình + Tài liệu; Lộ trình Senior Java có 4 module — Bảng điều khiển + Tài liệu + Lộ trình + Ma trận năng lực — vì đây là lĩnh vực duy nhất bật module `tracker`. Các lĩnh vực trên đều chưa có flashcards/trắc nghiệm riêng).
 - Lọc lại dữ liệu ở mọi trang dùng chung (Bảng điều khiển, Lộ trình, Tài liệu, Flashcards, Trắc nghiệm) theo đúng lĩnh vực.
 - Lưu lựa chọn vào `localStorage` để lần sau mở app vẫn ở đúng lĩnh vực đó.
 
@@ -70,13 +70,14 @@ webapp/
 │   ├── store.js          # localStorage có namespace
 │   └── ui.js             # DOM helper, badge, copy code…
 ├── js/data/
-│   ├── fields.js         # khai 5 lĩnh vực: label, icon, module nào bật
+│   ├── fields.js         # khai 6 lĩnh vực: label, icon, module nào bật
 │   ├── index.js          # lớp truy cập dữ liệu lọc theo lĩnh vực
 │   ├── meta.js, certs.js, roadmap.js, docs-index.js, …
 │   ├── sysprog-roadmap-part*.js, sysprog-flashcards.js,
 │   │   sysprog-questions-part*.js   # dữ liệu lĩnh vực System Programming
 │   ├── k8sbook-roadmap-part*.js, k8sbook-crossref.js  # sách Kubernetes in Action
 │   ├── springsec-roadmap-part*.js   # sách Spring Security in Action
+│   ├── modconc-roadmap-part*.js     # sách Modern Concurrency in Java
 │   ├── senior-java-gd{1..4}.js      # 4 giai đoạn Lộ trình Senior Java
 │   ├── senior-java-matrix.js        # ma trận năng lực (6 module/34 chủ đề/96 tiêu chí)
 │   └── …                 # roadmap-part*, questions, flashcards, commands, labs (Kubernetes)

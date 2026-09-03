@@ -1,7 +1,8 @@
 // Lộ trình học nhiều track (3 chứng chỉ Kubernetes, đọc sách Kubernetes in
-// Action, lập trình hệ thống, đọc sách Spring Security in Action, và 4 giai
-// đoạn của Lộ trình Senior Java) — mỗi track là một giáo trình tương tác: mỗi
-// mục là một bài học chi tiết (markdown), mỗi tuần kèm tài nguyên liên quan.
+// Action, lập trình hệ thống, đọc sách Spring Security in Action, đọc sách
+// Modern Concurrency in Java, và 4 giai đoạn của Lộ trình Senior Java) — mỗi
+// track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
+// (markdown), mỗi tuần kèm tài nguyên liên quan.
 //
 // Nội dung tách file theo track/tuần để dễ bảo trì:
 //   CKAD: roadmap-part{1,2,3}.js      (Tuần 1–3 / 4–5 / 6–10) — 55 bài
