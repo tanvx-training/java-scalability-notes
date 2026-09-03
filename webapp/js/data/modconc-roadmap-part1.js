@@ -60,7 +60,7 @@ export const modconcWeeksPart1 = [
     id: "mc-w2",
     week: "Tuần 2",
     title: "Virtual thread: khái niệm, cách tạo, scalability",
-    goal: "Tạo được virtual thread bằng cả bốn cách sách đưa ra, và giải thích được vì sao chúng cho scalability chứ không phải tốc độ.",
+    goal: "Tạo được virtual thread bằng những cách sách đưa ra, và giải thích được vì sao chúng cho scalability chứ không phải tốc độ.",
     practice: "Chạy lại benchmark Little's Law của chương 2 trên máy bạn: 10.000 tác vụ, mỗi tác vụ ngủ 500 mili giây, lần lượt với `newVirtualThreadPerTaskExecutor()` rồi `newFixedThreadPool(100)`, `(500)` và `(1000)`. Ghi bốn con số throughput và đặt cạnh bảng kết quả trong sách.",
     resources: [
       { label: "MCJ 02 — Tìm hiểu về Virtual Thread", href: "#/docs/modconc-02" },
@@ -142,7 +142,7 @@ export const modconcWeeksPart1 = [
 
 **Đọc.** [Giải quyết vấn đề Pinning với ReentrantLock](#/docs/modconc-02) — so hai dòng kết quả với ví dụ tuần trước, rồi đọc khung "Cơ chế park/unpark" và khung ba ví dụ về mức độ nghiêm trọng của \`synchronized\`. Tiếp theo [Gọi phương thức Native và Pinning](#/docs/modconc-02): nếu không dựng được thư viện C thì bỏ qua phần biên dịch, nhưng đọc kỹ đoạn giải thích *vì sao* native pin và khung JEP 491 ở cuối.
 
-**Bẫy.** Coi \`ReentrantLock\` là thuốc chữa bách bệnh cho pinning. Sách chỉ rõ lời gọi native hay foreign function vẫn pin, vì JVM không kiểm soát được code native: stack native không lưu và khôi phục được như Java stack frame. Bẫy thứ hai: quên \`unlock()\` trong khối \`finally\` — sách nhấn mạnh đây là điều bắt buộc để tránh deadlock khi có ngoại lệ.
+**Bẫy.** Coi \`ReentrantLock\` là thuốc chữa bách bệnh cho pinning. Sách chỉ rõ lời gọi native hay foreign function vẫn pin, vì JVM không kiểm soát được code native: stack native không lưu và khôi phục được như Java stack frame. Nói trước để bạn khỏi tưởng mình đọc nhầm: chính cuốn sách không nhất quán ở đúng chỗ này — văn xuôi khẳng định native vẫn pin, còn đầu ra ví dụ chạy trên JDK 25 ở cuối khung JEP 491 lại in ra hai carrier thread khác nhau. Bẫy thứ hai: quên \`unlock()\` trong khối \`finally\` — sách nhấn mạnh đây là điều bắt buộc để tránh deadlock khi có ngoại lệ.
 
 **Tự kiểm tra.** Hai đoạn code \`synchronized\` nào trong khung ba ví dụ bị sách xếp vào loại đáng lo, và điểm chung của chúng là gì? Sách gợi ý ba cách nào để giảm nhẹ pinning do lời gọi native?`,
       },
@@ -162,7 +162,7 @@ export const modconcWeeksPart1 = [
         text: "Giám sát: JFR, thread dump và mẹo khi chuyển sang virtual thread",
         lesson: `**Mục tiêu.** Chọn đúng công cụ cho từng câu hỏi — cờ JVM, JFR hay thread dump — và biết trước ba việc phải làm khi migrate một ứng dụng cũ.
 
-**Đọc.** [Giám sát (Monitoring)](#/docs/modconc-02) — ba phần con lần lượt cho: cờ theo dõi \`ThreadLocal\`; pinning, gồm cờ với hai mức đầu ra rồi ba sự kiện JFR (chú ý cái nào bật sẵn và ngưỡng mặc định là bao nhiêu); và thread dump bằng \`jcmd\` với hai định dạng cùng danh sách những thứ dump này *không* có. Rồi [Tạo Thread Dump với HotSpotDiagnosticsMXBean](#/docs/modconc-02) và [Mẹo thực tiễn khi chuyển sang Virtual Thread](#/docs/modconc-02).
+**Đọc.** [Giám sát (Monitoring)](#/docs/modconc-02) — ba phần con lần lượt cho: cờ theo dõi \`ThreadLocal\`; pinning, gồm cờ với hai mức đầu ra rồi bốn tên sự kiện JFR gói trong ba gạch đầu dòng (chú ý hai sự kiện nào bật sẵn, và ngưỡng mặc định của sự kiện báo pinning); và thread dump bằng \`jcmd\` với hai định dạng cùng danh sách những thứ dump này *không* có. Rồi [Tạo Thread Dump với HotSpotDiagnosticsMXBean](#/docs/modconc-02) và [Mẹo thực tiễn khi chuyển sang Virtual Thread](#/docs/modconc-02).
 
 **Bẫy.** Mở thread dump của \`jcmd\` rồi đi tìm thông tin lock. Sách liệt kê hẳn những gì bị lược bỏ: địa chỉ đối tượng, lock, thống kê JNI, thống kê heap. Bẫy thứ hai: đặt semaphore quá chặt khi migrate — sách gọi đây là "thế lưỡng nan của semaphore", giới hạn quá thấp thì bóp nghẹt concurrency và làm mất chính lợi ích của virtual thread.
 
@@ -206,7 +206,7 @@ export const modconcWeeksPart1 = [
       {
         id: "mc-w4-3",
         text: "ForkJoinPool và vì sao nó làm scheduler cho virtual thread",
-        lesson: `**Mục tiêu.** Chỉ ra được bốn khác biệt giữa \`ForkJoinPool\` và pool truyền thống, và nói được vì sao chính nó được chọn để lập lịch virtual thread.
+        lesson: `**Mục tiêu.** Nói được \`ForkJoinPool\` khác pool truyền thống ở chỗ nào — mỗi thread một deque riêng thay cho một queue dùng chung gây tranh chấp — và kể lại được thứ mà sách gọi là điểm khác biệt độc đáo của nó, rồi từ đó giải thích vì sao chính nó được chọn để lập lịch virtual thread.
 
 **Đọc.** [ForkJoinPool](#/docs/modconc-03) — bám theo ví dụ Fibonacci hai lần: bản dùng thread pool cố định (chạy thử để tận mắt thấy nó treo) rồi bản \`RecursiveTask\`, đọc kỹ chú thích số ③. Tiếp theo [Tại sao lại dùng ForkJoinPool cho Virtual Thread?](#/docs/modconc-03): cấu trúc deque của mỗi worker, hai đầu lấy tác vụ, submission queue, và chế độ async ở cuối mục.
 
