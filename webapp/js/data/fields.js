@@ -56,9 +56,9 @@ export const FIELDS = {
     icon: "🧵",
     desc: "Bản dịch tiếng Việt Modern Concurrency in Java (O'Reilly, ISBN 9781098165406) — virtual thread, structured concurrency, scoped values, và chỗ đứng của reactive sau Loom.",
     certFilter: false,
-    // Mở dần theo dữ liệu: "docs" thêm ở Task 3, "roadmap" ở Task 4.
+    // Mở dần theo dữ liệu: "roadmap" thêm ở Task 4.
     // Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard"],
+    modules: ["dashboard", "docs"],
     externalRef: { label: "openjdk.org — Project Loom", href: "https://wiki.openjdk.org/display/loom/Main" },
   },
 };

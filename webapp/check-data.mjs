@@ -42,6 +42,8 @@ const EXPECTED = {
     "matrix-modules:senior-java": 6,
     "matrix-topics:senior-java": 34,
     "matrix-criteria:senior-java": 96,
+    // Lĩnh vực Modern Concurrency in Java — 8 chương sách O'Reilly.
+    "docs:modern-concurrency": 8,
   },
 };
 
