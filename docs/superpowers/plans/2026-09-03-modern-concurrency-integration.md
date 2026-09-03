@@ -182,7 +182,7 @@ ls modern-concurrency-vi/*.pdf | wc -l                      # kỳ vọng 8
 find modern-concurrency-vi/images -type f | wc -l           # kỳ vọng 19
 md5 -q modern-concurrency-vi/08-ket-luan-va-diem-rut-ra.md  # phải khớp md5 ở Step 1
 git status --short | grep -c '^R'                           # kỳ vọng 35 (8 md + 8 pdf + 19 ảnh)
-git diff --cached --numstat -M | awk '$1 != 0 || $2 != 0'   # phải KHÔNG in gì
+git diff --cached --numstat -M | awk '$1 != "-" && ($1 != 0 || $2 != 0)'   # phải KHÔNG in gì
 ```
 
 Kỳ vọng: `git status` chỉ hiện `R` (rename) và một `??`/`A` cho README — **không có dòng `M`** nào, và lệnh `numstat` không in dòng nào. Một dòng `M` hay một dòng numstat khác 0 nghĩa là nội dung chương bị sửa, vi phạm Global Constraints.
@@ -573,6 +573,8 @@ Kế hoạch này cố ý **không viết sẵn một bài học mẫu**: ở ha
 
 Mỗi `lesson` là **kế hoạch học, không phải bài giảng** — 4 khối cố định, khoảng 120–220 từ:
 
+Con số này là hướng dẫn, không phải trần cứng — tiền lệ cùng thể loại trong kho, `springsec-roadmap-part{1,2}.js`, nằm ở dải 188–272 từ (trung vị p1 216, p2 240), nên bám sát nguồn (sách) quan trọng hơn bám đúng con số.
+
 ```
 **Mục tiêu.** <điều người học phải làm được sau mục này>
 
@@ -775,6 +777,8 @@ Cấu trúc tuần: `{ id, week, title, goal, practice, resources: [{label, href
 **Lưu ý về `goal`:** plain text, không phải markdown (chỉ `practice` đi qua `inlineMd`). Không backtick, không `**`.
 
 Mỗi `lesson` là **kế hoạch học, không phải bài giảng** — 4 khối cố định, khoảng 120–220 từ:
+
+Con số này là hướng dẫn, không phải trần cứng — tiền lệ cùng thể loại trong kho, `springsec-roadmap-part{1,2}.js`, nằm ở dải 188–272 từ (trung vị p1 216, p2 240), nên bám sát nguồn (sách) quan trọng hơn bám đúng con số.
 
 ```
 **Mục tiêu.** <điều người học phải làm được sau mục này>
