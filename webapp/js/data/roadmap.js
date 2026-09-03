@@ -37,6 +37,7 @@ import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
 import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { modconcWeeksPart1 } from "./modconc-roadmap-part1.js";
+import { modconcWeeksPart2 } from "./modconc-roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java-gd1.js";
 import { seniorJavaGd2 } from "./senior-java-gd2.js";
 import { seniorJavaGd3 } from "./senior-java-gd3.js";
@@ -177,7 +178,7 @@ export const tracks = [
     durationWeeks: 9,
     desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy thường gặp và câu tự kiểm tra.",
     prereq: "Yêu cầu: biết Java cơ bản và đã từng dùng thread hoặc ExecutorService. Không cần biết trước virtual thread.",
-    weeks: [...modconcWeeksPart1],
+    weeks: [...modconcWeeksPart1, ...modconcWeeksPart2],
   },
 ];
 
