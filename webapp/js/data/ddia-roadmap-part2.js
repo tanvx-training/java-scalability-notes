@@ -304,4 +304,62 @@ export const ddiaWeeksPart2 = [
       },
     ],
   },
+  {
+    id: "dd-w12",
+    week: "Tuần 12",
+    title: "Triết lý hệ streaming, và làm điều đúng đắn",
+    goal: "Nói được một kiến trúc dataflow bảo toàn tính đúng đắn bằng cách nào mà không cần distributed transaction, và phát biểu được trách nhiệm của chính bạn với dữ liệu của người khác bằng câu cụ thể thay vì thiện chí chung chung.",
+    practice: "Tuần cuối, cũng là buổi tổng kết cả lộ trình. Việc chính là viết một trang duy nhất đối chiếu hệ thống bạn đang làm với những đánh đổi đã đi qua mười hai tuần: nó là system of record hay dữ liệu dẫn xuất (tuần 1), mô hình dữ liệu và storage engine nào (tuần 2–3), schema tiến hóa ra sao (tuần 4), replication và sharding kiểu gì (tuần 5–6), mức cô lập nó thật sự đang chạy (tuần 7), nó giả định gì về mạng và đồng hồ (tuần 8), chỗ nào cần linearizability và chỗ nào chỉ cần một ràng buộc lỏng (tuần 9), pipeline batch và stream đi qua đâu (tuần 10–11). Với mỗi dòng thêm một cột: bạn biết điều đó vì đã đo, hay vì bạn đoán — cột đó chính là danh sách việc cho quý sau. Rồi hai việc riêng của tuần này. Một: lần theo một thao tác ghi quan trọng từ trình duyệt tới kho lưu trữ cuối cùng và đánh dấu mọi chặng nó có thể bị lặp; nếu không có một định danh request đi suốt cả đường, đó là chỗ cần vá. Hai: liệt kê mọi trường dữ liệu cá nhân bạn đang lưu, và với mỗi trường viết ra bạn giữ nó để làm gì, giữ bao lâu, và chuyện gì xảy ra với người dùng nếu nó rò rỉ — trường nào không trả lời được câu đầu tiên thì hãy xóa.",
+    resources: [
+      { label: "DDIA 13 — Một triết lý về hệ thống streaming", href: "#/docs/ddia-13" },
+      { label: "DDIA 14 — Làm Điều Đúng Đắn", href: "#/docs/ddia-14" },
+      { label: "acm.org — ACM Code of Ethics and Professional Conduct", href: "https://www.acm.org/code-of-ethics" },
+    ],
+    items: [
+      {
+        id: "dd-w12-1",
+        text: "Tích hợp dữ liệu: derived data và một log tổng thứ tự",
+        lesson: `**Mục tiêu.** Vẽ được trục system of record → dữ liệu dẫn xuất cho hệ thống của bạn, và nói được một log tổng thứ tự hết tác dụng ở đâu.
+
+**Đọc.** [Tích hợp dữ liệu](#/docs/ddia-13) mở bằng luận điểm nền: không công cụ nào phục vụ được mọi mẫu hình sử dụng, nên bạn buộc phải ghép nhiều thứ. Trong [Kết hợp các công cụ chuyên biệt bằng cách dẫn xuất dữ liệu](#/docs/ddia-13), mục [Suy luận về các dataflow](#/docs/ddia-13) chốt nguyên tắc — dùng CDC hay event sourcing ít quan trọng hơn việc quyết định một thứ tự toàn phần; [Giới hạn của thứ tự toàn phần (total ordering)](#/docs/ddia-13) liệt kê bốn giới hạn, chép cả bốn; [Sắp thứ tự event để ghi nhận quan hệ nhân quả](#/docs/ddia-13) dựng ví dụ hủy kết bạn rồi gửi tin nhắn. Nửa sau, [Batch processing và stream processing](#/docs/ddia-13) đi qua tái xử lý để tiến hóa ứng dụng, khung [SCHEMA MIGRATION TRÊN ĐƯỜNG SẮT](#/docs/ddia-13) — chuẩn khổ đường ray Anh chốt năm 1846 — và ba tính năng hợp nhất batch với stream.
+
+**Bẫy.** Dồn mọi event qua một log tổng thứ tự rồi coi bài toán tích hợp đã xong. Sách nêu bốn chỗ cách đó gãy — thông lượng vượt một máy, nhiều region, microservice giữ trạng thái riêng, client cập nhật ngay khi người dùng nhập — và nói thêm hầu hết thuật toán consensus giả định một node đủ sức xử lý toàn bộ luồng event, không có cơ chế chia việc sắp thứ tự cho nhiều node. Bẫy thứ hai: tin thuật toán giải quyết xung đột sẽ vá được thứ tự đến sai. Sách đặt giới hạn rõ: chúng hữu ích để duy trì trạng thái, nhưng vô dụng nếu hành động có tác dụng phụ ra bên ngoài — như thông báo đã gửi tới người yêu cũ.
+
+**Tự kiểm tra.** Vì sao sách nói câu "eventual consistency là điều không thể tránh khỏi" là không mang tính xây dựng? Và migration dần bằng hai view song song mua lại cho bạn tính chất gì?`,
+      },
+      {
+        id: "dd-w12-2",
+        text: "Tách rời database (unbundling) và dataflow ở tầng ứng dụng",
+        lesson: `**Mục tiêu.** Nói được federation và unbundling giải hai nửa nào của cùng một bài toán, và nhận ra khi nào ghép nhiều mảnh lại chính là tối ưu hóa quá sớm.
+
+**Đọc.** [Tách rời database (Unbundling)](#/docs/ddia-13) mở bằng phần đối chiếu hai triết lý Unix và quan hệ, cả hai xuất hiện đầu thập niên 1970 — đọc lướt. [Kết hợp các công nghệ lưu trữ dữ liệu](#/docs/ddia-13) là trọng tâm: chạy \`CREATE INDEX\` chính là snapshot cộng backlog, y hệt thiết lập follower mới ở tuần 5 và snapshot ban đầu của CDC ở tuần 11; rồi hai hướng đi — federated database hợp nhất thao tác đọc, unbundled database hợp nhất thao tác ghi. [Thiết kế ứng dụng xoay quanh Dataflow](#/docs/ddia-13) quay về VisiCalc năm 1979; ví dụ tỷ giá hối đoái đáng gõ lại. Đóng bằng [Quan sát trạng thái dẫn xuất](#/docs/ddia-13): Hình 13-1, cặp write path và read path, và sáu mục con kéo dataflow ra tới thiết bị người dùng cuối.
+
+**Bẫy.** Tách rời hệ thống vì kiến trúc unbundled nghe hiện đại hơn. Sách nói ngược lại: mỗi phần mềm có đặc thù vận hành riêng nên càng ít thành phần chuyển động càng tốt; một sản phẩm tích hợp thường cho hiệu năng tốt hơn và dễ dự đoán hơn trên workload của nó; xây cho quy mô bạn không cần là tối ưu hóa quá sớm — nếu một công nghệ làm được mọi thứ bạn cần thì cứ dùng nó. Bẫy thứ hai: nghe "liên kết lỏng" rồi tưởng hệ dẫn xuất là thứ dễ tính. Sách đặt hai yêu cầu không thương lượng: thứ tự thay đổi trạng thái phải ổn định, và chỉ mất một thông điệp cũng khiến tập dữ liệu dẫn xuất vĩnh viễn mất đồng bộ với nguồn.
+
+**Tự kiểm tra.** Vì sao sách gọi mục tiêu của unbundling là vấn đề chiều rộng chứ không phải chiều sâu? Và cách dataflow trong ví dụ tỷ giá hối đoái trả giá ở đâu khi xử lý lại event mua hàng?`,
+      },
+      {
+        id: "dd-w12-3",
+        text: "Hướng tới tính đúng đắn: lập luận end-to-end, ràng buộc, kiểm toán",
+        lesson: `**Mục tiêu.** Tách được hai thứ mà chữ *consistency* vẫn gộp làm một, và chỉ ra chỗ trong hệ của bạn cần một định danh request đi suốt từ trình duyệt tới database.
+
+**Đọc.** [Hướng tới tính đúng đắn](#/docs/ddia-13) mở bằng lý do hệ có trạng thái đòi hỏi cân nhắc kỹ hơn: hậu quả một sai sót kéo dài mãi mãi. [Lập luận đầu-cuối (end-to-end argument) cho database](#/docs/ddia-13) là mạch chính, năm mục con: gõ lại Ví dụ 13-1 và tự chỉ ra vì sao thử lại chuyển 22 đô thay vì 11, rồi Ví dụ 13-2 với request ID, và bản trích Saltzer, Reed, Clark 1984. [Thực thi ràng buộc](#/docs/ddia-13) gồm: uniqueness constraint đòi hỏi consensus, ba bước giành username, và xử lý request đa shard bám Hình 13-2 — bốn bước, đọc chậm nhất chương. [Tính kịp thời và tính toàn vẹn](#/docs/ddia-13) là cặp khái niệm phải thuộc, kèm ràng buộc lỏng và hệ tránh điều phối. Khép bằng [Tin tưởng, nhưng hãy kiểm chứng](#/docs/ddia-13) với năm mục con, rồi [Tóm tắt](#/docs/ddia-13).
+
+**Bẫy.** Trông cậy vào tính nguyên tử của transaction để thao tác chỉ xảy ra đúng một lần. Sách lấy đoạn mã chuyển tiền kinh điển làm phản ví dụ: nó không idempotent, và khi client kết nối lại thì đã ra ngoài phạm vi loại bỏ trùng lặp của TCP — sách nói thẳng nó không đúng đắn, ngân hàng thật không làm vậy, và 2PC cũng không đủ. Bẫy thứ hai: coi đảm bảo đúng đắn của database là tuyệt đối. Sách nêu đích danh MySQL các phiên bản trước không duy trì đúng ràng buộc duy nhất, và mức serializable của PostgreSQL từng để lọt write skew, rồi kết luận: đừng tin mù quáng — hãy đọc lại dữ liệu để kiểm tra, và thỉnh thoảng thử khôi phục từ backup.
+
+**Tự kiểm tra.** Vì sao vi phạm tính kịp thời tự khỏi khi chờ còn vi phạm tính toàn vẹn thì không? Và trong Hình 13-2, tính nguyên tử của giao dịch chuyển tiền đến từ đâu?`,
+      },
+      {
+        id: "dd-w12-4",
+        text: "Predictive analytics và quyền riêng tư — trách nhiệm của kỹ sư",
+        lesson: `**Mục tiêu.** Nêu được ba cách một hệ dự đoán gây hại cho từng con người cụ thể, và vì sao "người dùng đã bấm đồng ý" không phải một câu trả lời.
+
+**Đọc.** Chương 14 chỉ khoảng 10,5 nghìn từ, đọc trọn một buổi. Đoạn mở: công nghệ tự nó không tốt cũng không xấu, đạo đức không phải một danh sách kiểm tra mà là quá trình phản tư. [Predictive Analytics](#/docs/ddia-14) tách dự đoán thời tiết khỏi dự đoán tái phạm hay vỡ nợ và đưa ra hình ảnh "nhà tù thuật toán"; ba mục là [Bias and Discrimination](#/docs/ddia-14), [Responsibility and Accountability](#/docs/ddia-14) và [Feedback Loops](#/docs/ddia-14) với vòng xoáy tín dụng — thất nghiệp — nghèo đói. [Privacy and Tracking](#/docs/ddia-14) có sáu mục: [Surveillance](#/docs/ddia-14), [Consent and Freedom of Choice](#/docs/ddia-14), [Quyền riêng tư và việc sử dụng dữ liệu](#/docs/ddia-14), [Dữ liệu là tài sản và quyền lực](#/docs/ddia-14), [Nhớ lại cuộc Cách mạng Công nghiệp](#/docs/ddia-14) và [Luật pháp và tự điều chỉnh](#/docs/ddia-14). [Tóm tắt](#/docs/ddia-14) khép lại mười bốn chương.
+
+**Bẫy.** Tin rằng để dữ liệu quyết định thì kết quả sẽ khách quan. Sách gọi niềm tin ấy nực cười: hệ dự đoán chỉ ngoại suy từ quá khứ, nên quá khứ phân biệt đối xử thì chúng mã hóa và khuếch đại chính nó — mã bưu chính hay địa chỉ IP là chỉ báo mạnh về chủng tộc — và câu sách trích là "machine learning giống như hoạt động rửa tiền dành cho thiên kiến". Bẫy thứ hai: coi việc bấm chấp nhận điều khoản là đồng ý. Sách phản bác ba lớp: không hiểu dữ liệu của mình đi đâu thì không thể đồng ý có ý nghĩa; dữ liệu một người còn nói về người chưa hề đồng ý; và với dịch vụ thiết yếu cho tham gia xã hội, không dùng không phải lựa chọn tự do.
+
+**Tự kiểm tra.** Vì sao sách nói quyền riêng tư không bị xóa bỏ mà bị *chuyển giao*, và chuyển cho ai? Và data minimization của GDPR đi ngược triết lý big data ở điểm nào?`,
+      },
+    ],
+  },
 ];
