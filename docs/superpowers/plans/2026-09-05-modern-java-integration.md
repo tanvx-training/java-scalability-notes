@@ -770,7 +770,7 @@ export const mjiaWeeksPart2 = [
 - [ ] **Step 4: Viết tuần 8 — `mj-w8`, 4 mục (ch.13 + ch.14)**
 
 `title`: `"Default method và hệ thống module"` · `resources` trỏ `#/docs/mjia-13`, `#/docs/mjia-14`, và `{ label: "openjdk.org — JEP 261: Module System", href: "https://openjdk.org/jeps/261" }`.
-`practice`: dựng lại bằng tay ví dụ MỘT module của §14.4.3 bằng đúng ba lệnh sách in ra — `javac module-info.java …`, `jar cvfe`, `java --module-path`; rồi mở dự án hai module `expenses` của §14.6 và build bằng `mvn clean package`. Cuối cùng bỏ một mệnh đề `requires` khỏi `module-info.java` và build lại, đối chiếu thông báo lỗi bạn nhận được với thông báo sách in ở §14.6.
+`practice`: dựng lại bằng tay ví dụ MỘT module của §14.4.3 bằng đúng ba lệnh sách in ra — `javac module-info.java …`, `jar cvfe`, `java --module-path`; rồi mở dự án hai module `expenses` của §14.6 và build bằng `mvn clean package`. Cuối cùng làm đúng bài tập §14.7: thêm `requires httpclient` vào `module-info.java` của `expenses.readers`, build lại, và đối chiếu lỗi bạn nhận được với dòng `[ERROR] module not found: httpclient` sách in ra.
 
 | id | `text` | Mục sách phải đọc |
 |---|---|---|
