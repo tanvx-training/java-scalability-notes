@@ -19,7 +19,7 @@ export const ddiaWeeksPart1 = [
     resources: [
       { label: "DDIA 01 — Những sự đánh đổi trong kiến trúc hệ thống dữ liệu", href: "#/docs/ddia-01" },
       { label: "DDIA 02 — Xác định các yêu cầu phi chức năng", href: "#/docs/ddia-02" },
-      { label: "hdrhistogram.org — HdrHistogram", href: "http://hdrhistogram.org/" },
+      { label: "hdrhistogram.github.io — HdrHistogram", href: "https://hdrhistogram.github.io/HdrHistogram/" },
     ],
     items: [
       {
