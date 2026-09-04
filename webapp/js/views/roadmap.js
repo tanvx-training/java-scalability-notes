@@ -1,9 +1,10 @@
-// Lộ trình học đa track — nay là 12 track thuộc 6 lĩnh vực: CKAD, CKA, CKS và đọc
+// Lộ trình học đa track — nay là 13 track thuộc 7 lĩnh vực: CKAD, CKA, CKS và đọc
 // Kubernetes in Action (Kubernetes), đọc System Programming Coursebook (Lập trình
 // hệ thống), đọc Spring Security in Action (Spring Security), đọc Modern Concurrency
-// in Java (Modern Concurrency), đọc Designing Data-Intensive Applications (DDIA), và
-// 4 giai đoạn của Lộ trình Senior Java (Senior Java) — giáo trình tương tác theo
-// tuần: mỗi mục là một bài học chi tiết (mở/đóng được), tiến độ lưu localStorage.
+// in Java (Modern Concurrency), đọc Designing Data-Intensive Applications (DDIA), đọc
+// Modern Java in Action (Modern Java in Action), và 4 giai đoạn của Lộ trình Senior Java
+// (Senior Java) — giáo trình tương tác theo tuần: mỗi mục là một bài học chi tiết
+// (mở/đóng được), tiến độ lưu localStorage.
 
 import { h, pageHead, inlineMd, mdInto } from "../lib/ui.js";
 import { store } from "../lib/store.js";
