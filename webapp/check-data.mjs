@@ -50,6 +50,7 @@ const EXPECTED = {
     "roadmap-items:ddia": 48,
     // Lĩnh vực Modern Java in Action — 21 chương sách Manning.
     "docs:modern-java": 21,
+    "roadmap-items:modern-java": 48,
   },
 };
 

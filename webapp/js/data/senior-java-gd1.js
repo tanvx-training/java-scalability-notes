@@ -175,6 +175,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
     resources: [
       { label: "Giai đoạn 1 — bản đầy đủ", href: "#/docs/sj-01" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "🌊 Sang lĩnh vực Modern Java in Action — lộ trình đọc 12 tuần", href: "#/roadmap/modern-java" },
     ],
     items: [
       {

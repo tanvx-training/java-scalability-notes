@@ -1,9 +1,9 @@
 // Lộ trình học nhiều track (3 chứng chỉ Kubernetes, đọc sách Kubernetes in
 // Action, lập trình hệ thống, đọc sách Spring Security in Action, đọc sách
 // Modern Concurrency in Java, đọc sách Designing Data-Intensive Applications,
-// và 4 giai đoạn của Lộ trình Senior Java) — mỗi track là một giáo trình
-// tương tác: mỗi mục là một bài học chi tiết (markdown), mỗi tuần kèm tài
-// nguyên liên quan.
+// đọc sách Modern Java in Action, và 4 giai đoạn của Lộ trình Senior Java) —
+// mỗi track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
+// (markdown), mỗi tuần kèm tài nguyên liên quan.
 //
 // Nội dung tách file theo track/tuần để dễ bảo trì:
 //   CKAD: roadmap-part{1,2,3}.js      (Tuần 1–3 / 4–5 / 6–10) — 55 bài
@@ -14,6 +14,7 @@
 //   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
 //   MCJ : modconc-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)       — 32 mục
 //   DDIA: ddia-roadmap-part{1,2}.js  (Tuần 1–6 / 7–12)      — 48 mục
+//   MJIA: mjia-roadmap-part{1,2}.js (Tuần 1–6 / 7–12)      — 48 mục
 //   SJ1 : senior-java-gd1.js (Tuần 1–26) — 81 mục
 //   SJ2 : senior-java-gd2.js (Tuần 1–26) — 66 mục
 //   SJ3 : senior-java-gd3.js (Tuần 1–26) — 64 mục
@@ -21,8 +22,8 @@
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, mc-w1, dd-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, mc-w1, dd-w1, mj-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
@@ -43,6 +44,8 @@ import { modconcWeeksPart1 } from "./modconc-roadmap-part1.js";
 import { modconcWeeksPart2 } from "./modconc-roadmap-part2.js";
 import { ddiaWeeksPart1 } from "./ddia-roadmap-part1.js";
 import { ddiaWeeksPart2 } from "./ddia-roadmap-part2.js";
+import { mjiaWeeksPart1 } from "./mjia-roadmap-part1.js";
+import { mjiaWeeksPart2 } from "./mjia-roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java-gd1.js";
 import { seniorJavaGd2 } from "./senior-java-gd2.js";
 import { seniorJavaGd3 } from "./senior-java-gd3.js";
@@ -195,6 +198,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 12 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy thường gặp và câu tự kiểm tra.",
     prereq: "Yêu cầu: đã làm backend với một database quan hệ, hiểu index và transaction ở mức dùng được. Không cần biết trước về hệ phân tán.",
     weeks: [...ddiaWeeksPart1, ...ddiaWeeksPart2],
+  },
+  {
+    id: "modern-java",
+    field: "modern-java",
+    label: "MJIA",
+    icon: "🌊",
+    name: "Đọc Modern Java in Action",
+    durationWeeks: 12,
+    desc: "Kế hoạch đọc 12 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy thường gặp và câu tự kiểm tra; mỗi tuần một bài tập gõ code.",
+    prereq: "Yêu cầu: viết được Java ở mức thành thạo cú pháp trước Java 8 (class, interface, generics, collection). Không cần biết trước lambda hay stream.",
+    weeks: [...mjiaWeeksPart1, ...mjiaWeeksPart2],
   },
 ];
 
