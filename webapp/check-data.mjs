@@ -47,6 +47,7 @@ const EXPECTED = {
     "roadmap-items:modern-concurrency": 32,
     // Lĩnh vực DDIA — 14 chương Designing Data-Intensive Applications ấn bản 2.
     "docs:ddia": 14,
+    "roadmap-items:ddia": 48,
   },
 };
 

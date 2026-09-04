@@ -64,8 +64,7 @@ export const FIELDS = {
     icon: "🗄️",
     desc: "Bản dịch tiếng Việt Designing Data-Intensive Applications, ấn bản 2 (Martin Kleppmann, O'Reilly) — mô hình dữ liệu, lưu trữ, replication, sharding, transaction, hệ phân tán, batch và stream processing.",
     certFilter: false,
-    // Module "roadmap" mở ở Task 8, khi đã có đủ 48 mục lộ trình.
-    modules: ["dashboard", "docs"],
+    modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "dataintensive.net", href: "https://dataintensive.net/" },
   },
 };

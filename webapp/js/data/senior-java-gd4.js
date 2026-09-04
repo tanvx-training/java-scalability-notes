@@ -273,31 +273,32 @@ export const seniorJavaGd4 = [
     id: "sj-gd4-w5",
     week: "Tuần 9–14",
     title: "Đọc DDIA có kỷ luật",
-    goal: "Nắm phần lõi DDIA và biết soi hệ thống của mình qua lăng kính đó.",
+    goal: "Nắm phần lõi DDIA và biết soi hệ thống của mình qua lăng kính đó. Lịch 6 tuần ở đây cố ý chỉ quét phần lõi ở nhịp gấp; muốn đọc đủ 14 chương thì theo lộ trình đọc 12 tuần của lĩnh vực DDIA.",
     doneWhen: `6 ghi chú Feynman đều có mục "hệ thống của tôi"; kể được 3 ví dụ nối lý thuyết DDIA với lab đã tự làm.`,
     resources: [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "🗺️ Sang lĩnh vực DDIA — lộ trình đọc 12 tuần", href: "#/roadmap/ddia" },
     ],
     items: [
       {
         id: "sj-gd4-w5-1",
-        text: "Lịch đọc DDIA T9–T14: ch.1–2, ch.3, ch.5, ch.6–7, ch.8–9, ch.11–12 + tổng kết",
-        lesson: `**Việc cần làm.** Lịch chương: T9: ch.1–2 → T10: ch.3 (LSM-tree vs B-tree) → T11: ch.5 (replication) → T12: ch.6–7 (partitioning, transactions) → T13: ch.8–9 (network/clock không tin được, consensus — đọc mức khái niệm, đừng sa lầy) → T14: ch.11–12 (stream) + tổng kết.
+        text: "Lịch đọc DDIA T9–T14: ch.1–3, ch.4, ch.6, ch.7–8, ch.9–10, ch.12–13 + tổng kết",
+        lesson: `**Việc cần làm.** Lịch chương: T9: ch.1–3 → T10: ch.4 (LSM-tree vs B-tree) → T11: ch.6 (replication) → T12: ch.7–8 (sharding, transaction) → T13: ch.9–10 (network/clock không tin được, consensus — đọc mức khái niệm, đừng sa lầy) → T14: ch.12–13 (stream) + tổng kết.
 
 **Nguồn.** [Giai đoạn 4 — Tuần 9–14](#/docs/sj-04)`,
       },
       {
         id: "sj-gd4-w5-2",
         text: `Nghi thức mỗi chương: đọc + gạch chân 2 buổi, buổi 3 viết Feynman 1 trang kèm mục "hệ thống của tôi"`,
-        lesson: `**Việc cần làm.** Nghi thức mỗi chương (3 buổi): buổi 1–2 đọc + gạch chân; buổi 3 viết ghi chú Feynman 1 trang KÈM mục bắt buộc "Hệ thống công ty tôi đang đứng đâu trong trade-off này?" — ví dụ ch.5: DB công ty replicate kiểu gì, replication lag từng gây bug đọc-sau-ghi nào chưa?
+        lesson: `**Việc cần làm.** Nghi thức mỗi chương (3 buổi): buổi 1–2 đọc + gạch chân; buổi 3 viết ghi chú Feynman 1 trang KÈM mục bắt buộc "Hệ thống công ty tôi đang đứng đâu trong trade-off này?" — ví dụ ch.6: DB công ty replicate kiểu gì, replication lag từng gây bug đọc-sau-ghi nào chưa?
 
 **Nguồn.** [Giai đoạn 4 — Tuần 9–14](#/docs/sj-04)`,
       },
       {
         id: "sj-gd4-w5-3",
-        text: "Móc nối lý thuyết với lab đã làm: ch.3 với Kafka, ch.7 với isolation levels, ch.11 với outbox/CDC",
-        lesson: `**Việc cần làm.** Móc nối với lab đã làm để kiến thức bám rễ: ch.3 giải thích vì sao Kafka ghi nhanh (log tuần tự); ch.7 nối lại isolation levels giai đoạn 1 lên tầm phân tán; ch.11 chính là lý thuyết của outbox/CDC bạn đã cài.
+        text: "Móc nối lý thuyết với lab đã làm: ch.4 với Kafka, ch.8 với isolation levels, ch.12 với outbox/CDC",
+        lesson: `**Việc cần làm.** Móc nối với lab đã làm để kiến thức bám rễ: ch.4 giải thích vì sao Kafka ghi nhanh (log tuần tự); ch.8 nối lại isolation levels giai đoạn 1 lên tầm phân tán; ch.12 chính là lý thuyết của outbox/CDC bạn đã cài.
 
 **Nguồn.** [Giai đoạn 4 — Tuần 9–14](#/docs/sj-04)`,
       },
@@ -310,8 +311,8 @@ export const seniorJavaGd4 = [
       },
       {
         id: "sj-gd4-w5-5",
-        text: "Nếu DDIA quá nặng ở ch.3: đọc Understanding Distributed Systems trước 3 tuần rồi quay lại",
-        lesson: `**Việc cần làm.** Nếu DDIA quá nặng ngay ch.3: đọc *Understanding Distributed Systems* trước 3 tuần rồi quay lại — đường vòng này nhanh hơn bỏ cuộc.
+        text: "Nếu DDIA quá nặng ở ch.4: đọc Understanding Distributed Systems trước 3 tuần rồi quay lại",
+        lesson: `**Việc cần làm.** Nếu DDIA quá nặng ngay ch.4: đọc *Understanding Distributed Systems* trước 3 tuần rồi quay lại — đường vòng này nhanh hơn bỏ cuộc.
 
 **Nguồn.** [Giai đoạn 4 — Tuần 9–14](#/docs/sj-04)`,
       },
@@ -417,7 +418,7 @@ export const seniorJavaGd4 = [
       {
         id: "sj-gd4-w8-1",
         text: "Luyện 4 đề khó hơn: chat system, key-value store phân tán, payment flow, web crawler",
-        lesson: `**Việc cần làm.** Luyện tiếp 4 đề khó hơn, cùng nghi thức: chat system (WebSocket, presence), key-value store phân tán (áp dụng trực tiếp DDIA ch.5–6), **payment flow (trọng tâm idempotency — bạn có lab thật để kể)**, web crawler.
+        lesson: `**Việc cần làm.** Luyện tiếp 4 đề khó hơn, cùng nghi thức: chat system (WebSocket, presence), key-value store phân tán (áp dụng trực tiếp DDIA ch.6–7), **payment flow (trọng tâm idempotency — bạn có lab thật để kể)**, web crawler.
 
 **Nguồn.** [Giai đoạn 4 — Tuần 19–20](#/docs/sj-04)`,
       },
@@ -565,7 +566,7 @@ Tick khi trả lời trôi chảy không cần nhìn ghi chú.
       {
         id: "sj-gd4-w11-6",
         text: "Replication lag gây vấn đề gì? Xử lý đọc-sau-ghi ra sao?",
-        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm. Đối chiếu với ghi chú Feynman ch.5 (replication) ở tuần 9–14, đặc biệt mục "hệ thống công ty tôi đang đứng đâu". Ấp úng chỗ nào thì quay lại tuần đó ôn lại rồi thử trả lời lần nữa.
+        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm. Đối chiếu với ghi chú Feynman ch.6 (replication) ở tuần 9–14, đặc biệt mục "hệ thống công ty tôi đang đứng đâu". Ấp úng chỗ nào thì quay lại tuần đó ôn lại rồi thử trả lời lần nữa.
 
 Tick khi trả lời trôi chảy không cần nhìn ghi chú.
 
