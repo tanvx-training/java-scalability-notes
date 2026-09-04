@@ -131,7 +131,7 @@ export const mjiaWeeksPart1 = [
     title: "Stream: khái niệm và bộ thao tác trung gian",
     goal: "Diễn đạt được một truy vấn xử lý dữ liệu bằng stream thay vì vòng lặp, và biết thao tác nào lười, thao tác nào short-circuit, thao tác nào giữ trạng thái.",
     practice:
-      "Lấy một class domain thật trong dự án của bạn, dựng danh sách ~20 phần tử, rồi viết bằng stream năm truy vấn của §5.6 (\"Đưa tất cả vào thực hành\"); sau đó chạy lại đúng năm truy vấn đó bằng vòng lặp `for` và so số dòng.",
+      "Lấy một class domain thật trong dự án của bạn, dựng danh sách ~20 phần tử, rồi viết bằng stream tám truy vấn của §5.6 (\"Đưa tất cả vào thực hành\" — Listing 5.1–5.8); sau đó chạy lại đúng tám truy vấn đó bằng vòng lặp `for` và so số dòng.",
     resources: [
       { label: "MJIA 04 — Giới thiệu về stream", href: "#/docs/mjia-04" },
       { label: "MJIA 05 — Làm việc với stream", href: "#/docs/mjia-05" },
