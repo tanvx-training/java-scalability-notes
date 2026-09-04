@@ -193,4 +193,153 @@ export const ddiaWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "dd-w4",
+    week: "Tuần 4",
+    title: "Encoding và tiến hoá schema",
+    goal: "Chọn được định dạng encoding cho dữ liệu đi qua ranh giới process, và phát biểu được thay đổi schema nào an toàn cho một đợt rolling upgrade.",
+    practice: "Lấy một message hoặc một payload API thật trong hệ thống của bạn: viết schema của nó bằng Protocol Buffers và bằng Avro, encode cùng một bản ghi bằng JSON, protobuf và Avro rồi so ba kích thước byte. Sau đó thêm một trường, xóa một trường, đổi kiểu một trường; với mỗi thay đổi ghi ra nó phá vỡ tương thích xuôi, tương thích ngược, hay không phá vỡ gì — và kiểm chứng bằng cách decode dữ liệu cũ bằng schema mới rồi làm ngược lại.",
+    resources: [
+      { label: "DDIA 05 — Encoding và Tiến hóa", href: "#/docs/ddia-05" },
+      { label: "protobuf.dev — Language Guide (proto 3)", href: "https://protobuf.dev/programming-guides/proto3/" },
+    ],
+    items: [
+      {
+        id: "dd-w4-1",
+        text: "JSON, Protocol Buffers, Avro — và tương thích xuôi/ngược",
+        lesson: `**Mục tiêu.** Chọn được một định dạng encoding cho dữ liệu đi giữa các phiên bản mã, và phát biểu chính xác điều kiện phá vỡ tương thích của Protocol Buffers và của Avro.
+
+**Đọc.** [Các định dạng encoding dữ liệu](#/docs/ddia-05) mở đầu bằng cặp encoding/decoding cùng khung XUNG ĐỘT THUẬT NGỮ — đọc khung này, vì chữ *serialization* sẽ mang nghĩa hoàn toàn khác ở chương 8. [Các định dạng đặc thù theo ngôn ngữ](#/docs/ddia-05) chỉ cần lướt lấy ba lý do đừng dùng chúng. [JSON, XML và các biến thể nhị phân](#/docs/ddia-05) đọc kỹ đoạn về các số lớn hơn 2⁵³ và cách X trả ID bài đăng hai lần; [JSON Schema](#/docs/ddia-05) và [Các encoding nhị phân](#/docs/ddia-05) đọc vừa phải, nhưng ghi lại các con số byte để so: MessagePack 66 byte so với JSON dạng văn bản 81 byte. Trọng tâm là [Protocol Buffers](#/docs/ddia-05) (33 byte) cùng [Field tag và schema evolution](#/docs/ddia-05), rồi [Avro](#/docs/ddia-05) (32 byte) cùng [Writer’s schema và reader’s schema](#/docs/ddia-05), [Các quy tắc schema evolution](#/docs/ddia-05), [Nhưng writer’s schema là gì?](#/docs/ddia-05) và [Schema được tạo động](#/docs/ddia-05). Kết bằng [Ưu điểm của schema](#/docs/ddia-05).
+
+**Bẫy.** Đổi số tag của một trường protobuf cho schema gọn hơn. Sách tách bạch rất rõ: bạn có thể đổi *tên* một trường vì dữ liệu đã encode không bao giờ tham chiếu tên trường, nhưng bạn không thể đổi tag của nó, vì điều đó làm toàn bộ dữ liệu đã encode hiện có trở nên không hợp lệ — và tag của một trường đã xóa không bao giờ được dùng lại, nên hãy đánh dấu nó reserved. Bẫy thứ hai: tưởng \`null\` là giá trị mặc định dùng được cho mọi trường Avro. Sách nói trong Avro thì không: muốn một trường nhận \`null\`, bạn phải khai một union type, và chỉ được lấy \`null\` làm mặc định nếu nó là nhánh *đầu tiên* của union.
+
+**Tự kiểm tra.** Thêm một trường không có giá trị mặc định vào Avro schema phá vỡ tương thích theo hướng nào — xuôi hay ngược? Và vì sao Avro hợp với schema được tạo động từ một database quan hệ, còn Protocol Buffers thì không?`,
+      },
+      {
+        id: "dd-w4-2",
+        text: "Dataflow qua database và qua service (REST, RPC)",
+        lesson: `**Mục tiêu.** Nói được vì sao database đòi cả tương thích xuôi lẫn ngược trong khi service chỉ cần một chiều mỗi phía, và kể được sáu khác biệt giữa một lời gọi hàm cục bộ và một request qua mạng.
+
+**Đọc.** [Các phương thức dataflow](#/docs/ddia-05) mở đầu ngắn, đặt câu hỏi ai encode và ai decode. [Dataflow qua database](#/docs/ddia-05) cùng hai phần con [Các giá trị khác nhau được ghi vào những thời điểm khác nhau](#/docs/ddia-05) và [Lưu trữ dài hạn (archival storage)](#/docs/ddia-05) đọc chậm — đây là chỗ nối thẳng về LSM-tree và Parquet ở tuần 3. Rồi [Dataflow qua dịch vụ: REST và RPC](#/docs/ddia-05) với [Web service](#/docs/ddia-05) (Ví dụ 5-3 OpenAPI và Ví dụ 5-4 FastAPI chỉ cần lướt), [Những vấn đề của remote procedure call](#/docs/ddia-05) — sáu gạch đầu dòng, đọc kỹ nhất cả mục — [Load balancer, service discovery, và service mesh](#/docs/ddia-05) với năm giải pháp có tên riêng, và [Encoding dữ liệu và tiến hóa cho RPC](#/docs/ddia-05). [Durable Execution và Workflow](#/docs/ddia-05) khép lại phần dịch vụ; đọc lấy ngữ nghĩa exactly-once và lý do mã workflow trở nên mong manh.
+
+**Bẫy.** Triển khai xong mã mới rồi coi như dữ liệu cũng đã mới theo. Sách tóm nhận xét này thành *dữ liệu sống lâu hơn mã*: bạn thay hết phiên bản server trong vài phút, nhưng dữ liệu năm năm tuổi vẫn nằm đó trong encoding ban đầu trừ khi bạn đã chủ động ghi lại nó — nên forward compatibility là bắt buộc với database. Bẫy thứ hai: tin vào location transparency của RPC. Sách nói cách tiếp cận này có khiếm khuyết căn bản, và chỉ ra kết cục mà lời gọi cục bộ không có: một request qua mạng có thể trả về mà không có kết quả do timeout, và khi đó bạn đơn giản không biết request đã tới đích hay chưa — nên thử lại chỉ an toàn khi giao thức có idempotence.
+
+**Tự kiểm tra.** Vì sao với dataflow qua service, sách nói bạn chỉ cần tương thích ngược cho request và tương thích xuôi cho response? Và vì sao DNS là lựa chọn service discovery tồi khi các server được khởi động, dừng và di chuyển thường xuyên?`,
+      },
+      {
+        id: "dd-w4-3",
+        text: "Dataflow qua truyền message bất đồng bộ",
+        lesson: `**Mục tiêu.** Kể được năm lợi thế mà message broker mang lại so với RPC trực tiếp, và nói được vì sao chuyển sang actor cũng không giải thoát bạn khỏi bài toán tương thích.
+
+**Đọc.** [Kiến trúc hướng sự kiện (Event-Driven Architecture)](#/docs/ddia-05) là mục ngắn nhưng dựng hết khung: một request giờ được gọi là event hay message, bên gửi thường không chờ bên nhận xử lý, và trung gian lưu message tạm thời là message broker. Năm gạch đầu dòng về lợi thế so với RPC trực tiếp nên đọc như một checklist mang ra dùng thật. [Message broker](#/docs/ddia-05) cho hai mẫu phân phối message — thêm vào một queue có tên thì *một* consumer nhận, publish tới một topic thì *tất cả* subscriber nhận — kèm nhận xét rằng broker thường không áp đặt mô hình dữ liệu nào, nên schema registry là việc của bạn. [Distributed actor framework](#/docs/ddia-05) khép chương: mỗi actor xử lý một message tại một thời điểm, và location transparency hoạt động tốt hơn ở đây so với RPC vì mô hình actor đã giả định sẵn message có thể mất. Đọc luôn [Tóm tắt](#/docs/ddia-05) như bản đồ ba chế độ dataflow.
+
+**Bẫy.** Để một consumer đọc message, sửa, rồi publish lại sang topic khác qua một model object không giữ những trường nó không hiểu. Sách cảnh báo đúng chỗ này: nếu một consumer publish lại message sang topic khác, bạn có thể cần cẩn thận bảo toàn các trường không xác định, để không tái diễn vấn đề mất dữ liệu của Hình 5-1. Bẫy thứ hai: nghĩ actor framework lo giúp việc quản lý phiên bản. Sách nói ngược lại — nếu bạn muốn rolling upgrade một ứng dụng dựa trên actor, bạn *vẫn* phải lo tương thích xuôi và ngược, vì message có thể được gửi từ một node chạy phiên bản mới tới một node chạy phiên bản cũ, và ngược lại.
+
+**Tự kiểm tra.** Message broker khác database ở điểm nào về vòng đời một message, và bạn phải cấu hình gì nếu muốn dùng nó cho event sourcing? Và vì sao giao tiếp qua broker là bất đồng bộ mà vẫn dựng được một mô hình đồng bộ kiểu RPC?`,
+      },
+    ],
+  },
+  {
+    id: "dd-w5",
+    week: "Tuần 5",
+    title: "Replication",
+    goal: "Chọn được kiểu replication cho một yêu cầu cụ thể, và gọi đúng tên bảo đảm nhất quán mà ứng dụng của bạn thật sự cần thay vì nói chung chung là \"nhất quán\".",
+    practice: "Trên một database bạn đang chạy, tìm chỉ số replication lag và ghi lại giá trị p50 cùng giá trị lớn nhất trong 7 ngày qua (lấy từ dashboard thật). Sau đó liệt kê mọi màn hình trong ứng dụng có đọc từ replica và đánh dấu màn hình nào sẽ hỏng nếu lag lên 5 phút; với mỗi màn hình hỏng, ghi rõ nó cần read-your-writes, monotonic reads hay consistent prefix reads. Cuối cùng, viết ra n, w, r cho một cluster leaderless bạn đang dùng — hoặc cho một cụm giả định n = 5 — và kiểm tra điều kiện w + r > n.",
+    resources: [
+      { label: "DDIA 06 — Replication", href: "#/docs/ddia-06" },
+      { label: "jepsen.io — Consistency Models", href: "https://jepsen.io/consistency" },
+    ],
+    items: [
+      {
+        id: "dd-w5-1",
+        text: "Single-leader: đồng bộ hay bất đồng bộ, và cách dựng follower mới",
+        lesson: `**Mục tiêu.** Nói được vì sao không hệ thống thực nào replicate đồng bộ tới mọi follower, dựng lại được bốn bước thiết lập một follower mới, và gọi tên ba cách triển khai replication log.
+
+**Đọc.** [Single-Leader Replication](#/docs/ddia-06) mở đầu bằng ba bước của một lần ghi — chép cả ba ra, vì mọi thứ sau đó dựa trên chúng — kèm Hình 6-1 và khung LƯU Ý về thuật ngữ nên tránh. [Replication đồng bộ so với bất đồng bộ](#/docs/ddia-06) là mục đọc chậm nhất, với Hình 6-2 và khái niệm semisynchronous. [Thiết lập follower mới](#/docs/ddia-06) cho bốn bước đánh số; chú ý bước 3 và việc snapshot phải gắn với một vị trí chính xác trong replication log (PostgreSQL gọi là log sequence number, MySQL có binlog coordinates và GTID). Khung CƠ SỞ DỮ LIỆU DỰA TRÊN OBJECT STORAGE đọc lướt. [Xử lý node ngừng hoạt động](#/docs/ddia-06) với [Follower hỏng: Khôi phục bắt kịp (catch-up recovery)](#/docs/ddia-06) và [Leader hỏng: Failover](#/docs/ddia-06) — ba bước của failover tự động, rồi danh sách những thứ có thể hỏng. Kết bằng [Triển khai replication log](#/docs/ddia-06) với [Replication dựa trên statement](#/docs/ddia-06), [Vận chuyển write-ahead log (WAL shipping)](#/docs/ddia-06) và [Replication bằng logical log (dựa trên hàng)](#/docs/ddia-06).
+
+**Bẫy.** Cấu hình mọi follower đều đồng bộ cho "an toàn". Sách nói điều đó không thực tế: chỉ một node ngừng hoạt động cũng khiến toàn bộ hệ thống đình trệ, nên trong thực tế chỉ *một* follower là đồng bộ và số còn lại bất đồng bộ. Bẫy thứ hai: tin rằng một lần ghi đã được xác nhận là bền vững. Với replication bất đồng bộ, giải pháp phổ biến nhất khi failover là loại bỏ các lần ghi chưa được replicate của leader cũ — sách dẫn sự cố GitHub, nơi một follower MySQL lỗi thời được thăng cấp, bộ đếm tự tăng của nó tụt lại nên nó gán lại những khóa chính đã dùng, gây lệch dữ liệu giữa MySQL và Redis và làm lộ dữ liệu riêng tư cho sai người dùng.
+
+**Tự kiểm tra.** Vì sao WAL shipping thường khiến việc nâng cấp phần mềm database không downtime trở nên bất khả thi, còn logical log thì không? Và leader phải chọn giữa hai điều gì khi một follower offline quá lâu?`,
+      },
+      {
+        id: "dd-w5-2",
+        text: "Replication lag và ba bảo đảm chữa nó",
+        lesson: `**Mục tiêu.** Gọi đúng tên ba bảo đảm chữa ba bất thường của replication lag, và chọn được kỹ thuật hiện thực read-your-writes phù hợp cho một ứng dụng cụ thể.
+
+**Đọc.** [Các vấn đề với replication lag](#/docs/ddia-06) đặt khung read-scaling và định nghĩa eventual consistency — đừng bỏ khung LƯU Ý ngay sau đó. Rồi ba bất thường, mỗi cái một mục. [Đọc lại những gì chính mình đã ghi](#/docs/ddia-06) với Hình 6-3 và ba gạch đầu dòng kỹ thuật (đọc từ leader theo một tiêu chí, ghi nhớ timestamp lần ghi cuối, và rắc rối khi replica trải trên nhiều region), kèm phần cross-device ở cuối mục và khung [REGION VÀ AVAILABILITY ZONE](#/docs/ddia-06). [Monotonic reads](#/docs/ddia-06) với Hình 6-4 và mẹo chọn replica theo hash của ID người dùng thay vì ngẫu nhiên. [Consistent prefix reads](#/docs/ddia-06) với đoạn đối thoại ông Poons và bà Cake ở Hình 6-5 — đọc kỹ vì đây là mối nối sang chương 7. Đóng lại bằng [Các giải pháp cho replication lag](#/docs/ddia-06).
+
+**Bẫy.** Viết mã ứng dụng như thể replication là đồng bộ. Sách phát biểu thẳng: giả vờ rằng replication là đồng bộ trong khi thực tế nó bất đồng bộ là công thức dẫn đến rắc rối về sau — nếu trải nghiệm người dùng hỏng khi lag lên vài phút, phải thiết kế một bảo đảm mạnh hơn chứ không phải hy vọng lag nhỏ. Bẫy thứ hai: coi eventual consistency là đặc sản của NoSQL. Khung LƯU Ý nói rõ các follower trong một database quan hệ được replicate bất đồng bộ cũng có đúng đặc tính đó, và chữ "eventually" là cố ý mơ hồ: nói chung không có giới hạn nào cho việc một replica có thể tụt lại bao xa.
+
+**Tự kiểm tra.** Vì sao consistent prefix reads là vấn đề đặc biệt của database được sharding, và giải pháp đơn giản nào sách nêu ra? Và vì sao read-your-writes xuyên thiết bị khó hơn hẳn so với trên cùng một thiết bị?`,
+      },
+      {
+        id: "dd-w5-3",
+        text: "Multi-leader: topology và xử lý xung đột ghi",
+        lesson: `**Mục tiêu.** So được single-leader với multi-leader trên bốn trục mà sách dùng cho triển khai đa region, và chọn được chiến lược giải quyết xung đột thay vì mặc định bật LWW.
+
+**Đọc.** [Multi-Leader Replication](#/docs/ddia-06) mở đầu bằng lý do sách bỏ qua multi-leader đồng bộ. [Vận hành phân tán theo địa lý](#/docs/ddia-06) là bản so sánh bốn trục — hiệu năng, khả năng chịu sự cố ngừng hoạt động của region, khả năng chịu các vấn đề về mạng, tính nhất quán — đọc kỹ trục cuối, vì nó nói vì sao bạn không thể đảm bảo một tài khoản không âm hay một username là duy nhất. [Các topology của multi-leader replication](#/docs/ddia-06) cho ba topology ở Hình 6-7 và mẹo gắn thẻ định danh node để chặn vòng lặp replication vô hạn; [Các vấn đề với những topology khác nhau](#/docs/ddia-06) cho Hình 6-8. [Sync Engine và phần mềm Local-First](#/docs/ddia-06) cùng hai phần con đọc vừa phải. Phần còn lại là trọng tâm: [Xử lý các thao tác ghi xung đột](#/docs/ddia-06) với [Tránh xung đột](#/docs/ddia-06), [Last write wins (loại bỏ các thao tác ghi đồng thời)](#/docs/ddia-06), [Giải quyết xung đột thủ công](#/docs/ddia-06), [Giải quyết xung đột tự động](#/docs/ddia-06), [Conflict-free replicated datatypes và operational transformation](#/docs/ddia-06) và [Các loại xung đột](#/docs/ddia-06).
+
+**Bẫy.** Bật LWW rồi coi như đã "xử lý xung đột". Sách nói chính cái tên gây hiểu lầm: khi hai lần ghi là đồng thời thì lần nào mới hơn là không xác định, nên thứ tự timestamp của chúng về bản chất là ngẫu nhiên — ý nghĩa thật của LWW là một lần ghi được chọn ngẫu nhiên làm bên thắng còn các lần còn lại bị loại bỏ âm thầm, đạt được hội tụ với cái giá là mất dữ liệu. Bẫy thứ hai: merge sibling bằng phép hợp tập hợp cho chắc. Sách kể chuyện giỏ hàng Amazon: giữ lại mọi mặt hàng xuất hiện ở bất kỳ sibling nào khiến mặt hàng khách đã xóa bất ngờ quay lại giỏ, đúng như Hình 6-10.
+
+**Tự kiểm tra.** Trong chiến lược tránh xung đột, vì sao việc cho phép đổi leader được chỉ định của một bản ghi lại làm hỏng cả chiến lược? Và OT khác CRDT ở chỗ nào khi hai người chèn vào cùng một vị trí?`,
+      },
+      {
+        id: "dd-w5-4",
+        text: "Leaderless: quorum, read repair, sloppy quorum",
+        lesson: `**Mục tiêu.** Tính được điều kiện w + r > n cho một cấu hình cụ thể, và nói được vì sao thỏa điều kiện đó vẫn chưa phải một bảo đảm.
+
+**Đọc.** [Leaderless Replication (Replication không có leader)](#/docs/ddia-06) mở đầu, kèm khung LƯU Ý phân biệt Dynamo nguyên bản với DynamoDB ngày nay. [Ghi vào Database khi một Node ngừng hoạt động](#/docs/ddia-06) với Hình 6-12, rồi [Bắt kịp các thao tác ghi bị bỏ lỡ](#/docs/ddia-06) — ba cơ chế read repair, hinted handoff và anti-entropy, thuộc cả ba cùng điểm yếu riêng của từng cái. [Dùng quorum cho việc đọc và ghi](#/docs/ddia-06) là mục đọc chậm nhất: n, w, r, lựa chọn phổ biến w = r = (n + 1) / 2 làm tròn lên, và Hình 6-13. [Hiểu các giới hạn của tính nhất quán quorum (quorum consistency)](#/docs/ddia-06) có năm gạch đầu dòng trường hợp biên — đọc từng cái một. [Giám sát độ cũ của dữ liệu (staleness)](#/docs/ddia-06) và [Hiệu năng của Single-Leader so với Leaderless Replication](#/docs/ddia-06) cho request hedging, gray failure và sloppy quorum; [Vận hành đa vùng (Multi-Region)](#/docs/ddia-06) ngắn. Kết bằng [Phát hiện các thao tác ghi đồng thời](#/docs/ddia-06), [Quan hệ happens-before và tính đồng thời](#/docs/ddia-06), [Ghi nhận quan hệ happens-before](#/docs/ddia-06) — bám năm bước giỏ hàng ở Hình 6-15 — và [Version vector](#/docs/ddia-06).
+
+**Bẫy.** Đọc w + r > n như một bảo đảm rằng mọi lần đọc thấy giá trị mới nhất. Sách nói thẳng rằng trên thực tế điều đó không đơn giản như vậy, và khuyên đừng coi w với r là những đảm bảo tuyệt đối — chúng chỉ cho bạn điều chỉnh *xác suất* đọc phải giá trị cũ; rebalancing, một lần ghi thất bại không được rollback, hay đồng hồ chạy lệch đều có thể phá điều kiện đó. Bẫy thứ hai: bật sloppy quorum rồi vẫn kỳ vọng đọc thấy giá trị vừa ghi. Sách nói rõ không có đảm bảo nào rằng các thao tác đọc sau đó sẽ thấy giá trị vừa ghi, vì lần ghi có thể nằm trên những node không phải replica thông thường của khóa đó.
+
+**Tự kiểm tra.** Với n = 5, w = 3, r = 3 thì hệ thống chịu được mấy node không khả dụng? Và vì sao một số phiên bản duy nhất là không đủ khi có nhiều replica cùng chấp nhận ghi?`,
+      },
+    ],
+  },
+  {
+    id: "dd-w6",
+    week: "Tuần 6",
+    title: "Sharding",
+    goal: "Quyết định được một hệ thống đã cần shard hay chưa, và nếu cần thì chia theo key range hay theo hash, với secondary index cục bộ hay toàn cục.",
+    practice: "Đây là tuần nhẹ nhất cả lộ trình: chương 7 chỉ khoảng 11 nghìn từ, trong khi tuần 7 — chương 8, Transaction — là chương nặng nhất với khoảng 33 nghìn từ. Hãy cố ý dùng phần thời gian dư của tuần này để đọc trước chương 8. Phần việc tay chân: chọn bảng lớn nhất trong hệ thống của bạn, viết ra partition key bạn sẽ chọn, liệt kê ba truy vấn phổ biến nhất chạm vào bảng đó và với mỗi truy vấn ghi rõ nó chạm một shard hay tất cả các shard. Rồi liệt kê mọi secondary index của bảng và đánh dấu cái nào buộc phải trở thành global index.",
+    resources: [
+      { label: "DDIA 07 — Sharding", href: "#/docs/ddia-07" },
+      { label: "zookeeper.apache.org — Apache ZooKeeper", href: "https://zookeeper.apache.org/" },
+    ],
+    items: [
+      {
+        id: "dd-w6-1",
+        text: "Vì sao phải shard, và sharding cho multitenancy",
+        lesson: `**Mục tiêu.** Trả lời được câu hỏi "hệ thống này đã cần shard chưa" bằng lập luận của sách, và kể được bảy lợi ích mà sharding theo tenant mang lại ngoài khả năng mở rộng.
+
+**Đọc.** Phần mở đầu chương cho Hình 7-1 — mỗi node là leader của vài shard và follower của vài shard khác — cùng khung [SHARDING VÀ PARTITIONING](#/docs/ddia-07); chép lại danh sách tên gọi khác nhau của shard (partition trong Kafka, range trong CockroachDB, region trong HBase và TiDB, vnode trong Riak, token-range trong Cassandra, tablet trong Bigtable và ScyllaDB), vì trong tài liệu sản phẩm bạn sẽ gặp những chữ đó chứ hiếm khi gặp chữ "shard". [Ưu và nhược điểm của Sharding](#/docs/ddia-07) là mục quyết định: khái niệm partition key, cái giá của distributed transaction, và cả trường hợp sharding ngay trên một máy để tận dụng từng lõi CPU và kiến trúc NUMA. [Sharding cho Multitenancy](#/docs/ddia-07) liệt kê bảy lợi ích — đọc kỹ cell-based architecture và hai lợi ích mang tính pháp lý — rồi ba thách thức chính ở cuối mục.
+
+**Bẫy.** Shard vì thấy dữ liệu đã "nhiều". Sách gọi sharding là một giải pháp nặng nề chủ yếu chỉ phù hợp ở quy mô lớn, và dặn rằng nếu khối lượng dữ liệu cùng thông lượng ghi của bạn vẫn ở mức một máy đơn lẻ xử lý được — mà ngày nay một máy làm được rất nhiều — thì thường tốt hơn là tránh sharding và giữ một database chỉ có một shard. Bẫy thứ hai: shard để chữa thông lượng đọc. Ngay câu mở mục, sách nói nếu vấn đề nằm ở thông lượng đọc thì bạn không nhất thiết cần sharding; read scaling ở chương 6 mới là công cụ đúng.
+
+**Tự kiểm tra.** Vì sao chọn sai partition key lại đắt đến vậy, và chuyện gì xảy ra với một truy vấn không biết trước partition key? Và mô hình một shard mỗi tenant gãy ở đâu khi bạn có rất nhiều tenant rất nhỏ?`,
+      },
+      {
+        id: "dd-w6-2",
+        text: "Chia theo khoảng hay theo hash — hot spot và rebalancing",
+        lesson: `**Mục tiêu.** Chọn được giữa chia theo key range và chia theo hash cho một tập dữ liệu cụ thể, và mô tả chính xác thứ gì phải di chuyển khi bạn thêm một node.
+
+**Đọc.** [Sharding dữ liệu Key-Value](#/docs/ddia-07) định nghĩa skew, hot shard và hot key — ba từ bạn sẽ dùng suốt phần còn lại. [Sharding theo Key Range](#/docs/ddia-07) với Hình 7-2 (bộ bách khoa toàn thư in giấy) và ví dụ mạng cảm biến lấy timestamp làm khóa; [Rebalancing dữ liệu được shard theo key range](#/docs/ddia-07) cho presplitting và ngưỡng tách mặc định 10 GB của HBase. Rồi [Sharding theo Hash của khóa](#/docs/ddia-07) cùng ba lược đồ nối tiếp: [Hash modulo số node](#/docs/ddia-07) với Hình 7-3 — tự tính lại ví dụ ba node thêm node thứ tư; [Số shard cố định](#/docs/ddia-07) với cụm 10 node chia sẵn 1.000 shard, mỗi node 100 shard; [Sharding theo khoảng hash](#/docs/ddia-07) với Hình 7-5 và Hình 7-6 (mặc định 16 khoảng mỗi node trong Cassandra, 256 trong ScyllaDB). [Consistent hashing](#/docs/ddia-07) ngắn nhưng đọc kỹ đoạn nói chữ *consistent* ở đây không liên quan gì tới tính nhất quán của replica hay của ACID. Kết bằng [Workload lệch và giảm tải cho hot spot](#/docs/ddia-07) và [Vận hành: Rebalancing tự động và thủ công](#/docs/ddia-07).
+
+**Bẫy.** Nối hai chữ số ngẫu nhiên vào một hot key rồi coi như đã xong. Sách nói mẹo đó chia tải *ghi* ra 100 khóa, nhưng mọi thao tác đọc từ đó phải đọc dữ liệu từ cả 100 khóa rồi kết hợp lại — khối lượng đọc tới mỗi shard của hot key không hề giảm — và bạn còn phải theo dõi sổ sách xem khóa nào đang được chia nhỏ. Bẫy thứ hai: bật rebalancing tự động cạnh phát hiện lỗi tự động. Sách dựng đúng kịch bản hỏng: một node quá tải phản hồi chậm, các node khác kết luận nó đã chết và tự động chuyển tải ra khỏi nó, việc đó lại đặt thêm tải lên mạng và các node còn lại — rủi ro là hỏng hóc dây chuyền.
+
+**Tự kiểm tra.** Vì sao mod N buộc phần lớn khóa phải di chuyển khi N đổi, còn lược đồ số shard cố định thì không? Và vì sao một hot shard có thể bị tách ngay cả khi nó không lưu nhiều dữ liệu?`,
+      },
+      {
+        id: "dd-w6-3",
+        text: "Định tuyến request, và secondary index cục bộ so với toàn cục",
+        lesson: `**Mục tiêu.** Nêu được ba cách đưa một request tới đúng node, và chọn được giữa secondary index cục bộ và toàn cục dựa trên tỷ lệ đọc/ghi của ứng dụng.
+
+**Đọc.** [Định tuyến request](#/docs/ddia-07) đặt bài toán cạnh service discovery ở tuần 4 và nêu khác biệt cốt lõi: với database được shard, một request cho một khóa chỉ có thể được xử lý bởi node là replica của shard chứa khóa đó. Ba cách tiếp cận ở Hình 7-7 nên chép ra, cùng ba câu hỏi then chốt đi kèm — ai quyết định shard nằm ở node nào, bên định tuyến biết về thay đổi bằng cách nào, và xử lý ra sao với những request còn trên đường trong lúc cutover. Rồi Hình 7-8 với ZooKeeper, và đoạn về gossip protocol của Riak. Nửa sau là [Sharding và secondary index](#/docs/ddia-07): [Local secondary index](#/docs/ddia-07) với Hình 7-9, postings list và khung CẢNH BÁO; [Global Secondary Index](#/docs/ddia-07) với Hình 7-10 và khái niệm term-partitioned. Đọc luôn [Tóm tắt](#/docs/ddia-07) để chốt chương.
+
+**Bẫy.** Tự dựng một secondary index trong mã ứng dụng trên một database chỉ hỗ trợ key-value. Khung CẢNH BÁO nói thẳng: bạn cần hết sức cẩn trọng, vì race condition và các lỗi ghi không liên tục — một số thay đổi được lưu còn số khác thì không — rất dễ khiến index mất đồng bộ với dữ liệu bên dưới. Bẫy thứ hai: nghĩ rằng thêm shard sẽ làm truy vấn qua local secondary index nhanh hơn. Sách nói ngược lại: thêm shard cho phép bạn lưu nhiều dữ liệu hơn nhưng không làm tăng throughput truy vấn, vì dù sao mọi shard cũng phải xử lý mọi truy vấn kiểu đó — và cách hỏi scatter-gather này dễ bị khuếch đại tail latency.
+
+**Tự kiểm tra.** Vì sao một truy vấn chỉ có một điều kiện trên global index chạm đúng một shard, nhưng lấy về bản ghi thay vì ID thì vẫn phải chạm nhiều shard? Và vì sao database leaderless như Riak chấp nhận được split brain trong việc gán shard, còn HBase thì không?`,
+      },
+    ],
+  },
 ];
