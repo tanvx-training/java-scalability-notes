@@ -172,4 +172,179 @@ export const mjiaWeeksPart2 = [
       },
     ],
   },
+  {
+    id: "mj-w10",
+    week: "Tuần 10",
+    title: "CompletableFuture — kết hợp tác vụ bất đồng bộ",
+    goal: "Biến một chuỗi lời gọi từ xa đang chặn thread thành một pipeline CompletableFuture non-blocking, và chọn đúng combinator cho từng quan hệ phụ thuộc giữa các lời gọi đó.",
+    practice:
+      "cầm sơ đồ box-and-channel vẽ ở tuần 9, cài lại đúng luồng đó bằng `CompletableFuture`: `supplyAsync` cho từng lời gọi từ xa, `thenCombine` cho hai lời gọi độc lập, `thenCompose` cho hai lời gọi phụ thuộc; đo tổng thời gian với executor mặc định rồi với executor riêng có kích thước pool theo công thức ở §16.3, và ghi lại chênh lệch.",
+    resources: [
+      { label: "MJIA 16 — CompletableFuture: lập trình bất đồng bộ khả kết hợp", href: "#/docs/mjia-16" },
+    ],
+    items: [
+      {
+        id: "mj-w10-1",
+        text: "Future đơn giản, giới hạn của nó, và cách dựng API bất đồng bộ",
+        lesson: `**Mục tiêu.** Nói được vì sao \`Future\` của Java 5 không đủ để diễn đạt phụ thuộc giữa nhiều phép tính, và viết được một API bất đồng bộ trả cả kết quả lẫn lỗi về cho client.
+
+**Đọc.** [16.1. Sử dụng Future một cách đơn giản](#/docs/mjia-16) mở bằng Listing 16.1 — gõ lại, chú ý phiên bản hai đối số của \`get\` cùng ba khối catch của nó. [16.1.1. Hiểu về Future và những hạn chế của nó](#/docs/mjia-16) chỉ là năm gạch đầu dòng nhưng chép ra giấy: đó là mục lục thật của cả chương. [16.1.2. Sử dụng CompletableFuture để xây dựng một ứng dụng bất đồng bộ](#/docs/mjia-16) dựng bài toán best-price-finder xuyên suốt; khung "API đồng bộ và API bất đồng bộ" chốt cặp blocking/nonblocking — đọc chậm. Sang [16.2. Cài đặt một API bất đồng bộ](#/docs/mjia-16) với Listing 16.2 \`delay\` và Listing 16.3. [16.2.1. Chuyển một phương thức đồng bộ thành phương thức bất đồng bộ](#/docs/mjia-16) gõ lại Listing 16.4 và Listing 16.5, rồi dừng lại tự giải thích trước khi đọc tiếp vì sao \`invocationTime\` nhỏ hơn \`retrievalTime\` cả nghìn lần. [16.2.2. Xử lý lỗi](#/docs/mjia-16) là mục đọc chậm nhất tuần: Listing 16.6, stack trace ba tầng in trong sách, rồi khung "Tạo một CompletableFuture bằng phương thức factory supplyAsync" với Listing 16.7.
+
+**Bẫy.** Bọc phép tính trong một \`Thread\` rồi tin rằng ngoại lệ bên trong sẽ tự tìm đường về client. §16.2.2 nói kết cục ngược lại: ngoại lệ bị giam trong thread đang tính giá và cuối cùng giết chết thread đó, nên client bị block mãi mãi chờ \`get\`; chỉ \`completeExceptionally\` mới lan truyền được nguyên nhân thật, còn \`get\` có timeout chỉ cho client một \`TimeoutException\` không kèm nguyên nhân. Bẫy thứ hai: viết lại bằng \`supplyAsync\` rồi vội bọc thêm try/catch vì sợ mất phần xử lý lỗi vừa thêm. Khung ở cuối §16.2.2 nói rõ CompletableFuture do Listing 16.7 trả về tương đương với cái bạn tạo và hoàn tất thủ công ở Listing 16.6, nghĩa là nó cung cấp đúng cùng cơ chế quản lý lỗi ấy.
+
+**Tự kiểm tra.** Vì sao sách nói hầu như luôn nên dùng phiên bản hai đối số của \`get\`, và phiên bản không đối số làm gì? Và \`supplyAsync\` chạy Supplier của bạn trên executor nào theo mặc định, và bạn đổi nó bằng cách nào?`,
+      },
+      {
+        id: "mj-w10-2",
+        text: "Làm code non-blocking, và chọn executor cho đúng",
+        lesson: `**Mục tiêu.** Chọn được giữa parallel stream và CompletableFuture cho một khối lượng công việc cụ thể, và tính kích thước thread pool thay vì đoán.
+
+**Đọc.** [16.3. Làm cho code của bạn trở nên non-blocking](#/docs/mjia-16) bắt đầu bằng Listing 16.8 tuần tự và Listing 16.9 đo giờ — chạy thật, ghi lại con số của máy bạn cạnh con số 4032 mili giây của sách. [16.3.1. Song song hoá các yêu cầu bằng parallel Stream](#/docs/mjia-16) chỉ đổi một chữ mà xuống còn 1180 mili giây. [16.3.2. Thực hiện các yêu cầu bất đồng bộ với CompletableFuture](#/docs/mjia-16) gõ lại Listing 16.11, rồi dừng lại tự giải thích trước khi đọc tiếp vì sao phải tách thành hai pipeline stream riêng — Hình 16.2 là câu trả lời. [16.3.3. Tìm kiếm giải pháp có khả năng mở rộng tốt hơn](#/docs/mjia-16) thêm cửa hàng thứ năm rồi thứ chín và đặt ba cột số cạnh nhau. [16.3.4. Sử dụng một Executor tuỳ chỉnh](#/docs/mjia-16) là mục đọc chậm nhất tuần: khung "Định kích thước thread pool" với công thức Goetz — chép ra giấy — rồi Listing 16.12, rồi khung "Tính song song: qua Stream hay qua CompletableFuture?" với hai gạch đầu dòng quyết định.
+
+**Bẫy.** Dừng ở §16.3.1 và kết luận parallel stream là đủ. §16.3.3 phá kết luận đó bằng đúng một cửa hàng thêm vào: bốn thread của common pool đã bận với bốn cửa hàng đầu nên truy vấn thứ năm phải chờ một thao tác trước giải phóng thread, thời gian nhảy lên 2167 mili giây — cả hai phiên bản đều dựa vào cùng common pool có số thread cố định bằng \`Runtime.getRuntime().availableProcessors()\`. Bẫy thứ hai: cắm thẳng con số mà công thức Goetz cho ra vào \`newFixedThreadPool\`. Với tỷ lệ W/C ước lượng là 100 và mục tiêu dùng 100 phần trăm CPU, công thức đòi 400 thread, nhưng sách bác lại ngay tại chỗ: sẽ là lãng phí nếu có nhiều thread hơn số cửa hàng, nên Listing 16.12 lấy số nhỏ nhất giữa số cửa hàng và giới hạn trên 100 thread để tránh làm sập máy chủ.
+
+**Tự kiểm tra.** Vì sao pool ở Listing 16.12 tạo daemon thread, và lựa chọn đó đổi lấy bao nhiêu hiệu năng? Và theo khung cuối mục, khi nào Stream là phần cài đặt đơn giản lẫn hiệu quả nhất, còn khi nào CompletableFuture thắng?`,
+      },
+      {
+        id: "mj-w10-3",
+        text: "Nối ống task: thenCompose, thenCombine, ghép với API đồng bộ",
+        lesson: `**Mục tiêu.** Ghép được lời gọi phụ thuộc bằng \`thenCompose\`, hai lời gọi độc lập bằng \`thenCombine\`, và biết khi nào không nên với tay lấy biến thể \`Async\`.
+
+**Đọc.** [16.4. Nối ống các task bất đồng bộ](#/docs/mjia-16) dựng enum \`Discount.Code\` ở Listing 16.13 cùng định dạng \`ShopName:price:DiscountCode\`. [16.4.1. Cài đặt một dịch vụ giảm giá](#/docs/mjia-16) cho class \`Quote\` và Listing 16.14 — gõ lại cả hai. [16.4.2. Sử dụng dịch vụ Discount](#/docs/mjia-16) đọc lướt: Listing 16.15 chỉ để lấy mốc 10 giây. [16.4.3. Kết hợp các thao tác đồng bộ và bất đồng bộ](#/docs/mjia-16) là mục đọc chậm nhất tuần — Listing 16.16, Hình 16.3, ba tiểu mục "Lấy giá", "Phân tích cú pháp các báo giá" và "Kết hợp các future để tính giá sau giảm"; dừng lại tự giải thích trước khi đọc tiếp vì sao bước parse dùng \`thenApply\` còn bước giảm giá dùng \`thenCompose\`. [16.4.4. Kết hợp hai CompletableFuture: phụ thuộc và độc lập](#/docs/mjia-16) với Listing 16.17 và Hình 16.4. [16.4.5. Suy ngẫm về Future và CompletableFuture](#/docs/mjia-16) đặt Listing 16.18 viết bằng Java 7 cạnh Listing 16.17 — chép cả hai ra giấy. [16.4.6. Sử dụng timeout một cách hiệu quả](#/docs/mjia-16) cho \`orTimeout\` ở Listing 16.19 và \`completeOnTimeout\` ở Listing 16.20.
+
+**Bẫy.** Dùng \`thenCompose\` cho mọi cặp CompletableFuture vì nó chạy đúng ở Listing 16.16. §16.4.4 tách rõ hai trường hợp: \`thenCompose\` dành cho cái thứ hai cần giá trị kết quả của cái thứ nhất làm đầu vào; còn khi hai phép tính độc lập — giá bằng € và tỷ giá €/$ — bạn không muốn chờ cái thứ nhất xong rồi mới bắt đầu cái thứ hai, và đó là việc của \`thenCombine\`. Bẫy thứ hai: thấy có biến thể \`Async\` thì mặc định nó nhanh hơn. §16.4.3 nói phương thức không có hậu tố \`Async\` thực thi task trên cùng thread với task trước đó, và \`thenCompose\` được chọn chỉ vì ít overhead chuyển thread hơn; §16.4.4 còn gắt hơn: thao tác kết hợp ở đây chỉ là một phép nhân, nên đẩy nó thành task riêng bằng \`thenCombineAsync\` là lãng phí tài nguyên.
+
+**Tự kiểm tra.** \`join\` khác \`get\` ở đúng điểm nào, và khác biệt đó tiết kiệm cho bạn thứ gì trong lambda truyền cho \`map\`? Và \`orTimeout\` với \`completeOnTimeout\` dẫn tới hai kết cục khác nhau ra sao khi cùng một dịch vụ hết giờ?`,
+      },
+      {
+        id: "mj-w10-4",
+        text: "Phản ứng khi hoàn tất, và các combinator còn lại",
+        lesson: `**Mục tiêu.** In được kết quả của từng lời gọi từ xa ngay khi nó về thay vì chờ lời gọi chậm nhất, và chờ đúng cách cho tới khi tất cả hoàn tất.
+
+**Đọc.** [16.5. Phản ứng lại sự hoàn tất của một CompletableFuture](#/docs/mjia-16) mở bằng lý do độ trễ thật không đoán trước được, rồi Listing 16.21 \`randomDelay\` từ 0,5 đến 2,5 giây — thay \`delay\` bằng nó trước khi đọc tiếp, nếu không phần còn lại của mục sẽ không có gì để nhìn. [16.5.1. Refactor ứng dụng best-price-finder](#/docs/mjia-16) là mục đọc chậm nhất tuần: Listing 16.22 tách ra \`findPricesStream\`, rồi thao tác map thứ tư với \`thenAccept\`, rồi Listing 16.23 với \`allOf\`; đọc kỹ đoạn giải thích vì sao ở đây không dùng \`thenAcceptAsync\`, và đoạn cuối mục giới thiệu \`anyOf\`. [16.5.2. Ghép tất cả lại với nhau](#/docs/mjia-16) cho đoạn code có dấu thời gian cùng sáu dòng output — chạy bản của bạn rồi đối chiếu, mức giá đầu tiên phải về nhanh hơn mức giá cuối cùng khoảng gấp đôi. [16.6. Lộ trình phía trước](#/docs/mjia-16) chỉ hai dòng nhưng đừng bỏ: đó là bản lề sang tuần 11.
+
+**Bẫy.** Với tay lấy \`thenAcceptAsync\` chỉ vì tên nó có chữ Async. §16.5.1 giải thích vì sao không: biến thể Async lập lịch Consumer trên một thread mới lấy từ pool thay vì dùng chính thread vừa hoàn tất CompletableFuture, trong khi bạn muốn phản ứng càng sớm càng tốt chứ không muốn chờ một thread mới sẵn sàng, và muốn tránh một lần chuyển ngữ cảnh không cần thiết. Bẫy thứ hai: gọi xong \`map(f -> f.thenAccept(...))\` thì coi như đã hiển thị đủ giá. Thao tác đó chỉ cho bạn một \`Stream<CompletableFuture<Void>>\`, mà sách nói thẳng bạn chẳng làm được gì nhiều với \`CompletableFuture<Void>\` ngoài chờ nó hoàn tất; thiếu \`allOf(futures).join()\` thì cửa hàng chậm nhất không kịp in ra gì, và bạn cũng mất luôn mốc để báo "All shops returned results or timed out".
+
+**Tự kiểm tra.** \`allOf\` và \`anyOf\` khác nhau ở kiểu trả về nào và ở thời điểm hoàn tất nào? Và §16.6 nói Flow API của Java 9 tổng quát hoá CompletableFuture theo đúng hướng nào?`,
+      },
+    ],
+  },
+  {
+    id: "mj-w11",
+    week: "Tuần 11",
+    title: "Flow API, reactive, và tư duy hàm",
+    goal: "Đọc được một hệ thống theo bốn tính chất của Reactive Manifesto, cài được bốn interface của Flow API bằng tay, và gọi tên chính xác điều gì làm một phương thức trở nên mang tính hàm.",
+    practice:
+      "cài đúng bốn interface của Flow API cho ví dụ nhiệt kế ở §17.2 — `Publisher`, `Subscriber`, `Subscription`, `Processor` — rồi cố tình để `Subscriber` xử lý chậm hơn `Publisher` phát và quan sát `request(n)` chặn dòng chảy thế nào. Đó là backpressure nhìn thấy được.",
+    resources: [
+      { label: "MJIA 17 — Reactive programming", href: "#/docs/mjia-17" },
+      { label: "MJIA 18 — Tư duy hàm", href: "#/docs/mjia-18" },
+      { label: "reactive-streams.org", href: "https://www.reactive-streams.org/" },
+    ],
+    items: [
+      {
+        id: "mj-w11-1",
+        text: "Reactive Manifesto — bốn tính chất và chỗ chúng mâu thuẫn nhau",
+        lesson: `**Mục tiêu.** Kể được bốn tính chất của Reactive Manifesto cùng quan hệ phụ thuộc giữa chúng, và chỉ ra được thao tác nào không được phép nằm trong event loop chính.
+
+**Đọc.** Phần mở đầu chương 17 cho ba lý do khiến kiến trúc cũ hết đủ dùng — Big Data, môi trường không đồng nhất, thói quen sử dụng; đọc lướt là đủ. [17.1. Reactive Manifesto](#/docs/mjia-17) là bốn định nghĩa responsive, resilient, elastic, message-driven cùng Hình 17.1 — chép cả bốn ra giấy kèm mũi tên phụ thuộc. [17.1.1. Reactive ở cấp độ ứng dụng](#/docs/mjia-17) là mục đọc chậm nhất: khung "Kiểm tra kiến thức nền" chỉ ngược về chương 15 nếu bạn còn lấn cấn thuật ngữ, rồi ý tưởng chia sẻ thread giữa future, actor và event loop, rồi Hình 17.2. [17.1.2. Reactive ở cấp độ hệ thống](#/docs/mjia-17) đặt event-driven cạnh message-driven — dừng lại tự giải thích trước khi đọc tiếp khác biệt giữa một message và một event, sách trả lời ngay đoạn sau đó.
+
+**Bẫy.** Gọi một API blocking — truy vấn cơ sở dữ liệu, ghi file, lời gọi từ xa — ngay trong event loop vì "chỉ một chỗ thôi". §17.1.1 in đậm đúng điều ngược lại rồi dựng con số: pool hai thread, ba luồng sự kiện, một thao tác I/O làm Thread 2 bị chặn lãng phí, nên dù Thread 1 vẫn xử lý được luồng thứ nhất thì luồng thứ ba phải nằm chờ tới khi thao tác blocking kết thúc; cách chữa là dành cho thao tác blocking một thread pool riêng. Bẫy thứ hai: coi "ứng dụng của tôi reactive" là đã có reactive system. §17.1.2 tách hẳn hai thứ: reactive application tính toán trên những luồng dữ liệu phù du và được gọi là event-driven, còn reactive system nhằm kết hợp các ứng dụng lại và là message-driven — message hướng tới một đích đến xác định duy nhất, còn event thì được nhận bởi mọi component đã đăng ký quan sát.
+
+**Tự kiểm tra.** Tính kiên cường theo nghĩa reactive vượt qua fault-tolerance ở chỗ nào, và lỗi được vật thể hoá thành gì rồi gửi cho ai? Và vì sao location transparency là điều kiện của tính co giãn chứ không chỉ là một tiện nghi khi triển khai?`,
+      },
+      {
+        id: "mj-w11-2",
+        text: "Reactive streams và Flow API: bốn interface, và backpressure",
+        lesson: `**Mục tiêu.** Cài được cả bốn interface của Flow API bằng tay và đọc được giao thức mà \`Publisher\` với \`Subscriber\` phải tuân theo, kể cả các quy tắc quanh việc huỷ.
+
+**Đọc.** [17.2. Reactive streams và Flow API](#/docs/mjia-17) định nghĩa backpressure là một cơ chế điều khiển luồng — đọc chậm đoạn nói vì sao lời gọi đồng bộ đã ngầm được backpressure bởi chính các API blocking, còn API bất đồng bộ thì phải dựng lấy. [17.2.1. Giới thiệu class Flow](#/docs/mjia-17) là mục đọc chậm nhất tuần: gõ lại cả bốn listing 17.1 đến 17.4, chép ra giấy dòng giao thức \`onSubscribe onNext* (onError | onComplete)?\`, rồi ba gạch đầu dòng quy tắc hợp tác, rồi Hình 17.3. [17.2.2. Tạo reactive application đầu tiên của bạn](#/docs/mjia-17) là phần thực hành của tuần: Listing 17.5 \`TempInfo\`, Listing 17.6 \`TempSubscription\`, Listing 17.7 \`TempSubscriber\`, Listing 17.8 class \`Main\`; làm quiz 17.1 rồi đọc trọn đáp án trước khi xem Listing 17.9. [17.2.3. Biến đổi dữ liệu với Processor](#/docs/mjia-17) thêm \`TempProcessor\` ở Listing 17.10 và Listing 17.11 — chú ý chỉ \`onNext\` chứa logic nghiệp vụ, mọi phương thức khác chỉ uỷ thác. [17.2.4. Tại sao Java không cung cấp một phần cài đặt cho Flow API?](#/docs/mjia-17) ngắn nhưng trả lời đúng câu hỏi đang có trong đầu bạn.
+
+**Bẫy.** Viết \`onNext\` gọi ngay \`subscription.request(1)\` rồi tin luồng sẽ chảy êm mãi. Quiz 17.1 chốt đúng chỗ đó: nếu bạn comment câu lệnh sinh lỗi ngẫu nhiên đi và để \`main\` chạy đủ lâu, mỗi \`onNext\` lại gọi \`request\`, mà \`request\` lại gọi \`onNext\`, những lời gọi đệ quy chồng lên stack cho tới khi tràn và chương trình chết bằng \`StackOverflowError\`; cách chữa ở Listing 17.9 là cho \`TempSubscription\` một \`Executor\` để phát phần tử từ một thread khác. Bẫy thứ hai: đi tìm trong JDK một class cài sẵn \`Publisher\`. §17.2.4 nói thẳng thư viện Java 9 chẳng cung cấp phần cài đặt nào — bốn interface này là bản hợp đồng và ngôn ngữ chung để Akka, RxJava, Reactor, Vert.x hiểu nhau, chứ không phải bộ đôi dùng ngay kiểu \`List\` với \`ArrayList\`.
+
+**Tự kiểm tra.** Sau khi một trạng thái kết thúc đã đạt tới, Publisher bị cấm làm gì và Subscriber bị cấm làm gì? Và chuẩn đòi hỏi phần cài đặt \`Subscription.cancel\` phải có hai tính chất nào?`,
+      },
+      {
+        id: "mj-w11-3",
+        text: "RxJava — Observable, Flowable, và biến đổi luồng",
+        lesson: `**Mục tiêu.** Chọn được giữa \`Observable\` và \`Flowable\` cho một luồng cụ thể, và đọc được một marble diagram thay vì vật lộn với mô tả bằng lời của toán tử.
+
+**Đọc.** [17.3. Sử dụng thư viện reactive RxJava](#/docs/mjia-17) mở bằng một lời khuyên kiến trúc — chỉ dùng \`Observable\` ở nơi thật sự cần cấu trúc bổ sung của nó, chỗ khác khai kiểu \`Publisher\`; đọc chậm, đây chính là thói quen bạn đã có sẵn với \`List\` và \`ArrayList\`. Phần cuối mục đặt \`io.reactivex.Flowable\` cạnh \`io.reactivex.Observable\` — chép ra giấy tiêu chí chọn giữa hai class. [17.3.1. Tạo và sử dụng một Observable](#/docs/mjia-17) là mục dài nhất: factory \`just\` rồi \`interval\`, interface \`Observer\` với đối số \`Disposable\`, rồi \`blockingSubscribe\`, rồi Listing 17.12 \`getTemperature\` dựng bằng \`create\` và \`ObservableEmitter\` — gõ lại và chạy — rồi Listing 17.13 \`TempObserver\` và Listing 17.14. [17.3.2. Biến đổi và kết hợp các Observable](#/docs/mjia-17) bắt đầu bằng đoạn mô tả \`mergeDelayError\` bằng lời: đọc một lần cho biết cảm giác, rồi mới sang Hình 17.4 và Hình 17.5. Làm quiz 17.2 rồi đọc trọn đáp án, sau đó Listing 17.15, 17.16 và 17.17.
+
+**Bẫy.** Đăng ký vào \`Observable.interval\` trong \`main\` rồi kết luận code hỏng vì màn hình trống trơn. §17.3.1 giải thích: Observable phát sự kiện mỗi giây chạy trên computation thread pool của RxJava vốn gồm các daemon thread, còn chương trình main của bạn kết thúc ngay lập tức và giết chúng trước khi kịp tạo ra output nào; cách chữa đúng là \`blockingSubscribe\`, thứ gọi callback trên chính thread hiện tại. Bẫy thứ hai: dùng \`Observable\` cho mọi thứ vì nó đơn giản hơn khi lập trình. Sách nói rõ \`Observable\` không hỗ trợ backpressure và chỉ khuyên dùng nó khi luồng không quá một nghìn phần tử hoặc khi xử lý sự kiện GUI như di chuyển chuột — thứ không thể yêu cầu chậm lại; ngay cả mẹo gọi \`request(Long.MAX_VALUE)\` để tắt backpressure cũng bị sách xếp vào loại không được khuyến khích.
+
+**Tự kiểm tra.** Interface \`Observer\` của RxJava khác \`Subscriber\` của Java 9 ở đúng hai chỗ nào, và vì sao? Và trong Listing 17.12, \`isDisposed\` được kiểm trước mỗi lần phát để phòng tình huống gì?`,
+      },
+      {
+        id: "mj-w11-4",
+        text: "Hàm thuần, trong suốt tham chiếu, và đệ quy so với vòng lặp",
+        lesson: `**Mục tiêu.** Áp được định nghĩa "mang tính hàm" của sách vào một phương thức thật trong code của bạn, và nói được khi nào đổi vòng lặp sang đệ quy là lãi, khi nào lỗ.
+
+**Đọc.** [18.1. Xây dựng và bảo trì hệ thống](#/docs/mjia-18) mở bằng mẹo tìm từ khoá \`synchronized\` — đọc lướt. [18.1.1. Dữ liệu mutable dùng chung](#/docs/mjia-18) cho năm câu hỏi về quyền sở hữu một danh sách dùng chung, Hình 18.1, rồi ba ví dụ side effect — chép ra giấy. [18.1.2. Declarative programming](#/docs/mjia-18) và [18.1.3. Tại sao lại là functional programming?](#/docs/mjia-18) ngắn. [18.2. Functional programming là gì?](#/docs/mjia-18) dùng Hình 18.2 và Hình 18.3 tách pure functional programming khỏi functional-style programming. [18.2.1. Java theo phong cách hàm](#/docs/mjia-18) là mục đọc chậm nhất tuần: nguyên tắc chỉ được mutate biến cục bộ, yêu cầu không ném ngoại lệ, Hình 18.4, và khung "Hàm và hàm bộ phận (partial function)". [18.2.2. Referential transparency](#/docs/mjia-18) và [18.2.3. Lập trình hướng đối tượng so với lập trình theo phong cách hàm](#/docs/mjia-18) đọc nhanh. [18.2.4. Phong cách hàm trong thực tế](#/docs/mjia-18) là bài tập \`subsets\` — tự giải trước khi đọc \`insertAll\` và hai phiên bản \`concat\`. [18.3. Recursion so với iteration](#/docs/mjia-18) gõ lại bốn listing 18.1–18.4 cùng Hình 18.5 và 18.6.
+
+**Bẫy.** Định nghĩa \`insertAll\` sao cho nó cập nhật thẳng \`subAns\` để khỏi sao chép. §18.2.4 cho kết cục: \`subAns\` bị sửa đổi đúng như \`subAns2\`, và bạn nhận câu trả lời chứa tám bản sao của \`{1,4,9}\` một cách bí ẩn — chỗ đúng để đặt code sao chép là bên trong \`insertAll\`, không phải ở nơi gọi nó. Bẫy thứ hai: nghe rằng phong cách hàm ưa đệ quy rồi thay mọi vòng lặp. §18.3 dặn hãy cảnh giác với những kẻ cuồng tín nói bạn luôn luôn nên dùng recursion: mỗi lời gọi \`factorialRecursive\` tạo một stack frame mới nên bộ nhớ tỉ lệ thuận với đầu vào, và đầu vào lớn cho ra \`StackOverflowError\`; tail recursion chỉ mở đường cho compiler tối ưu, mà Java không hỗ trợ, khác Scala, Groovy và Kotlin.
+
+**Tự kiểm tra.** Theo §18.2.1, một phương thức mang phong cách hàm được phép mutate cái gì, và ràng buộc nào về ngoại lệ đi kèm? Và vì sao hai lời gọi trả về hai \`List\` khác nhau trong bộ nhớ lại biến referential transparency thành chuyện phải chọn lập trường?`,
+      },
+    ],
+  },
+  {
+    id: "mj-w12",
+    week: "Tuần 12",
+    title: "Kỹ thuật FP, so sánh Scala, hướng đi tiếp",
+    goal: "Cài được cấu trúc dữ liệu bền vững cùng lazy list bằng Java, và định vị được Java trên phổ OOP–FP qua đối chiếu với Scala và qua lộ trình mà ngôn ngữ đang đi tiếp.",
+    practice:
+      "cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — `update` trả về cây mới thay vì sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.",
+    resources: [
+      { label: "MJIA 19 — Các kỹ thuật lập trình hàm", href: "#/docs/mjia-19" },
+      { label: "MJIA 20 — Kết hợp OOP và FP: so sánh Java và Scala", href: "#/docs/mjia-20" },
+      { label: "MJIA 21 — Kết luận và hướng đi tiếp của Java", href: "#/docs/mjia-21" },
+    ],
+    items: [
+      {
+        id: "mj-w12-1",
+        text: "Hàm bậc cao, currying, và cấu trúc dữ liệu bền vững",
+        lesson: `**Mục tiêu.** Viết được một factory hàm dạng curry thay cho phương thức nhiều tham số, và cài được một cây mà phép cập nhật không đụng tới bản cũ.
+
+**Đọc.** [19.1. Hàm ở khắp mọi nơi](#/docs/mjia-19) chốt định nghĩa first-class function bằng đúng một dòng gán \`Integer::parseInt\` vào biến. [19.1.1. Higher-order functions](#/docs/mjia-19) cho hai điều kiện của một higher-order function cùng Hình 19.1, rồi kiểu lồng ba tầng của phép lấy đạo hàm — chép kiểu đó ra giấy; đọc kỹ khung "Side effect và higher-order function". [19.1.2. Currying](#/docs/mjia-19) là mục thực dụng nhất: gõ lại \`converter\` rồi \`curriedConverter\` và ba bộ chuyển đổi dựng từ nó, sau đó đọc chậm khung "Định nghĩa hình thức của currying". [19.2. Persistent data structures](#/docs/mjia-19) rồi [19.2.1. Cập nhật phá huỷ so với cập nhật theo lối hàm](#/docs/mjia-19) với \`TrainJourney\`, \`link\` phá huỷ và \`append\` theo lối hàm, Hình 19.2 đặt cạnh Hình 19.3. [19.2.2. Một ví dụ khác với Tree](#/docs/mjia-19) và [19.2.3. Sử dụng cách tiếp cận hàm](#/docs/mjia-19) là hai mục đọc chậm nhất tuần và cũng là bài tập tuần: hai phiên bản \`update\` đặt cạnh \`fupdate\`, Hình 19.4, cùng phép so sánh với đĩa CD-R ở cuối mục.
+
+**Bẫy.** Nhận kết quả của \`append\` hay \`fupdate\` rồi sửa nó cho tiện. §19.2.1 nói rõ \`append\` trả về \`n+m\` phần tử nhưng \`m\` phần tử cuối được chia sẻ với dãy \`b\`, nên sửa kết quả là làm hỏng luôn các chuyến tàu đã truyền vào; §19.2.3 gọi đó là phía bên kia của thoả thuận — mọi người dùng persistent data structure phải tuân thủ yêu cầu không-được-thay-đổi, nếu không bạn sẽ thấy một biến đổi bất ngờ và bị trì hoãn trên chính đối số cũ. Bẫy thứ hai: khai \`final\` cho \`key\`, \`val\`, \`left\`, \`right\` rồi coi như compiler đã canh giúp. §19.2.3 hạ ngay kỳ vọng đó: \`final\` chỉ bảo vệ trường chứ không bảo vệ đối tượng mà trường trỏ tới, mà đối tượng đó lại cần các trường của chính nó là \`final\` mới được bảo vệ, và cứ thế tiếp tục.
+
+**Tự kiểm tra.** Với một cây tương đối cân bằng có độ sâu \`d\`, \`fupdate\` phải tạo mới phần nào của cây, và vì sao sách nói chi phí đó không hề tốn kém? Và theo định nghĩa hình thức, khi nào một hàm được gọi là đã áp dụng một phần?`,
+      },
+      {
+        id: "mj-w12-2",
+        text: "Lazy evaluation tự cài, và pattern matching mô phỏng bằng lambda",
+        lesson: `**Mục tiêu.** Cài được một lazy list tự sinh phần tử theo yêu cầu, và mô phỏng được pattern matching một tầng bằng lambda thay cho chuỗi \`instanceof\` kèm ép kiểu.
+
+**Đọc.** [19.3. Lazy evaluation với stream](#/docs/mjia-19) nêu hạn chế then chốt: stream Java không định nghĩa đệ quy được vì chỉ tiêu thụ một lần. [19.3.1. Stream tự định nghĩa](#/docs/mjia-19) đi bốn bước sinh số nguyên tố — làm theo đúng thứ tự sách dựng, chạy code ở bước 4, đọc lỗi, rồi mới đọc hai tiểu mục "Tin xấu" và "Lazy evaluation" cùng đoạn Scala với toán tử \`#::\`. [19.3.2. Lazy list của riêng bạn](#/docs/mjia-19) là mục đọc chậm nhất tuần: gõ lại \`MyList\`, \`MyLinkedList\`, \`Empty\`, rồi \`LazyList\` với \`Supplier\`, \`from\`, \`primes\` và phương thức \`filter\` lười; Hình 19.5 giải thích vì sao. [19.4. Pattern matching](#/docs/mjia-19) mở bằng \`simplifyExpression\` viết bằng \`instanceof\` — đọc để thấy nó xấu tới đâu. [19.4.1. Design pattern Visitor](#/docs/mjia-19) ngắn; [19.4.2. Pattern matching đến giải cứu](#/docs/mjia-19) đặt bốn dòng Scala cạnh Java rồi dựng \`patternMatchExpr\` và Listing 19.1 — gõ lại cả hai. [19.5. Những điều linh tinh khác](#/docs/mjia-19) với [19.5.1. Caching hay memoization](#/docs/mjia-19), [19.5.2. "Trả về cùng một đối tượng" nghĩa là gì?](#/docs/mjia-19) và [19.5.3. Combinator](#/docs/mjia-19) đọc lướt được, trừ đoạn bàn về thread-safety.
+
+**Bẫy.** Tách stream thành head và tail bằng \`findFirst\` với \`skip\` rồi gọi đệ quy. §19.3.1 cho hai lỗi chồng lên nhau: bạn nhận \`java.lang.IllegalStateException: stream has already been operated upon or closed\` vì đã dùng hai terminal operation trên cùng một stream, và ngay cả khi qua được thì \`IntStream.concat\` vẫn đánh giá đối số thứ hai ngay lập tức, dẫn tới đệ quy vô hạn. Bẫy thứ hai: kết luận rằng làm mọi thứ một cách lười biếng thì luôn tốt hơn làm háo hức. §19.3.2 phản bác bằng hai con số: overhead của những \`Supplier\` xen giữa các phần tử lấn át lợi ích trên lý thuyết trừ khi bạn chỉ khám phá dưới 10 phần trăm cấu trúc, và \`LazyList\` vừa viết còn chưa thực sự lười — duyệt \`from(2)\` tới phần tử thứ 10 tạo ra 20 node.
+
+**Tự kiểm tra.** \`computeNumberOfNodesUsingCache\` có referential transparency nhưng vẫn không thread-safe — race condition nằm giữa đúng hai thời điểm nào? Và phần mô phỏng pattern matching bằng lambda thiếu gì so với Scala, lấy \`BinOp("+", e, Number(0))\` làm ví dụ?`,
+      },
+      {
+        id: "mj-w12-3",
+        text: "Scala đối chiếu Java: hàm, class, trait (đọc lướt)",
+        lesson: `**Mục tiêu.** Chỉ ra được ba chỗ Scala gọn hơn Java trên cùng một bài toán, và nêu được trait cho thêm gì so với interface có default method — mà không cần viết Scala.
+
+**Đọc.** Cả chương là đọc lướt, không bài tập: mục đích là đối chiếu để thấy giới hạn của Java, không phải học cú pháp — chính phần mở đầu chương 20 cũng nói nó không nhằm dạy bạn viết Scala bản địa. [20.1. Giới thiệu về Scala](#/docs/mjia-20) và [20.1.1. Hello beer](#/docs/mjia-20) đọc nhanh, chỉ dừng ở khai báo \`object\` (singleton thành tính năng ngôn ngữ) và dòng \`2 to 6 foreach\` viết theo ký pháp trung tố. [20.1.2. Các cấu trúc dữ liệu cơ bản: List, Set, Map, Tuple, Stream, Option](#/docs/mjia-20) là mục dừng lâu nhất của chương: \`val\` so với \`var\`, tuple literal, và nhất là khung "Unmodifiable và immutable" — chép ra giấy. [20.2. Hàm](#/docs/mjia-20) gồm ba mục con: [20.2.1. First-class function trong Scala](#/docs/mjia-20) cho cú pháp function type mà Java cố ý không đưa vào; [20.2.2. Anonymous function và closure](#/docs/mjia-20) đọc chậm; [20.2.3. Currying](#/docs/mjia-20) đối chiếu \`multiplyCurry\` với cú pháp hai danh sách đối số. [20.3. Class và trait](#/docs/mjia-20) gom [20.3.1. Ít dài dòng hơn với class của Scala](#/docs/mjia-20) và [20.3.2. Trait của Scala so với interface của Java](#/docs/mjia-20), nối thẳng với luật gỡ xung đột ở tuần 8.
+
+**Bẫy.** Coi \`Collections.unmodifiableSet\` là đã có collection immutable kiểu Scala. Khung "Unmodifiable và immutable" nói rõ collection unmodifiable chỉ là lớp bọc bên ngoài một collection có thể sửa đổi: bạn không thêm được phần tử qua \`newNumbers\`, nhưng vẫn thêm được qua \`numbers\` gốc; còn collection immutable bảo đảm không gì thay đổi được nó, bất kể bao nhiêu biến trỏ tới. Bẫy thứ hai: đọc chữ closure của Scala rồi tưởng lambda Java cũng thế. §20.2.2 đặt hai đoạn code cạnh nhau: anonymous function của Scala capture chính biến \`count\` nên in 1 rồi 2, còn bản Java không biên dịch được vì \`count\` bị ép ngầm phải là final — lambda Java đóng gói giá trị chứ không phải biến. Sách dặn chỉ dùng tính năng đó khi thật cần.
+
+**Tự kiểm tra.** Trait khác interface có default method của Java ở đúng hai điểm nào? Và vì sao Scala viết được \`2 to 6\` mà Java không có gì tương đương ở mức ngôn ngữ?`,
+      },
+      {
+        id: "mj-w12-4",
+        text: "Điểm lại Java 8–10, và hướng ngôn ngữ đang đi tiếp",
+        lesson: `**Mục tiêu.** Kể lại được các tính năng Java 8–9 như một thiết kế mạch lạc chứ không phải danh sách rời rạc, và nêu được ba hướng ngôn ngữ đang đi tiếp cùng lý do chúng khó.
+
+**Đọc.** Chương cuối, đọc lướt là đủ, trừ hai chỗ dưới. [21.1. Điểm lại các tính năng của Java 8](#/docs/mjia-21) nêu hai "biến đổi khí hậu" giải thích mọi lựa chọn thiết kế: đa lõi và phong cách khai báo trên collection; chép hai gạch đó ra giấy rồi đọc liền sáu mục [21.1.1. Behavior parameterization (lambda và method reference)](#/docs/mjia-21), [21.1.2. Stream](#/docs/mjia-21), [21.1.3. CompletableFuture](#/docs/mjia-21), [21.1.4. Optional](#/docs/mjia-21), [21.1.5. Flow API](#/docs/mjia-21) và [21.1.6. Default method](#/docs/mjia-21), mỗi mục là bản thu gọn của một tuần đã qua. [21.2. Module system của Java 9](#/docs/mjia-21) cho năm ưu điểm của module hoá; [21.3. Local variable type inference trong Java 10](#/docs/mjia-21) ngắn. [21.4. Điều gì đang chờ Java phía trước?](#/docs/mjia-21) là chỗ đọc chậm nhất: năm mục con từ [21.4.1. Declaration-site variance](#/docs/mjia-21) tới [21.4.5. Value type](#/docs/mjia-21), trong đó [21.4.2. Pattern matching](#/docs/mjia-21) nối thẳng với §19.4; dừng lại tự giải câu đố ba dòng \`println\` ở mục cuối trước khi đọc đáp án. [21.5. Đưa Java tiến lên nhanh hơn](#/docs/mjia-21) và [21.6. Lời cuối](#/docs/mjia-21) khép lại track.
+
+**Bẫy.** Tin rằng \`final\` là đủ để có giá trị immutable. §21.4.4 dập tắt kỳ vọng đó bằng hai dòng: \`final int[] arr = {1, 2, 3}\` cấm gán lại \`arr\` nhưng không cấm \`arr[1] = 2\`, còn \`final List<T> list\` không cấm phương thức khác đổi số phần tử; sách nói với tham chiếu tới đối tượng, \`final\` thường tạo cảm giác an toàn giả tạo, nên đề xuất từ khoá \`transitively_final\`. Bẫy thứ hai: cho rằng compiler chỉ cần thông minh hơn là đối xử được \`Integer\` như \`int\`. §21.4.5 đưa câu đố in ra "yes", "no", "yes": dù cả ba đều mang giá trị \`3.14\`, các phép gán tạo ra đối tượng \`Double\` mới mà toán tử \`==\` phân biệt được, vì ngữ nghĩa của \`Object\` mà \`Double\` kế thừa buộc compiler tôn trọng; escape analysis chỉ cứu được phạm vi hẹp.
+
+**Tự kiểm tra.** Vì sao reified generic vướng vào garbage collection, và điều gì ở tương thích ngược chặn nó lại? Và trong chu kỳ phát hành sáu tháng, vì sao Java 9 và Java 10 không phải bản LTS còn Java 11 thì có?`,
+      },
+    ],
+  },
 ];
