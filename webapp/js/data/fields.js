@@ -67,9 +67,18 @@ export const FIELDS = {
     modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "dataintensive.net", href: "https://dataintensive.net/" },
   },
+  "modern-java": {
+    label: "Modern Java in Action",
+    icon: "🌊",
+    desc: "Bản dịch tiếng Việt Modern Java in Action (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — lambda, stream, collector, Optional, Date/Time API, module system, CompletableFuture và reactive, tư duy hàm.",
+    certFilter: false,
+    // Module "roadmap" mở ở Task 7, khi đã có đủ 48 mục lộ trình.
+    modules: ["dashboard", "docs"],
+    externalRef: { label: "dev.java", href: "https://dev.java/" },
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "ddia", "modern-concurrency", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "ddia", "modern-concurrency", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.
