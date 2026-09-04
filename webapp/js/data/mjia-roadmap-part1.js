@@ -194,4 +194,178 @@ export const mjiaWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "mj-w4",
+    week: "Tuần 4",
+    title: "Collector — thu thập, nhóm, phân hoạch",
+    goal: "Diễn đạt được một phép gom nhóm nhiều tầng bằng collector thay vì vòng lặp lồng nhau, và biết khi nào phải tự cài đặt interface Collector thay vì ghép các factory method có sẵn.",
+    practice:
+      "Lấy ba vòng lặp `for` gom nhóm trong code thật của bạn và viết lại bằng `groupingBy` kèm downstream collector (`counting`, `mapping`, `summingInt`); giữ cả hai bản và so kết quả trên cùng dữ liệu đầu vào.",
+    resources: [
+      { label: "MJIA 06 — Thu thập dữ liệu với stream", href: "#/docs/mjia-06" },
+    ],
+    items: [
+      {
+        id: "mj-w4-1",
+        text: "Collector làm gì ở cuối pipeline: đếm, tổng, nối chuỗi, reduce",
+        lesson: `**Mục tiêu.** Nói được \`collect\` khác \`reduce\` ở đâu, chọn đúng collector cho bốn phép tổng hợp thường gặp (đếm, tổng, trung bình, nối chuỗi), và giải thích được vì sao tất cả chúng chỉ là chuyên biệt hoá của \`reducing\`.
+
+**Đọc.** [6.1. Tổng quan nhanh về collector](#/docs/mjia-06) mở bằng Listing 6.1 — vòng lặp gom giao dịch theo loại tiền tệ — đặt cạnh một dòng \`collect(groupingBy(Transaction::getCurrency))\`; giữ cặp này trong đầu, cả chương là phần khai triển của nó. [6.1.1. Collector như những phép reduction nâng cao](#/docs/mjia-06) với Hình 6.1; [6.1.2. Các collector định nghĩa sẵn](#/docs/mjia-06) chỉ liệt kê ba nhóm chức năng, đọc lướt. Sang [6.2. Reduce và summarize](#/docs/mjia-06) rồi bốn mục con: [6.2.1. Tìm giá trị lớn nhất và nhỏ nhất trong một stream các giá trị](#/docs/mjia-06), [6.2.2. Summarization](#/docs/mjia-06) — gõ lại ví dụ \`summarizingInt\` và xem dòng \`IntSummaryStatistics\` in ra, [6.2.3. Nối chuỗi (joining String)](#/docs/mjia-06) ngắn, và [6.2.4. Summarization tổng quát với reduction](#/docs/mjia-06) là mục đọc chậm nhất: ba đối số của \`reducing\`, khung "collect so với reduce", khung "Sự linh hoạt của Collection framework: làm cùng một việc theo nhiều cách khác nhau" và khung "Chọn giải pháp tốt nhất cho tình huống của bạn". Làm quiz 6.1 rồi đọc trọn đáp án.
+
+**Bẫy.** Dùng \`reduce\` với một \`ArrayList\` làm accumulator để thay \`toList\`. Khung "collect so với reduce" gọi đó là lạm dụng sai phương thức: \`reduce\` được thiết kế cho một phép reduction bất biến, còn đoạn code kia thay đổi tại chỗ chính cái \`List\` dùng làm accumulator — hệ quả thực tiễn là nó không hoạt động song song được, vì nhiều thread cùng sửa đồng thời một cấu trúc dữ liệu có thể làm hỏng chính \`List\` đó. Bẫy thứ hai: khoe \`reducing\` ở chỗ đã có collector chuyên biệt. Đáp án quiz 6.1 nói rõ hai biến thể \`reducing\` chỉ để minh hoạ tính tổng quát, còn xét mọi mục đích thực tiễn thì luôn nên dùng \`joining\`, vì lý do cả tính dễ đọc lẫn hiệu năng.
+
+**Tự kiểm tra.** Vì sao \`reducing\` phiên bản một đối số trả về \`Optional\` còn phiên bản ba đối số thì không? Và \`counting()\` thật ra được cài đặt bằng đúng lời gọi \`reducing\` nào?`,
+      },
+      {
+        id: "mj-w4-2",
+        text: "groupingBy nhiều tầng và downstream collector",
+        lesson: `**Mục tiêu.** Dựng được một \`Map\` hai tầng bằng cách lồng \`groupingBy\`, và chọn đúng downstream collector — \`counting\`, \`summingInt\`, \`mapping\`, \`filtering\`, \`flatMapping\`, \`collectingAndThen\` — cho việc cần làm bên trong từng nhóm.
+
+**Đọc.** [6.3. Grouping](#/docs/mjia-06) mở bằng \`groupingBy(Dish::getType)\` và khái niệm hàm phân loại, kèm Hình 6.4; ghi lại lý do vì sao có lúc phải viết lambda thay vì method reference. [6.3.1. Thao tác trên các phần tử đã được nhóm](#/docs/mjia-06) là mục đọc chậm nhất: chạy cả bản lọc-trước-khi-nhóm lẫn bản dùng \`filtering\` rồi so hai \`Map\` in ra, sau đó tới \`mapping\` và \`flatMapping\` với ví dụ \`dishTags\`. [6.3.2. Nhóm nhiều tầng (Multilevel grouping)](#/docs/mjia-06) với Listing 6.2 và Hình 6.5 — hình dung "các rổ" ở cuối mục là thứ đáng nhớ nhất. [6.3.3. Thu thập dữ liệu trong các nhóm con](#/docs/mjia-06) cho \`counting\`, \`maxBy\`, khung "Ghi chú", khung "Điều chỉnh kết quả của collector sang một kiểu khác" với Listing 6.3, Hình 6.6, và khung "Các ví dụ khác về collector được dùng kết hợp với groupingBy".
+
+**Bẫy.** Lọc trước rồi mới nhóm. Sách chỉ thẳng nhược điểm bằng kết quả in ra: vì không món nào thuộc kiểu \`FISH\` thoả predicate, khoá đó biến mất hoàn toàn khỏi map kết quả; đẩy predicate vào \`filtering\` bên trong thì \`FISH\` vẫn còn, chỉ là ánh xạ tới một \`List\` rỗng. Bẫy thứ hai: đọc \`Optional\` trong \`Map<Dish.Type, Optional<Dish>>\` như "kiểu này có thể không có món nào". Khung "Ghi chú" bác lại: \`groupingBy\` chỉ thêm khoá mới một cách lười biếng, đúng vào lần đầu gặp phần tử sinh ra khoá đó, nên một kiểu vắng mặt sẽ không mang giá trị \`Optional.empty()\` mà không xuất hiện như một khoá; lớp bọc \`Optional\` ở đây không hữu ích, nó chỉ tình cờ có mặt vì đó là kiểu \`maxBy\` trả về.
+
+**Tự kiểm tra.** \`groupingBy(f)\` một đối số thật ra là cách viết tắt của lời gọi nào? Và vì sao \`Optional::get\` trong Listing 6.3 lại an toàn?`,
+      },
+      {
+        id: "mj-w4-3",
+        text: "partitioningBy, và khi nào nó hơn groupingBy",
+        lesson: `**Mục tiêu.** Chọn được giữa \`partitioningBy\` và \`groupingBy\` dựa trên kiểu trả về của hàm phân loại, và dựng được phân hoạch nhiều tầng cùng phân hoạch có downstream collector.
+
+**Đọc.** [6.4. Partitioning](#/docs/mjia-06) định nghĩa partitioning là trường hợp đặc biệt của grouping, dùng một predicate làm hàm phân loại, nên \`Map\` kết quả có khoá \`Boolean\` và nhiều nhất hai nhóm; chạy \`partitioningBy(Dish::isVegetarian)\` rồi so với bản \`filter(...).collect(toList())\` ngay dưới đó. [6.4.1. Ưu điểm của partitioning](#/docs/mjia-06) là trọng tâm: phiên bản overload nhận collector thứ hai, ví dụ lồng \`groupingBy(Dish::getType)\` cho \`Map\` hai tầng, và ví dụ tái dùng \`collectingAndThen(maxBy(...), Optional::get)\`. Làm trọn quiz 6.2 — cả ba câu — trước khi xem đáp án. [6.4.2. Phân hoạch các số thành nguyên tố và không nguyên tố](#/docs/mjia-06) gõ lại \`isPrime\` cả hai phiên bản (chia tới \`candidate\`, rồi chỉ tới căn bậc hai) và \`partitionPrimes\`; đây chính là code mà mục 6.6 sẽ tối ưu tiếp, đừng bỏ. Đóng lại bằng Bảng 6.1, bảng tra cứu các static factory method chính của lớp \`Collectors\`.
+
+**Bẫy.** Tưởng truyền hàm nào vào \`partitioningBy\` cũng được. Quiz 6.2 câu 2 chặn đúng chỗ đó: \`partitioningBy(Dish::isVegetarian, partitioningBy(Dish::getType))\` không biên dịch được, vì \`partitioningBy\` yêu cầu một predicate — một hàm trả về giá trị boolean — còn method reference \`Dish::getType\` thì không thể dùng như một predicate. Bẫy thứ hai: coi \`partitioningBy\` chỉ là đường cú pháp cho \`groupingBy\`. Sách nói rõ phần cài đặt \`Map\` do \`partitioningBy\` trả về gọn nhẹ và hiệu quả hơn: bên trong nó là một \`Map\` chuyên biệt với hai trường, bởi nó chỉ cần chứa hai khoá \`true\` và \`false\`.
+
+**Tự kiểm tra.** Nếu thay \`partitioningBy\` bằng hai lần \`filter\` — một với predicate, một với phủ định của nó — thì bạn mất đi điều gì? Và kết quả của quiz 6.2 câu 1 có hình dạng \`Map\` như thế nào?`,
+      },
+      {
+        id: "mj-w4-4",
+        text: "Interface Collector, và tự viết collector cho hiệu năng",
+        lesson: `**Mục tiêu.** Kể tên năm phương thức của interface \`Collector\` cùng vai trò từng cái, và nói được khi nào một collector tuỳ biến đáng công viết so với việc ghép các factory method có sẵn.
+
+**Đọc.** [6.5. Interface Collector](#/docs/mjia-06) với Listing 6.4 và ý nghĩa ba tham số kiểu \`T\`, \`A\`, \`R\`. [6.5.1. Hiểu ý nghĩa các phương thức được khai báo trong interface Collector](#/docs/mjia-06) đọc chậm từng tiểu mục: \`supplier\`, \`accumulator\`, \`finisher\` — ba cái đầu đã đủ cho một reduction tuần tự như Hình 6.7 — rồi \`combiner\` với Hình 6.8 và ba gạch đầu dòng mô tả quá trình chia đệ quy, cuối cùng \`characteristics\` với \`UNORDERED\`, \`CONCURRENT\`, \`IDENTITY_FINISH\`. [6.5.2. Ghép tất cả lại với nhau](#/docs/mjia-06) cho Listing 6.5 — gõ lại \`ToListCollector\` — và khung "Thực hiện một phép collect tuỳ biến mà không cần tạo phần cài đặt Collector". Sang [6.6. Xây dựng collector của riêng bạn để có hiệu năng tốt hơn](#/docs/mjia-06) và [6.6.1. Chỉ chia cho các số nguyên tố](#/docs/mjia-06): bốn bước dựng \`PrimeNumbersCollector\`, quiz 6.3, Listing 6.7. [6.6.2. So sánh hiệu năng của các collector](#/docs/mjia-06) ngắn nhưng có hai con số nên nhớ.
+
+**Bẫy.** Cài đặt \`combiner\` rồi tin rằng collector đã chạy song song được. Ở bước 3 của mục 6.6.1, sách nói thẳng collector này trên thực tế không thể dùng song song vì thuật toán về bản chất là tuần tự: \`combiner\` sẽ không bao giờ được gọi tới, bạn có thể để trống nó hoặc, tốt hơn, ném \`UnsupportedOperationException\`; họ chỉ cài đặt cho đầy đủ. Bẫy thứ hai: chọn phiên bản \`collect\` ba hàm vì nó gọn hơn. Khung cuối mục 6.5.2 cảnh báo nó kém dễ đọc và kém dễ tái sử dụng hơn, và quan trọng hơn: bạn không được phép truyền bất kỳ \`Characteristics\` nào cho nó, nên nó luôn hành xử như \`IDENTITY_FINISH\` và \`CONCURRENT\` nhưng không phải \`UNORDERED\`.
+
+**Tự kiểm tra.** \`ToListCollector\` được đánh dấu \`CONCURRENT\` nhưng khi nào nó mới thật sự được xử lý song song? Và collector tuỳ biến nhanh hơn bản \`partitioningBy\` khoảng bao nhiêu phần trăm, nhờ truy cập được thứ gì mà collector định nghĩa sẵn không cho?`,
+      },
+    ],
+  },
+  {
+    id: "mj-w5",
+    week: "Tuần 5",
+    title: "Parallel stream, spliterator, và Collection API mới",
+    goal: "Đo được thay vì đoán khi nào parallel stream đáng dùng, và nói được chính xác thứ gì quyết định dữ liệu bị chia như thế nào trước khi chạy song song.",
+    practice:
+      "Chạy benchmark tổng 1..10 triệu của §7.1 bằng ba cách (vòng lặp, `Stream.iterate().parallel()`, `LongStream.rangeClosed().parallel()`) và đo bằng JMH — không đo bằng `System.nanoTime()` thủ công; ghi lại con số của chính máy bạn.",
+    resources: [
+      { label: "MJIA 07 — Xử lý dữ liệu song song và hiệu năng", href: "#/docs/mjia-07" },
+      { label: "MJIA 08 — Các cải tiến của Collection API", href: "#/docs/mjia-08" },
+      { label: "openjdk.org — JMH", href: "https://openjdk.org/projects/code-tools/jmh/" },
+    ],
+    items: [
+      {
+        id: "mj-w5-1",
+        text: "parallelStream: khi nào nhanh hơn, khi nào chậm hơn hẳn",
+        lesson: `**Mục tiêu.** Trả lời được vì sao cùng một phép tính tổng lại nhanh hơn hay chậm hơn bản tuần tự tuỳ theo cách sinh stream, và liệt kê được những tiêu chí định tính mà sách đưa ra để quyết định có song song hoá hay không.
+
+**Đọc.** [7.1. Parallel streams](#/docs/mjia-07) đặt bài toán tổng 1..n. [7.1.1. Chuyển một sequential stream thành parallel stream](#/docs/mjia-07) với Hình 7.1 và khung "Cấu hình thread pool được parallel stream sử dụng" — nhớ cái tên \`ForkJoinPool\` cùng system property đổi kích thước pool, và lời khuyên đừng sửa nó nếu không có lý do chính đáng. [7.1.2. Đo hiệu năng của stream](#/docs/mjia-07) là mục dài nhất và cũng là phần thực hành của tuần: dựng JMH theo Listing 7.1, chạy lần lượt \`sequentialSum\`, \`iterativeSum\`, \`parallelSum\`, \`rangedSum\`, \`parallelRangedSum\` rồi đặt các con số của máy bạn cạnh con số của sách; đọc kỹ Hình 7.2 giải thích vì sao \`iterate\` về bản chất là tuần tự. [7.1.3. Sử dụng parallel stream đúng cách](#/docs/mjia-07) ngắn nhưng bắt buộc. [7.1.4. Sử dụng parallel stream một cách hiệu quả](#/docs/mjia-07) là tám gạch đầu dòng — chép cả tám ra — cộng Bảng 7.1 xếp hạng khả năng phân rã của sáu nguồn stream.
+
+**Bẫy.** Gắn \`.parallel()\` vào \`Stream.iterate\` rồi chờ máy bốn nhân trả công. Số đo của sách ngược lại: bản song song chậm hơn khoảng năm lần so với bản tuần tự, vì \`iterate\` sinh ra các đối tượng đã boxing và vì đầu vào của mỗi lần áp dụng hàm phụ thuộc kết quả lần trước nên không chia thành khối độc lập được; đánh dấu parallel chỉ thêm vào overhead phân bổ mỗi phép cộng cho một thread khác nhau. Bẫy thứ hai: cộng dồn vào một accumulator dùng chung rồi gọi \`parallel()\`. §7.1.3 chạy \`sideEffectParallelSum\` mười lần và in ra mười kết quả khác nhau, tất cả đều cách xa giá trị đúng 50000005000000, bởi \`total += value\` không phải một thao tác nguyên tử.
+
+**Tự kiểm tra.** Trong một pipeline xen kẽ \`parallel()\` với \`sequential()\`, lời gọi nào thắng thế và nó ảnh hưởng tới phạm vi nào? Và \`LongStream.rangeClosed\` hơn \`Stream.iterate\` ở đúng hai điểm nào?`,
+      },
+      {
+        id: "mj-w5-2",
+        text: "Fork/join framework và work stealing",
+        lesson: `**Mục tiêu.** Viết được một \`RecursiveTask\` chia đôi đúng cách, và giải thích được vì sao fork thật nhiều task nhỏ thường thắng fork vài task lớn.
+
+**Đọc.** [7.2. Fork/join framework](#/docs/mjia-07) giới thiệu \`ForkJoinPool\` như một phần cài đặt của \`ExecutorService\`. [7.2.1. Làm việc với RecursiveTask](#/docs/mjia-07) — đọc đoạn mã giả của \`compute\` trước, rồi Hình 7.3, rồi gõ trọn Listing 7.2 \`ForkJoinSumCalculator\` và chạy nó; chú ý thứ tự bốn dòng cuối của \`compute\`, ngưỡng \`THRESHOLD = 10_000\`, ghi chú rằng \`availableProcessors\` đếm cả nhân ảo do hyperthreading, và Hình 7.4. [7.2.2. Các best practice khi sử dụng fork/join framework](#/docs/mjia-07) là năm gạch đầu dòng, đọc chậm cả năm — đây là danh sách kiểm tra bạn sẽ quay lại mỗi lần viết task. [7.2.3. Work stealing](#/docs/mjia-07) với Hình 7.5 giải thích hàng đợi liên kết đôi của mỗi thread, việc lấy task từ đầu hàng đợi của mình và "đánh cắp" task từ đuôi hàng đợi của thread khác.
+
+**Bẫy.** Gọi \`fork()\` trên cả hai subtask cho cân đối. Best practice thứ ba nói ngược lại: làm vậy kém hiệu quả hơn gọi trực tiếp \`compute\` trên một trong hai, vì gọi \`compute\` cho phép tái sử dụng cùng một thread cho một subtask và tránh được overhead cấp phát không cần thiết thêm một task nữa vào pool — đúng như Listing 7.2 làm. Bẫy thứ hai: gọi \`join()\` ngay sau khi fork subtask trái. Best practice thứ nhất cảnh báo \`join\` chặn bên gọi cho tới khi kết quả sẵn sàng, nên phải gọi nó sau khi quá trình tính toán của cả hai subtask đã bắt đầu; nếu không, bạn nhận được một phiên bản chậm hơn và phức tạp hơn của chính thuật toán tuần tự ban đầu.
+
+**Tự kiểm tra.** Vì sao \`invoke\` của \`ForkJoinPool\` không nên được gọi từ bên trong một \`RecursiveTask\`, và thay vào đó nên gọi gì? Và với mảng 10 triệu phần tử, \`ForkJoinSumCalculator\` fork ít nhất bao nhiêu subtask, và vì sao con số nghe có vẻ lãng phí đó nói chung lại là lựa chọn thắng lợi?`,
+      },
+      {
+        id: "mj-w5-3",
+        text: "Spliterator — thứ quyết định stream chia dữ liệu thế nào",
+        lesson: `**Mục tiêu.** Đọc được bốn phương thức của interface \`Spliterator\` như một bản hợp đồng, và nhận ra khi nào một bài toán cho kết quả sai chỉ vì stream bị chia sai chỗ.
+
+**Đọc.** [7.3. Spliterator](#/docs/mjia-07) với Listing 7.3 — \`tryAdvance\`, \`trySplit\`, \`estimateSize\`, \`characteristics\` — và câu nói rằng ngay cả một ước lượng kích thước không chính xác nhưng tính nhanh cũng đã hữu ích. [7.3.1. Quá trình chia nhỏ (splitting)](#/docs/mjia-07) bám bốn bước của Hình 7.6, rồi Bảng 7.2 với tám characteristic; đọc kỹ \`SIZED\` và \`SUBSIZED\`. [7.3.2. Tự cài đặt Spliterator của bạn](#/docs/mjia-07) nên đọc như một câu chuyện gỡ lỗi: Listing 7.4 đếm từ theo kiểu lặp cho 19, Listing 7.5 \`WordCounter\` bất biến với \`accumulate\` và \`combine\` (Hình 7.7), bản \`reduce\` tuần tự vẫn cho 19, rồi \`stream.parallel()\` cho 25 — dừng lại tự giải thích trước khi đọc tiếp. Cuối cùng là Listing 7.6 \`WordCounterSpliterator\` cùng bốn gạch đầu dòng mổ xẻ từng phương thức, và \`StreamSupport.stream(spliterator, true)\`.
+
+**Bẫy.** Cho rằng đổi sang parallel chỉ ảnh hưởng tốc độ. Chính ví dụ đếm từ bác điều đó: vì \`String\` ban đầu bị chia ở những vị trí tuỳ ý, đôi khi một từ bị chia làm đôi rồi bị đếm hai lần, cho ra 25 thay vì 19 — sách kết luận việc chuyển từ sequential stream sang parallel stream có thể dẫn tới kết quả sai nếu kết quả đó có thể bị ảnh hưởng bởi vị trí mà stream bị chia. Bẫy thứ hai: bê nguyên ngưỡng của Listing 7.6 vào code thật. Sách nói rõ giới hạn thấp chỉ 10 \`Character\` là để đảm bảo chương trình thực hiện được vài lần chia trên chuỗi tương đối ngắn đang phân tích; trong các ứng dụng thực tế bạn sẽ phải dùng một giới hạn cao hơn, như đã làm ở ví dụ fork/join, để tránh tạo ra quá nhiều task.
+
+**Tự kiểm tra.** \`trySplit\` trả về \`null\` khi nào, và framework hiểu tín hiệu đó là gì? Và vì sao \`WordCounter\` được cố ý viết thành một class bất biến?`,
+      },
+      {
+        id: "mj-w5-4",
+        text: "Collection factory và các default method mới của List/Set/Map",
+        lesson: `**Mục tiêu.** Thay được những đoạn tạo và sửa collection dài dòng bằng đúng một lời gọi factory hoặc default method, và biết ngay lời gọi đó trả về thứ mutable hay immutable.
+
+**Đọc.** [8.1. Collection factories](#/docs/mjia-08) mở bằng \`Arrays.asList\`, mẹo dựng \`Set\` và khung "Collection literals"; rồi [8.1.1. List factory](#/docs/mjia-08) với khung "Overloading (nạp chồng) so với varargs" — lý do có các biến thể overload cố định thay vì một chữ ký varargs duy nhất đáng đọc kỹ — [8.1.2. Set factory](#/docs/mjia-08) và [8.1.3. Map factories](#/docs/mjia-08) với \`Map.of\` cùng \`Map.ofEntries\`; làm quiz 8.1. [8.2. Làm việc với List và Set](#/docs/mjia-08) rồi [8.2.1. removeIf](#/docs/mjia-08) — gõ lại cả ba phiên bản để thấy vì sao vòng for-each ném \`ConcurrentModificationException\` — và [8.2.2. replaceAll](#/docs/mjia-08). [8.3. Làm việc với Map](#/docs/mjia-08) là phần dày nhất: [8.3.1. forEach](#/docs/mjia-08), [8.3.2. Sắp xếp (Sorting)](#/docs/mjia-08) với khung "HashMap và hiệu năng", [8.3.3. getOrDefault](#/docs/mjia-08), [8.3.4. Các khuôn mẫu compute](#/docs/mjia-08), [8.3.5. Các khuôn mẫu remove](#/docs/mjia-08), [8.3.6. Các khuôn mẫu thay thế (Replacement patterns)](#/docs/mjia-08) và [8.3.7. Merge](#/docs/mjia-08) — đọc kỹ trích dẫn Javadoc về cách \`merge\` xử lý \`null\`; làm quiz 8.2. [8.4. ConcurrentHashMap được cải tiến](#/docs/mjia-08) cùng [8.4.1. Reduce và Search](#/docs/mjia-08), [8.4.2. Đếm (Counting)](#/docs/mjia-08) và [8.4.3. Set view](#/docs/mjia-08) đọc nhanh hơn.
+
+**Bẫy.** Coi \`Arrays.asList\` và \`List.of\` là một. §8.1 chỉ rõ \`Arrays.asList\` cho một danh sách kích thước cố định: \`set\` được phép còn \`add\` ném \`UnsupportedOperationException\` — sách gọi hành vi này là hơi bất ngờ; còn \`List.of\` cho một collection immutable, nên theo quiz 8.1 thì chính \`set\` cũng ném ngoại lệ đó. Bẫy thứ hai: dùng \`getOrDefault\` như một tấm khiên chống \`NullPointerException\`. §8.3.3 nêu đúng hai điều: nếu khoá tồn tại nhưng vô tình được gán \`null\` thì \`getOrDefault\` vẫn có thể trả về \`null\`, và biểu thức bạn truyền làm giá trị dự phòng luôn luôn được tính toán bất kể khoá có tồn tại hay không.
+
+**Tự kiểm tra.** Vì sao \`Set.of("Raphael", "Olivia", "Olivia")\` ném \`IllegalArgumentException\` thay vì âm thầm bỏ trùng? Và trong §8.3.4, chuyện gì xảy ra với ánh xạ hiện tại nếu hàm truyền cho \`computeIfPresent\` trả về \`null\`?`,
+      },
+    ],
+  },
+  {
+    id: "mj-w6",
+    week: "Tuần 6",
+    title: "Refactoring/test/debug code hàm, và DSL bằng lambda",
+    goal: "Chuyển được code cũ sang lambda và stream mà không đánh đổi tính đúng đắn hay khả năng debug, và đọc được một fluent API bất kỳ như một DSL dựng theo pattern có tên.",
+    practice:
+      "Chọn một chỗ trong dự án đang dùng Strategy hoặc Template Method, viết lại bằng lambda theo §9.2, rồi viết unit test cho hành vi lambda đó theo §9.3; cuối cùng chèn `peek()` vào một pipeline dài để xem giá trị chảy qua từng bước.",
+    resources: [
+      { label: "MJIA 09 — Refactoring, testing và debugging", href: "#/docs/mjia-09" },
+      { label: "MJIA 10 — Domain-specific language với lambda", href: "#/docs/mjia-10" },
+    ],
+    items: [
+      {
+        id: "mj-w6-1",
+        text: "Refactor code cũ sang lambda/stream, và viết lại design pattern OOP",
+        lesson: `**Mục tiêu.** Áp dụng được ba phép refactoring của mục 9.1 lên code của chính bạn, và viết lại được ít nhất hai trong năm design pattern của mục 9.2 bằng lambda.
+
+**Đọc.** [9.1. Refactoring để cải thiện tính dễ đọc và tính linh hoạt](#/docs/mjia-09) và [9.1.1. Cải thiện tính dễ đọc của code](#/docs/mjia-09) chỉ liệt kê ba phép refactoring, đọc lướt. [9.1.2. Từ anonymous class sang lambda expression](#/docs/mjia-09) là mục đọc chậm nhất — ba khác biệt ngữ nghĩa và ví dụ \`Task\` với \`Runnable\`. [9.1.3. Từ lambda expression sang method reference](#/docs/mjia-09) với \`Dish::getCaloricLevel\` và \`summingInt\`; [9.1.4. Từ xử lý dữ liệu kiểu mệnh lệnh sang Streams](#/docs/mjia-09) ngắn. [9.1.5. Cải thiện tính linh hoạt của code](#/docs/mjia-09) cho hai khuôn mẫu "Conditional deferred execution" và "Execute around" — gõ lại đoạn \`logger.log(Level.FINER, () -> ...)\` cùng phần cài đặt bên trong của nó. [9.2. Refactoring các design pattern hướng đối tượng bằng lambda](#/docs/mjia-09) rồi năm mục con [9.2.1. Strategy](#/docs/mjia-09), [9.2.2. Template method](#/docs/mjia-09), [9.2.3. Observer](#/docs/mjia-09), [9.2.4. Chain of responsibility](#/docs/mjia-09) và [9.2.5. Factory](#/docs/mjia-09); mỗi mục có một bản OOP và một bản lambda, gõ cả hai bản của Strategy và của Chain of responsibility.
+
+**Bẫy.** Để IDE đổi mọi anonymous class thành lambda rồi thôi. §9.1.2 nêu ba chỗ ngữ nghĩa đổi: \`this\` trong anonymous class trỏ chính nó còn trong lambda trỏ class bao ngoài; anonymous class được phép che khuất biến của class bao ngoài còn lambda thì gây lỗi biên dịch; và nếu tồn tại hai overload \`doSomething(Runnable)\` với \`doSomething(Task)\` thì lời gọi bằng lambda trở nên nhập nhằng, phải ép kiểu \`(Task)\` để khử. Bẫy thứ hai: thay mọi observer bằng lambda. §9.2.3 tự đặt câu hỏi có nên dùng lambda mọi lúc không rồi trả lời thẳng là không: lambda hợp khi hành vi cần thực thi rất đơn giản, còn observer có trạng thái hoặc định nghĩa nhiều phương thức thì nên bám vào việc dùng class.
+
+**Tự kiểm tra.** Bản \`logger.log(Level.FINER, "Problem: " + generateDiagnostic())\` đã sửa được gì so với bản có \`isLoggable\`, và còn sót lại vấn đề gì? Và bản Factory dùng \`Map<String, Supplier<Product>>\` hỏng ở đâu khi constructor sản phẩm cần ba đối số?`,
+      },
+      {
+        id: "mj-w6-2",
+        text: "Test và debug code dùng lambda — stack trace khó đọc, peek()",
+        lesson: `**Mục tiêu.** Quyết định được cái gì trong code dùng lambda thì đáng test, và đọc được một stack trace sinh ra từ bên trong stream pipeline mà không hoảng.
+
+**Đọc.** [9.3. Testing lambda](#/docs/mjia-09) mở bằng class \`Point\` và unit test cho \`moveRightBy\`. [9.3.1. Testing hành vi của một lambda hiển thị được](#/docs/mjia-09) — trường static \`compareByXAndThenY\` và cách gọi thẳng \`compare\` trên nó. [9.3.2. Tập trung vào hành vi của phương thức sử dụng lambda](#/docs/mjia-09) là mục quan trọng nhất của cả mục 9.3, kèm lưu ý cuối mục về \`equals\`. [9.3.3. Tách các lambda phức tạp ra thành phương thức riêng](#/docs/mjia-09) chỉ vài dòng; [9.3.4. Testing các hàm bậc cao](#/docs/mjia-09) cho \`testFilter\` với hai predicate khác nhau. [9.4. Debugging](#/docs/mjia-09) rồi [9.4.1. Kiểm tra stack trace](#/docs/mjia-09) — chạy đúng đoạn \`Debugging\` cố tình lỗi để tự thấy dòng \`lambda$main$0\`, rồi chạy tiếp bản \`Point::getX\` và bản \`Debugging::divideByZero\` để so ba stack trace. [9.4.2. Ghi log thông tin](#/docs/mjia-09) với Hình 9.4: gõ lại pipeline có bốn lời gọi \`peek\` và đối chiếu mười hai dòng đầu ra với dự đoán của bạn.
+
+**Bẫy.** Cố viết test cho chính lambda. §9.3.2 nói thẳng chẳng có ý nghĩa gì khi test lambda \`p -> new Point(p.getX() + x, p.getY())\`; nó chỉ là một chi tiết cài đặt của \`moveAllPointsRightBy\`, và thứ đáng test là hành vi của phương thức đó — với điều kiện \`Point\` cài đặt \`equals\` một cách phù hợp, nếu không test sẽ dựa vào phần cài đặt mặc định từ \`Object\`. Bẫy thứ hai: tin rằng đổi lambda sang method reference sẽ làm stack trace dễ đọc. §9.4.1 chỉ ra \`Point::getX\` vẫn cho ra một dòng \`Unknown Source\`; chỉ khi method reference trỏ tới một phương thức được khai báo trong chính class nơi nó được dùng — như \`Debugging::divideByZero\` — thì tên phương thức mới xuất hiện trong stack trace.
+
+**Tự kiểm tra.** Vì sao compiler phải tự bịa ra cái tên \`lambda$main$0\`, và điều đó gây rắc rối gì với những class lớn? Và \`peek\` khác \`forEach\` ở đúng điểm nào khiến chỉ \`peek\` dùng được để soi pipeline?`,
+      },
+      {
+        id: "mj-w6-3",
+        text: "DSL là gì, và những DSL nhỏ đã nằm sẵn trong API Java hiện đại",
+        lesson: `**Mục tiêu.** Nói được DSL là gì và không phải là gì, cân được sáu lợi ích với năm nhược điểm của DSL, và chỉ ra được hai DSL nhỏ bạn vẫn dùng hằng ngày mà không gọi tên.
+
+**Đọc.** [10.1. Một ngôn ngữ riêng cho lĩnh vực của bạn](#/docs/mjia-10) — định nghĩa DSL như một API giao tiếp với một lĩnh vực nghiệp vụ, đoạn "Cái gì không phải là DSL?", và hai lý do "Giao tiếp là vua" cùng "Code được viết một lần nhưng được đọc rất nhiều lần". [10.1.1. Ưu và nhược điểm của DSL](#/docs/mjia-10) là hai danh sách; chép cả hai ra để trích lại khi thuyết phục đội. [10.1.2. Các giải pháp DSL khác nhau có sẵn trên JVM](#/docs/mjia-10) chia ba loại internal, polyglot và external; phần Scala với \`3 times { ... }\` chỉ cần lấy cảm giác. [10.2. Các DSL nhỏ trong API Java hiện đại](#/docs/mjia-10) đi từ \`Collections.sort\` bọc trong inner class tới \`persons.sort(comparing(Person::getAge).thenComparing(Person::getName))\`. [10.2.1. Stream API nhìn như một DSL để thao tác với collection](#/docs/mjia-10) đặt cạnh nhau Listing 10.1 và Listing 10.2 — đọc kỹ hai danh sách "ba chỗ" nằm giữa chúng. [10.2.2. Collector như một DSL để tổng hợp dữ liệu](#/docs/mjia-10) với Listing 10.3 \`GroupingBuilder\`.
+
+**Bẫy.** Bán DSL cho đội bằng lời hứa "chuyên gia nghiệp vụ sẽ tự viết được logic". §10.1 chặn ngay: một DSL không phải tiếng Anh thuần tuý, và cũng không phải một ngôn ngữ cho phép chuyên gia nghiệp vụ cài đặt logic nghiệp vụ ở mức thấp — thứ họ làm được là đọc và kiểm chứng. Bẫy thứ hai: cho rằng phong cách fluent luôn hơn phong cách lồng nhau, nên việc \`Collectors\` bắt lồng nhau là chỗ thiết kế lười. §10.2.2 nói ngược lại: đó là lựa chọn thiết kế có chủ ý, xuất phát từ việc \`Collector\` ở trong cùng phải được định trị trước nhưng về mặt logic lại là phép nhóm cuối cùng; và khi thử dựng \`GroupingBuilder\` fluent thì các hàm nhóm phải viết theo thứ tự ngược, còn muốn sửa thứ tự thì hệ thống kiểu của Java không cho phép.
+
+**Tự kiểm tra.** Trong Listing 10.1, code đọc file theo từng dòng bị rải ra đúng ba chỗ nào? Và theo §10.1.2, những lợi thế nào khiến viết internal DSL bằng Java thuần vẫn đáng chọn so với Scala hay Groovy?`,
+      },
+      {
+        id: "mj-w6-4",
+        text: "Các pattern dựng DSL trong Java, và DSL thật ngoài đời",
+        lesson: `**Mục tiêu.** Đặt tên được pattern đứng sau một fluent API bất kỳ, và chọn được pattern phù hợp khi tự dựng DSL cho lĩnh vực của bạn.
+
+**Đọc.** [10.3. Các pattern và kỹ thuật tạo DSL trong Java](#/docs/mjia-10) mở bằng mô hình \`Stock\` / \`Trade\` / \`Order\` và Listing 10.4 — đoạn code tạo order dài dòng mà cả mục sẽ tìm cách xoá bỏ; gõ mô hình này vào IDE. [10.3.1. Method chaining](#/docs/mjia-10) với Listing 10.5 và Listing 10.6 cùng các builder phụ; chú ý vì sao cần tới hai trade builder. [10.3.2. Dùng hàm lồng nhau (nested functions)](#/docs/mjia-10) với Listing 10.7, Listing 10.8 và vai trò của hai phương thức giả \`at()\` với \`on()\`. [10.3.3. Xâu chuỗi hàm với lambda expression (function sequencing)](#/docs/mjia-10) với Listing 10.9. [10.3.4. Ghép tất cả lại với nhau](#/docs/mjia-10) trộn cả ba trong Listing 10.11. [10.3.5. Dùng method reference trong một DSL](#/docs/mjia-10) là mục đáng gõ lại nhất: từ ba cờ \`boolean\` ở Listing 10.14, qua \`TaxCalculator\` fluent ở Listing 10.15, tới bản \`DoubleUnaryOperator\` ghép bằng \`andThen\` ở Listing 10.16. Bảng 10.1 tóm tắt ưu nhược ba pattern. [10.4. DSL Java 8 trong thế giới thực](#/docs/mjia-10) với [10.4.1. jOOQ](#/docs/mjia-10), [10.4.2. Cucumber](#/docs/mjia-10) và [10.4.3. Spring Integration](#/docs/mjia-10) — với mỗi thư viện, tự đoán pattern trước khi đọc câu chốt.
+
+**Bẫy.** Chọn method chaining chỉ vì chỗ dùng nó đẹp nhất. §10.3.1 nêu đúng cái giá: vấn đề chính của method chaining là sự dài dòng cần có để cài đặt các builder, cần rất nhiều code keo dán nối builder tầng cao với builder tầng thấp, và bạn không có cách nào bắt buộc quy ước thụt lề — thứ duy nhất thể hiện cấu trúc phân cấp của các đối tượng lĩnh vực. Bẫy thứ hai: chọn nested function rồi gặp trường tuỳ chọn. §10.3.2 cảnh báo danh sách đối số truyền cho các static method bị định sẵn một cách cứng nhắc, nên có trường tuỳ chọn là phải cài đặt nhiều phiên bản overload; thêm nữa ý nghĩa đối số được xác định bởi vị trí thay vì bởi tên, và cách giảm nhẹ duy nhất là chèn những phương thức giả.
+
+**Tự kiểm tra.** Vì sao \`MethodChainingOrderBuilder\` cần tới hai trade builder riêng biệt? Và \`TaxCalculator\` ở Listing 10.16 chỉ còn đúng một trường — trường đó là gì, và giá trị khởi đầu của nó là gì?`,
+      },
+    ],
+  },
 ];
