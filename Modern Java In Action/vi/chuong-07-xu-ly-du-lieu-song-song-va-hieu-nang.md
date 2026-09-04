@@ -61,6 +61,8 @@ public long parallelSum(long n) {
 Trong đoạn code trên, quá trình reduction dùng để cộng tất cả các số trong stream hoạt động theo cách tương tự như được mô tả ở mục 5.4.1. Điểm khác biệt là giờ đây stream được chia nội bộ thành nhiều khối. Kết quả là thao tác reduction có thể làm việc trên các khối khác nhau một cách độc lập và song song, như minh hoạ ở hình 7.1. Cuối cùng, chính thao tác reduction đó kết hợp các giá trị thu được từ những reduction bộ phận của mỗi substream, tạo ra kết quả của quá trình reduction trên toàn bộ stream ban đầu.
 
 > **Hình 7.1.** Một thao tác reduction song song
+>
+> ![Hình 7.1](images/ch07/hinh-7-1.jpg)
 
 Lưu ý rằng trên thực tế, việc gọi phương thức parallel trên một sequential stream không kéo theo bất kỳ biến đổi cụ thể nào trên chính stream đó. Bên trong, một cờ boolean được đặt để báo hiệu rằng bạn muốn chạy song song tất cả các thao tác đứng sau lời gọi parallel. Tương tự, bạn có thể biến một parallel stream thành sequential stream bằng cách gọi phương thức sequential trên nó. Lưu ý rằng bạn có thể nghĩ rằng bằng cách kết hợp hai phương thức này, bạn có thể đạt được sự kiểm soát chi tiết hơn về việc thao tác nào muốn thực hiện song song và thao tác nào tuần tự trong khi duyệt stream. Ví dụ, bạn có thể viết đại loại như sau:
 
@@ -213,6 +215,8 @@ ParallelStreamBenchmark.parallelSum  avgt   40  604.059 ± 55.288  ms/op
 Vấn đề thứ hai đặc biệt thú vị vì bạn cần giữ một mô hình tư duy rằng một số thao tác trên stream dễ song song hoá hơn những thao tác khác. Cụ thể, thao tác iterate rất khó chia thành các khối có thể thực thi độc lập, bởi đầu vào của một lần áp dụng hàm luôn phụ thuộc vào kết quả của lần áp dụng trước đó, như minh hoạ ở hình 7.2.
 
 > **Hình 7.2.** iterate về bản chất là tuần tự.
+>
+> ![Hình 7.2](images/ch07/hinh-7-2.jpg)
 
 Điều này có nghĩa là trong trường hợp cụ thể này, quá trình reduction không diễn ra như mô tả ở hình 7.1: toàn bộ danh sách các số không sẵn có ngay từ đầu quá trình reduction, khiến việc phân hoạch stream thành các khối để xử lý song song một cách hiệu quả trở nên bất khả thi. Bằng cách đánh dấu stream là parallel, bạn chỉ đang thêm vào quá trình xử lý tuần tự cái overhead của việc phân bổ mỗi thao tác cộng cho một thread khác nhau.
 
@@ -376,6 +380,8 @@ if (task đủ nhỏ hoặc không còn chia được nữa) {
 Nói chung, không có tiêu chí chính xác nào để quyết định xem một task có nên được chia nhỏ tiếp hay không, nhưng có nhiều heuristic khác nhau mà bạn có thể theo để hỗ trợ quyết định này. Chúng tôi sẽ làm rõ chúng chi tiết hơn ở mục 7.2.2. Quá trình chia task một cách đệ quy được tóm lược trực quan qua hình 7.3.
 
 > **Hình 7.3.** Quá trình fork/join
+>
+> ![Hình 7.3](images/ch07/hinh-7-3.jpg)
 
 Như bạn có thể đã nhận ra, đây chẳng qua chỉ là phiên bản song song của thuật toán chia để trị (divide-and-conquer) nổi tiếng. Để minh hoạ một ví dụ thực tế về cách dùng fork/join framework và để tiếp nối các ví dụ trước, hãy thử tính tổng của một dãy số (ở đây được biểu diễn bằng một mảng số `long[]`) bằng framework này. Như đã giải thích, trước hết bạn cần cung cấp một phần cài đặt cho class RecursiveTask, như được minh hoạ bởi ForkJoinSumCalculator trong listing 7.2.
 
@@ -459,6 +465,8 @@ Lưu ý rằng trong một ứng dụng thực tế, việc dùng nhiều hơn m
 Khi bạn truyền task ForkJoinSumCalculator vào ForkJoinPool, task này được thực thi bởi một thread của pool, và thread đó lần lượt gọi phương thức compute của task. Phương thức này kiểm tra xem task có đủ nhỏ để được thực hiện tuần tự hay không; nếu không, nó chia mảng số cần tính tổng thành hai nửa và gán chúng cho hai ForkJoinSumCalculator mới được lên lịch để thực thi bởi ForkJoinPool. Kết quả là quá trình này có thể được lặp lại một cách đệ quy, cho phép task ban đầu được chia thành các task nhỏ hơn, cho tới khi thoả mãn điều kiện dùng để kiểm tra xem việc chia nhỏ tiếp có còn thuận tiện hoặc còn khả thi hay không (trong trường hợp này là khi số phần tử cần tính tổng nhỏ hơn hoặc bằng 10.000). Tại thời điểm đó, kết quả của mỗi subtask được tính một cách tuần tự, và cây nhị phân (ngầm định) các task được tạo ra bởi quá trình forking sẽ được duyệt ngược trở lại về gốc của nó. Kết quả của task sau đó được tính bằng cách kết hợp các kết quả bộ phận của mỗi subtask. Quá trình này được trình bày ở hình 7.4.
 
 > **Hình 7.4.** Thuật toán fork/join
+>
+> ![Hình 7.4](images/ch07/hinh-7-4.jpg)
 
 Một lần nữa, bạn có thể kiểm tra hiệu năng của phương thức tính tổng sử dụng fork/join framework một cách tường minh bằng harness đã được phát triển ở đầu chương này:
 
@@ -498,6 +506,8 @@ Fork/join framework giải quyết vấn đề này bằng một kỹ thuật g�
 Tổng quát hơn, thuật toán work-stealing này được dùng để tái phân phối và cân bằng các task giữa các worker thread trong pool. Hình 7.5 cho thấy quá trình này diễn ra như thế nào. Khi một task trong hàng đợi của một worker được chia thành hai subtask, một trong hai subtask sẽ bị một worker đang nhàn rỗi khác đánh cắp. Như đã mô tả ở trên, quá trình này có thể tiếp diễn một cách đệ quy cho tới khi điều kiện dùng để xác định rằng một subtask nhất định nên được thực thi tuần tự trở thành đúng.
 
 > **Hình 7.5.** Thuật toán work-stealing được fork/join framework sử dụng
+>
+> ![Hình 7.5](images/ch07/hinh-7-5.jpg)
 
 Đến đây hẳn đã rõ ràng rằng một stream có thể dùng fork/join framework để xử lý song song các phần tử của nó như thế nào, nhưng vẫn còn thiếu một thành phần. Trong mục này, chúng ta đã phân tích một ví dụ mà bạn tự tay phát triển logic chia một mảng số thành nhiều task. Tuy nhiên, bạn đã không phải làm bất cứ điều gì tương tự khi dùng parallel stream ở đầu chương này, và điều đó có nghĩa là phải tồn tại một cơ chế tự động chia stream giúp bạn. Cơ chế tự động mới này được gọi là Spliterator, và chúng ta sẽ khám phá nó trong mục tiếp theo.
 
@@ -525,6 +535,8 @@ Như thường lệ, T là kiểu của các phần tử được Spliterator du
 Thuật toán chia một stream thành nhiều phần là một quá trình đệ quy và diễn ra như minh hoạ ở hình 7.6. Ở bước thứ nhất, trySplit được gọi trên Spliterator đầu tiên và sinh ra một Spliterator thứ hai. Rồi ở bước thứ hai, nó lại được gọi trên cả hai Spliterator này, dẫn tới tổng cộng bốn cái. Framework tiếp tục gọi phương thức trySplit trên một Spliterator cho tới khi nó trả về null để báo hiệu rằng cấu trúc dữ liệu mà nó đang xử lý không còn chia được nữa, như thể hiện ở bước 3. Cuối cùng, quá trình chia nhỏ đệ quy này kết thúc ở bước 4, khi tất cả các Spliterator đều đã trả về null cho một lời gọi trySplit.
 
 > **Hình 7.6.** Quá trình chia nhỏ đệ quy
+>
+> ![Hình 7.6](images/ch07/hinh-7-6.jpg)
 
 Quá trình chia nhỏ này cũng có thể bị ảnh hưởng bởi chính các đặc tính (characteristics) của Spliterator, vốn được khai báo qua phương thức characteristics.
 
@@ -645,6 +657,8 @@ class WordCounter {
 Trong listing này, phương thức accumulate định nghĩa cách thay đổi trạng thái của WordCounter, hay chính xác hơn là với trạng thái nào thì tạo ra một WordCounter mới, bởi đây là một class immutable. Điều này rất quan trọng cần hiểu. Chúng ta đang tích luỹ trạng thái với một class immutable một cách có chủ đích, để quá trình này có thể được song song hoá ở bước tiếp theo. Phương thức accumulate được gọi mỗi khi một Character mới của stream được duyệt qua. Cụ thể, như bạn đã làm trong phương thức countWordsIteratively ở listing 7.4, bộ đếm được tăng lên khi gặp một ký tự không phải khoảng trắng mới, và ký tự gặp trước đó là khoảng trắng. Hình 7.7 cho thấy các chuyển trạng thái của WordCounter khi một Character mới được duyệt qua bởi phương thức accumulate.
 
 > **Hình 7.7.** Các chuyển trạng thái của WordCounter khi một Character c mới được duyệt qua
+>
+> ![Hình 7.7](images/ch07/hinh-7-7.jpg)
 
 Phương thức thứ hai, combine, được gọi để tổng hợp các kết quả bộ phận của hai WordCounter đang làm việc trên hai phần con khác nhau của stream các Character, nên nó kết hợp hai WordCounter bằng cách cộng các bộ đếm nội bộ của chúng.
 

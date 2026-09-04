@@ -138,6 +138,8 @@ public interface ApplePredicate {
 Bây giờ bạn có thể khai báo nhiều phần cài đặt của `ApplePredicate` để biểu diễn các tiêu chí chọn lựa khác nhau, như được trình bày dưới đây (và được minh hoạ trong hình 2.1):
 
 > **Hình 2.1.** Các chiến lược khác nhau để chọn một Apple
+>
+> ![Hình 2.1](images/ch02/hinh-2-1.jpg)
 
 ```java
 // Chỉ chọn những quả táo nặng
@@ -200,12 +202,16 @@ Bạn đã đạt được một điều rất hay: hành vi của phương th�
 Lưu ý rằng trong ví dụ trước, phần code duy nhất thực sự quan trọng là phần cài đặt của phương thức `test`, như được minh hoạ trong hình 2.2; đó là thứ định nghĩa các hành vi mới cho phương thức `filterApples`. Đáng tiếc là, vì phương thức `filterApples` chỉ có thể nhận vào các đối tượng, bạn phải bọc đoạn code đó bên trong một đối tượng `ApplePredicate`. Điều bạn đang làm tương tự như việc truyền code inline, bởi vì bạn đang truyền một biểu thức boolean thông qua một đối tượng cài đặt phương thức `test`. Bạn sẽ thấy ở mục 2.3 (và chi tiết hơn ở chương 3) rằng bằng cách dùng lambda, bạn có thể truyền trực tiếp biểu thức `RED.equals(apple.getColor()) && apple.getWeight() > 150` cho phương thức `filterApples` mà không cần phải định nghĩa nhiều class `ApplePredicate`. Điều này loại bỏ sự dài dòng không cần thiết.
 
 > **Hình 2.2.** Tham số hoá hành vi của filterApples và truyền vào các chiến lược lọc khác nhau
+>
+> ![Hình 2.2](images/ch02/hinh-2-2.jpg)
 
 **Nhiều hành vi, một tham số**
 
 Như chúng tôi đã giải thích ở trên, behavior parameterization rất tuyệt vì nó cho phép bạn tách bạch logic duyệt collection để lọc với hành vi cần áp dụng lên từng phần tử của collection đó. Hệ quả là, bạn có thể tái sử dụng cùng một phương thức và trao cho nó những hành vi khác nhau để đạt được những kết quả khác nhau, như minh hoạ trong hình 2.3. Đây chính là lý do behavior parameterization là một khái niệm hữu ích mà bạn nên có trong bộ công cụ của mình khi tạo ra các API linh hoạt.
 
 > **Hình 2.3.** Tham số hoá hành vi của filterApples và truyền vào các chiến lược lọc khác nhau
+>
+> ![Hình 2.3](images/ch02/hinh-2-3.jpg)
 
 Để chắc chắn rằng bạn đã thoải mái với ý tưởng behavior parameterization, hãy thử làm quiz 2.1!
 
@@ -444,6 +450,8 @@ List<Apple> result =
 Bạn phải thừa nhận rằng đoạn code này trông sạch hơn rất nhiều so với những nỗ lực trước đó của chúng ta! Nó tuyệt vời bởi vì nó đang bắt đầu trông gần với phát biểu bài toán hơn nhiều. Bây giờ chúng ta đã xử lý xong vấn đề dài dòng. Hình 2.4 tóm tắt hành trình của chúng ta cho tới giờ.
 
 > **Hình 2.4.** Behavior parameterization so với value parameterization
+>
+> ![Hình 2.4](images/ch02/hinh-2-4.jpg)
 
 ### 2.3.4. Nỗ lực thứ bảy: trừu tượng hoá trên kiểu List
 

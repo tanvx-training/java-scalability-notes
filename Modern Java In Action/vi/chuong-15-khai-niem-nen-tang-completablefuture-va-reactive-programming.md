@@ -18,6 +18,8 @@ Bạn có thể muốn xây dựng một website thu thập và tóm tắt cảm
 Tất nhiên, nếu bất kỳ dịch vụ mạng bên ngoài nào phản hồi chậm, bạn sẽ muốn cung cấp kết quả từng phần cho người dùng — có lẽ là hiển thị phần kết quả dạng văn bản cùng với một tấm bản đồ chung có dấu chấm hỏi trong đó, thay vì để màn hình trắng trơn cho tới khi máy chủ bản đồ phản hồi hoặc hết thời gian chờ. Hình 15.1 minh hoạ cách kiểu ứng dụng mashup này tương tác với các dịch vụ từ xa.
 
 > **Hình 15.1.** Một ứng dụng mashup điển hình
+>
+> ![Hình 15.1](images/ch15/hinh-15-1.jpg)
 
 Để hiện thực những ứng dụng như thế, bạn phải liên lạc với nhiều web service khác nhau qua Internet. Nhưng bạn không muốn chặn (block) các tính toán của mình và lãng phí hàng tỷ chu kỳ xung nhịp quý giá của CPU chỉ để chờ câu trả lời từ những dịch vụ đó. Chẳng hạn, bạn không nên phải chờ dữ liệu từ Facebook trước khi xử lý dữ liệu đến từ Twitter.
 
@@ -30,6 +32,8 @@ Java cung cấp hai bộ công cụ chính cho những hoàn cảnh như vậy. 
 Hình 15.2 minh hoạ sự khác biệt giữa concurrency và parallelism. Concurrency là một thuộc tính của chương trình (thực thi chồng lấn — overlapped execution), có thể xảy ra ngay cả trên một máy đơn core, trong khi parallelism là thuộc tính của phần cứng thực thi (thực thi đồng thời — simultaneous execution).
 
 > **Hình 15.2.** Concurrency so với parallelism
+>
+> ![Hình 15.2](images/ch15/hinh-15-2.jpg)
 
 Phần còn lại của chương này giải thích những ý tưởng nền tảng làm cơ sở cho các API mới CompletableFuture và Flow của Java.
 
@@ -135,6 +139,8 @@ Thread pool tốt hơn việc thao tác thread tường minh ở gần như mọ
 - Một thread pool với k thread chỉ có thể thực thi đồng thời k tác vụ. Mọi tác vụ gửi thêm sẽ được giữ trong một hàng đợi và không được cấp thread cho tới khi một trong các tác vụ hiện có hoàn thành. Tình huống này nói chung là tốt, ở chỗ nó cho phép bạn gửi nhiều tác vụ mà không vô tình tạo ra quá nhiều thread, nhưng bạn phải cảnh giác với những tác vụ ngủ hoặc chờ I/O hay chờ kết nối mạng. Trong bối cảnh I/O có chặn (blocking I/O), những tác vụ này chiếm dụng worker thread nhưng chẳng làm việc gì hữu ích trong lúc chờ. Hãy thử với bốn hardware thread và một thread pool kích thước 5, rồi gửi 20 tác vụ vào đó (hình 15.3). Bạn có thể trông đợi rằng các tác vụ sẽ chạy song song cho tới khi cả 20 hoàn thành. Nhưng giả sử ba trong số các tác vụ được gửi đầu tiên lại ngủ hoặc chờ I/O. Khi đó chỉ còn hai thread khả dụng cho 15 tác vụ còn lại, nên bạn chỉ đạt được một nửa throughput như mong đợi (và như bạn hẳn đã có nếu tạo thread pool với tám thread thay vì năm). Thậm chí có thể gây ra deadlock trong một thread pool nếu những tác vụ được gửi trước, hoặc những tác vụ đang chạy, cần chờ những tác vụ được gửi sau — đây vốn là một mẫu sử dụng điển hình của Future.
 
   > **Hình 15.3.** Các tác vụ đang ngủ làm giảm throughput của thread pool.
+  >
+  > ![Hình 15.3](images/ch15/hinh-15-3.jpg)
 
   Điều cần rút ra là hãy cố tránh gửi vào thread pool những tác vụ có thể bị chặn (ngủ hoặc chờ sự kiện), nhưng trong các hệ thống hiện hữu, không phải lúc nào bạn cũng làm được điều đó.
 
@@ -145,16 +151,22 @@ Thread pool tốt hơn việc thao tác thread tường minh ở gần như mọ
 Để giải thích vì sao các dạng concurrency dùng trong chương này khác với những dạng dùng ở chương 7 (xử lý parallel Stream và fork/join framework), chúng ta lưu ý rằng các dạng dùng ở chương 7 có một tính chất đặc biệt: bất cứ khi nào một tác vụ (hay thread) được khởi động bên trong một lời gọi phương thức, thì chính lời gọi phương thức đó sẽ chờ nó hoàn thành trước khi trả về. Nói cách khác, việc tạo thread và lời join() tương ứng diễn ra theo cách lồng nhau đúng đắn bên trong cấu trúc lồng gọi-trả về của các lời gọi phương thức. Ý tưởng này, gọi là strict fork/join, được minh hoạ ở hình 15.4.
 
 > **Hình 15.4.** Strict fork/join. Các mũi tên biểu thị thread, các hình tròn biểu thị fork và join, còn các hình chữ nhật biểu thị lời gọi và trả về của phương thức.
+>
+> ![Hình 15.4](images/ch15/hinh-15-4.jpg)
 
 Việc có một dạng fork/join nới lỏng hơn cũng tương đối vô hại, trong đó một tác vụ được sinh ra thoát khỏi một lời gọi phương thức bên trong nhưng được join ở một lời gọi bên ngoài, sao cho interface cung cấp cho người dùng vẫn trông như một lời gọi bình thường,[3] như thể hiện ở hình 15.5.
 
 > [3] Hãy so sánh với "Tư duy theo kiểu hàm" (chương 18), nơi chúng ta bàn về việc có một interface không có side effect cho một phương thức mà bên trong lại dùng side effect!
 
 > **Hình 15.5.** Fork/join nới lỏng
+>
+> ![Hình 15.5](images/ch15/hinh-15-5.jpg)
 
 Trong chương này, chúng ta tập trung vào những dạng concurrency phong phú hơn, trong đó các thread được tạo ra (hay các tác vụ được sinh ra) bởi một lời gọi phương thức của người dùng có thể sống lâu hơn chính lời gọi đó, như thể hiện ở hình 15.6.
 
 > **Hình 15.6.** Một phương thức asynchronous
+>
+> ![Hình 15.6](images/ch15/hinh-15-6.jpg)
 
 Kiểu phương thức này thường được gọi là phương thức asynchronous, đặc biệt khi tác vụ đang chạy được sinh ra vẫn tiếp tục làm những việc có ích cho bên gọi phương thức. Chúng ta sẽ khám phá các kỹ thuật của Java 8 và 9 để hưởng lợi từ những phương thức như vậy ở phần sau của chương, bắt đầu từ mục 15.2, nhưng trước hết hãy điểm qua các nguy cơ:
 
@@ -432,6 +444,8 @@ Khi xem những sự kiện này như một phần của API, điều quan trọ
 Thông thường, cách tốt nhất để thiết kế và tư duy về các hệ thống đồng thời là bằng hình ảnh. Chúng tôi gọi kỹ thuật này là mô hình box-and-channel. Hãy xét một tình huống đơn giản với các số nguyên, tổng quát hoá ví dụ trước đó về việc tính f(x) + g(x). Bây giờ bạn muốn gọi phương thức hoặc hàm p với đối số x, truyền kết quả của nó cho các hàm q1 và q2, gọi phương thức hoặc hàm r với kết quả của hai lời gọi này, rồi in ra kết quả. (Để tránh rối rắm trong phần giải thích này, chúng tôi sẽ không phân biệt giữa một phương thức m của class C và hàm C::m tương ứng của nó.) Về mặt hình ảnh, nhiệm vụ này rất đơn giản, như thể hiện ở hình 15.7.
 
 > **Hình 15.7.** Một sơ đồ box-and-channel đơn giản
+>
+> ![Hình 15.7](images/ch15/hinh-15-7.jpg)
 
 Hãy xem hai cách viết code cho hình 15.7 trong Java để thấy những vấn đề mà chúng gây ra. Cách thứ nhất là
 
@@ -579,6 +593,8 @@ public class CFCombine {
 Dòng thenCombine là mấu chốt: mà không cần biết gì về các phép tính trong Future a và b, nó tạo ra một phép tính được lập lịch để chạy trong thread pool chỉ khi cả hai phép tính đầu tiên đã hoàn thành. Phép tính thứ ba, c, cộng kết quả của chúng lại và (quan trọng nhất) không được xem là đủ điều kiện để thực thi trên một thread cho tới khi hai phép tính kia đã hoàn thành (thay vì bắt đầu thực thi sớm rồi bị block). Vì vậy, không có thao tác chờ thực sự nào được thực hiện — điều vốn gây phiền toái ở hai phiên bản trước của đoạn code này. Trong những phiên bản đó, nếu phép tính trong Future tình cờ kết thúc sau, thì hai thread trong thread pool vẫn đang hoạt động, dù bạn chỉ cần một! Hình 15.8 minh hoạ tình huống này bằng sơ đồ. Ở cả hai phiên bản trước, việc tính y+z diễn ra trên cùng một thread cố định đã tính f(x) hoặc g(x) — với một khoảng chờ tiềm tàng ở giữa. Ngược lại, việc dùng thenCombine lập lịch cho phép tính tổng chỉ sau khi cả f(x) và g(x) đều đã hoàn thành.
 
 > **Hình 15.8.** Sơ đồ thời gian thể hiện ba phép tính: f(x), g(x) và việc cộng kết quả của chúng
+>
+> ![Hình 15.8](images/ch15/hinh-15-8.jpg)
 
 Nói cho rõ, với nhiều đoạn code, bạn không cần bận tâm về chuyện một vài thread bị block chờ một lời get(), nên các Future trước Java 8 vẫn là những lựa chọn lập trình hợp lý. Tuy nhiên, trong một số tình huống, bạn muốn có một số lượng lớn Future (chẳng hạn để xử lý nhiều truy vấn tới các dịch vụ). Trong những trường hợp này, việc dùng CompletableFuture và các combinator của nó để tránh những lời gọi get() gây block cùng khả năng mất tính song song hoặc deadlock thường là giải pháp tốt nhất.
 
@@ -601,6 +617,8 @@ Java 9 mô hình hoá reactive programming bằng các interface có trong java.
 Hình 15.9 thể hiện ý tưởng này bằng hình ảnh, với subscription là các kênh và publisher cùng subscriber là các cổng trên những chiếc hộp. Nhiều thành phần có thể đăng ký vào cùng một publisher, một thành phần có thể publish nhiều stream riêng biệt, và một thành phần có thể đăng ký vào nhiều publisher. Trong mục tiếp theo, chúng tôi sẽ cho bạn thấy ý tưởng này hoạt động thế nào từng bước một, dùng thuật ngữ của interface Flow trong Java 9.
 
 > **Hình 15.9.** Mô hình publish-subscribe
+>
+> ![Hình 15.9](images/ch15/hinh-15-9.jpg)
 
 ### 15.5.1. Ví dụ sử dụng: cộng hai luồng dữ liệu
 

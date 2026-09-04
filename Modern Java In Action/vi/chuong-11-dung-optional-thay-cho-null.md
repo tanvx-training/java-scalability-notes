@@ -133,6 +133,8 @@ Các ngôn ngữ hàm khác, như Haskell và Scala, có góc nhìn khác. Haske
 Java 8 giới thiệu một class mới tên là `java.util.Optional<T>`, lấy cảm hứng từ Haskell và Scala. Class này đóng gói một giá trị optional. Ví dụ, nếu bạn biết rằng một người có thể không có xe, thì biến car bên trong class Person không nên được khai báo kiểu Car rồi gán null reference khi người đó không sở hữu xe; thay vào đó, nó nên có kiểu `Optional<Car>`, như minh hoạ trong hình 11.1.
 
 > **Hình 11.1.** Một Car dạng optional
+>
+> ![Hình 11.1](images/ch11/hinh-11-1.jpg)
 
 Khi một giá trị hiện diện, class Optional bọc nó lại. Ngược lại, sự vắng mặt của một giá trị được mô hình hoá bằng một optional rỗng do phương thức `Optional.empty` trả về. Phương thức static factory này trả về một thể hiện singleton đặc biệt của class Optional. Bạn có thể thắc mắc về sự khác biệt giữa một null reference và `Optional.empty()`. Về mặt ngữ nghĩa, chúng có thể được xem là cùng một thứ, nhưng trên thực tế, khác biệt là rất lớn. Cố gắng truy xuất một null luôn luôn gây ra NullPointerException, trong khi `Optional.empty()` là một đối tượng hợp lệ, dùng được, thuộc kiểu Optional và có thể được gọi theo những cách hữu ích. Bạn sẽ sớm thấy điều đó.
 
@@ -225,6 +227,8 @@ Optional<String> name = optInsurance.map(Insurance::getName);
 Phương thức này về mặt khái niệm tương tự phương thức map của Stream mà bạn đã thấy trong chương 4 và 5. Thao tác map áp dụng hàm được cung cấp lên mỗi phần tử của một stream. Bạn cũng có thể xem một đối tượng Optional như một tập hợp dữ liệu đặc biệt, chứa nhiều nhất một phần tử. Nếu Optional chứa một giá trị, hàm được truyền làm đối số cho map sẽ biến đổi giá trị đó. Nếu Optional rỗng, không có gì xảy ra. Hình 11.2 minh hoạ sự tương đồng này, cho thấy điều gì xảy ra khi bạn truyền một hàm biến hình vuông thành hình tam giác cho phương thức map của cả một stream các hình vuông lẫn một optional chứa hình vuông.
 
 > **Hình 11.2.** So sánh phương thức map của Stream và của Optional
+>
+> ![Hình 11.2](images/ch11/hinh-11-2.jpg)
 
 Ý tưởng này trông có vẻ hữu ích, nhưng làm sao bạn dùng nó để viết lại code trong listing 11.1,
 
@@ -253,12 +257,16 @@ Optional<String> name =
 Đáng tiếc, đoạn code này không biên dịch được. Tại sao? Biến optPerson có kiểu `Optional<Person>`, nên việc gọi phương thức map là hoàn toàn hợp lệ. Nhưng getCar trả về một đối tượng kiểu `Optional<Car>` (như trình bày trong listing 11.4), nghĩa là kết quả của thao tác map là một đối tượng kiểu `Optional<Optional<Car>>`. Kết quả là lời gọi getInsurance không hợp lệ vì optional ngoài cùng chứa bên trong nó một optional khác, và tất nhiên optional đó không hỗ trợ phương thức getInsurance. Hình 11.3 minh hoạ cấu trúc optional lồng nhau mà bạn sẽ nhận được.
 
 > **Hình 11.3.** Một optional hai tầng
+>
+> ![Hình 11.3](images/ch11/hinh-11-3.jpg)
 
 Bạn giải quyết vấn đề này như thế nào? Một lần nữa, bạn có thể nhìn vào một khuôn mẫu mà bạn đã dùng trước đây với stream: phương thức flatMap. Với stream, phương thức flatMap nhận một hàm làm đối số và trả về một stream khác. Hàm này được áp dụng lên mỗi phần tử của một stream, tạo ra một stream của các stream. Nhưng flatMap có tác dụng thay thế mỗi stream được sinh ra bằng chính nội dung của stream đó. Nói cách khác, tất cả các stream riêng lẻ được sinh ra bởi hàm sẽ được hợp nhất, hay làm phẳng (flatten), thành một stream duy nhất. Ở đây bạn muốn điều gì đó tương tự, nhưng bạn muốn làm phẳng một optional hai tầng thành một tầng.
 
 Giống như hình 11.2 làm với phương thức map, hình 11.4 minh hoạ những điểm tương đồng giữa phương thức flatMap của class Stream và của class Optional.
 
 > **Hình 11.4.** So sánh phương thức flatMap của Stream và của Optional
+>
+> ![Hình 11.4](images/ch11/hinh-11-4.jpg)
 
 Ở đây, hàm được truyền cho phương thức flatMap của stream biến mỗi hình vuông thành một stream khác chứa hai hình tam giác. Khi đó kết quả của một phép map đơn thuần là một stream chứa ba stream khác, mỗi stream có hai hình tam giác, nhưng phương thức flatMap làm phẳng stream hai tầng này thành một stream duy nhất chứa tổng cộng sáu hình tam giác. Theo cách tương tự, hàm được truyền cho phương thức flatMap của optional biến hình vuông chứa trong optional gốc thành một optional chứa một hình tam giác. Nếu hàm này được truyền cho phương thức map, kết quả sẽ là một optional chứa một optional khác, mà optional đó lại chứa một hình tam giác, nhưng phương thức flatMap làm phẳng optional hai tầng này thành một optional duy nhất chứa một hình tam giác.
 
@@ -288,6 +296,8 @@ Một lần nữa, cách tiếp cận này cho phép bạn làm tường minh th
 Bắt đầu từ `Optional<Person>` này, Car lấy từ Person, Insurance lấy từ Car, và String chứa tên công ty bảo hiểm lấy từ Insurance đều được truy xuất bằng cách kết hợp các phương thức map và flatMap đã giới thiệu ở phần trước của chương này. Hình 11.5 minh hoạ pipeline các thao tác này.
 
 > **Hình 11.5.** Chuỗi truy xuất Person/Car/Insurance bằng optional
+>
+> ![Hình 11.5](images/ch11/hinh-11-5.jpg)
 
 Ở đây, bạn bắt đầu với optional bọc Person và gọi `flatMap(Person::getCar)` trên nó. Như chúng tôi đã nói, bạn có thể hình dung lời gọi này về mặt logic là điều gì đó xảy ra qua hai bước. Ở bước 1, một Function được áp dụng lên Person bên trong optional để biến đổi nó. Trong trường hợp này, Function được biểu diễn bằng một method reference gọi phương thức getCar trên Person đó. Vì phương thức đó trả về một `Optional<Car>`, Person bên trong optional được biến đổi thành một thể hiện của kiểu đó, tạo ra một optional hai tầng và optional này được làm phẳng như một phần của thao tác flatMap. Từ góc nhìn lý thuyết, bạn có thể nghĩ về thao tác làm phẳng này như thao tác kết hợp hai optional lồng nhau, cho ra một optional rỗng nếu ít nhất một trong hai là rỗng. Điều thực sự xảy ra là nếu bạn gọi flatMap trên một optional rỗng, không có gì thay đổi và optional rỗng được trả về nguyên trạng. Ngược lại, nếu optional bọc một Person, Function được truyền cho phương thức flatMap sẽ được áp dụng lên Person đó. Vì giá trị do việc áp dụng Function tạo ra vốn đã là một optional, phương thức flatMap có thể trả về nó nguyên trạng.
 

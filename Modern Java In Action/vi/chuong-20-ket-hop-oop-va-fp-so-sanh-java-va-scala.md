@@ -173,6 +173,8 @@ val linesLongUpper
 ```
 
 > **Hình 20.1.** Các thao tác kiểu stream với `List` của Scala
+>
+> ![Hình 20.1](images/ch20/hinh-20-1.jpg)
 
 Đừng bận tâm về dòng đầu tiên, dòng này biến một file thành một danh sách các chuỗi tương ứng với các dòng trong file (tương tự những gì `Files.readAllLines` cung cấp trong Java). Dòng thứ hai tạo ra một pipeline gồm hai thao tác:
 

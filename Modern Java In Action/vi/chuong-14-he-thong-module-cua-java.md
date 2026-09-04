@@ -38,6 +38,8 @@ Information hiding là nguyên tắc khuyến khích che giấu các chi tiết 
 Hai nguyên tắc này là nền tảng trong bất kỳ phần mềm nào được thiết kế tốt. Chúng khớp với các tính năng của ngôn ngữ Java ra sao? Java là một ngôn ngữ hướng đối tượng, và bạn làm việc với class và interface. Bạn làm cho code của mình có tính module bằng cách gom nhóm các package, class và interface cùng giải quyết một mối quan tâm cụ thể. Trên thực tế, việc suy luận trực tiếp trên code thô có phần hơi trừu tượng. Vì vậy, các công cụ như sơ đồ UML (hoặc đơn giản hơn là các hộp và mũi tên) giúp bạn suy luận về phần mềm bằng cách biểu diễn trực quan các phụ thuộc giữa các phần trong code. Hình 14.1 minh hoạ một sơ đồ UML cho một ứng dụng quản lý hồ sơ người dùng đã được phân rã thành ba mối quan tâm cụ thể.
 
 > **Hình 14.1.** Ba mối quan tâm riêng biệt cùng các phụ thuộc giữa chúng
+>
+> ![Hình 14.1](images/ch14/hinh-14-1.jpg)
 
 Còn information hiding thì sao? Trong Java, bạn đã quen với việc dùng các modifier khả kiến để kiểm soát truy cập tới phương thức, trường và class: `public`, `protected`, mức package, và `private`. Tuy nhiên, như chúng tôi sẽ làm rõ ở mục tiếp theo, độ chi tiết của chúng không đủ mịn trong nhiều trường hợp, và bạn có thể bị buộc phải khai báo một phương thức là `public` ngay cả khi bạn không hề muốn nó truy cập được bởi người dùng cuối. Mối lo này không quá lớn trong những ngày đầu của Java, khi ứng dụng và các chuỗi phụ thuộc còn tương đối nhỏ. Giờ đây, khi nhiều ứng dụng Java đã trở nên lớn, vấn đề này trở nên quan trọng hơn. Thật vậy, nếu bạn thấy một trường hay một phương thức `public` trong một class, có lẽ bạn cảm thấy mình có quyền sử dụng nó (đúng không?), ngay cả khi người thiết kế coi nó chỉ dành cho việc dùng riêng giữa một vài class của chính anh ta!
 
@@ -120,10 +122,14 @@ Một module descriptor mô tả và đóng gói một hoặc nhiều package (v
 Cấu trúc lõi của một module descriptor trong Java được minh hoạ ở hình 14.2.
 
 > **Hình 14.2.** Cấu trúc lõi của một module descriptor trong Java (`module-info.java`)
+>
+> ![Hình 14.2](images/ch14/hinh-14-2.jpg)
 
 Sẽ hữu ích nếu bạn nghĩ về phần `exports` và `requires` của một module lần lượt giống như các mấu lồi (lugs hay tabs) và các lỗ khuyết của một mảnh ghép jigsaw (có lẽ đây chính là nguồn gốc của tên gọi trong quá trình phát triển: Project Jigsaw). Hình 14.3 minh hoạ một ví dụ với vài module.
 
 > **Hình 14.3.** Ví dụ theo kiểu ghép hình jigsaw về một hệ thống Java được xây dựng từ bốn module (A, B, C, D). Module A yêu cầu module B và C phải có mặt, và nhờ đó có quyền truy cập vào các package `pkgB` và `pkgC` (lần lượt được export bởi module B và C). Module C cũng có thể tương tự sử dụng package `pkgD` mà nó đã require từ module C, nhưng module B thì không thể dùng `pkgD`.
+>
+> ![Hình 14.3](images/ch14/hinh-14-3.jpg)
 
 Khi bạn dùng các công cụ như Maven, phần lớn chi tiết của mô tả module được IDE xử lý và được che giấu khỏi người dùng.
 

@@ -62,6 +62,8 @@ Sự khác biệt giữa phiên bản mệnh lệnh và phiên bản hàm của 
 Nhận xét cuối cùng này dẫn đến một lợi ích điển hình khác của một API hàm được thiết kế tốt: mức độ dễ kết hợp (composability) và tái sử dụng (reusability) cao. Collector cực kỳ hữu ích, bởi vì chúng cung cấp một cách ngắn gọn nhưng linh hoạt để định nghĩa tiêu chí mà `collect` dùng để tạo ra collection kết quả. Cụ thể hơn, việc gọi phương thức `collect` trên một stream sẽ kích hoạt một phép reduction (được tham số hoá bởi một `Collector`) trên chính các phần tử của stream đó. Phép reduction này, được minh hoạ ở hình 6.1, thực hiện giúp bạn ở bên trong đúng những gì bạn đã phải viết bằng phong cách mệnh lệnh ở listing 6.1. Nó duyệt qua từng phần tử của stream và để cho `Collector` xử lý chúng.
 
 > **Hình 6.1.** Quá trình reduction nhóm các giao dịch theo loại tiền tệ
+>
+> ![Hình 6.1](images/ch06/hinh-6-1.jpg)
 
 Thông thường, `Collector` áp dụng một hàm biến đổi (transforming function) lên phần tử. Khá thường xuyên, đây là phép biến đổi đồng nhất (identity transformation), tức là không có tác dụng gì (ví dụ như trong `toList`). Sau đó hàm này tích luỹ kết quả vào một cấu trúc dữ liệu tạo thành đầu ra cuối cùng của quá trình. Chẳng hạn, trong ví dụ nhóm giao dịch đã trình bày ở trên, hàm biến đổi trích xuất loại tiền tệ từ mỗi giao dịch, và sau đó bản thân giao dịch được tích luỹ vào `Map` kết quả, sử dụng loại tiền tệ làm khoá.
 
@@ -144,6 +146,8 @@ int totalCalories = menu.stream().collect(summingInt(Dish::getCalories));
 Ở đây quá trình thu thập diễn ra như minh hoạ ở hình 6.2. Trong khi duyệt stream, mỗi món ăn được ánh xạ thành số calo của nó, và số đó được cộng vào một bộ tích luỹ (accumulator) khởi đầu từ một giá trị ban đầu (trong trường hợp này giá trị đó là 0).
 
 > **Hình 6.2.** Quá trình tổng hợp của collector `summingInt`
+>
+> ![Hình 6.2](images/ch06/hinh-6-2.jpg)
 
 Các phương thức `Collectors.summingLong` và `Collectors.summingDouble` hoạt động y hệt như vậy và có thể được dùng khi trường cần cộng tổng lần lượt là kiểu `long` hoặc `double`.
 
@@ -261,6 +265,8 @@ Bạn có thể xem collector được tạo bằng factory method `reducing` m�
 > Về mặt logic, phép reduction này diễn ra như minh hoạ ở hình 6.3, trong đó một accumulator — được khởi tạo bằng một giá trị khởi đầu — được kết hợp lặp đi lặp lại bằng một hàm gộp, với kết quả của việc áp dụng hàm biến đổi lên từng phần tử của stream.
 >
 > > **Hình 6.3.** Quá trình reduction tính tổng số calo trong thực đơn
+> >
+> > ![Hình 6.3](images/ch06/hinh-6-3.jpg)
 >
 > Collector `counting` mà chúng ta đã đề cập ở đầu mục 6.2 thực chất cũng được cài đặt tương tự bằng factory method `reducing` ba đối số. Nó biến đổi mỗi phần tử trong stream thành một đối tượng kiểu `Long` có giá trị 1 rồi cộng tất cả những số 1 này lại. Nó được cài đặt như sau:
 >
@@ -352,6 +358,8 @@ Kết quả sẽ là `Map` sau:
 Ở đây, bạn truyền cho phương thức `groupingBy` một `Function` (được biểu diễn dưới dạng một method reference) trích xuất `Dish.Type` tương ứng cho mỗi `Dish` trong stream. Chúng ta gọi `Function` này là một hàm phân loại (classification function), chính xác là vì nó được dùng để phân loại các phần tử của stream vào những nhóm khác nhau. Kết quả của phép grouping này, được minh hoạ ở hình 6.4, là một `Map` có khoá là giá trị do hàm phân loại trả về, và giá trị tương ứng là danh sách tất cả các phần tử trong stream mang giá trị phân loại đó. Trong ví dụ phân loại thực đơn, một khoá là kiểu của món ăn, và giá trị của nó là danh sách chứa tất cả các món ăn thuộc kiểu đó.
 
 > **Hình 6.4.** Việc phân loại một phần tử trong stream trong quá trình grouping
+>
+> ![Hình 6.4](images/ch06/hinh-6-4.jpg)
 
 Nhưng không phải lúc nào cũng có thể dùng một method reference làm hàm phân loại, bởi bạn có thể muốn phân loại theo một tiêu chí phức tạp hơn là một accessor thuộc tính đơn giản. Chẳng hạn, bạn có thể quyết định phân loại là "diet" tất cả những món có từ 400 calo trở xuống, đặt là "normal" những món có từ 400 đến 700 calo, và đặt là "fat" những món có hơn 700 calo. Bởi vì tác giả của lớp `Dish` đã không cung cấp sẵn một phép toán như vậy dưới dạng phương thức, bạn không thể dùng method reference trong trường hợp này, nhưng bạn có thể diễn đạt logic đó bằng một lambda expression:
 
@@ -474,6 +482,8 @@ Kết quả của phép nhóm hai tầng này là một `Map` hai tầng như sa
 Hình 6.5 cho thấy cấu trúc này cũng tương đương với một bảng n chiều, làm nổi bật mục đích phân loại của phép grouping.
 
 > **Hình 6.5.** Sự tương đương giữa map lồng nhau n tầng và bảng phân loại n chiều
+>
+> ![Hình 6.5](images/ch06/hinh-6-5.jpg)
 
 Nói chung, sẽ dễ hình dung nếu ta nghĩ rằng `groupingBy` hoạt động theo kiểu "các rổ" (bucket). `groupingBy` đầu tiên tạo một rổ cho mỗi khoá. Sau đó bạn thu thập các phần tử trong mỗi rổ bằng collector phía dưới (downstream collector) và cứ thế tiếp tục để đạt được phép nhóm n tầng!
 
@@ -543,6 +553,8 @@ Việc dùng nhiều collector lồng nhau là khá phổ biến, và ban đầu
 - Ba giá trị đã được biến đổi, chính là các `Dish` nhiều calo nhất cho từng kiểu (thu được từ việc thực thi quá trình này trên mỗi stream con trong ba stream con), sẽ là các giá trị gắn với những khoá phân loại tương ứng — các kiểu `Dish` — trong `Map` do collector `groupingBy` trả về.
 
 > **Hình 6.6.** Kết hợp tác dụng của nhiều collector bằng cách lồng cái này vào trong cái kia
+>
+> ![Hình 6.6](images/ch06/hinh-6-6.jpg)
 
 > **Các ví dụ khác về collector được dùng kết hợp với groupingBy**
 >
@@ -849,6 +861,8 @@ public Function<List<T>, List<T>> finisher() {
 Ba phương thức đầu tiên này đã đủ để thực thi một phép reduction tuần tự trên stream mà, ít nhất từ góc nhìn logic, có thể diễn ra như ở hình 6.7. Chi tiết cài đặt trong thực tế thì khó khăn hơn một chút, do cả bản chất lười (lazy) của stream — vốn có thể đòi hỏi một pipeline các intermediate operation khác phải được thực thi trước phép `collect` — lẫn khả năng, về lý thuyết, thực hiện phép reduction song song.
 
 > **Hình 6.7.** Các bước logic của quá trình reduction tuần tự
+>
+> ![Hình 6.7](images/ch06/hinh-6-7.jpg)
 
 **Gộp hai container kết quả: phương thức combiner**
 
@@ -869,6 +883,8 @@ Việc bổ sung phương thức thứ tư này cho phép thực hiện phép re
 - Cuối cùng, tất cả các kết quả từng phần được kết hợp từng cặp bằng hàm do phương thức `combiner` của collector trả về. Việc này được thực hiện bằng cách kết hợp các kết quả tương ứng với những stream con gắn với mỗi lần chia của stream ban đầu.
 
 > **Hình 6.8.** Song song hoá quá trình reduction bằng phương thức combiner
+>
+> ![Hình 6.8](images/ch06/hinh-6-8.jpg)
 
 **Phương thức characteristics**
 

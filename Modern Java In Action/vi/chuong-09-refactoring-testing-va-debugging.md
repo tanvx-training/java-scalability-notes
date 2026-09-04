@@ -312,6 +312,8 @@ Pattern Strategy gồm ba phần, như minh hoạ ở hình 9.1:
 - Một hoặc nhiều client sử dụng các đối tượng strategy
 
 > **Hình 9.1.** Design pattern Strategy
+>
+> ![Hình 9.1](images/ch09/hinh-9-1.jpg)
 
 Giả sử bạn muốn kiểm tra xem một văn bản đầu vào có được định dạng đúng theo các tiêu chí khác nhau hay không (chẳng hạn chỉ gồm chữ thường, hoặc là số). Bạn bắt đầu bằng việc định nghĩa một interface để kiểm tra hợp lệ văn bản (được biểu diễn dưới dạng String):
 
@@ -423,6 +425,8 @@ Ví dụ này cho thấy lambda expression có thể giúp bạn loại bỏ ph�
 Design pattern Observer là một giải pháp phổ biến khi một đối tượng (gọi là subject) cần tự động thông báo cho một danh sách các đối tượng khác (gọi là observer) khi một sự kiện nào đó xảy ra (chẳng hạn một thay đổi trạng thái). Bạn thường bắt gặp pattern này khi làm việc với các ứng dụng GUI. Bạn đăng ký một tập các observer lên một thành phần GUI, chẳng hạn một nút bấm. Nếu nút được nhấn, các observer sẽ được thông báo và có thể thực thi một hành động cụ thể. Nhưng pattern Observer không chỉ giới hạn ở GUI. Design pattern Observer cũng phù hợp trong tình huống mà nhiều nhà giao dịch (observer) muốn phản ứng với sự thay đổi giá của một cổ phiếu (subject). Hình 9.2 minh hoạ sơ đồ UML của pattern Observer.
 
 > **Hình 9.2.** Design pattern Observer
+>
+> ![Hình 9.2](images/ch09/hinh-9-2.jpg)
 
 Bây giờ hãy viết một chút code để thấy pattern Observer hữu ích như thế nào trong thực tế. Bạn sẽ thiết kế và cài đặt một hệ thống thông báo tuỳ biến cho một ứng dụng như Twitter. Ý tưởng rất đơn giản: một số hãng báo (The New York Times, The Guardian và Le Monde) đăng ký nhận một luồng tin tweet tin tức và có thể muốn nhận được thông báo nếu một tweet chứa một từ khoá cụ thể.
 
@@ -548,6 +552,8 @@ public abstract class ProcessingObject<T> {
 Hình 9.3 minh hoạ pattern Chain of Responsibility dưới dạng UML.
 
 > **Hình 9.3.** Design pattern Chain of Responsibility
+>
+> ![Hình 9.3](images/ch09/hinh-9-3.jpg)
 
 Ở đây, có thể bạn nhận ra design pattern Template Method mà chúng ta đã thảo luận ở mục 9.2.2. Phương thức handle cung cấp khung sườn cho việc xử lý một phần công việc. Bạn có thể tạo ra những loại đối tượng xử lý khác nhau bằng cách kế thừa class ProcessingObject và cung cấp phần cài đặt cho phương thức handleWork.
 
@@ -899,6 +905,8 @@ numbers.stream()
 Phép toán stream peek có thể giúp ích. Mục đích của peek là thực thi một hành động lên từng phần tử của stream khi phần tử đó được tiêu thụ. Tuy nhiên, nó không tiêu thụ toàn bộ stream theo cách mà forEach làm; nó chuyển tiếp phần tử mà nó vừa thực hiện hành động lên đó sang phép toán kế tiếp trong pipeline. Hình 9.4 minh hoạ phép toán peek.
 
 > **Hình 9.4.** Kiểm tra các giá trị chảy qua một stream pipeline bằng peek
+>
+> ![Hình 9.4](images/ch09/hinh-9-4.jpg)
 
 Trong đoạn code sau, bạn dùng peek để in ra các giá trị trung gian trước và sau mỗi phép toán trong stream pipeline:
 

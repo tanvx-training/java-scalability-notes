@@ -77,6 +77,8 @@ Lập trình hướng đối tượng trở thành thời thượng vào thập 
 Nhưng khí hậu của hệ sinh thái ngôn ngữ lập trình đang thay đổi; lập trình viên ngày càng phải xử lý cái gọi là dữ liệu lớn (big data — những tập dữ liệu cỡ terabyte trở lên) và mong muốn khai thác hiệu quả các máy tính multicore hay các cụm máy tính để xử lý chúng. Và điều này nghĩa là phải dùng xử lý song song — thứ mà trước đây Java không hề thân thiện. Có thể bạn đã bắt gặp những ý tưởng từ các ngách lập trình khác (ví dụ, map-reduce của Google hay sự dễ dàng tương đối trong thao tác dữ liệu bằng các ngôn ngữ truy vấn cơ sở dữ liệu như SQL) giúp bạn làm việc với khối lượng dữ liệu lớn và với CPU multicore. Hình 1.1 tóm tắt hệ sinh thái ngôn ngữ bằng hình ảnh: hãy hình dung cảnh quan là không gian các bài toán lập trình, và thảm thực vật chiếm ưu thế trên một mảnh đất cụ thể là ngôn ngữ được ưa chuộng cho loại chương trình đó. Biến đổi khí hậu là ý tưởng rằng phần cứng mới hoặc những ảnh hưởng lập trình mới (ví dụ, "Tại sao tôi không thể lập trình theo phong cách giống SQL?") khiến những ngôn ngữ khác nhau trở thành lựa chọn hàng đầu cho các dự án mới, y như việc nhiệt độ vùng miền tăng lên khiến nho giờ đây phát triển tốt ở các vĩ độ cao hơn. Nhưng vẫn có độ trễ (hysteresis) — nhiều bác nông dân già vẫn sẽ tiếp tục trồng những cây truyền thống. Tóm lại, các ngôn ngữ mới đang xuất hiện và ngày càng phổ biến vì chúng đã thích nghi nhanh chóng với sự biến đổi khí hậu ấy.
 
 > **Hình 1.1.** Hệ sinh thái ngôn ngữ lập trình và sự biến đổi khí hậu
+>
+> ![Hình 1.1](images/ch01/hinh-1-1.jpg)
 
 Lợi ích chính của những bổ sung trong Java 8 đối với một lập trình viên là chúng cung cấp thêm nhiều công cụ và khái niệm lập trình để giải quyết các bài toán lập trình mới hoặc đã có một cách nhanh hơn, hoặc quan trọng hơn, theo một cách ngắn gọn hơn và dễ bảo trì hơn. Mặc dù các khái niệm này là mới đối với Java, chúng đã chứng tỏ sức mạnh trong những ngôn ngữ mang tính nghiên cứu ở các ngách hẹp. Trong các mục tiếp theo, chúng tôi sẽ làm nổi bật và phát triển những ý tưởng đứng sau ba khái niệm lập trình đã thúc đẩy sự phát triển các tính năng của Java 8 nhằm khai thác parallelism và viết code ngắn gọn hơn nói chung. Chúng tôi sẽ giới thiệu chúng theo một thứ tự hơi khác so với phần còn lại của cuốn sách, để có thể dùng một phép so sánh dựa trên Unix và để phơi bày những phụ thuộc kiểu "cần cái này vì cái kia" trong cơ chế parallelism mới cho multicore của Java 8.
 
@@ -101,6 +103,8 @@ câu lệnh này (giả sử `file1` và `file2` chứa mỗi dòng một từ) 
 > **[3]** Những người theo chủ nghĩa thuần tuý sẽ nói đó là một "stream các ký tự", nhưng về mặt khái niệm thì đơn giản hơn nếu nghĩ rằng `sort` sắp xếp lại các dòng.
 
 > **Hình 1.2.** Các lệnh Unix thao tác trên stream
+>
+> ![Hình 1.2](images/ch01/hinh-1-2.jpg)
 
 Java 8 bổ sung một Streams API (chú ý chữ S viết hoa) trong `java.util.stream` dựa trên ý tưởng này; `Stream<T>` là một dãy các mục có kiểu `T`. Bạn có thể tạm nghĩ về nó như một iterator hào nhoáng. Streams API có nhiều phương thức có thể được nối chuỗi (chain) lại để tạo thành một pipeline phức tạp, đúng như cách các lệnh Unix được nối chuỗi trong ví dụ trước.
 
@@ -115,6 +119,8 @@ Ví dụ, giả sử bạn có một tập hợp các mã hoá đơn với đị
 Giờ đây, song song trực tiếp trong Java, bạn muốn bảo một phương thức sort so sánh bằng một thứ tự tuỳ chỉnh. Bạn có thể viết một phương thức `compareUsingCustomerId` để so sánh hai mã hoá đơn, nhưng trước Java 8 bạn không thể truyền phương thức này cho một phương thức khác! Bạn có thể tạo một đối tượng `Comparator` để truyền cho phương thức sort như chúng tôi đã trình bày ở đầu chương này, nhưng cách đó dài dòng và làm mờ đi ý tưởng đơn giản là tái sử dụng một mẩu hành vi đã có. Java 8 bổ sung khả năng truyền các phương thức (code của bạn) làm đối số cho những phương thức khác. Hình 1.3, dựa trên hình 1.2, minh hoạ ý tưởng này. Về mặt khái niệm, chúng ta cũng gọi điều này là behavior parameterization. Tại sao nó lại quan trọng? Streams API được xây dựng trên chính ý tưởng truyền code để tham số hoá hành vi của các thao tác của nó, y như cách bạn truyền `compareUsingCustomerId` để tham số hoá hành vi của `sort`.
 
 > **Hình 1.3.** Truyền phương thức `compareUsingCustomerId` làm đối số cho `sort`
+>
+> ![Hình 1.3](images/ch01/hinh-1-3.jpg)
 
 Chúng tôi tóm tắt cách hoạt động của cơ chế này trong mục 1.3 của chương này, nhưng để dành đầy đủ chi tiết cho các chương 2 và 3. Các chương 18 và 19 xem xét những điều nâng cao hơn mà bạn có thể làm với tính năng này, với các kỹ thuật từ cộng đồng functional programming.
 
@@ -173,6 +179,8 @@ Chà! Ngầu quá phải không? Bạn đã có sẵn hàm `isHidden`, nên bạ
 Đây là một chút nếm thử về những gì sắp tới: phương thức không còn là giá trị hạng hai nữa. Tương tự việc dùng một tham chiếu đối tượng khi bạn truyền một đối tượng đi khắp nơi (và tham chiếu đối tượng được tạo bằng `new`), trong Java 8 khi bạn viết `File::isHidden`, bạn tạo ra một method reference, thứ cũng có thể được truyền đi tương tự. Khái niệm này được bàn chi tiết trong chương 3. Vì phương thức chứa code (phần thân thực thi được của một phương thức), việc dùng method reference cho phép truyền code đi khắp nơi như trong hình 1.3. Hình 1.4 minh hoạ khái niệm này. Bạn cũng sẽ thấy một ví dụ cụ thể (chọn táo từ một kho hàng) trong mục tiếp theo.
 
 > **Hình 1.4.** Truyền method reference `File::isHidden` cho phương thức `listFiles`
+>
+> ![Hình 1.4](images/ch01/hinh-1-4.jpg)
 
 > **Lambda: những hàm vô danh**
 >
@@ -363,10 +371,14 @@ Vấn đề là việc khai thác parallelism bằng cách viết code đa luồ
 > **[7]** A ha — một nguồn áp lực buộc ngôn ngữ phải tiến hoá!
 
 > **Hình 1.5.** Một vấn đề có thể xảy ra với hai thread cùng cố cộng vào một biến `sum` dùng chung. Kết quả là 105 thay vì kết quả mong đợi là 108.
+>
+> ![Hình 1.5](images/ch01/hinh-1-5.jpg)
 
 Java 8 cũng giải quyết cả hai vấn đề (code khuôn mẫu và sự tối nghĩa khi xử lý collection, cùng với khó khăn trong việc khai thác multicore) bằng Streams API (`java.util.stream`). Động lực thiết kế đầu tiên là có rất nhiều mẫu xử lý dữ liệu (tương tự `filterApples` ở mục trước, hay những thao tác quen thuộc từ các ngôn ngữ truy vấn cơ sở dữ liệu như SQL) lặp đi lặp lại nhiều lần và sẽ có lợi nếu trở thành một phần của thư viện: lọc dữ liệu dựa trên một tiêu chí (ví dụ, những quả táo nặng), trích xuất dữ liệu (ví dụ, trích ra trường trọng lượng từ mỗi quả táo trong một danh sách), hoặc nhóm dữ liệu (ví dụ, nhóm một danh sách các số thành những danh sách riêng gồm số chẵn và số lẻ), và cứ thế. Động lực thứ hai là những thao tác như vậy thường có thể được song song hoá. Chẳng hạn, như minh hoạ trong hình 1.6, việc lọc một danh sách trên hai CPU có thể được thực hiện bằng cách yêu cầu một CPU xử lý nửa đầu của danh sách và CPU thứ hai xử lý nửa còn lại. Đây được gọi là bước fork (1). Các CPU sau đó lọc nửa danh sách tương ứng của chúng (2). Cuối cùng (3), một CPU sẽ nối hai kết quả lại. (Điều này có liên hệ mật thiết với cách tìm kiếm của Google hoạt động nhanh đến vậy, sử dụng nhiều hơn hai bộ xử lý rất nhiều.)
 
 > **Hình 1.6.** Fork thao tác `filter` lên hai CPU rồi nối kết quả lại
+>
+> ![Hình 1.6](images/ch01/hinh-1-6.jpg)
 
 Còn bây giờ, chúng tôi chỉ nói rằng Streams API mới hành xử tương tự như Collections API sẵn có của Java: cả hai đều cung cấp quyền truy cập vào các dãy mục dữ liệu. Nhưng lúc này sẽ hữu ích nếu bạn ghi nhớ rằng Collections chủ yếu là về việc lưu trữ và truy cập dữ liệu, trong khi Streams chủ yếu là về việc mô tả các phép tính trên dữ liệu. Điểm mấu chốt ở đây là Streams API cho phép và khuyến khích các phần tử bên trong một stream được xử lý song song. Mặc dù thoạt đầu điều này có vẻ lạ lùng, nhưng thường thì cách nhanh nhất để lọc một collection (ví dụ, dùng `filterApples` ở mục trước trên một danh sách) lại là chuyển nó thành một stream, xử lý song song, rồi chuyển ngược lại thành một danh sách. Một lần nữa, chúng tôi chỉ nói "parallelism gần như miễn phí" và cho bạn nếm thử cách bạn có thể lọc những quả táo nặng từ một danh sách theo kiểu tuần tự hoặc song song bằng stream và một lambda expression.
 

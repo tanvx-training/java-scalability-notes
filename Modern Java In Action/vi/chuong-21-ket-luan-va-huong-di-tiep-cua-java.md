@@ -317,6 +317,8 @@ Bạn có thể cho phép các value type do người dùng định nghĩa (có 
 Ngoài ra, value type có thể giảm bớt nhu cầu lưu trữ vì chúng không có định danh tham chiếu. Hình 21.1 minh hoạ một mảng kích thước ba, có các phần tử 0, 1 và 2 lần lượt mang màu xám nhạt, trắng và xám đậm. Sơ đồ bên trái cho thấy nhu cầu lưu trữ điển hình khi `Pair` và `Complex` là Object, còn sơ đồ bên phải cho thấy bố cục tốt hơn khi `Pair` và `Complex` là value type. Lưu ý rằng chúng tôi gọi chúng là `pair` và `complex` viết thường trong sơ đồ để nhấn mạnh sự tương đồng của chúng với các primitive type. Cũng lưu ý rằng value type nhiều khả năng sẽ cho hiệu năng tốt hơn, không chỉ đối với việc truy cập dữ liệu (nhiều tầng con trỏ gián tiếp được thay bằng một lệnh định địa chỉ theo chỉ số duy nhất), mà còn đối với việc sử dụng cache phần cứng (nhờ tính liền kề của dữ liệu).
 
 > **Hình 21.1.** Object so với value type
+>
+> ![Hình 21.1](images/ch21/hinh-21-1.jpg)
 
 Lưu ý rằng vì value type không có định danh tham chiếu, compiler có thể tuỳ ý box và unbox chúng. Nếu bạn truyền một `complex` làm đối số từ một hàm này sang một hàm khác, compiler có thể truyền nó một cách tự nhiên dưới dạng hai giá trị `double` riêng biệt. (Tất nhiên, việc trả về nó mà không boxing thì phức tạp hơn trong JVM, bởi JVM chỉ cung cấp các lệnh trả về từ phương thức cho những giá trị biểu diễn được trong một thanh ghi máy 64 bit.) Nhưng nếu bạn truyền một value type lớn hơn làm đối số (chẳng hạn một mảng immutable lớn), compiler có thể thay vào đó truyền nó dưới dạng tham chiếu sau khi đã box nó, một cách trong suốt với người dùng. Công nghệ tương tự đã tồn tại trong C#. Microsoft nói (https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/value-types):
 
@@ -335,6 +337,8 @@ Chúng ta muốn có value type trong Java vì các chương trình theo phong c
 Vì những lý do này, người ta đã quyết định rằng từ nay trở đi, Java sẽ có chu kỳ phát triển sáu tháng. Nói cách khác, một phiên bản chính mới của Java và JVM sẽ xuất hiện sau mỗi sáu tháng, với Java 10 phát hành vào tháng 3 năm 2018 và Java 11 dự kiến vào tháng 9 năm 2018. Các kiến trúc sư Java cũng nhận ra rằng mặc dù chu kỳ phát triển nhanh hơn này có lợi cho bản thân ngôn ngữ, và cũng có lợi cho các công ty theo hướng agile cùng những lập trình viên quen với việc liên tục thử nghiệm công nghệ mới, nó lại có thể gây khó khăn cho các tổ chức bảo thủ hơn, vốn thường cập nhật phần mềm của họ với nhịp độ chậm hơn. Vì lý do đó, các kiến trúc sư Java cũng quyết định rằng cứ ba năm một lần, sẽ có một bản phát hành hỗ trợ dài hạn (long-term support — LTS) được hỗ trợ trong ba năm tiếp theo. Java 9 không phải là bản phát hành LTS, nên nó được coi là đã kết thúc vòng đời khi Java 10 ra mắt. Điều tương tự sẽ xảy ra với Java 10. Ngược lại, Java 11 sẽ là một phiên bản LTS, với kế hoạch phát hành vào tháng 9 năm 2018 và được hỗ trợ đến tháng 9 năm 2021. Hình 21.2 cho thấy vòng đời của các phiên bản Java được lên kế hoạch phát hành trong vài năm tới.
 
 > **Hình 21.2.** Vòng đời của các bản phát hành Java trong tương lai
+>
+> ![Hình 21.2](images/ch21/hinh-21-2.jpg)
 
 Chúng tôi hết sức đồng cảm với quyết định trao cho Java một chu kỳ phát triển ngắn hơn, đặc biệt là trong thời buổi ngày nay, khi mọi hệ thống phần mềm và ngôn ngữ đều phải cải tiến nhanh hết mức có thể. Một chu kỳ phát triển ngắn hơn giúp Java tiến hoá với tốc độ phù hợp và cho phép ngôn ngữ này giữ được tính thời sự và phù hợp trong những năm sắp tới.
 

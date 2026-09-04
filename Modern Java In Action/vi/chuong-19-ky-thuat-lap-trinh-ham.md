@@ -25,6 +25,8 @@ Function<String, Integer> strToInt = Integer::parseInt;
 Cho đến giờ, bạn chủ yếu mới tận dụng việc giá trị hàm là first-class để truyền chúng vào các thao tác xử lý stream của Java 8 (như trong các chương 4–7) và để đạt được hiệu quả tương tự behavior parameterization (tham số hoá hành vi) khi bạn truyền `Apple::isGreenApple` như một giá trị hàm vào `filterApples` ở các chương 1 và 2. Một ví dụ thú vị khác là việc dùng static method `Comparator.comparing`, phương thức này nhận vào một hàm làm tham số và trả về một hàm khác (một `Comparator`), như minh hoạ trong đoạn code dưới đây và hình 19.1:
 
 > **Hình 19.1.** `comparing` nhận một hàm làm tham số và trả về một hàm khác.
+>
+> ![Hình 19.1](images/ch19/hinh-19-1.jpg)
 
 ```java
 Comparator<Apple> c = comparing(Apple::getWeight);
@@ -177,8 +179,12 @@ static TrainJourney append(TrainJourney a, TrainJourney b) {
 Đoạn code này rõ ràng theo phong cách hàm (không dùng phép biến đổi trạng thái, kể cả cục bộ) và không sửa đổi bất kỳ cấu trúc dữ liệu sẵn có nào. Tuy nhiên, hãy lưu ý rằng đoạn code này không tạo ra một `TrainJourney` hoàn toàn mới. Nếu `a` là một dãy gồm `n` phần tử và `b` là một dãy gồm `m` phần tử, đoạn code trả về một dãy gồm `n+m` phần tử, trong đó `n` phần tử đầu tiên là các node mới còn `m` phần tử cuối cùng được chia sẻ với `TrainJourney b`. Lưu ý rằng người dùng có nghĩa vụ không được thay đổi kết quả của `append`, vì nếu làm vậy họ có thể làm hỏng các chuyến tàu được truyền vào ở dãy `b`. Các hình 19.2 và 19.3 minh hoạ sự khác biệt giữa `append` phá huỷ và `append` theo phong cách hàm.
 
 > **Hình 19.2.** Cấu trúc dữ liệu bị cập nhật một cách phá huỷ.
+>
+> ![Hình 19.2](images/ch19/hinh-19-2.jpg)
 
 > **Hình 19.3.** Phong cách hàm không hề sửa đổi cấu trúc dữ liệu.
+>
+> ![Hình 19.3](images/ch19/hinh-19-3.jpg)
 
 ### 19.2.2. Một ví dụ khác với Tree
 
@@ -259,6 +265,8 @@ Chúng tôi viết đoạn code này dưới dạng một biểu thức điều 
 Sự khác biệt giữa `update` và `fupdate` là gì? Trước đó chúng ta đã lưu ý rằng phương thức `update` giả định mọi người dùng đều muốn chia sẻ cấu trúc dữ liệu và nhìn thấy những cập nhật do bất kỳ phần nào của chương trình gây ra. Vì vậy, trong code phi hàm, điều tối quan trọng (nhưng thường bị bỏ qua) là mỗi khi bạn thêm một giá trị có cấu trúc nào đó vào một cây, bạn phải sao chép nó, bởi sau này có ai đó có thể cho rằng anh ta được phép cập nhật nó. Ngược lại, `fupdate` hoàn toàn thuần hàm; nó tạo ra một `Tree` mới làm kết quả nhưng chia sẻ nhiều nhất có thể với đối số của nó. Hình 19.4 minh hoạ ý tưởng này. Bạn có một cây gồm các node lưu tên và tuổi của một người. Việc gọi `fupdate` không sửa đổi cây hiện có; nó tạo ra những node mới "sống ở bên cạnh" cây mà không làm tổn hại đến cấu trúc dữ liệu sẵn có.
 
 > **Hình 19.4.** Không có cấu trúc dữ liệu sẵn có nào bị tổn hại trong quá trình thực hiện phép cập nhật này lên `Tree`.
+>
+> ![Hình 19.4](images/ch19/hinh-19-4.jpg)
 
 Những cấu trúc dữ liệu theo lối hàm như vậy thường được gọi là *persistent* — các giá trị của chúng tồn tại bền vững và được cô lập khỏi những thay đổi xảy ra ở nơi khác — nên với tư cách lập trình viên, bạn chắc chắn rằng `fupdate` sẽ không thay đổi các cấu trúc dữ liệu được truyền vào làm đối số. Có một điều kiện đi kèm: phía bên kia của thoả thuận đòi hỏi tất cả người dùng của persistent data structure phải tuân thủ yêu cầu không-được-thay-đổi. Nếu không, một lập trình viên phớt lờ điều kiện này có thể thay đổi kết quả của `fupdate` (chẳng hạn bằng cách sửa số 20 của Emily). Khi đó, sự thay đổi này sẽ hiện ra như một biến đổi bất ngờ và bị trì hoãn (và gần như chắc chắn là không mong muốn) đối với cấu trúc dữ liệu được truyền vào làm đối số cho `fupdate`!
 
@@ -382,6 +390,8 @@ Stream trong Java 8 thường được mô tả là *lazy* (lười biếng). Ch
 Trong mục này, bạn sẽ xem xét khái niệm lazy list, vốn là những dạng của một stream tổng quát hơn. (Lazy list là một khái niệm tương tự stream.) Lazy list cũng là một cách tuyệt vời để tư duy về higher-order function. Bạn đặt một giá trị hàm vào bên trong một cấu trúc dữ liệu để phần lớn thời gian nó cứ nằm im ở đó mà không được dùng đến, nhưng khi nó được gọi (theo yêu cầu), nó có thể tạo ra thêm phần nữa của cấu trúc dữ liệu. Hình 19.5 minh hoạ ý tưởng này.
 
 > **Hình 19.5.** Các phần tử của một `LinkedList` tồn tại (được trải ra) trong bộ nhớ. Nhưng các phần tử của một `LazyList` được tạo ra theo yêu cầu bởi một `Function`; bạn có thể coi chúng như được trải ra theo thời gian.
+>
+> ![Hình 19.5](images/ch19/hinh-19-5.jpg)
 
 Tiếp theo, bạn sẽ thấy khái niệm này hoạt động ra sao. Bạn muốn sinh ra một danh sách vô hạn các số nguyên tố bằng thuật toán mà chúng ta đã mô tả trước đó.
 

@@ -97,8 +97,16 @@ Nếu chú thích dài, đặt comment ở dòng riêng phía trên.
 - Khối "This chapter covers" → `> **Nội dung chương này**` + danh sách gạch đầu dòng.
 - Mục `2.1.` → `## 2.1. ...`; `2.1.1.` → `### 2.1.1. ...`. Giữ nguyên hệ thống đánh số gốc.
 - Bảng gốc → bảng markdown.
-- Hình ảnh: bản gốc là PDF nên không có file ảnh. Với mỗi hình, chèn dòng:
-  `> **Hình N.M.** <chú thích hình đã dịch>` và giữ lại phần mô tả nội dung hình nếu có trong text.
+- Hình ảnh: đã trích xuất từ PDF gốc vào `images/chNN/hinh-N-M.jpg`. Với mỗi hình, chèn
+  dòng chú thích rồi tới ảnh, cùng mức thụt lề/blockquote với đoạn văn chứa nó:
+
+  ```
+  > **Hình N.M.** <chú thích hình đã dịch>
+  >
+  > ![Hình N.M](images/chNN/hinh-N-M.jpg)
+  ```
+
+  Giữ lại phần mô tả nội dung hình nếu có trong text.
 - Khung "Quiz N.M" → dùng `> [!NOTE]`-style blockquote hoặc `---` + `**Quiz N.M: ...**`,
   nhất quán trong cả file. Phần "Answer" giữ nguyên vị trí như bản gốc.
 - Sidebar/Note/Warning → blockquote `>`.

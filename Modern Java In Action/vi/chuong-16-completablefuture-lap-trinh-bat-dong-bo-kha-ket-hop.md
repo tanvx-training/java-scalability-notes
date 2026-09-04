@@ -44,6 +44,8 @@ try {
 Như minh hoạ trong hình 16.1, phong cách lập trình này cho phép thread của bạn thực hiện một số tác vụ khác trong khi thao tác kéo dài được thực thi đồng thời trong một thread riêng do ExecutorService cung cấp. Sau đó, khi bạn không thể làm bất kỳ việc có ý nghĩa nào khác mà không có kết quả của thao tác bất đồng bộ đó, bạn có thể lấy nó về từ Future bằng cách gọi phương thức get. Phương thức này trả về ngay lập tức kết quả của thao tác nếu nó đã hoàn tất, hoặc block thread của bạn để chờ cho tới khi kết quả sẵn sàng.
 
 > **Hình 16.1.** Sử dụng một Future để thực thi một thao tác dài theo cách bất đồng bộ
+>
+> ![Hình 16.1](images/ch16/hinh-16-1.jpg)
 
 Hãy chú ý tới vấn đề trong kịch bản này. Điều gì xảy ra nếu thao tác dài đó không bao giờ trả về? Để xử lý khả năng này, hầu như luôn luôn là một ý hay khi dùng phiên bản hai đối số của get, phiên bản này nhận một timeout chỉ định khoảng thời gian tối đa (cùng với đơn vị thời gian của nó) mà thread của bạn sẵn lòng chờ đợi kết quả của Future (như trong listing 16.1). Ngược lại, phiên bản không đối số của get sẽ chờ vô hạn.
 
@@ -370,6 +372,8 @@ Lưu ý rằng bạn dùng hai pipeline stream riêng biệt thay vì đặt hai
 Nửa trên của hình 16.2 cho thấy việc xử lý stream với một pipeline duy nhất hàm ý rằng thứ tự đánh giá (được nhận diện bởi đường chấm chấm) là tuần tự. Thực tế, một CompletableFuture mới chỉ được tạo ra sau khi cái trước đó đã được đánh giá hoàn toàn. Ngược lại, nửa dưới của hình minh hoạ việc trước tiên gom các CompletableFuture vào một danh sách (được biểu diễn bằng hình bầu dục) cho phép tất cả chúng khởi động trước khi chờ chúng hoàn tất.
 
 > **Hình 16.2.** Vì sao tính lazy của Stream gây ra một phép tính tuần tự và làm sao để tránh điều đó
+>
+> ![Hình 16.2](images/ch16/hinh-16-2.jpg)
 
 Chạy đoạn code trong listing 16.11 để kiểm tra hiệu năng của phiên bản thứ ba này của phương thức findPrices, bạn có thể thu được đầu ra đại loại như sau:
 
@@ -637,6 +641,8 @@ public List<String> findPrices(String product) {
 Lần này mọi thứ trông có vẻ phức tạp hơn một chút, nên hãy cố hiểu chuyện gì đang xảy ra theo từng bước. Hình 16.3 mô tả trình tự của ba phép biến đổi này.
 
 > **Hình 16.3.** Kết hợp các thao tác đồng bộ và các task bất đồng bộ
+>
+> ![Hình 16.3](images/ch16/hinh-16-3.jpg)
 
 Bạn đang thực hiện đúng ba thao tác map như trong giải pháp đồng bộ ở listing 16.15, nhưng bạn làm cho các thao tác đó trở nên bất đồng bộ khi cần, bằng cách dùng tính năng do lớp CompletableFuture cung cấp.
 
@@ -698,6 +704,8 @@ Future<Double> futurePriceInUSD =
 Ở đây, bởi vì thao tác kết hợp chỉ là một phép nhân đơn giản, việc thực hiện nó trong một task riêng sẽ là lãng phí tài nguyên, nên bạn cần dùng phương thức thenCombine thay vì biến thể bất đồng bộ thenCombineAsync của nó. Hình 16.4 cho thấy cách các task được tạo ra trong listing 16.17 được thực thi trên các thread khác nhau của pool và cách kết quả của chúng được kết hợp.
 
 > **Hình 16.4.** Kết hợp hai task bất đồng bộ độc lập
+>
+> ![Hình 16.4](images/ch16/hinh-16-4.jpg)
 
 ### 16.4.5. Suy ngẫm về Future và CompletableFuture
 

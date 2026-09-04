@@ -52,6 +52,8 @@ Bạn phải thừa nhận rằng code trông rõ ràng hơn hẳn! Đừng lo n
 Lambda mà chúng tôi vừa cho bạn xem gồm ba phần, như minh hoạ ở hình 3.1:
 
 > **Hình 3.1.** Một lambda expression gồm các tham số, một mũi tên, và một thân hàm.
+>
+> ![Hình 3.1](images/ch03/hinh-3-1.jpg)
 
 - **Danh sách tham số** — Trong trường hợp này nó phản chiếu các tham số của phương thức `compare` của một `Comparator` — hai đối tượng `Apple`.
 - **Một mũi tên** — Mũi tên `->` ngăn cách danh sách tham số với thân của lambda.
@@ -323,6 +325,8 @@ Ví dụ thứ ba không hợp lệ vì lambda expression `(Apple a) -> a.getWei
 Hãy xem một ví dụ về cách lambda, cùng với behavior parameterization, có thể được dùng trong thực tế để làm cho code của bạn linh hoạt và ngắn gọn hơn. Một mẫu hình lặp đi lặp lại trong việc xử lý tài nguyên (ví dụ, làm việc với file hoặc cơ sở dữ liệu) là mở một tài nguyên, thực hiện một số xử lý trên nó, rồi đóng tài nguyên đó lại. Các giai đoạn thiết lập và dọn dẹp luôn giống nhau và bao quanh phần code quan trọng thực hiện việc xử lý. Đây được gọi là **execute-around pattern**, như minh hoạ ở hình 3.2. Ví dụ, trong đoạn code sau, những dòng được tô sáng là code khuôn mẫu (boilerplate) cần thiết để đọc một dòng từ một file (cũng lưu ý rằng bạn dùng câu lệnh try-with-resources của Java 7, vốn đã giúp đơn giản hoá code, bởi vì bạn không phải đóng tài nguyên một cách tường minh):
 
 > **Hình 3.2.** Tác vụ A và tác vụ B được bao quanh bởi code khuôn mẫu chịu trách nhiệm chuẩn bị/dọn dẹp.
+>
+> ![Hình 3.2](images/ch03/hinh-3-2.jpg)
 
 ```java
 public String processFile() throws IOException {
@@ -397,6 +401,8 @@ String twoLines =
 Hình 3.3 tóm tắt bốn bước đã thực hiện để làm cho phương thức `processFile` linh hoạt hơn.
 
 > **Hình 3.3.** Quy trình bốn bước để áp dụng execute-around pattern
+>
+> ![Hình 3.3](images/ch03/hinh-3-3.jpg)
 
 Chúng tôi đã chỉ cho bạn cách tận dụng functional interface để truyền lambda. Nhưng bạn đã phải tự định nghĩa interface của riêng mình. Ở mục kế tiếp, chúng ta khám phá những interface mới được thêm vào Java 8 mà bạn có thể tái sử dụng để truyền nhiều lambda khác nhau.
 
@@ -611,6 +617,8 @@ Khi lần đầu đề cập tới lambda expression, chúng tôi đã nói rằ
 Kiểu của một lambda được suy ra từ ngữ cảnh trong đó lambda được sử dụng. Kiểu được mong đợi cho lambda expression bên trong ngữ cảnh đó (ví dụ, một tham số phương thức mà nó được truyền vào, hoặc một biến cục bộ mà nó được gán cho) được gọi là **target type**. Hãy xem một ví dụ để thấy điều gì xảy ra ở phía sau hậu trường khi bạn dùng một lambda expression. Hình 3.4 tóm tắt quá trình kiểm tra kiểu cho đoạn code sau:
 
 > **Hình 3.4.** Phân tách quá trình kiểm tra kiểu của một lambda expression
+>
+> ![Hình 3.4](images/ch03/hinh-3-4.jpg)
 
 ```java
 List<Apple> heavierThan150g =
@@ -837,6 +845,8 @@ filter(words, this::isValidName)
 Để giúp bạn tiêu hoá kiến thức mới này, các quy tắc viết tắt để refactor một lambda expression thành một method reference tương đương tuân theo những công thức đơn giản, được trình bày ở hình 3.5.
 
 > **Hình 3.5.** Các công thức xây dựng method reference cho ba loại lambda expression khác nhau
+>
+> ![Hình 3.5](images/ch03/hinh-3-5.jpg)
 
 Lưu ý rằng cũng có những dạng đặc biệt của method reference dành cho constructor, constructor mảng, và lời gọi `super`. Hãy áp dụng method reference vào một ví dụ cụ thể. Giả sử bạn muốn sắp xếp một `List` các chuỗi, bỏ qua sự khác biệt chữ hoa chữ thường. Phương thức `sort` trên một `List` mong đợi một `Comparator` làm tham số. Bạn đã thấy trước đó rằng `Comparator` mô tả một function descriptor với chữ ký `(T, T) -> int`. Bạn có thể định nghĩa một lambda expression dùng phương thức `compareToIgnoreCase` trong class `String` như sau (lưu ý rằng `compareToIgnoreCase` đã được định nghĩa sẵn trong class `String`):
 
@@ -1191,6 +1201,8 @@ int result = h.apply(1);    // Kết quả trả về là 3.
 Hình 3.6 minh hoạ sự khác biệt giữa `andThen` và `compose`.
 
 > **Hình 3.6.** Dùng `andThen` so với `compose`
+>
+> ![Hình 3.6](images/ch03/hinh-3-6.jpg)
 
 Tất cả những điều này nghe có vẻ hơi trừu tượng. Làm sao bạn có thể dùng chúng trong thực tế? Giả sử bạn có nhiều phương thức tiện ích thực hiện các phép biến đổi văn bản trên một lá thư được biểu diễn dưới dạng một `String`:
 
@@ -1213,6 +1225,8 @@ public class Letter {
 Bây giờ bạn có thể tạo ra nhiều pipeline biến đổi khác nhau bằng cách kết hợp các phương thức tiện ích này. Ví dụ, tạo một pipeline trước tiên thêm header, sau đó kiểm tra chính tả, và cuối cùng thêm footer, như minh hoạ dưới đây (và như được thể hiện ở hình 3.7):
 
 > **Hình 3.7.** Một pipeline biến đổi sử dụng `andThen`
+>
+> ![Hình 3.7](images/ch03/hinh-3-7.jpg)
 
 ```java
 Function<String, String> addHeader = Letter::addHeader;
@@ -1244,6 +1258,8 @@ Khi đó, một câu hỏi thường được đặt ra (ở trường học và
 cho phần diện tích được thể hiện ở hình 3.8.
 
 > **Hình 3.8.** Diện tích bên dưới hàm f(x) = x + 10 với x chạy từ 3 đến 7
+>
+> ![Hình 3.8](images/ch03/hinh-3-8.jpg)
 
 Trong ví dụ này, hàm `f` là một đường thẳng, và vì vậy bạn có thể dễ dàng tính ra diện tích này bằng phương pháp hình thang (vẽ các tam giác và hình chữ nhật) để tìm ra lời giải:
 
