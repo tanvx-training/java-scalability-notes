@@ -17,6 +17,7 @@ Mọi task đều ngầm chịu các ràng buộc sau. Đọc kỹ trước khi 
 - **Mọi `id` là khoá localStorage lưu tiến độ người dùng — không bao giờ đổi sau khi đã commit.** Áp dụng cho `mjia-01`…`mjia-21`, `mj-w1`…`mj-w12`, `mj-w1-1`…`mj-w12-4`, và mọi id sẵn có của lĩnh vực khác.
 - **Không viết bất biến mới trong `check-data.mjs`.** Chỉ mở rộng bảng `EXPECTED.counts`. Không nới, không thêm allowlist, không sửa bất biến hiện có — kể cả khi dữ liệu mới bị nó chặn.
 - **Không copy `.pdf` sang `webapp/content/`.** PDF ở lại repo làm nguồn đối chiếu.
+- **Không sửa đường dẫn ảnh trong markdown.** 100 ảnh được nhúng bằng đường dẫn tương đối `images/chNN/hinh-N-M.jpg`; thư mục `images/` di chuyển cùng các tệp `.md`, nên không tham chiếu nào cần đụng tới. Nếu thấy mình đang sửa một đường dẫn ảnh, nghĩa là `git mv` đã sai — quay lại sửa chỗ đó.
 - **Không sửa view nào** (`webapp/js/views/*.js`) ngoài một dòng chú thích ở `views/roadmap.js` (Task 8).
 - **Không thêm link `#/docs/<id>` xuyên lĩnh vực.** Bất biến #3b quét cả `week.resources[].href` lẫn `item.lesson`. Liên kết từ lĩnh vực khác sang MJIA chỉ ở mức track (`#/roadmap/modern-java`).
 - **Ngôn ngữ nội dung: tiếng Việt.** Thuật ngữ kỹ thuật giữ nguyên tiếng Anh khi sách giữ nguyên (lambda, stream, collector, functional interface, default method, module, backpressure…) — đúng quy ước ghi trong `modern-java-vi/QUY-TAC-DICH.md`.
@@ -41,20 +42,22 @@ Lý do: khai 48 từ đầu khiến `check-data.mjs` đỏ liên tục suốt 4 
 
 ## Bảng phân bổ tổng — tham chiếu nhanh
 
-| Tuần | Chương | Mục | Task |
-|---|---|---:|---|
-| `mj-w1` | ch.1 + ch.2 | 4 | Task 3 |
-| `mj-w2` | ch.3 | 4 | Task 3 |
-| `mj-w3` | ch.4 + ch.5 | 5 | Task 3 |
-| `mj-w4` | ch.6 | 4 | Task 4 |
-| `mj-w5` | ch.7 + ch.8 | 4 | Task 4 |
-| `mj-w6` | ch.9 + ch.10 | 4 | Task 4 |
-| `mj-w7` | ch.11 + ch.12 | 4 | Task 5 |
-| `mj-w8` | ch.13 + ch.14 | 4 | Task 5 |
-| `mj-w9` | ch.15 | 3 | Task 5 |
-| `mj-w10` | ch.16 | 4 | Task 6 |
-| `mj-w11` | ch.17 + ch.18 | 4 | Task 6 |
-| `mj-w12` | ch.19 + ch.20 + ch.21 | 4 | Task 6 |
+| Tuần | Chương | Số từ | Ảnh | Mục | Task |
+|---|---|---:|---:|---:|---|
+| `mj-w1` | ch.1 + ch.2 | 18.693 | 10 | 4 | Task 3 |
+| `mj-w2` | ch.3 | 14.269 | 8 | 4 | Task 3 |
+| `mj-w3` | ch.4 + ch.5 | 20.333 | 14 | 5 | Task 3 |
+| `mj-w4` | ch.6 | 15.047 | 8 | 4 | Task 4 |
+| `mj-w5` | ch.7 + ch.8 | 16.748 | 7 | 4 | Task 4 |
+| `mj-w6` | ch.9 + ch.10 | 22.454 | 4 | 4 | Task 4 |
+| `mj-w7` | ch.11 + ch.12 | 17.427 | 6 | 4 | Task 5 |
+| `mj-w8` | ch.13 + ch.14 | 16.027 | 11 | 4 | Task 5 |
+| `mj-w9` | ch.15 | 13.823 | 9 | 3 | Task 5 |
+| `mj-w10` | ch.16 | 12.714 | 4 | 4 | Task 6 |
+| `mj-w11` | ch.17 + ch.18 | 18.523 | 11 | 4 | Task 6 |
+| `mj-w12` | ch.19 + ch.20 + ch.21 | 26.884 | 8 | 4 | Task 6 |
+
+Tổng: **212.942 từ / 100 ảnh**. Hai chương không có hình: ch.8 và ch.10.
 
 `mjiaWeeksPart1` = tuần 1–6 = **25 mục** · `mjiaWeeksPart2` = tuần 7–12 = **23 mục** · tổng **48**.
 
@@ -65,13 +68,13 @@ Lý do: khai 48 từ đầu khiến `check-data.mjs` đỏ liên tục suốt 4 
 ## Task 1: Chuẩn hoá nguồn sang `modern-java-vi/` và nối vào build
 
 **Files:**
-- Rename: `Modern Java In Action/vi/` → `modern-java-vi/` (21 `.md` + `README.md` + `QUY-TAC-DICH.md`)
+- Rename: `Modern Java In Action/vi/` → `modern-java-vi/` (21 `.md` + `README.md` + `QUY-TAC-DICH.md` + `images/` với 100 ảnh)
 - Rename: `Modern Java In Action/*.pdf` → `modern-java-vi/NN-slug.pdf` (21 tệp)
 - Modify: `webapp/build-content.sh`
 
 **Interfaces:**
 - Consumes: không có (task đầu tiên).
-- Produces: 21 tệp markdown tại `modern-java-vi/NN-slug.md`; sau khi chạy build, nội dung có mặt tại `webapp/content/mjia/`. Task 2 tham chiếu chúng qua `file: "content/mjia/NN-slug.md"`.
+- Produces: 21 tệp markdown tại `modern-java-vi/NN-slug.md` và 100 ảnh tại `modern-java-vi/images/chNN/`; sau khi chạy build, nội dung có mặt tại `webapp/content/mjia/` và `webapp/content/mjia/images/`. Task 2 tham chiếu chúng qua `file: "content/mjia/NN-slug.md"`.
 
 - [ ] **Step 1: Xác nhận không nơi nào tham chiếu đường dẫn cũ**
 
@@ -90,7 +93,9 @@ git mv "Modern Java In Action/vi" modern-java-vi
 ls modern-java-vi
 ```
 
-Kỳ vọng: 21 tệp `chuong-*.md` + `README.md` + `QUY-TAC-DICH.md`.
+Kỳ vọng: 21 tệp `chuong-*.md` + `README.md` + `QUY-TAC-DICH.md` + thư mục `images`.
+
+Thư mục `images/` **phải** đi cùng trong bước này — đường dẫn ảnh trong markdown là tương đối (`images/ch02/hinh-2-2.jpg`), nên chỉ cần nó nằm cạnh các tệp `.md` là không tham chiếu nào gãy và không phải sửa một ký tự nội dung nào.
 
 - [ ] **Step 3: Bỏ tiền tố `chuong-` khỏi 21 tệp markdown**
 
@@ -144,39 +149,59 @@ diff <(ls modern-java-vi/*.md  | sed 's#.*/##; s#\.md$##'  | grep -E '^[0-9]{2}-
 
 Kỳ vọng: in ra `OK — 21 cặp khớp slug`, không dòng `<`/`>` nào.
 
-- [ ] **Step 6: Xác nhận markdown không tham chiếu ảnh nào**
+- [ ] **Step 6: Kiểm toàn vẹn ảnh — 100 tệp, 0 tham chiếu gãy, 0 mồ côi**
 
 ```bash
-grep -c '!\[' modern-java-vi/*.md | grep -v ':0$' || echo "OK — không tệp nào chứa ảnh"
+cd modern-java-vi
+echo "tệp ảnh: $(find images -type f | wc -l | tr -d ' ')"
+miss=0
+for ref in $(grep -ho '](images/[^)]*)' [0-9][0-9]-*.md | sed 's#](##; s#)##' | sort -u); do
+  [ -f "$ref" ] || { echo "THIẾU: $ref"; miss=$((miss+1)); }
+done
+orph=0
+for f in $(find images -type f | sort); do
+  grep -qF "$f" [0-9][0-9]-*.md || { echo "MỒ CÔI: $f"; orph=$((orph+1)); }
+done
+echo "gãy: $miss | mồ côi: $orph"
+cd ..
 ```
 
-Kỳ vọng: in ra `OK — không tệp nào chứa ảnh`. Nếu có tệp nào ra khác 0, dừng lại — `build-content.sh` sẽ cần thêm dòng copy ảnh và spec §3 phải sửa.
+Kỳ vọng chính xác: `tệp ảnh: 100` và `gãy: 0 | mồ côi: 0`.
+
+**Glob phải là `[0-9][0-9]-*.md`, không phải `*.md`.** `README.md` và `QUY-TAC-DICH.md` mô tả quy ước bằng đường dẫn mẫu `images/chNN/hinh-N-M.jpg`, không phải tham chiếu thật — quét cả chúng sẽ báo một `THIẾU` giả. (Bất biến #2b của `check-data.mjs` không dính bẫy này vì nó chỉ quét các tệp được khai trong `docs-index.js`, tức 21 chương.)
+
+Nếu `tệp ảnh` ra 0: thư mục `images/` đã bị bỏ lại ở `Modern Java In Action/` — quay lại Step 2. Nếu có dòng `THIẾU` trỏ vào một `hinh-N-M` cụ thể: tham chiếu thật bị gãy, bất biến #2b sẽ đỏ ở Task 2 — dừng lại và báo, **không tự tạo ảnh thay thế**.
 
 - [ ] **Step 7: Nối vào `build-content.sh`**
 
-Trong `webapp/build-content.sh`, sửa lệnh `mkdir -p` (thêm `"$DEST/mjia"` vào cuối danh sách):
+Trong `webapp/build-content.sh`, sửa lệnh `mkdir -p` (thêm `"$DEST/mjia/images"` vào cuối danh sách):
 
 ```bash
 mkdir -p "$DEST/java" "$DEST/images" "$DEST/sysprog/images" \
          "$DEST/k8sbook/images" "$DEST/springsec" "$DEST/senior" \
-         "$DEST/modconc/images" "$DEST/ddia/images" "$DEST/mjia"
+         "$DEST/modconc/images" "$DEST/ddia/images" "$DEST/mjia/images"
 ```
 
-Và thêm **một** dòng `cp` vào cuối tệp, sau dòng `ddia-vi/images`:
+Và thêm **hai** dòng `cp` vào cuối tệp, sau dòng `ddia-vi/images` — đúng khuôn đã dùng cho `modconc` và `ddia`:
 
 ```bash
 cp    "$REPO"/modern-java-vi/*.md                        "$DEST/mjia/"
+cp -R "$REPO"/modern-java-vi/images/.                    "$DEST/mjia/images/"
 ```
-
-Không có dòng `cp -R images` — sách không có hình (đã xác nhận ở Step 6).
 
 - [ ] **Step 8: Chạy build và đếm tệp đích**
 
 ```bash
-./webapp/build-content.sh webapp/content && ls webapp/content/mjia | wc -l
+./webapp/build-content.sh webapp/content
+echo "mục trong content/mjia: $(ls webapp/content/mjia | wc -l | tr -d ' ')"
+echo "ảnh đã copy: $(find webapp/content/mjia/images -type f | wc -l | tr -d ' ')"
 ```
 
-Kỳ vọng: `23` (21 chương + `README.md` + `QUY-TAC-DICH.md`). Hai tệp thừa là vô hại và có tiền lệ ở `content/modconc/`: không bản ghi `docs` nào trỏ vào chúng, và bất biến #2 chỉ kiểm chiều "doc đã khai thì tệp phải tồn tại".
+Kỳ vọng chính xác: `mục trong content/mjia: 24` (21 chương + `README.md` + `QUY-TAC-DICH.md` + thư mục `images`) và `ảnh đã copy: 100`.
+
+Hai tệp `.md` thừa là vô hại và có tiền lệ ở `content/modconc/`: không bản ghi `docs` nào trỏ vào chúng, và bất biến #2 chỉ kiểm chiều "doc đã khai thì tệp phải tồn tại".
+
+Nếu `ảnh đã copy` ra 0: dòng `cp -R` ở Step 7 chưa ăn.
 
 - [ ] **Step 9: Chạy checker để xác nhận không hồi quy**
 
@@ -190,7 +215,7 @@ Kỳ vọng: **XANH** — chưa khai lĩnh vực nào nên chưa có gì để �
 
 ```bash
 git add -A modern-java-vi webapp/build-content.sh
-git commit -m "chore: chuẩn hoá nguồn Modern Java in Action thành modern-java-vi/ và nối vào build-content"
+git commit -m "chore: chuẩn hoá nguồn Modern Java in Action thành modern-java-vi/ (21 chương, 100 ảnh) và nối vào build-content"
 ```
 
 ---
@@ -461,7 +486,9 @@ Trong `webapp/js/data/docs-index.js`, thêm vào cuối mảng `docs` (sau nhóm
 ./webapp/build-content.sh webapp/content && node webapp/check-data.mjs
 ```
 
-Kỳ vọng: **XANH toàn bộ**. Các bất biến phải thấy xanh ở đây: `docs:modern-java` = 21, #1 (id duy nhất), #2 (21 tệp tồn tại trên đĩa), N3 (`EXPECTED.counts` phủ mọi lĩnh vực khai module), `FIELD_ORDER` khớp `FIELDS` 1-1, #7/#7b (module ↔ dữ liệu hai chiều).
+Kỳ vọng: **XANH toàn bộ**. Các bất biến phải thấy xanh ở đây: `docs:modern-java` = 21, #1 (id duy nhất), #2 (21 tệp tồn tại trên đĩa), **#2b (100 ảnh trong markdown tồn tại trên đĩa)**, N3 (`EXPECTED.counts` phủ mọi lĩnh vực khai module), `FIELD_ORDER` khớp `FIELDS` 1-1, #7/#7b (module ↔ dữ liệu hai chiều).
+
+#2b là bất biến đáng theo dõi nhất đợt này — nó đỏ nghĩa là `cp -R images` ở Task 1 Step 7 thiếu, hoặc `build-content.sh` chưa chạy lại sau khi sửa.
 
 Nếu #7b đỏ với thông báo về module `roadmap`: nghĩa là đã lỡ khai `"roadmap"` trong `modules` ở Step 3 — bỏ nó ra, việc đó thuộc Task 7.
 
@@ -473,8 +500,9 @@ Nếu #7b đỏ với thông báo về module `roadmap`: nghĩa là đã lỡ kh
 
 Mở trình duyệt, chọn lĩnh vực **Modern Java in Action** ở sidebar. Xác nhận:
 1. Bảng điều khiển hiện 21 tài liệu, không hiện mục "Lộ trình học" (chưa bật).
-2. Mở `MJIA 06 — Thu thập dữ liệu với stream` và `MJIA 16 — CompletableFuture` — hai chương nhiều code nhất. Xác nhận highlight cú pháp Java chạy và mục lục nổi dựng đúng các mục `6.1`…`6.6` / `16.1`…`16.6`.
-3. Chân sidebar hiện liên kết `dev.java`.
+2. Mở `MJIA 05 — Làm việc với stream` (9 ảnh) và `MJIA 15 — Khái niệm nền tảng của CompletableFuture` (9 ảnh) — hai chương nhiều hình nhất. Xác nhận **ảnh hiện đúng**, không có ô vỡ.
+3. Mở `MJIA 06 — Thu thập dữ liệu với stream` và `MJIA 16 — CompletableFuture` — hai chương nhiều code nhất. Xác nhận highlight cú pháp Java chạy và mục lục nổi dựng đúng các mục `6.1`…`6.6` / `16.1`…`16.6`.
+4. Chân sidebar hiện liên kết `dev.java`.
 
 - [ ] **Step 8: Commit**
 
@@ -1080,7 +1108,7 @@ Ba chỗ:
 2. Bảng thành phần: thêm một dòng sau dòng `ddia-vi/`:
 
 ```markdown
-| [`modern-java-vi/`](./modern-java-vi/) | Bản dịch tiếng Việt *Modern Java in Action* (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 21 chương, không có hình. Đọc trong app ở lĩnh vực Modern Java in Action, kèm lộ trình đọc 12 tuần. |
+| [`modern-java-vi/`](./modern-java-vi/) | Bản dịch tiếng Việt *Modern Java in Action* (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 21 chương, 100 hình. Đọc trong app ở lĩnh vực Modern Java in Action, kèm lộ trình đọc 12 tuần. |
 ```
 
 3. Dòng mô tả `webapp/`: thêm `Modern Java in Action` vào danh sách lĩnh vực trong ngoặc; `12 giáo trình, 620 mục` → `13 giáo trình, 668 mục`; `100 tài liệu` → `121 tài liệu`.

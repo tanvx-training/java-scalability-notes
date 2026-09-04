@@ -9,8 +9,9 @@ Lĩnh vực thứ 8 của DevPrep — id `modern-java`
 Commit `b40bc24` đưa vào repo thư mục `Modern Java In Action/`: 21 PDF từng chương và thư
 mục `vi/` chứa bản dịch tiếng Việt đầy đủ 21 chương của *Modern Java in Action*
 (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning), kèm `README.md` mục lục 6 phần
-và `QUY-TAC-DICH.md`. Nội dung **đã dịch xong**; việc còn lại thuần tuý là tích hợp vào
-web app DevPrep.
+và `QUY-TAC-DICH.md`. Commit `133fe65` bổ sung **100 ảnh** vào `vi/images/chNN/` và nhúng
+chúng vào markdown, đồng thời sửa `QUY-TAC-DICH.md`, `README.md` và chương 18. Nội dung
+**đã dịch xong**; việc còn lại thuần tuý là tích hợp vào web app DevPrep.
 
 DevPrep hiện có 7 lĩnh vực. Lần thêm gần nhất — DDIA, merge `460d1ab` — là khuôn mẫu trực
 tiếp cho đợt này. Kiến trúc app đã đủ chín để thêm một lĩnh vực không phải sửa view nào:
@@ -21,15 +22,20 @@ Số liệu đã đo, không ước lượng:
 | Chỉ số | MJIA | DDIA (đối chiếu) |
 |---|---:|---:|
 | Số chương | 21 | 14 |
-| Tổng số từ | 212.540 | ~295.000 |
-| Trung bình mỗi chương | 10.121 | ~21.000 |
+| Tổng số từ | 212.942 | ~295.000 |
+| Trung bình mỗi chương | 10.140 | ~21.000 |
 | Chương nặng nhất | ch.6 — 15.013 từ | ch.8 — 33.100 từ |
 | Chương nhẹ nhất | ch.8 — 5.524 từ | ch.7 — 11.100 từ |
-| Số ảnh trong markdown | **0** | 105 |
+| Số ảnh | **100** (19/21 chương) | 105 |
 
-Hai khác biệt đáng kể so với DDIA: chương **đều tay hơn nhiều** (không có chương nào nặng
-gấp ba mặt bằng), và **không có ảnh nào** — bất biến #2b không phải lo, `build-content.sh`
-không cần dòng `cp -R images`.
+Khác biệt đáng kể so với DDIA: chương **đều tay hơn nhiều** — không có chương nào nặng gấp
+ba mặt bằng.
+
+Về ảnh, MJIA đi cùng khuôn DDIA: 100 tệp `.jpg` trong `vi/images/ch01`–`ch21`, nhúng bằng
+đường dẫn **tương đối** (`images/ch02/hinh-2-2.jpg`). Đã kiểm toàn vẹn: **0 tham chiếu gãy,
+0 ảnh mồ côi** — 100 tệp, 100 lượt được tham chiếu. Hai chương không có hình: **ch.8** và
+**ch.10**, đúng như nguồn. Hệ quả: bất biến #2b áp dụng đầy đủ, và `build-content.sh` cần
+dòng `cp -R images` như các lĩnh vực sách khác.
 
 ## 2. Quyết định đã chốt
 
@@ -47,9 +53,10 @@ không cần dòng `cp -R images`.
 ## 3. Nguồn: chuẩn hoá `modern-java-vi/`
 
 `git mv` 21 `.md` từ `Modern Java In Action/vi/` và 21 `.pdf` từ `Modern Java In Action/`
-vào một thư mục phẳng `modern-java-vi/`, đặt tên theo cùng một slug. `README.md` và
-`QUY-TAC-DICH.md` đi cùng. Giữ nguyên nội dung — **không sửa một ký tự nào**: markdown
-không chứa đường dẫn ảnh tương đối nào để hỏng (đã grep, 0 kết quả `![...](...)`).
+vào một thư mục phẳng `modern-java-vi/`, đặt tên theo cùng một slug. `README.md`,
+`QUY-TAC-DICH.md` và cả thư mục `images/` đi cùng. Giữ nguyên nội dung — **không sửa một
+ký tự nào**: đường dẫn ảnh là tương đối so với tệp markdown, và `images/` di chuyển cùng
+chúng, nên không tham chiếu nào gãy.
 
 Slug lấy nguyên từ tên tệp `vi/` hiện có, chỉ bỏ tiền tố `chuong-`:
 
@@ -87,14 +94,15 @@ Trước khi đổi tên: `grep -rn "Modern Java In Action" --include='*.md' --i
 ### `webapp/build-content.sh`
 
 ```bash
-# thêm vào lệnh mkdir -p sẵn có (KHÔNG có thư mục images con):
-"$DEST/mjia"
+# thêm vào lệnh mkdir -p sẵn có:
+"$DEST/mjia/images"
 
-# thêm 1 dòng cp:
+# thêm 2 dòng cp:
 cp    "$REPO"/modern-java-vi/*.md          "$DEST/mjia/"
+cp -R "$REPO"/modern-java-vi/images/.      "$DEST/mjia/images/"
 ```
 
-Chỉ **một** dòng `cp`, không có `cp -R images` — sách không có hình.
+Đúng khuôn `modern-concurrency-vi/` và `ddia-vi/`.
 
 `.pdf` **không** copy sang `content/` — nhất quán với 4 thư mục sách hiện có; PDF ở lại
 repo làm nguồn đối chiếu, không phục vụ qua web.
@@ -216,22 +224,22 @@ Nguyên tắc: bám ranh giới 6 phần của sách; tách tuần riêng cho 4 
 lambda, ch.6 collector, ch.15 nền tảng async, ch.16 CompletableFuture); gộp các cặp liền
 mạch còn lại.
 
-| Tuần | Chương | Số từ | Mục | Tiêu đề |
-|---|---|---:|---:|---|
-| `mj-w1` | ch.1 + ch.2 | 18.653 | 4 | Java 8+ đổi gì, và ý tưởng truyền hành vi |
-| `mj-w2` | ch.3 | 14.237 | 4 | Lambda expression và functional interface |
-| `mj-w3` | ch.4 + ch.5 | 20.277 | 5 | Stream: khái niệm và bộ thao tác trung gian |
-| `mj-w4` | ch.6 | 15.013 | 4 | Collector — thu thập, nhóm, phân hoạch |
-| `mj-w5` | ch.7 + ch.8 | 16.720 | 4 | Parallel stream, spliterator, và Collection API mới |
-| `mj-w6` | ch.9 + ch.10 | 22.438 | 4 | Refactoring/test/debug code hàm, và DSL bằng lambda |
-| `mj-w7` | ch.11 + ch.12 | 17.403 | 4 | Optional thay null, và Date/Time API |
-| `mj-w8` | ch.13 + ch.14 | 15.983 | 4 | Default method và hệ thống module |
-| `mj-w9` | ch.15 | 13.787 | 3 | Nền tảng: thread, future, reactive manifesto |
-| `mj-w10` | ch.16 | 12.698 | 4 | CompletableFuture — kết hợp tác vụ bất đồng bộ |
-| `mj-w11` | ch.17 + ch.18 | 18.479 | 4 | Flow API, reactive, và tư duy hàm |
-| `mj-w12` | ch.19 + ch.20 + ch.21 | 26.852 | 4 | Kỹ thuật FP, so sánh Scala, hướng đi tiếp |
+| Tuần | Chương | Số từ | Ảnh | Mục | Tiêu đề |
+|---|---|---:|---:|---:|---|
+| `mj-w1` | ch.1 + ch.2 | 18.693 | 10 | 4 | Java 8+ đổi gì, và ý tưởng truyền hành vi |
+| `mj-w2` | ch.3 | 14.269 | 8 | 4 | Lambda expression và functional interface |
+| `mj-w3` | ch.4 + ch.5 | 20.333 | 14 | 5 | Stream: khái niệm và bộ thao tác trung gian |
+| `mj-w4` | ch.6 | 15.047 | 8 | 4 | Collector — thu thập, nhóm, phân hoạch |
+| `mj-w5` | ch.7 + ch.8 | 16.748 | 7 | 4 | Parallel stream, spliterator, và Collection API mới |
+| `mj-w6` | ch.9 + ch.10 | 22.454 | 4 | 4 | Refactoring/test/debug code hàm, và DSL bằng lambda |
+| `mj-w7` | ch.11 + ch.12 | 17.427 | 6 | 4 | Optional thay null, và Date/Time API |
+| `mj-w8` | ch.13 + ch.14 | 16.027 | 11 | 4 | Default method và hệ thống module |
+| `mj-w9` | ch.15 | 13.823 | 9 | 3 | Nền tảng: thread, future, reactive manifesto |
+| `mj-w10` | ch.16 | 12.714 | 4 | 4 | CompletableFuture — kết hợp tác vụ bất đồng bộ |
+| `mj-w11` | ch.17 + ch.18 | 18.523 | 11 | 4 | Flow API, reactive, và tư duy hàm |
+| `mj-w12` | ch.19 + ch.20 + ch.21 | 26.884 | 8 | 4 | Kỹ thuật FP, so sánh Scala, hướng đi tiếp |
 
-**Tổng 48 mục / 212.540 từ.** Hai chỗ lệch là cố ý:
+**Tổng 48 mục / 212.942 từ / 100 ảnh.** Hai chỗ lệch là cố ý:
 
 - `mj-w9` chỉ 3 mục dù 13,8k từ — ch.15 là chương khái niệm (thread, future, reactive
   manifesto), không có API mới để gõ; 3 mục vừa đủ và nó dọn chỗ nghỉ trước `mj-w10` nặng
@@ -309,13 +317,15 @@ Bất biến N3 ("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap/trac
 khoá này ngay khi `fields.js` khai module — quên khai là báo đỏ.
 
 Các bất biến sẵn có tự phủ lên dữ liệu mới, không cần sửa gì: #1 id duy nhất · #2 tệp docs
-tồn tại trên đĩa · #3 link `#/docs/<id>` có thật · #3b link cùng lĩnh vực với track ·
+tồn tại trên đĩa · #2b ảnh trong markdown tồn tại trên đĩa (100 ảnh `ch01`–`ch21`; ch.8 và
+ch.10 không có ảnh, đúng như nguồn) · #3 link `#/docs/<id>` có thật · #3b link cùng lĩnh vực với track ·
 #3c link `#/roadmap/<trackId>` có thật · "Id mục lộ trình khớp tiền tố id tuần cha"
 (`mj-w7-3` ⊂ `mj-w7`) · "Mọi khối tuần có ít nhất 1 mục" · "Mọi module của lĩnh vực là view
 có thật" · "FIELD_ORDER khớp FIELDS 1-1" · #7 và #7b (module ↔ dữ liệu, hai chiều) ·
 "Module chỉ dành cho Kubernetes không bị lĩnh vực khác khai".
 
-**#2b (ảnh trong markdown tồn tại trên đĩa) không áp dụng** — 21 chương không có ảnh nào.
+**#2b là bất biến đáng theo dõi nhất đợt này** — nó quét cả 100 đường dẫn ảnh sau khi
+`build-content.sh` chạy. Nó đỏ nghĩa là `cp -R images` thiếu hoặc `git mv` bỏ sót thư mục.
 
 ## 9. Thứ tự triển khai
 
@@ -348,7 +358,7 @@ Mỗi chặng nghiệm thu xanh trước khi bước sang chặng sau.
 | `webapp/README.md` dòng "Thư viện tài liệu" | **100 tài liệu** thuộc 7 lĩnh vực → **121 tài liệu** thuộc 8 lĩnh vực; thêm `21 Modern Java in Action` |
 | `webapp/README.md:73` | "khai 7 lĩnh vực" → **8 lĩnh vực** |
 | `README.md:82` | "cả bảy lĩnh vực" → **cả tám lĩnh vực**; thêm "bản dịch **Modern Java in Action**" vào câu liệt kê |
-| `README.md` bảng thành phần | thêm dòng `modern-java-vi/` kèm ghi chú bản quyền thương mại: 21 chương, không có hình |
+| `README.md` bảng thành phần | thêm dòng `modern-java-vi/` kèm ghi chú bản quyền thương mại: 21 chương, 100 hình |
 | `README.md` dòng `webapp/` | 12 giáo trình / 620 mục → **13 / 668**; 100 → **121 tài liệu**; thêm "Modern Java in Action" vào danh sách lĩnh vực |
 | `webapp/index.html:7` | meta description: thêm "Modern Java in Action" |
 | `webapp/js/data/roadmap.js` | khối chú thích đầu tệp: thêm dòng `MJIA: mjia-roadmap-part{1,2}.js (Tuần 1–6 / 7–12) — 48 mục`, thêm MJIA vào câu liệt kê track, và thêm `mj-w1` / `mj-w1-1` vào dòng LƯU Ý id |
@@ -409,8 +419,12 @@ nghĩa là đã lỡ tay thêm/xoá mục khi chèn chip ở §6.1.
 4. **Chip `#/roadmap/modern-java` vẫn đổi lĩnh vực đang chọn** (`app.js:160`), giống mọi
    link `#/roadmap/<trackId>` xuyên lĩnh vực. Giảm nhẹ bằng nhãn nói thẳng "Sang lĩnh vực
    Modern Java in Action" thay vì để người dùng bị chuyển mà không biết.
-5. **`git mv` 44 tệp làm gãy mọi link ngoài trỏ vào đường dẫn cũ.** Thư mục vừa được commit
-   ở `b40bc24` và chưa nơi nào tham chiếu (đã grep, 0 kết quả), nên rủi ro gần bằng không —
-   nhưng grep lại ngay trước khi đổi tên.
+5. **`git mv` 144 tệp làm gãy mọi link ngoài trỏ vào đường dẫn cũ.** Thư mục vừa được commit
+   ở `b40bc24`/`133fe65` và chưa nơi nào tham chiếu (đã grep, 0 kết quả), nên rủi ro gần
+   bằng không — nhưng grep lại ngay trước khi đổi tên.
 6. **Tên tệp `.pdf` chứa ký tự Unicode lạ** (dấu nháy cong `’` ở ch.1, gạch dưới thay dấu
    hai chấm). Đổi tên phải dùng `git mv` với chuỗi trích dẫn đúng, không dùng glob tự chế.
+7. **Thư mục `images/` có thể bị bỏ quên khi đổi tên.** Đường dẫn ảnh là tương đối, nên
+   `images/` phải đi cùng 21 tệp markdown trong cùng một `git mv`. Bất biến #2b bắt được
+   sai sót này, nhưng chỉ sau khi đã chạy `build-content.sh` — nên chặng 1 phải có bước
+   đếm ảnh riêng, không đợi tới checker.
