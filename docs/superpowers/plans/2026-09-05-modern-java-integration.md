@@ -580,7 +580,7 @@ export const mjiaWeeksPart1 = [
 - [ ] **Step 5: Viết tuần 3 — `mj-w3`, 5 mục (ch.4 + ch.5)**
 
 `title`: `"Stream: khái niệm và bộ thao tác trung gian"` · `resources` trỏ `#/docs/mjia-04` và `#/docs/mjia-05`.
-`practice`: lấy một class domain thật trong dự án của bạn, dựng danh sách ~20 phần tử, rồi viết bằng stream năm truy vấn của §5.6 ("Đưa tất cả vào thực hành"); sau đó chạy lại đúng năm truy vấn đó bằng vòng lặp `for` và so số dòng.
+`practice`: lấy một class domain thật trong dự án của bạn, dựng danh sách ~20 phần tử, rồi viết bằng stream tám truy vấn của §5.6 ("Đưa tất cả vào thực hành" — Listing 5.1–5.8); sau đó chạy lại đúng tám truy vấn đó bằng vòng lặp `for` và so số dòng.
 
 | id | `text` | Mục sách phải đọc |
 |---|---|---|
