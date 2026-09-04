@@ -858,7 +858,7 @@ Nối vào **cuối** mảng `mjiaWeeksPart2`, sau `mj-w9`.
 - [ ] **Step 4: Viết tuần 12 — `mj-w12`, 4 mục (ch.19 + ch.20 + ch.21)**
 
 `title`: `"Kỹ thuật FP, so sánh Scala, hướng đi tiếp"` · `resources` trỏ `#/docs/mjia-19`, `#/docs/mjia-20`, `#/docs/mjia-21`.
-`practice`: cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — `update` trả về cây mới thay vì sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.
+`practice`: cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — viết `fupdate` trả về cây mới thay vì `update` sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.
 
 | id | `text` | Mục sách phải đọc |
 |---|---|---|
