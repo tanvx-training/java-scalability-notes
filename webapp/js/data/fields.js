@@ -59,9 +59,17 @@ export const FIELDS = {
     modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "openjdk.org — Project Loom", href: "https://wiki.openjdk.org/display/loom/Main" },
   },
+  ddia: {
+    label: "Designing Data-Intensive Applications",
+    icon: "🗄️",
+    desc: "Bản dịch tiếng Việt Designing Data-Intensive Applications, ấn bản 2 (Martin Kleppmann, O'Reilly) — mô hình dữ liệu, lưu trữ, replication, sharding, transaction, hệ phân tán, batch và stream processing.",
+    certFilter: false,
+    modules: ["dashboard", "docs", "roadmap"],
+    externalRef: { label: "dataintensive.net", href: "https://dataintensive.net/" },
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-concurrency", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "ddia", "modern-concurrency", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.

@@ -88,11 +88,11 @@
 **Mục tiêu:** nắm phần lõi DDIA và biết soi hệ thống của mình qua lăng kính đó.
 
 **Cách thực hiện (quy trình lặp mỗi tuần):**
-1. Lịch chương: T9: ch.1–2 → T10: ch.3 (LSM-tree vs B-tree) → T11: ch.5 (replication) → T12: ch.6–7 (partitioning, transactions) → T13: ch.8–9 (network/clock không tin được, consensus — đọc mức khái niệm, đừng sa lầy) → T14: ch.11–12 (stream) + tổng kết.
-2. Nghi thức mỗi chương (3 buổi): buổi 1–2 đọc + gạch chân; buổi 3 viết ghi chú Feynman 1 trang KÈM mục bắt buộc "Hệ thống công ty tôi đang đứng đâu trong trade-off này?" — ví dụ ch.5: DB công ty replicate kiểu gì, replication lag từng gây bug đọc-sau-ghi nào chưa?
-3. Móc nối với lab đã làm để kiến thức bám rễ: ch.3 giải thích vì sao Kafka ghi nhanh (log tuần tự); ch.7 nối lại isolation levels giai đoạn 1 lên tầm phân tán; ch.11 chính là lý thuyết của outbox/CDC bạn đã cài.
+1. Lịch chương: T9: ch.1–3 → T10: ch.4 (LSM-tree vs B-tree) → T11: ch.6 (replication) → T12: ch.7–8 (sharding, transaction) → T13: ch.9–10 (network/clock không tin được, consensus — đọc mức khái niệm, đừng sa lầy) → T14: ch.12–13 (stream) + tổng kết.
+2. Nghi thức mỗi chương (3 buổi): buổi 1–2 đọc + gạch chân; buổi 3 viết ghi chú Feynman 1 trang KÈM mục bắt buộc "Hệ thống công ty tôi đang đứng đâu trong trade-off này?" — ví dụ ch.6: DB công ty replicate kiểu gì, replication lag từng gây bug đọc-sau-ghi nào chưa?
+3. Móc nối với lab đã làm để kiến thức bám rễ: ch.4 giải thích vì sao Kafka ghi nhanh (log tuần tự); ch.8 nối lại isolation levels giai đoạn 1 lên tầm phân tán; ch.12 chính là lý thuyết của outbox/CDC bạn đã cài.
 4. Song song từ T11: mỗi tuần đọc 1 bài engineering blog (Netflix/Uber/Shopify), ghi 3 điều học được vào file `reading-notes.md`. Chọn bài liên quan chương đang đọc càng tốt.
-5. Nếu DDIA quá nặng ngay ch.3: đọc *Understanding Distributed Systems* trước 3 tuần rồi quay lại — đường vòng này nhanh hơn bỏ cuộc.
+5. Nếu DDIA quá nặng ngay ch.4: đọc *Understanding Distributed Systems* trước 3 tuần rồi quay lại — đường vòng này nhanh hơn bỏ cuộc.
 
 **Hoàn thành khi:** 6 ghi chú Feynman đều có mục "hệ thống của tôi"; kể được 3 ví dụ nối lý thuyết DDIA với lab đã tự làm.
 
@@ -127,7 +127,7 @@
 ### Tuần 19–20: 4 đề nâng cao + design doc #2 + mentoring
 
 **Cách thực hiện:**
-1. Luyện tiếp 4 đề khó hơn, cùng nghi thức: chat system (WebSocket, presence), key-value store phân tán (áp dụng trực tiếp DDIA ch.5–6), **payment flow (trọng tâm idempotency — bạn có lab thật để kể)**, web crawler.
+1. Luyện tiếp 4 đề khó hơn, cùng nghi thức: chat system (WebSocket, presence), key-value store phân tán (áp dụng trực tiếp DDIA ch.6–7), **payment flow (trọng tâm idempotency — bạn có lab thật để kể)**, web crawler.
 2. Design doc #2: tại công ty nếu có đề bài (tốt nhất); không có thì viết tài liệu kiến trúc hoàn chỉnh cho chính `distributed-patterns-demo` theo đúng template — ít nhất được luyện văn phong và trở thành tài liệu đỉnh của repo.
 3. Mentoring — bắt đầu chính thức: đề nghị lead cho kèm 1 junior/fresher. Cấu trúc: 1 buổi pair 45'/tuần + review code của bạn ấy với quy tắc "mỗi comment phải có TẠI SAO, không chỉ hãy sửa thành X". Không có junior → 30'/tuần trả lời câu hỏi cộng đồng (Stack Overflow, group Java Việt Nam) — cũng luyện được kỹ năng giải thích.
 
