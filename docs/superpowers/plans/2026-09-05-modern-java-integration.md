@@ -770,7 +770,7 @@ export const mjiaWeeksPart2 = [
 - [ ] **Step 4: Viết tuần 8 — `mj-w8`, 4 mục (ch.13 + ch.14)**
 
 `title`: `"Default method và hệ thống module"` · `resources` trỏ `#/docs/mjia-13`, `#/docs/mjia-14`, và `{ label: "openjdk.org — JEP 261: Module System", href: "https://openjdk.org/jeps/261" }`.
-`practice`: tự tay dựng lại ví dụ hai module của §14.4–§14.6 — viết `module-info.java` cho cả hai, biên dịch bằng `javac --module-source-path`, đóng gói bằng `jar`, chạy bằng `java --module-path`; rồi cố tình bỏ một `requires` để xem thông báo lỗi trông thế nào.
+`practice`: dựng lại bằng tay ví dụ MỘT module của §14.4.3 bằng đúng ba lệnh sách in ra — `javac module-info.java …`, `jar cvfe`, `java --module-path`; rồi mở dự án hai module `expenses` của §14.6 và build bằng `mvn clean package`. Cuối cùng bỏ một mệnh đề `requires` khỏi `module-info.java` và build lại, đối chiếu thông báo lỗi bạn nhận được với thông báo sách in ở §14.6.
 
 | id | `text` | Mục sách phải đọc |
 |---|---|---|
