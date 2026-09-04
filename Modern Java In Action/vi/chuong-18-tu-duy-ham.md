@@ -37,6 +37,8 @@ Xét cho cùng, nguyên nhân của vấn đề "giá trị biến ngoài dự k
 Nói cách khác, các cấu trúc dữ liệu mutable dùng chung khiến việc theo dõi các thay đổi ở những phần khác nhau trong chương trình của bạn trở nên khó khăn hơn. Hình 18.1 minh hoạ ý tưởng này.
 
 > **Hình 18.1.** Một danh sách mutable được dùng chung giữa nhiều class. Rất khó để hiểu ai là chủ sở hữu của danh sách đó.
+>
+> ![Hình 18.1](images/ch18/hinh-18-1.jpg)
 
 Hãy hình dung một hệ thống không thay đổi (mutate) bất kỳ cấu trúc dữ liệu nào. Hệ thống đó sẽ là một giấc mơ đối với việc bảo trì, bởi vì bạn sẽ không gặp phải bất kỳ bất ngờ khó chịu nào kiểu như có một đối tượng ở đâu đó bất thình lình sửa đổi một cấu trúc dữ liệu. Một phương thức không sửa đổi trạng thái của class bao quanh nó, cũng không sửa đổi trạng thái của bất kỳ đối tượng nào khác, và trả về toàn bộ kết quả của mình thông qua `return`, được gọi là *pure* (thuần khiết) hay *side-effect-free* (không có side effect).
 
@@ -98,10 +100,14 @@ Câu trả lời quá đơn giản cho câu hỏi "Functional programming là g�
 Thật dễ hình dung một phương thức nhận vào một `int` và một `double` làm đối số rồi tạo ra một `double` — đồng thời cũng có side effect là đếm số lần nó được gọi bằng cách cập nhật một biến mutable, như minh hoạ ở hình 18.2.
 
 > **Hình 18.2.** Một hàm có side effect
+>
+> ![Hình 18.2](images/ch18/hinh-18-2.jpg)
 
 Tuy nhiên, trong ngữ cảnh của functional programming, một hàm tương ứng với một hàm toán học: nó nhận không hoặc nhiều đối số, trả về một hoặc nhiều kết quả, và không có side effect. Bạn có thể xem một hàm như một chiếc hộp đen nhận vào một số đầu vào và tạo ra một số đầu ra, như minh hoạ ở hình 18.3.
 
 > **Hình 18.3.** Một hàm không có side effect
+>
+> ![Hình 18.3](images/ch18/hinh-18-3.jpg)
 
 Sự phân biệt giữa loại hàm này với các phương thức mà bạn thấy trong những ngôn ngữ lập trình như Java là điều cốt lõi. (Ý nghĩ rằng các hàm toán học như `log` hay `sin` lại có thể có những side effect như vậy là điều không tưởng.) Cụ thể, các hàm toán học luôn trả về cùng một kết quả khi chúng được gọi lặp đi lặp lại với cùng các đối số. Đặc trưng này loại trừ những phương thức như `Random.nextInt`, và chúng ta sẽ bàn thêm về khái niệm referential transparency này ở mục 18.2.2.
 
@@ -120,6 +126,8 @@ Nguyên tắc của chúng tôi là: để được xem là theo phong cách hà
 Tuy nhiên, nguyên tắc của chúng tôi vẫn chưa đầy đủ. Có thêm một yêu cầu nữa để được xem là mang tính hàm, đó là một hàm hoặc phương thức không nên ném ra bất kỳ ngoại lệ nào. Lý do biện minh là việc ném ra một ngoại lệ đồng nghĩa với việc một kết quả đang được báo hiệu theo cách khác với việc hàm trả về một giá trị; hãy xem mô hình hộp đen ở hình 18.2. Vẫn còn không gian để tranh luận ở đây, với một số tác giả lập luận rằng những ngoại lệ không được bắt, đại diện cho các lỗi nghiêm trọng, thì vẫn chấp nhận được, và rằng chính hành động bắt một ngoại lệ mới là thứ đại diện cho luồng điều khiển phi-hàm. Tuy nhiên, việc sử dụng ngoại lệ như vậy vẫn phá vỡ phép ẩn dụ đơn giản "truyền đối số vào, trả kết quả ra" được mô tả trong mô hình hộp đen, dẫn đến một mũi tên thứ ba đại diện cho ngoại lệ, như minh hoạ ở hình 18.4.
 
 > **Hình 18.4.** Một hàm ném ra ngoại lệ
+>
+> ![Hình 18.4](images/ch18/hinh-18-4.jpg)
 
 > **Hàm và hàm bộ phận (partial function)**
 >
@@ -323,8 +331,12 @@ Hàm `factorialHelper` là tail-recursive bởi vì lời gọi đệ quy là vi
 Dạng recursion này hữu ích bởi vì thay vì lưu mỗi kết quả trung gian của quá trình đệ quy trong các stack frame riêng biệt, compiler có thể quyết định tái sử dụng một stack frame duy nhất. Quả thật, trong định nghĩa của `factorialHelper`, các kết quả trung gian (các kết quả bộ phận của giai thừa) được truyền trực tiếp làm đối số cho hàm. Không cần phải theo dõi kết quả trung gian của mỗi lời gọi đệ quy trên một stack frame riêng biệt; nó có thể truy cập được trực tiếp thông qua đối số đầu tiên của `factorialHelper`. Hình 18.5 và 18.6 minh hoạ sự khác biệt giữa định nghĩa đệ quy và định nghĩa tail-recursive của giai thừa.
 
 > **Hình 18.5.** Định nghĩa đệ quy của giai thừa, đòi hỏi nhiều stack frame
+>
+> ![Hình 18.5](images/ch18/hinh-18-5.jpg)
 
 > **Hình 18.6.** Định nghĩa tail-recursive của giai thừa, có thể tái sử dụng một stack frame duy nhất
+>
+> ![Hình 18.6](images/ch18/hinh-18-6.jpg)
 
 Tin xấu là Java không hỗ trợ kiểu tối ưu hoá này. Nhưng việc áp dụng tail recursion có thể là một thực hành tốt hơn so với recursion cổ điển, bởi vì nó mở đường cho khả năng compiler tối ưu hoá về sau. Nhiều ngôn ngữ JVM hiện đại như Scala, Groovy và Kotlin có thể tối ưu hoá những cách dùng recursion đó, khiến chúng tương đương với iteration (và thực thi với cùng tốc độ). Kết quả là những người theo trường phái thuần hàm có thể vừa giữ được sự thuần khiết của mình vừa thực thi hiệu quả.
 

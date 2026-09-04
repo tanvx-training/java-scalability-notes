@@ -33,6 +33,8 @@ Reactive Manifesto (https://www.reactivemanifesto.org) — được Jonas Bonér
 Hình 17.1 cho thấy bốn đặc tính này liên hệ và phụ thuộc lẫn nhau như thế nào. Những nguyên tắc này đúng ở nhiều quy mô khác nhau, từ việc tổ chức nội bộ một ứng dụng nhỏ cho đến việc xác định cách các ứng dụng đó phải được phối hợp để dựng nên một hệ thống lớn. Tuy nhiên, những điểm cụ thể liên quan đến mức độ chi tiết mà các ý tưởng này được áp dụng đáng để bàn kỹ hơn.
 
 > **Hình 17.1.** Các đặc tính chính của một reactive system
+>
+> ![Hình 17.1](images/ch17/hinh-17-1.jpg)
 
 ### 17.1.1. Reactive ở cấp độ ứng dụng
 
@@ -49,6 +51,8 @@ Các kỹ thuật này không chỉ có lợi ích là rẻ hơn thread, mà cò
 Hãy hình dung một kịch bản ghép kênh đơn giản nhưng điển hình với một pool gồm hai thread xử lý ba luồng sự kiện. Chỉ có hai luồng được xử lý cùng lúc, và các luồng phải cạnh tranh để chia sẻ hai thread đó sao cho công bằng và hiệu quả nhất có thể. Bây giờ giả sử việc xử lý một sự kiện của một luồng kích hoạt một thao tác I/O tiềm ẩn chậm chạp, chẳng hạn ghi vào hệ thống tệp hoặc lấy dữ liệu từ cơ sở dữ liệu bằng một API blocking. Như hình 17.2 cho thấy, trong tình huống này Thread 2 bị chặn một cách lãng phí trong lúc chờ thao tác I/O hoàn tất, nên mặc dù Thread 1 có thể xử lý luồng thứ nhất, luồng thứ ba lại không thể được xử lý cho tới khi thao tác blocking kết thúc.
 
 > **Hình 17.2.** Một thao tác blocking giữ thread bận một cách lãng phí, ngăn nó thực hiện các tính toán khác.
+>
+> ![Hình 17.2](images/ch17/hinh-17-2.jpg)
 
 Để khắc phục vấn đề này, hầu hết các framework reactive (như RxJava và Akka) cho phép các thao tác blocking được thực thi bởi một thread pool riêng, chuyên dụng. Toàn bộ thread trong pool chính khi đó được tự do chạy liên tục không gián đoạn, giữ cho tất cả các nhân CPU đạt mức sử dụng cao nhất có thể. Việc duy trì các thread pool riêng biệt cho các thao tác CPU-bound và I/O-bound còn có thêm lợi ích là cho phép bạn định cỡ và cấu hình các pool với mức độ chi tiết cao hơn, cũng như theo dõi hiệu năng của hai loại tác vụ này một cách chính xác hơn.
 
@@ -137,6 +141,8 @@ public interface Subscription {
 Hình 17.3 minh hoạ vòng đời điển hình của một ứng dụng cài đặt các interface được định nghĩa bởi Flow API.
 
 > **Hình 17.3.** Vòng đời của một reactive application sử dụng Flow API
+>
+> ![Hình 17.3](images/ch17/hinh-17-3.jpg)
 
 Thành viên thứ tư và cũng là cuối cùng của class Flow là interface Processor, mở rộng cả Publisher lẫn Subscriber mà không đòi hỏi thêm phương thức nào.
 
@@ -684,10 +690,14 @@ Những hàm biến đổi và kết hợp này có thể khá tinh vi, tới m�
 Bạn phải thừa nhận rằng chức năng của hàm này không hề hiển nhiên ngay lập tức. Để giảm bớt vấn đề này, cộng đồng reactive-streams đã quyết định ghi lại hành vi của các hàm này một cách trực quan, bằng cách dùng cái gọi là **marble diagram**. Một marble diagram, chẳng hạn như trong hình 17.4, biểu diễn dãy phần tử được sắp thứ tự theo thời gian trong một reactive stream dưới dạng các hình khối trên một đường nằm ngang; các ký hiệu đặc biệt biểu diễn tín hiệu lỗi và tín hiệu hoàn tất. Các hộp chỉ ra cách các toán tử có tên biến đổi những phần tử đó hoặc kết hợp nhiều luồng.
 
 > **Hình 17.4.** Chú giải của một marble diagram mô tả một toán tử do một thư viện reactive điển hình cung cấp
+>
+> ![Hình 17.4](images/ch17/hinh-17-4.jpg)
 
 Dùng ký pháp này, thật dễ dàng để cung cấp một biểu diễn trực quan cho các tính năng của tất cả các hàm trong thư viện RxJava, như trong hình 17.5, minh hoạ `map` (biến đổi các phần tử được phát hành bởi một Observable) và `merge` (kết hợp các sự kiện được phát ra bởi hai hoặc nhiều Observable thành một).
 
 > **Hình 17.5.** Marble diagram cho các hàm map và merge
+>
+> ![Hình 17.5](images/ch17/hinh-17-5.jpg)
 
 Bạn có thể tự hỏi làm thế nào để dùng `map` và `merge` nhằm cải thiện và bổ sung tính năng cho ví dụ RxJava mà bạn đã phát triển ở mục trước. Dùng `map` là cách ngắn gọn hơn để đạt được phép biến đổi từ Fahrenheit sang Celsius mà bạn đã cài đặt bằng Processor của Flow API, như trong listing sau.
 

@@ -14,6 +14,9 @@ Nguồn: các file PDF từng chương trong thư mục cha.
   Chỉ comment trong code được dịch sang tiếng Việt.
 - Chú thích đánh số dưới code trong bản gốc được chuyển thành comment ngay tại dòng code
   tương ứng.
+- **Hình ảnh** được trích xuất từ PDF gốc và đặt trong `images/chNN/hinh-N-M.jpg`,
+  chèn ngay dưới dòng chú thích `> **Hình N.M.**` tương ứng — tổng cộng 100 hình.
+  Chương 8 và 10 trong bản gốc không có hình nào.
 
 ## Mục lục
 

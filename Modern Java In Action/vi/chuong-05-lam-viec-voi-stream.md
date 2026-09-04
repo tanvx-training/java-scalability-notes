@@ -43,6 +43,8 @@ Trong mục này, chúng ta sẽ xem xét các cách chọn ra phần tử của
 Interface Stream hỗ trợ phương thức filter (mà đến giờ chắc bạn đã khá quen thuộc). Phép toán này nhận đối số là một predicate (một hàm trả về giá trị boolean) và trả về một stream chứa tất cả các phần tử thoả mãn predicate đó. Ví dụ, bạn có thể tạo ra một thực đơn chay bằng cách lọc ra tất cả các món ăn chay, như minh hoạ ở hình 5.1 và đoạn code theo sau nó:
 
 > **Hình 5.1.** Lọc một stream bằng một predicate
+>
+> ![Hình 5.1](images/ch05/hinh-5-1.jpg)
 
 ```java
 List<Dish> vegetarianMenu = menu.stream()
@@ -65,6 +67,8 @@ numbers.stream()
 ```
 
 > **Hình 5.2.** Lọc các phần tử duy nhất trong một stream
+>
+> ![Hình 5.2](images/ch05/hinh-5-2.jpg)
 
 ## 5.2. Cắt lát (slicing) một stream
 
@@ -133,6 +137,8 @@ List<Dish> dishes = specialMenu
 Hình 5.3 minh hoạ sự kết hợp của filter và limit. Bạn có thể thấy rằng chỉ ba phần tử đầu tiên thoả mãn predicate được chọn, và kết quả được trả về ngay lập tức.
 
 > **Hình 5.3.** Cắt ngắn một stream
+>
+> ![Hình 5.3](images/ch05/hinh-5-3.jpg)
 
 Lưu ý rằng limit cũng hoạt động trên các stream không có thứ tự (ví dụ, nếu source là một Set). Trong trường hợp này, bạn không nên giả định bất kỳ thứ tự nào cho kết quả mà limit tạo ra.
 
@@ -148,6 +154,8 @@ List<Dish> dishes = menu.stream()
 ```
 
 > **Hình 5.4.** Bỏ qua các phần tử trong một stream
+>
+> ![Hình 5.4](images/ch05/hinh-5-4.jpg)
 
 Hãy đưa những gì bạn vừa học trong mục này vào thực hành với quiz 5.1 trước khi chúng ta chuyển sang các phép toán mapping.
 
@@ -221,6 +229,8 @@ words.stream()
 Vấn đề với cách tiếp cận này là lambda được truyền cho phương thức map trả về một `String[]` (một mảng String) cho mỗi từ. Stream do phương thức map trả về có kiểu `Stream<String[]>`. Cái bạn muốn là `Stream<String>` để biểu diễn một stream các ký tự. Hình 5.5 minh hoạ vấn đề này.
 
 > **Hình 5.5.** Sử dụng map sai cách để tìm các ký tự duy nhất từ một danh sách các từ
+>
+> ![Hình 5.5](images/ch05/hinh-5-5.jpg)
 
 May mắn thay, có một giải pháp cho vấn đề này bằng cách dùng phương thức flatMap! Hãy xem từng bước cách giải quyết nó.
 
@@ -265,6 +275,8 @@ List<String> uniqueCharacters =
 Việc dùng phương thức flatMap có tác dụng ánh xạ mỗi mảng không phải thành một stream, mà thành nội dung của stream đó. Tất cả các stream riêng lẻ được sinh ra khi dùng `map(Arrays::stream)` được hợp nhất lại — làm phẳng thành một stream duy nhất. Hình 5.6 minh hoạ tác dụng của việc dùng phương thức flatMap. Hãy so sánh nó với những gì map làm ở hình 5.5.
 
 > **Hình 5.6.** Sử dụng flatMap để tìm các ký tự duy nhất từ một danh sách các từ
+>
+> ![Hình 5.6](images/ch05/hinh-5-6.jpg)
 
 Nói ngắn gọn, phương thức flatMap cho phép bạn thay thế mỗi giá trị của một stream bằng một stream khác, rồi nối tất cả các stream được sinh ra thành một stream duy nhất.
 
@@ -461,6 +473,8 @@ int product = numbers.stream().reduce(1, (a, b) -> a * b);
 Hình 5.7 minh hoạ cách phép toán reduce hoạt động trên một stream: lambda kết hợp lặp đi lặp lại từng phần tử cho tới khi stream chứa các số nguyên 4, 5, 3, 9 được rút gọn thành một giá trị duy nhất.
 
 > **Hình 5.7.** Sử dụng reduce để tính tổng các số trong một stream
+>
+> ![Hình 5.7](images/ch05/hinh-5-7.jpg)
 
 Hãy xem xét kỹ hơn cách phép toán reduce diễn ra khi tính tổng một stream các số. Đầu tiên, 0 được dùng làm tham số thứ nhất của lambda (a), và 4 được tiêu thụ từ stream và dùng làm tham số thứ hai (b). `0 + 4` cho ra 4, và nó trở thành giá trị tích luỹ mới. Sau đó lambda lại được gọi với giá trị tích luỹ và phần tử tiếp theo của stream, là 5, cho ra giá trị tích luỹ mới là 9. Tiếp tục, lambda lại được gọi với giá trị tích luỹ và phần tử tiếp theo, là 3, cho ra 12. Cuối cùng, lambda được gọi với 12 và phần tử cuối cùng của stream là 9, cho ra giá trị cuối cùng là 21.
 
@@ -502,6 +516,8 @@ Optional<Integer> min = numbers.stream().reduce(Integer::min);
 Bạn cũng hoàn toàn có thể dùng lambda `(x, y) -> x < y ? x : y` thay cho `Integer::min`, nhưng cách sau rõ ràng là dễ đọc hơn!
 
 > **Hình 5.8.** Một phép toán reduce — tính giá trị lớn nhất
+>
+> ![Hình 5.8](images/ch05/hinh-5-8.jpg)
 
 Để kiểm tra hiểu biết của bạn về phép toán reduce, hãy thử làm quiz 5.3.
 
@@ -893,6 +909,8 @@ Bây giờ chúng ta sẽ xem một ví dụ khó hơn để bạn có thể c�
 Bộ ba Pythagore là gì? Chúng ta phải quay lại vài năm về trước. Trong một buổi học toán thú vị nào đó, bạn đã học rằng nhà toán học Hy Lạp nổi tiếng Pythagoras đã khám phá ra rằng một số bộ ba số (a, b, c) thoả mãn công thức `a * a + b * b = c * c` với a, b và c là các số nguyên. Ví dụ, (3, 4, 5) là một bộ ba Pythagore hợp lệ bởi vì `3 * 3 + 4 * 4 = 5 * 5` hay `9 + 16 = 25`. Có vô số bộ ba như vậy. Ví dụ, (5, 12, 13), (6, 8, 10) và (7, 24, 25) đều là các bộ ba Pythagore hợp lệ. Những bộ ba như vậy hữu ích bởi vì chúng mô tả độ dài ba cạnh của một tam giác vuông, như minh hoạ ở hình 5.9.
 
 > **Hình 5.9.** Định lý Pythagore
+>
+> ![Hình 5.9](images/ch05/hinh-5-9.jpg)
 
 **Biểu diễn một bộ ba**
 

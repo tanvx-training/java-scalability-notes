@@ -74,6 +74,8 @@ Có lẽ bạn đang tự hỏi chính xác thì điều gì xảy ra khi bạn 
 - Bạn nối nhiều thao tác nền tảng lại với nhau để diễn đạt một pipeline xử lý dữ liệu phức tạp (bạn nối `filter` với các thao tác `sorted`, `map` và `collect`, như minh hoạ ở hình 4.1) trong khi vẫn giữ cho code dễ đọc và ý định rõ ràng. Kết quả của `filter` được truyền sang phương thức `sorted`, rồi tiếp tục được truyền sang phương thức `map` và cuối cùng là `collect`.
 
 > **Hình 4.1.** Nối các thao tác stream lại với nhau để tạo thành một stream pipeline
+>
+> ![Hình 4.1](images/ch04/hinh-4-1.jpg)
 
 Bởi vì các thao tác như `filter` (hay `sorted`, `map` và `collect`) được cung cấp sẵn dưới dạng những khối xây dựng ở mức cao và không phụ thuộc vào một mô hình luồng cụ thể nào, phần cài đặt bên trong của chúng có thể là đơn luồng, hoặc cũng có thể tận dụng tối đa kiến trúc đa lõi của bạn một cách trong suốt! Trong thực tế, điều này có nghĩa là bạn không còn phải bận tâm tới thread và lock để tìm cách song song hoá một số tác vụ xử lý dữ liệu: Streams API làm việc đó thay cho bạn!
 
@@ -206,6 +208,8 @@ Trong ví dụ này, trước tiên bạn lấy một stream từ danh sách cá
 - `collect` — Chuyển đổi một stream thành một dạng khác. Trong trường hợp này bạn chuyển stream thành một list. Trông có vẻ hơi ma thuật; chúng tôi sẽ mô tả chi tiết hơn cách `collect` hoạt động ở chương 6. Ở thời điểm này, bạn có thể xem `collect` như một thao tác nhận đối số là những "công thức" khác nhau để tích luỹ các phần tử của một stream thành một kết quả tổng hợp. Ở đây, `toList()` mô tả công thức để chuyển một stream thành một list.
 
 > **Hình 4.2.** Lọc một thực đơn bằng stream để tìm ra tên của ba món ăn nhiều calo
+>
+> ![Hình 4.2](images/ch04/hinh-4-2.jpg)
 
 Hãy để ý xem đoạn code chúng ta vừa mô tả khác thế nào so với những gì bạn sẽ viết nếu phải xử lý danh sách các món trong thực đơn theo từng bước một. Thứ nhất, bạn dùng một phong cách khai báo hơn hẳn để xử lý dữ liệu trong thực đơn, ở đó bạn nói ra *cái* cần làm: "Tìm tên của ba món ăn nhiều calo." Bạn không phải cài đặt các chức năng lọc (`filter`), trích xuất (`map`) hay cắt bớt (`limit`); chúng đã có sẵn thông qua thư viện Streams. Nhờ vậy, Streams API có nhiều tự do hơn để quyết định cách tối ưu hoá pipeline này. Ví dụ, các bước lọc, trích xuất và cắt bớt có thể được gộp lại thành một lượt duyệt duy nhất và dừng ngay khi tìm đủ ba món ăn. Chúng tôi sẽ trình bày một ví dụ minh hoạ điều đó ở chương sau.
 
@@ -226,6 +230,8 @@ Ngược lại, một collection được dựng một cách háo hức (eagerly
 Hình 4.3 minh hoạ sự khác biệt giữa một stream và một collection, áp dụng vào ví dụ DVD so với streaming qua internet của chúng ta.
 
 > **Hình 4.3.** Stream so với collection
+>
+> ![Hình 4.3](images/ch04/hinh-4-3.jpg)
 
 Một ví dụ khác là tìm kiếm trên internet bằng trình duyệt. Giả sử bạn tìm một cụm từ có rất nhiều kết quả khớp trên Google hoặc trong một cửa hàng thương mại điện tử trực tuyến. Thay vì phải chờ tải về toàn bộ collection kết quả cùng với hình ảnh của chúng, bạn nhận được một stream mà các phần tử là 10 hoặc 20 kết quả khớp nhất, kèm theo một nút bấm để xem 10 hoặc 20 kết quả tiếp theo. Khi bạn — người tiêu thụ — bấm để xem 10 kết quả tiếp theo, phía cung cấp mới tính ra chúng theo yêu cầu, rồi trả về cho trình duyệt của bạn để hiển thị.
 
@@ -304,6 +310,8 @@ Hãy dùng một phép so sánh để hiểu những khác biệt và lợi ích
 Đây chính xác là những gì bạn làm mỗi ngày với collection trong Java. Bạn lặp qua một collection theo kiểu external, lấy ra và xử lý từng phần tử một cách tường minh, lần lượt từng cái một. Sẽ tốt hơn nhiều nếu bạn có thể nói với Sofia: "Bỏ tất cả đồ chơi đang ở dưới sàn vào trong hộp." Còn hai lý do khác khiến internal iteration đáng được ưu tiên: thứ nhất, Sofia có thể chọn cầm con búp bê bằng một tay và quả bóng bằng tay kia cùng lúc, và thứ hai, bé có thể quyết định nhặt những món ở gần hộp trước rồi mới đến những món khác. Tương tự như vậy, khi dùng internal iteration, việc xử lý các phần tử có thể được thực hiện song song một cách trong suốt, hoặc theo một thứ tự khác tối ưu hơn. Những tối ưu hoá này rất khó thực hiện nếu bạn lặp qua collection theo kiểu external như bạn vẫn quen làm trong Java. Điều này nghe có vẻ là bới lông tìm vết, nhưng nó chính là phần lớn lý do tồn tại (raison-d'être) của việc Java 8 giới thiệu stream. Internal iteration trong thư viện Streams có thể tự động chọn cách biểu diễn dữ liệu và cách cài đặt cơ chế song song sao cho phù hợp với phần cứng của bạn. Ngược lại, một khi bạn đã chọn external iteration bằng cách viết for-each, thì bạn đã tự cam kết sẽ tự mình quản lý mọi thứ liên quan tới song song hoá. (Tự quản lý trong thực tế nghĩa là hoặc "một ngày đẹp trời nào đó chúng ta sẽ song song hoá cái này", hoặc "bắt đầu một trận chiến dài dằng dặc và gian khổ với đủ thứ task và `synchronized`".) Java 8 cần một interface giống như `Collection` nhưng không có iterator, và thế là `Stream` ra đời! Hình 4.4 minh hoạ sự khác biệt giữa một stream (internal iteration) và một collection (external iteration).
 
 > **Hình 4.4.** Internal iteration so với external iteration
+>
+> ![Hình 4.4](images/ch04/hinh-4-4.jpg)
 
 Chúng ta đã mô tả những khác biệt về mặt khái niệm giữa collection và stream. Cụ thể, stream sử dụng internal iteration, ở đó thư viện lo việc lặp thay cho bạn. Nhưng điều này chỉ hữu ích nếu bạn có sẵn một danh sách các thao tác được định nghĩa trước để làm việc cùng (ví dụ `filter` hoặc `map`), những thao tác che giấu việc lặp. Hầu hết các thao tác này nhận lambda expression làm đối số nên bạn có thể tham số hoá hành vi của chúng như chúng tôi đã trình bày ở chương trước. Những người thiết kế ngôn ngữ Java đã phát hành Streams API kèm theo một danh sách đồ sộ các thao tác mà bạn có thể dùng để diễn đạt những truy vấn xử lý dữ liệu phức tạp. Chúng ta sẽ xem lướt qua danh sách các thao tác này ngay bây giờ và khám phá chúng chi tiết hơn cùng ví dụ ở chương sau. Để kiểm tra hiểu biết của bạn về external iteration so với internal iteration, hãy thử làm quiz 4.1 dưới đây.
 
@@ -357,6 +365,8 @@ Bạn có thể thấy hai nhóm thao tác:
 Những thao tác stream có thể nối lại với nhau được gọi là intermediate operation, còn những thao tác đóng một stream lại được gọi là terminal operation. Hình 4.5 làm nổi bật hai nhóm này. Vì sao sự phân biệt này lại quan trọng?
 
 > **Hình 4.5.** Intermediate operation so với terminal operation
+>
+> ![Hình 4.5](images/ch04/hinh-4-5.jpg)
 
 ### 4.4.1. Intermediate operation
 

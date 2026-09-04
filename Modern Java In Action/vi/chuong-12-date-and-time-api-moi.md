@@ -489,6 +489,8 @@ ZonedDateTime zdt3 = instant.atZone(romeZone);
 Hình 12.1 minh hoạ các thành phần của một `ZonedDateTime` để giúp bạn hiểu được sự khác biệt giữa `LocalDate`, `LocalTime`, `LocalDateTime` và `ZoneId`.
 
 > **Hình 12.1.** Hiểu về một ZonedDateTime
+>
+> ![Hình 12.1](images/ch12/hinh-12-1.jpg)
 
 Bạn cũng có thể chuyển đổi một `LocalDateTime` thành một `Instant` bằng cách dùng một `ZoneId`:
 

@@ -39,6 +39,8 @@ default Stream<E> stream() {
 Chà! Vậy giờ đây interface giống như abstract class rồi sao? Vừa đúng vừa không; có những khác biệt căn bản mà chúng tôi sẽ giải thích trong chương này. Quan trọng hơn, tại sao bạn nên quan tâm đến default method? Người dùng chính của default method là những người thiết kế thư viện. Như chúng tôi sẽ giải thích ở phần sau, default method được giới thiệu để tiến hoá các thư viện như Java API theo cách tương thích, như minh hoạ ở hình 13.1.
 
 > **Hình 13.1.** Thêm một phương thức vào một interface
+>
+> ![Hình 13.1](images/ch13/hinh-13-1.jpg)
 
 Nói ngắn gọn, việc thêm một phương thức vào một interface là nguồn gốc của rất nhiều vấn đề; các class hiện có đang implement interface đó cần được thay đổi để cung cấp phần cài đặt cho phương thức mới. Nếu bạn nắm quyền kiểm soát interface và tất cả các phần cài đặt của nó thì tình hình không đến nỗi tệ. Nhưng thường thì không phải như vậy — và đó chính là động cơ dẫn tới default method, thứ cho phép các class tự động kế thừa một phần cài đặt mặc định từ một interface.
 
@@ -119,6 +121,8 @@ public interface Resizable {
 ```
 
 > **Hình 13.2.** Tiến hoá một API bằng cách thêm một phương thức vào `Resizable`. Việc biên dịch lại ứng dụng sẽ sinh ra lỗi bởi vì ứng dụng phụ thuộc vào interface `Resizable`.
+>
+> ![Hình 13.2](images/ch13/hinh-13-2.jpg)
 
 **Những vấn đề cho người dùng của bạn**
 
@@ -245,6 +249,8 @@ Do đó, bạn có thể giảm bớt code khuôn mẫu. Bất kỳ class nào i
 Default method mở ra một điều gì đó thật thanh lịch mà trước đây không thể làm được: đa kế thừa hành vi (multiple inheritance of behavior), tức là khả năng một class tái sử dụng code từ nhiều nơi khác nhau (hình 13.3).
 
 > **Hình 13.3.** Đơn kế thừa so với đa kế thừa
+>
+> ![Hình 13.3](images/ch13/hinh-13-3.jpg)
 
 Hãy nhớ rằng các class trong Java chỉ có thể kế thừa từ đúng một class khác, nhưng các class thì luôn luôn được phép implement nhiều interface. Để xác nhận điều đó, dưới đây là cách class `ArrayList` được định nghĩa trong Java API:
 
@@ -354,6 +360,8 @@ public class Sun implements Moveable, Rotatable {
 Hình 13.4 minh hoạ sơ đồ UML của kịch bản này.
 
 > **Hình 13.4.** Kết hợp nhiều hành vi
+>
+> ![Hình 13.4](images/ch13/hinh-13-4.jpg)
 
 Đây là một ưu điểm nữa của việc định nghĩa các interface đơn giản kèm phần cài đặt mặc định như những interface cho trò chơi của bạn. Giả sử bạn cần sửa phần cài đặt của `moveVertically` để nó hiệu quả hơn. Bạn có thể thay đổi phần cài đặt của nó trực tiếp trong interface `Moveable`, và tất cả các class implement interface đó sẽ tự động kế thừa đoạn code mới (với điều kiện là bản thân chúng không tự cài đặt phương thức đó)!
 
@@ -408,12 +416,16 @@ Chúng tôi cam đoan rằng đây là những quy tắc duy nhất bạn cần 
 Ở đây, bạn xem lại ví dụ từ đầu mục này, trong đó `C` implement cả `B` lẫn `A`, hai interface cùng định nghĩa một default method tên là `hello`. Ngoài ra, `B` extend `A`. Hình 13.5 cung cấp sơ đồ UML cho kịch bản này.
 
 > **Hình 13.5.** Interface cung cấp default method cụ thể nhất sẽ thắng.
+>
+> ![Hình 13.5](images/ch13/hinh-13-5.jpg)
 
 Trình biên dịch sẽ dùng khai báo nào của phương thức `hello`? Quy tắc 2 nói rằng phương thức thuộc interface cung cấp default method cụ thể nhất sẽ được chọn. Vì `B` cụ thể hơn `A`, `hello` từ `B` được chọn. Do đó, chương trình in ra `"Hello from B"`.
 
 Bây giờ hãy xem điều gì sẽ xảy ra nếu `C` kế thừa từ `D` như sau (được minh hoạ ở hình 13.6):
 
 > **Hình 13.6.** Kế thừa từ một class và implement hai interface
+>
+> ![Hình 13.6](images/ch13/hinh-13-6.jpg)
 
 ```java
 public class D implements A { }
@@ -486,6 +498,8 @@ public class C implements B, A { }
 ```
 
 > **Hình 13.7.** Implement hai interface
+>
+> ![Hình 13.7](images/ch13/hinh-13-7.jpg)
 
 Quy tắc 2 không giúp được bạn lúc này bởi vì không còn interface nào cụ thể hơn để chọn. Cả hai phương thức `hello` từ `A` và `B` đều có thể là lựa chọn hợp lệ. Vì vậy, trình biên dịch Java sinh ra một lỗi biên dịch bởi vì nó không biết phương thức nào phù hợp hơn: `"Error: class C inherits unrelated defaults for hello() from types B and A."`
 
@@ -566,6 +580,8 @@ public class D implements B, C {
 Hình 13.8 minh hoạ sơ đồ UML cho kịch bản này. Vấn đề này được gọi là bài toán kim cương (diamond problem) bởi vì sơ đồ trông giống một viên kim cương. `D` kế thừa khai báo default method nào: cái từ `B` hay cái từ `C`? Bạn chỉ có duy nhất một khai báo phương thức để chọn. Chỉ có `A` khai báo một default method. Vì interface này là super-interface của `D`, đoạn code in ra `"Hello from A"`.
 
 > **Hình 13.8.** Bài toán kim cương
+>
+> ![Hình 13.8](images/ch13/hinh-13-8.jpg)
 
 Bây giờ chuyện gì xảy ra nếu `B` cũng có một default method `hello` với cùng chữ ký? Quy tắc 2 nói rằng bạn chọn interface cung cấp default method cụ thể nhất. Vì `B` cụ thể hơn `A`, khai báo default method từ `B` được chọn. Nếu cả `B` lẫn `C` đều khai báo một phương thức `hello` với cùng chữ ký thì bạn có một xung đột và cần giải quyết nó một cách tường minh, như chúng tôi đã trình bày ở trên.
 
