@@ -201,4 +201,107 @@ export const ddiaWeeksPart2 = [
       },
     ],
   },
+  {
+    id: "dd-w10",
+    week: "Tuần 10",
+    title: "Batch processing",
+    goal: "Chọn được mô hình batch cho một workload cụ thể, và nói được job của bạn xử lý một task chết giữa chừng bằng cách nào thay vì tin rằng framework lo hết.",
+    practice: "Lấy pipeline dữ liệu lớn nhất bạn đang chạy và làm ba việc đo được. Một: vẽ ra DAG của nó — đếm số job, và với mỗi cạnh ghi rõ dữ liệu trung gian đi qua đâu: hệ thống file phân tán, object store, hay truyền thẳng từ task này sang task kia; sách nói workflow gồm 50 đến 100 job là chuyện phổ biến, nên nếu không ai trong đội vẽ nổi DAG đó thì chính con số ấy là thứ cần đo trước. Hai: mở lịch sử 30 ngày gần nhất, đếm riêng số task thất bại và số task bị preempt, rồi đặt tỷ lệ đó cạnh lời sách nói rằng preemption xảy ra thường xuyên hơn lỗi phần cứng — nếu bạn đang chạy trên spot instance mà chưa từng nhìn hai con số này thì bạn chưa biết job của mình đang chịu lỗi kiểu gì. Ba: tìm mọi chỗ một batch job ghi thẳng vào database production, đếm số bản ghi mỗi lần chạy, và viết ra chuyện gì xảy ra với phần đã ghi nếu job thất bại giữa chừng rồi được chạy lại.",
+    resources: [
+      { label: "DDIA 11 — Batch Processing", href: "#/docs/ddia-11" },
+      { label: "spark.apache.org — RDD Programming Guide", href: "https://spark.apache.org/docs/latest/rdd-programming-guide.html" },
+    ],
+    items: [
+      {
+        id: "dd-w10-1",
+        text: "Triết lý Unix: pipeline, và vì sao nó vẫn là khuôn mẫu",
+        lesson: `**Mục tiêu.** Nói được vì sao đầu vào bất biến làm một job dễ sửa sai hơn transaction đọc/ghi, và chọn đúng giữa bảng hash trong bộ nhớ và cách sắp xếp cho một phép đếm.
+
+**Đọc.** Đoạn mở chương đặt nền cho cả tuần: bốn gạch đầu dòng về lợi ích của đầu vào bất biến, trong đó *time travel* và *human fault tolerance* đáng ghi lại; đọc luôn câu nói MapReduce nay phần lớn đã lỗi thời và không còn được dùng tại Google. [Batch Processing với các công cụ Unix](#/docs/ddia-11) mở bằng một dòng access log NGINX kèm định nghĩa định dạng — tự giải mã dòng đó trước khi đọc lời giải thích. [Phân tích log đơn giản](#/docs/ddia-11) là sáu lệnh nối bằng pipe, mỗi lệnh một chú thích đánh số; gõ lại cả sáu trên máy bạn. [Chuỗi lệnh so với chương trình tùy biến](#/docs/ddia-11) đưa bản Python tương đương: khác biệt thật nằm ở luồng thực thi, không ở cú pháp. [Sắp xếp so với aggregation trong bộ nhớ](#/docs/ddia-11) là mục đọc chậm nhất — khái niệm *working set*, và lý do \`sort\` của GNU Coreutils tự tràn ra đĩa rồi tự song song hóa trên nhiều lõi.
+
+**Bẫy.** Tin rằng rollback code sẽ sửa được dữ liệu sai. Sách đối chiếu thẳng: với batch job, bạn quay về phiên bản code trước rồi chạy lại là đầu ra lại đúng; còn hầu hết database có transaction đọc/ghi *không* có tính chất này — đã ghi dữ liệu sai vào database rồi thì rollback code không sửa được gì. Bẫy thứ hai: giữ một bảng hash trong bộ nhớ rồi coi như xong chuyện quy mô. Sách đặt điều kiện rõ: cách đó chỉ tốt khi working set — số URL riêng biệt, không phải số dòng log — còn nhỏ; lớn hơn bộ nhớ khả dụng thì cách sắp xếp mới có lợi thế, vì nó dùng đĩa hiệu quả.
+
+**Tự kiểm tra.** Vì sao working set của phép đếm URL không tăng khi số dòng log tăng? Và pipeline Unix mất đi lợi thế nào ngay khi dataset không còn vừa một máy?`,
+      },
+      {
+        id: "dd-w10-2",
+        text: "MapReduce: shuffle, sort-merge join, và chịu lỗi bằng tính lại",
+        lesson: `**Mục tiêu.** Dựng lại được đường đi của một cặp key-value từ mapper tới reducer, và nói được framework của bạn xử lý một task chết giữa chừng bằng cách nào.
+
+**Đọc.** [Batch Processing trong hệ phân tán](#/docs/ddia-11) so từng thành phần của một máy Unix với đối tác phân tán của nó. [Hệ thống file phân tán](#/docs/ddia-11) — block mặc định của HDFS là 128 MB còn của ext4 là 4.096 byte, và một file 900 MB thành bảy block 128 MB cộng một block 4 MB; khung [HỆ THỐNG FILE PHÂN TÁN VÀ LƯU TRỮ MẠNG](#/docs/ddia-11) đọc nhanh. [Object Store](#/docs/ddia-11) đọc kỹ hai điểm khác biệt khi \`list\` theo prefix. [Điều phối job phân tán](#/docs/ddia-11) cho ba thành phần — task executor, resource manager, scheduler; [Cấp phát tài nguyên](#/docs/ddia-11) dựng bài toán năm node với 160 lõi và hai job mỗi job muốn 100 lõi, tự trả lời trước khi đọc tiếp; [Lên lịch workflow](#/docs/ddia-11) định nghĩa DAG, còn [Xử lý lỗi](#/docs/ddia-11) là mục quan trọng nhất ở đây. Rồi [MapReduce](#/docs/ddia-11) với bốn bước đánh số — bước 3 là ngầm định — [Shuffle dữ liệu](#/docs/ddia-11) bám Hình 11-1, và [Join và Grouping](#/docs/ddia-11) với Hình 11-2, Hình 11-3 và *sort-merge join*.
+
+**Bẫy.** Coi object store là một filesystem chỉ vì đã có driver FUSE. Sách vạch đúng chỗ gãy: link và lock thường không được hỗ trợ, còn đổi tên thì *không* nguyên tử — nó là sao chép object sang key mới rồi xóa key cũ, nên đổi tên một "thư mục" nghĩa là đổi tên từng object bên trong; sách dặn phải thận trọng vì những hệ thống này có thể trông như đã hiện thực đủ API mà vẫn không hành xử như bạn mong đợi. Bẫy thứ hai: chạy job trên spot instance rồi coi lỗi phần cứng là rủi ro chính. Sách nói ngược lại: task ưu tiên thấp dễ bị scheduler kill hơn, vì preemption xảy ra thường xuyên hơn lỗi phần cứng.
+
+**Tự kiểm tra.** Vì sao MapReduce phải ghi dữ liệu trung gian trở lại DFS còn Spark thì không, và mỗi cách trả giá gì? Và *secondary sort* tiết kiệm cho reducer thứ gì?`,
+      },
+      {
+        id: "dd-w10-3",
+        text: "Vượt khỏi MapReduce — dataflow engine và các trường hợp dùng batch",
+        lesson: `**Mục tiêu.** Nói được dataflow engine lấy lại được gì so với MapReduce, và chọn đúng đường đưa đầu ra của một batch job vào hệ thống đang phục vụ người dùng.
+
+**Đọc.** [Các Dataflow Engine](#/docs/ddia-11) là trọng tâm: năm gạch đầu dòng liệt kê lợi thế so với MapReduce — chỉ sắp xếp ở nơi thật sự cần, gộp các operator không đổi cách sharding vào một task, tối ưu hóa tính cục bộ, giữ trạng thái trung gian trong bộ nhớ hoặc đĩa cục bộ, và tái dùng process thay vì bật JVM mới cho mỗi task; chép cả năm. [Các ngôn ngữ truy vấn](#/docs/ddia-11) giải thích vì sao SQL thành ngôn ngữ chung; khung [BATCH PROCESSING VÀ CLOUD DATA WAREHOUSE HỘI TỤ](#/docs/ddia-11) nói thẳng khi nào cloud data warehouse là lựa chọn sai. [DataFrame](#/docs/ddia-11) ngắn nhưng giấu một cảnh báo dễ bỏ sót. Nửa sau là [Các trường hợp sử dụng batch](#/docs/ddia-11) với bốn mục con: [Extract–Transform–Load](#/docs/ddia-11), [Phân tích (Analytics)](#/docs/ddia-11) cùng data lakehouse, [Machine Learning](#/docs/ddia-11) với BSP và Pregel, rồi [Phục vụ dữ liệu dẫn xuất (Serving Derived Data)](#/docs/ddia-11) — đọc kỹ nhất. [Tóm tắt](#/docs/ddia-11) gom cả chương về ba tầng: điều phối, lưu trữ, tính toán.
+
+**Bẫy.** Dùng thư viện client trong batch job để ghi thẳng từng bản ghi vào database production. Sách gọi đó là ý tưởng tồi: một request mạng cho mỗi bản ghi chậm hơn nhiều bậc so với thông lượng của một task batch; nhiều task ghi song song dễ làm database quá tải và kéo theo sự cố ở nơi khác; và tác dụng phụ nhìn thấy từ bên ngoài phá vỡ bảo đảm all-or-nothing — task thất bại rồi chạy lại để lại đầu ra trùng lặp. Bẫy thứ hai: bê thẳng mã Pandas sang Spark rồi mong nó hành xử y hệt. Sách nói DataFrame cục bộ thường được đánh index và có thứ tự, còn DataFrame phân tán thì nhìn chung không — nguồn của những bất ngờ về hiệu năng khi di trú.
+
+**Tự kiểm tra.** Vì sao đẩy đầu ra batch qua một Kafka topic không tự nó giải quyết được bảo đảm all-or-nothing? Và Spark khác Pandas ở thời điểm nào trong vòng đời một lời gọi DataFrame?`,
+      },
+    ],
+  },
+  {
+    id: "dd-w11",
+    week: "Tuần 11",
+    title: "Stream processing",
+    goal: "Chọn đúng kiểu broker và kiểu join cho một bài toán stream cụ thể, và phát biểu chính xác hệ thống của bạn bảo đảm gì khi một consumer chết giữa chừng.",
+    practice: "Chọn một event stream đang chạy trong hệ thống của bạn và làm bốn việc đo được. Một: phân loại từng consumer của nó theo hai kiểu broker mà chương này đối chiếu, rồi với mỗi consumer viết ra chuyện gì xảy ra khi nó crash giữa lúc xử lý — thông điệp được giao lại cho ai, thứ tự có còn giữ không, bản ghi nào có thể bị xử lý hai lần. Hai: lấy chỉ số lag của consumer chậm nhất trong 7 ngày và đặt cạnh thời gian lưu giữ của topic, rồi ghi ra tỷ lệ giữa hai con số đó; nếu bạn không biết mình còn bao nhiêu giờ đệm trước khi consumer bắt đầu bỏ lỡ thông điệp thì bạn chưa có cảnh báo. Ba: tìm mọi chỗ mã ứng dụng ghi cùng một thay đổi vào hai hệ thống, đánh dấu từng chỗ là dual write hay CDC, và với mỗi dual write viết ra cặp giá trị nào có thể lệch nhau vĩnh viễn mà không lỗi nào báo. Bốn: liệt kê mọi phép tính theo window trong hệ thống và ghi rõ nó đang chia window theo event time hay theo processing time.",
+    resources: [
+      { label: "DDIA 12 — Stream Processing", href: "#/docs/ddia-12" },
+      { label: "kafka.apache.org — Design", href: "https://kafka.apache.org/documentation/#design" },
+    ],
+    items: [
+      {
+        id: "dd-w11-1",
+        text: "Truyền event: message broker so với log-based broker",
+        lesson: `**Mục tiêu.** Chọn được giữa broker kiểu JMS/AMQP và broker dựa trên log cho một workload cụ thể, và nói được mỗi kiểu đánh mất thứ gì.
+
+**Đọc.** [Truyền tải Event Stream](#/docs/ddia-12) định nghĩa *event* và vì sao poll một database không thay được cơ chế thông báo. [Hệ thống Messaging](#/docs/ddia-12) đặt hai câu hỏi phân loại mọi hệ thống trong chương, kèm ba lựa chọn khi producer nhanh hơn consumer: bỏ thông điệp, đưa vào buffer, hay áp backpressure. [Messaging trực tiếp từ producer tới consumer](#/docs/ddia-12) đọc lướt; [Message broker](#/docs/ddia-12) và [So sánh message broker với database](#/docs/ddia-12) đọc kỹ bốn gạch đầu dòng khác biệt. [Nhiều consumer](#/docs/ddia-12) cho hai mẫu ở Hình 12-1; [Xác nhận (acknowledgment) và gửi lại (redelivery)](#/docs/ddia-12) bám Hình 12-2, khép bằng dead letter queue. Nửa sau là [Message Broker Dựa trên Log](#/docs/ddia-12): [Dùng log để lưu trữ thông điệp](#/docs/ddia-12) với offset và Hình 12-3, [So sánh log với messaging truyền thống](#/docs/ddia-12) chốt điều kiện chọn bên nào, [Consumer offset](#/docs/ddia-12) nối về log sequence number ở tuần 5, [Sử dụng dung lượng đĩa](#/docs/ddia-12) với phép tính 20 TB ở 250 MB/s ra khoảng 22 giờ đệm, rồi [Khi consumer không theo kịp producer](#/docs/ddia-12) và [Phát lại (replay) các thông điệp cũ](#/docs/ddia-12).
+
+**Bẫy.** Bật load balancing rồi vẫn trông cậy vào thứ tự thông điệp. Sách nói điều đó là tất yếu: kể cả khi broker cố bảo toàn thứ tự — JMS và AMQP đều yêu cầu thế — kết hợp load balancing với gửi lại chắc chắn làm đảo thứ tự, như Hình 12-2 cho ra chuỗi *m4*, *m3*, *m5*; muốn tránh thì phải bỏ load balancing. Bẫy thứ hai: coi broker dựa trên log là kho lưu vô hạn. Sách nói log chỉ là một circular buffer trên đĩa: segment cũ bị xóa hoặc chuyển sang lưu trữ dài hạn, và nếu offset của một consumer trỏ vào segment đã bị xóa thì nó *bỏ lỡ* thông điệp — không lỗi nào báo cho bạn ngoài chỉ số lag bạn phải tự giám sát.
+
+**Tự kiểm tra.** Vì sao head-of-line blocking là cái giá riêng của cách tiếp cận dựa trên log? Và điều gì khiến việc tiêu thụ một log production để gỡ lỗi trở nên an toàn?`,
+      },
+      {
+        id: "dd-w11-2",
+        text: "Database và stream: CDC, event sourcing, log compaction",
+        lesson: `**Mục tiêu.** Nói được vì sao dual write hỏng theo cách không ai phát hiện ra, và chọn giữa CDC và event sourcing cho một hệ thống đã có sẵn.
+
+**Đọc.** [Database và Stream](#/docs/ddia-12) mở bằng ý niệm mọi lần ghi vào database đều là một event. [Giữ các hệ thống đồng bộ với nhau](#/docs/ddia-12) dựng bài toán bằng Hình 12-4 — đọc chậm. [Change Data Capture](#/docs/ddia-12) cùng Hình 12-5 đưa lời giải: biến database thành leader, mọi hệ thống dẫn xuất thành follower. Bốn mục con kỹ thuật: [Triển khai CDC](#/docs/ddia-12) với Debezium, [Snapshot ban đầu](#/docs/ddia-12) — snapshot phải ứng với một offset đã biết trong change log — [Log compaction](#/docs/ddia-12) với Hình 12-6 và tombstone, và [Hỗ trợ API cho change stream](#/docs/ddia-12) với ca khó của Cassandra. [CDC so với event sourcing](#/docs/ddia-12): khác biệt nằm ở mức trừu tượng, không ở cơ chế. Khung [CHANGE DATA CAPTURE VÀ SCHEMA CỦA DATABASE](#/docs/ddia-12) giới thiệu outbox pattern. Khép bằng [Trạng thái, Stream và Tính bất biến](#/docs/ddia-12) với Hình 12-7, [Ưu điểm của các sự kiện bất biến](#/docs/ddia-12), [Dẫn xuất nhiều view từ cùng một event log](#/docs/ddia-12), [Kiểm soát đồng thời (concurrency control)](#/docs/ddia-12) và [Hạn chế của tính bất biến](#/docs/ddia-12) với crypto-shredding.
+
+**Bẫy.** Giải bài toán đồng bộ bằng dual write. Sách chỉ ra hai chỗ hỏng độc lập: race condition ở Hình 12-4 khiến database kết thúc ở *B* còn search index ở *A* — không nhất quán *vĩnh viễn* dù không lỗi nào xảy ra, và thiếu version vector thì bạn không nhận ra đã có ghi đồng thời; chỗ thứ hai là một lần ghi thành công còn lần kia thất bại, tức atomic commit vốn đắt. Bẫy thứ hai: bật CDC rồi vẫn đổi schema database như một chi tiết nội bộ. Sách nói CDC biến schema nguồn thành public API: xóa một cột làm hỏng consumer phía sau, và vì CDC thường chạy dưới dạng data stream, consumer đó có thể là một service production — hỏng nó là sự cố chạm tới khách hàng.
+
+**Tự kiểm tra.** Vì sao log compaction làm được cho CDC nhưng không làm được theo cùng cách cho event sourcing? Và outbox pattern có phải một dual write không, nếu phải thì nó thoát bằng cách nào?`,
+      },
+      {
+        id: "dd-w11-3",
+        text: "Cửa sổ thời gian, và thời gian sự kiện so với thời gian xử lý",
+        lesson: `**Mục tiêu.** Chọn đúng loại window cho một phép aggregation cụ thể, và nói được kết quả sai đi thế nào nếu bạn chia window theo đồng hồ của máy xử lý.
+
+**Đọc.** [Xử lý Stream](#/docs/ddia-12) mở bằng ba việc bạn có thể làm với một stream — ghi vào kho lưu trữ, đẩy tới người dùng, hay sinh stream dẫn xuất — chương chỉ bàn việc thứ ba. [Các ứng dụng của Stream Processing](#/docs/ddia-12) đi qua sáu mục con; [Complex event processing (xử lý event phức hợp)](#/docs/ddia-12) đảo ngược quan hệ giữa truy vấn và dữ liệu, rồi [Stream analytics (phân tích stream)](#/docs/ddia-12), [Duy trì materialized view](#/docs/ddia-12), khung [DUY TRÌ VIEW TĂNG DẦN (INCREMENTAL VIEW MAINTENANCE)](#/docs/ddia-12), [Tìm kiếm trên stream](#/docs/ddia-12) và [Kiến trúc hướng event (event-driven) và RPC](#/docs/ddia-12). [Suy luận về thời gian](#/docs/ddia-12) là trọng tâm: [Event time so với processing time](#/docs/ddia-12) với phép so sánh thứ tự phát hành *Star Wars* và Hình 12-8, [Xử lý các event đến muộn (straggler)](#/docs/ddia-12), [Rốt cuộc bạn đang dùng đồng hồ của ai?](#/docs/ddia-12) với ba timestamp để hiệu chỉnh đồng hồ thiết bị, và [Các loại window](#/docs/ddia-12) với bốn loại — tumbling, hopping, sliding, session; tự xếp mỗi phép đo của bạn vào một loại.
+
+**Bẫy.** Chia window theo đồng hồ của máy xử lý. Sách dựng kịch bản hỏng: bạn triển khai lại stream processor, nó tắt một phút rồi xử lý phần tồn đọng; đo theo processing time thì đồ thị hiện một đợt tăng vọt request trong khi tốc độ thật vẫn ổn định — Hình 12-8 gọi đó là hiện tượng giả do biến động tốc độ xử lý. Bẫy thứ hai: đặt timeout, tuyên bố window đã đóng, rồi coi con số đó là chung cuộc. Sách nói bạn không bao giờ chắc đã nhận đủ event cho một window: có event còn bị lưu tạm ở máy khác do gián đoạn mạng. Chỉ còn hai đường — bỏ qua straggler nhưng theo dõi lượng bị loại như một chỉ số, hoặc công bố một *correction*, kèm rút lại đầu ra trước.
+
+**Tự kiểm tra.** Vì sao dùng Bloom filter hay HyperLogLog không khiến stream processing "vốn dĩ xấp xỉ"? Và một sliding window năm phút gom được cặp event nào mà tumbling và hopping năm phút thì không?`,
+      },
+      {
+        id: "dd-w11-4",
+        text: "Join trên stream, và exactly-once thực chất nghĩa là gì",
+        lesson: `**Mục tiêu.** Phân biệt được ba loại join trên stream theo state mà mỗi loại phải giữ, và phát biểu chính xác exactly-once bảo đảm gì, không bảo đảm gì.
+
+**Đọc.** [Stream Join](#/docs/ddia-12) giải thích vì sao join trên stream khó hơn trong batch, rồi tách ra ba loại. [Join stream–stream (window join)](#/docs/ddia-12) dùng ví dụ tỷ lệ nhấp: state là các event một giờ vừa qua, index theo session ID; chú ý câu nói nhúng chi tiết tìm kiếm vào event nhấp *không* tương đương join. [Join stream–table (stream enrichment)](#/docs/ddia-12) là *hash join*, với bản sao cục bộ của database được CDC giữ luôn tươi. [Join table–table (duy trì materialized view)](#/docs/ddia-12) quay lại home timeline mạng xã hội. [Sự phụ thuộc thời gian của join](#/docs/ddia-12) là mục dễ bỏ sót nhất: thuế suất tại thời điểm bán, và slowly changing dimension. [Khả năng chịu lỗi](#/docs/ddia-12) mở bằng định nghĩa exactly-once và nhận xét *effectively-once* mới là chữ sát hơn, rồi bốn mục con: [Microbatching và checkpointing](#/docs/ddia-12) — kích thước batch khoảng một giây — [Xem lại atomic commit](#/docs/ddia-12) nối về 2PC ở tuần 7, [Idempotence](#/docs/ddia-12), và [Xây dựng lại state sau hỏng hóc](#/docs/ddia-12). [Tóm tắt](#/docs/ddia-12) đối chiếu gọn hai kiểu broker và ba loại join.
+
+**Bẫy.** Đọc thấy "Flink cho exactly-once" rồi tưởng đã xong. Sách vạch đúng biên: microbatching và checkpointing cho exactly-once *trong phạm vi framework*; ngay khi đầu ra rời khỏi stream processor — ghi vào database, publish sang broker ngoài, hay gửi email — framework không còn loại bỏ được đầu ra của microbatch thất bại, và khởi động lại task khiến tác dụng phụ xảy ra hai lần. Bẫy thứ hai: dựa vào idempotence mà bỏ qua các giả định của nó. Sách nêu ba điều kiện: task khởi động lại phải phát lại đúng các thông điệp theo đúng thứ tự, việc xử lý phải deterministic, và không node nào khác cập nhật đồng thời cùng giá trị — khi failover còn có thể cần fencing để chặn node bị cho là đã chết nhưng vẫn sống, đúng cơ chế tuần 8.
+
+**Tự kiểm tra.** Vì sao gán định danh phiên bản cho record được join làm join deterministic nhưng lại chặn mất log compaction? Và khi nào bạn không cần replicate state để khôi phục?`,
+      },
+    ],
+  },
 ];
