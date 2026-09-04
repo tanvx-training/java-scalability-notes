@@ -73,7 +73,7 @@ export const mjiaWeeksPart2 = [
     title: "Default method và hệ thống module",
     goal: "Thêm được một phương thức vào interface đã phát hành mà không phá code người dùng, và cắt một dự án thành các module có ranh giới được compiler kiểm tra.",
     practice:
-      "tự tay dựng lại ví dụ hai module của §14.4–§14.6 — viết `module-info.java` cho cả hai, biên dịch bằng `javac --module-source-path`, đóng gói bằng `jar`, chạy bằng `java --module-path`; rồi cố tình bỏ một `requires` để xem thông báo lỗi trông thế nào.",
+      "dựng lại bằng tay ví dụ MỘT module của §14.4.3 bằng đúng ba lệnh sách in ra — `javac module-info.java …`, `jar cvfe`, `java --module-path`; rồi mở dự án hai module `expenses` của §14.6 và build bằng `mvn clean package`. Cuối cùng làm đúng bài tập §14.7: thêm `requires httpclient` vào `module-info.java` của `expenses.readers`, build lại, và đối chiếu lỗi bạn nhận được với dòng `[ERROR] module not found: httpclient` sách in ra.",
     resources: [
       { label: "MJIA 13 — Default method", href: "#/docs/mjia-13" },
       { label: "MJIA 14 — Hệ thống module của Java", href: "#/docs/mjia-14" },
