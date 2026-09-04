@@ -294,7 +294,7 @@ export const mjiaWeeksPart2 = [
     title: "Kỹ thuật FP, so sánh Scala, hướng đi tiếp",
     goal: "Cài được cấu trúc dữ liệu bền vững cùng lazy list bằng Java, và định vị được Java trên phổ OOP–FP qua đối chiếu với Scala và qua lộ trình mà ngôn ngữ đang đi tiếp.",
     practice:
-      "cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — `update` trả về cây mới thay vì sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.",
+      "cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — viết `fupdate` trả về cây mới thay vì `update` sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.",
     resources: [
       { label: "MJIA 19 — Các kỹ thuật lập trình hàm", href: "#/docs/mjia-19" },
       { label: "MJIA 20 — Kết hợp OOP và FP: so sánh Java và Scala", href: "#/docs/mjia-20" },
