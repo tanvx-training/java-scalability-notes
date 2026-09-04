@@ -895,7 +895,7 @@ export const docs = [
     title: "Chương 11 — Batch Processing",
     file: "content/ddia/11-batch-processing.md",
     icon: "⚙️",
-    desc: "Từ pipeline Unix tới MapReduce và dataflow engine — join phía map hay phía reduce, và chịu lỗi bằng cách tính lại.",
+    desc: "Từ pipeline Unix tới MapReduce và dataflow engine — shuffle, sort-merge join, và chịu lỗi bằng cách tính lại.",
     tags: ["Batch", "MapReduce", "Dataflow"],
   },
   {

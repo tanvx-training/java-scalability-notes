@@ -79,7 +79,7 @@ Thư mục [`images/`](./images/) — 10 hình được nhúng đúng ngữ cả
 
 ## 📚 DevPrep — nền tảng học đa lĩnh vực
 
-Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action**, bản dịch **Spring Security in Action**, bản dịch **Modern Concurrency in Java**, **Lộ trình Senior Java** (chương trình tự học 24 tháng) và web app **DevPrep** để học/ôn tập/thi thử cả sáu lĩnh vực:
+Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action**, bản dịch **Designing Data-Intensive Applications**, bản dịch **Modern Concurrency in Java**, bản dịch **Spring Security in Action**, **Lộ trình Senior Java** (chương trình tự học 24 tháng) và web app **DevPrep** để học/ôn tập/thi thử cả bảy lĩnh vực:
 
 | Thành phần | Mô tả |
 |---|---|
@@ -92,7 +92,8 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 | [`spring-security-vi/`](./spring-security-vi/) | Bản dịch tiếng Việt *Spring Security in Action*, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. Lời giới thiệu + 18 chương + 2 phụ lục (21 tệp). Đọc trong app ở lĩnh vực Spring Security. |
 | [`senior-java-roadmap/`](./senior-java-roadmap/) | Kế hoạch tự học 24 tháng từ Mid-level lên Senior Java + DevOps: 4 giai đoạn (Java/Spring, DevOps, K8s/Cloud, System Design), 5 tài liệu. Đọc trong app ở lĩnh vực Lộ trình Senior Java, kèm ma trận năng lực 96 tiêu chí. |
 | [`modern-concurrency-vi/`](./modern-concurrency-vi/) | Bản dịch tiếng Việt *Modern Concurrency in Java* (O'Reilly, ISBN 9781098165406) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 8 chương, 19 hình. Đọc trong app ở lĩnh vực Modern Concurrency in Java. |
-| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability, Spring Security, Modern Concurrency in Java, Lộ trình Senior Java): lộ trình tương tác (11 giáo trình, 572 mục), thư viện tài liệu (86 tài liệu), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
+| [`ddia-vi/`](./ddia-vi/) | Bản dịch tiếng Việt *Designing Data-Intensive Applications*, ấn bản 2 (Martin Kleppmann, O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 14 chương, 105 hình. Đọc trong app ở lĩnh vực Designing Data-Intensive Applications, kèm lộ trình đọc 12 tuần. |
+| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability, Designing Data-Intensive Applications, Modern Concurrency in Java, Spring Security, Lộ trình Senior Java): lộ trình tương tác (12 giáo trình, 620 mục), thư viện tài liệu (100 tài liệu), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
 
 ### Chạy local
 
