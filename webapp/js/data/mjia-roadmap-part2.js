@@ -15,7 +15,7 @@ export const mjiaWeeksPart2 = [
     title: "Optional thay null, và Date/Time API",
     goal: "Mô hình hoá được sự vắng mặt của một giá trị bằng kiểu thay vì bằng null, và chọn đúng lớp date-time cho một bài toán mà không phải tra Javadoc từng lần.",
     practice:
-      "lấy một chuỗi truy cập lồng nhau trong code của bạn đang phải kiểm `null` từng tầng (kiểu `a.getB().getC().getD()`), viết lại bằng `Optional` với `map`/`flatMap` theo §11.3; rồi thay mọi `Date`/`Calendar` trong một class sang `LocalDate`/`Instant` và ghi lại chỗ nào compile hỏng.",
+      "Lấy một chuỗi truy cập lồng nhau trong code của bạn đang phải kiểm `null` từng tầng (kiểu `a.getB().getC().getD()`), viết lại bằng `Optional` với `map`/`flatMap` theo §11.3; rồi thay mọi `Date`/`Calendar` trong một class sang `LocalDate`/`Instant` và ghi lại chỗ nào compile hỏng.",
     resources: [
       { label: "MJIA 11 — Dùng Optional thay cho null", href: "#/docs/mjia-11" },
       { label: "MJIA 12 — Date and Time API mới", href: "#/docs/mjia-12" },
@@ -73,7 +73,7 @@ export const mjiaWeeksPart2 = [
     title: "Default method và hệ thống module",
     goal: "Thêm được một phương thức vào interface đã phát hành mà không phá code người dùng, và cắt một dự án thành các module có ranh giới được compiler kiểm tra.",
     practice:
-      "dựng lại bằng tay ví dụ MỘT module của §14.4.3 bằng đúng ba lệnh sách in ra — `javac module-info.java …`, `jar cvfe`, `java --module-path`; rồi mở dự án hai module `expenses` của §14.6 và build bằng `mvn clean package`. Cuối cùng làm đúng bài tập §14.7: thêm `requires httpclient` vào `module-info.java` của `expenses.readers`, build lại, và đối chiếu lỗi bạn nhận được với dòng `[ERROR] module not found: httpclient` sách in ra.",
+      "Dựng lại bằng tay ví dụ MỘT module của §14.4.3 bằng đúng ba lệnh sách in ra — `javac module-info.java …`, `jar cvfe`, `java --module-path`; rồi mở dự án hai module `expenses` của §14.6 và build bằng `mvn clean package`. Cuối cùng làm đúng bài tập §14.7: thêm `requires httpclient` vào `module-info.java` của `expenses.readers`, build lại, và đối chiếu lỗi bạn nhận được với dòng `[ERROR] module not found: httpclient` sách in ra.",
     resources: [
       { label: "MJIA 13 — Default method", href: "#/docs/mjia-13" },
       { label: "MJIA 14 — Hệ thống module của Java", href: "#/docs/mjia-14" },
@@ -132,7 +132,7 @@ export const mjiaWeeksPart2 = [
     title: "Nền tảng: thread, future, reactive manifesto",
     goal: "Nói được vì sao một thread bị chặn là tài nguyên bị phí, và vẽ được hệ thống của bạn thành hộp và kênh trước khi chọn API concurrency nào.",
     practice:
-      "tuần này không gõ code mới. Thay vào đó vẽ tay sơ đồ box-and-channel (§15.3) cho **một** luồng gọi thật trong hệ thống của bạn — mỗi hộp là một lời gọi từ xa, mỗi kênh là dữ liệu đi giữa chúng — rồi đánh dấu hộp nào đang chặn thread và hộp nào không. Sơ đồ này là đầu vào cho bài tập tuần 10.",
+      "Tuần này không gõ code mới. Thay vào đó vẽ tay sơ đồ box-and-channel (§15.3) cho **một** luồng gọi thật trong hệ thống của bạn — mỗi hộp là một lời gọi từ xa, mỗi kênh là dữ liệu đi giữa chúng — rồi đánh dấu hộp nào đang chặn thread và hộp nào không. Sơ đồ này là đầu vào cho bài tập tuần 10.",
     resources: [
       { label: "MJIA 15 — Khái niệm nền tảng của CompletableFuture và reactive programming", href: "#/docs/mjia-15" },
     ],
@@ -178,7 +178,7 @@ export const mjiaWeeksPart2 = [
     title: "CompletableFuture — kết hợp tác vụ bất đồng bộ",
     goal: "Biến một chuỗi lời gọi từ xa đang chặn thread thành một pipeline CompletableFuture non-blocking, và chọn đúng combinator cho từng quan hệ phụ thuộc giữa các lời gọi đó.",
     practice:
-      "cầm sơ đồ box-and-channel vẽ ở tuần 9, cài lại đúng luồng đó bằng `CompletableFuture`: `supplyAsync` cho từng lời gọi từ xa, `thenCombine` cho hai lời gọi độc lập, `thenCompose` cho hai lời gọi phụ thuộc; đo tổng thời gian với executor mặc định rồi với executor riêng có kích thước pool theo công thức ở §16.3, và ghi lại chênh lệch.",
+      "Cầm sơ đồ box-and-channel vẽ ở tuần 9, cài lại đúng luồng đó bằng `CompletableFuture`: `supplyAsync` cho từng lời gọi từ xa, `thenCombine` cho hai lời gọi độc lập, `thenCompose` cho hai lời gọi phụ thuộc; đo tổng thời gian với executor mặc định rồi với executor riêng có kích thước pool theo công thức ở §16.3, và ghi lại chênh lệch.",
     resources: [
       { label: "MJIA 16 — CompletableFuture: lập trình bất đồng bộ khả kết hợp", href: "#/docs/mjia-16" },
     ],
@@ -235,11 +235,11 @@ export const mjiaWeeksPart2 = [
     title: "Flow API, reactive, và tư duy hàm",
     goal: "Đọc được một hệ thống theo bốn tính chất của Reactive Manifesto, cài được bốn interface của Flow API bằng tay, và gọi tên chính xác điều gì làm một phương thức trở nên mang tính hàm.",
     practice:
-      "cài đúng bốn interface của Flow API cho ví dụ nhiệt kế ở §17.2 — `Publisher`, `Subscriber`, `Subscription`, `Processor` — rồi cố tình để `Subscriber` xử lý chậm hơn `Publisher` phát và quan sát `request(n)` chặn dòng chảy thế nào. Đó là backpressure nhìn thấy được.",
+      "Cài đúng bốn interface của Flow API cho ví dụ nhiệt kế ở §17.2 — `Publisher`, `Subscriber`, `Subscription`, `Processor` — rồi cố tình để `Subscriber` xử lý chậm hơn `Publisher` phát và quan sát `request(n)` chặn dòng chảy thế nào. Đó là backpressure nhìn thấy được.",
     resources: [
       { label: "MJIA 17 — Reactive programming", href: "#/docs/mjia-17" },
       { label: "MJIA 18 — Tư duy hàm", href: "#/docs/mjia-18" },
-      { label: "reactive-streams.org", href: "https://www.reactive-streams.org/" },
+      { label: "reactive-streams.org — Reactive Streams", href: "https://www.reactive-streams.org/" },
     ],
     items: [
       {
@@ -294,7 +294,7 @@ export const mjiaWeeksPart2 = [
     title: "Kỹ thuật FP, so sánh Scala, hướng đi tiếp",
     goal: "Cài được cấu trúc dữ liệu bền vững cùng lazy list bằng Java, và định vị được Java trên phổ OOP–FP qua đối chiếu với Scala và qua lộ trình mà ngôn ngữ đang đi tiếp.",
     practice:
-      "cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — viết `fupdate` trả về cây mới thay vì `update` sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.",
+      "Cài lại class `Tree` của §19.2.2 theo lối hàm như §19.2.3 chỉ ra — viết `fupdate` trả về cây mới thay vì `update` sửa cây cũ tại chỗ — rồi viết test chứng minh một tham chiếu giữ từ trước vẫn thấy dữ liệu cũ sau khi thêm node. Nếu còn thời gian, làm tương tự với `TrainJourney` của §19.2.1. Ch.20 và ch.21 chỉ đọc, không có bài tập — đọc lướt lấy điểm khác biệt và hướng đi, đừng sa vào cú pháp Scala.",
     resources: [
       { label: "MJIA 19 — Các kỹ thuật lập trình hàm", href: "#/docs/mjia-19" },
       { label: "MJIA 20 — Kết hợp OOP và FP: so sánh Java và Scala", href: "#/docs/mjia-20" },

@@ -845,7 +845,7 @@ Nối vào **cuối** mảng `mjiaWeeksPart2`, sau `mj-w9`.
 
 - [ ] **Step 3: Viết tuần 11 — `mj-w11`, 4 mục (ch.17 + ch.18)**
 
-`title`: `"Flow API, reactive, và tư duy hàm"` · `resources` trỏ `#/docs/mjia-17`, `#/docs/mjia-18`, và `{ label: "reactive-streams.org", href: "https://www.reactive-streams.org/" }`.
+`title`: `"Flow API, reactive, và tư duy hàm"` · `resources` trỏ `#/docs/mjia-17`, `#/docs/mjia-18`, và `{ label: "reactive-streams.org — Reactive Streams", href: "https://www.reactive-streams.org/" }`.
 `practice`: cài đúng bốn interface của Flow API cho ví dụ nhiệt kế ở §17.2 — `Publisher`, `Subscriber`, `Subscription`, `Processor` — rồi cố tình để `Subscriber` xử lý chậm hơn `Publisher` phát và quan sát `request(n)` chặn dòng chảy thế nào. Đó là backpressure nhìn thấy được.
 
 | id | `text` | Mục sách phải đọc |
