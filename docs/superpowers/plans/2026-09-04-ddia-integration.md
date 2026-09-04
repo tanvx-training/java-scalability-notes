@@ -435,7 +435,7 @@ Sáu task tiếp theo viết 12 khối tuần vào hai tệp. **Cấu trúc mộ
 
 ---
 
-## Task 3: Lộ trình tuần 1–3 (12 mục)
+## Task 3: Lộ trình tuần 1–3 (13 mục)
 
 **Files:**
 - Create: `webapp/js/data/ddia-roadmap-part1.js`
@@ -514,7 +514,7 @@ node -e "import('./webapp/js/data/ddia-roadmap-part1.js').then(m=>{
 })"
 ```
 
-Kỳ vọng chính xác: `tuần: 3 | mục: 12` và `dd-w1:5 dd-w2:4 dd-w3:4`
+Kỳ vọng chính xác: `tuần: 3 | mục: 13` và `dd-w1:5 dd-w2:4 dd-w3:4`
 
 - [ ] **Step 7: Kiểm mọi anchor `#/docs/` trỏ tài liệu có thật**
 
@@ -538,7 +538,7 @@ Kỳ vọng: `OK — mọi anchor hợp lệ`
 
 ```bash
 git add webapp/js/data/ddia-roadmap-part1.js
-git commit -m "feat: lộ trình đọc DDIA tuần 1-3 — 12 mục
+git commit -m "feat: lộ trình đọc DDIA tuần 1-3 — 13 mục
 
 Tuần 1 gộp ch.1+2 (đánh đổi kiến trúc, yêu cầu phi chức năng), tuần 2
 ch.3 (mô hình dữ liệu), tuần 3 ch.4 (lưu trữ và truy xuất).
@@ -548,7 +548,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 4: Lộ trình tuần 4–6 (11 mục)
+## Task 4: Lộ trình tuần 4–6 (10 mục)
 
 **Files:**
 - Modify: `webapp/js/data/ddia-roadmap-part1.js`
