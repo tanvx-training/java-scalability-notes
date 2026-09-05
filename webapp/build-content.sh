@@ -14,7 +14,8 @@ DEST="$(cd "$DEST" && pwd)"
 mkdir -p "$DEST/java" "$DEST/images" "$DEST/sysprog/images" \
          "$DEST/k8sbook/images" "$DEST/springsec" "$DEST/senior" \
          "$DEST/modconc/images" "$DEST/ddia/images" "$DEST/mjia/images" \
-         "$DEST/kafka/images" "$DEST/springstart/images" "$DEST/ckabook/images"
+         "$DEST/kafka/images" "$DEST/springstart/images" "$DEST/ckabook/images" \
+         "$DEST/kuar/images"
 
 cp "$REPO"/CKAD/*.md "$REPO"/CKA/*.md "$REPO"/CKS/*.md  "$DEST/"
 cp "$REPO/Chủ đề"*/*.md                                 "$DEST/java/"
@@ -37,3 +38,5 @@ cp    "$REPO"/spring-start-vi/*.md                       "$DEST/springstart/"
 cp -R "$REPO"/spring-start-vi/images/.                   "$DEST/springstart/images/"
 cp    "$REPO"/cka-book-vi/*.md                           "$DEST/ckabook/"
 cp -R "$REPO"/cka-book-vi/images/.                       "$DEST/ckabook/images/"
+cp    "$REPO"/kuar-vi/*.md                               "$DEST/kuar/"
+cp -R "$REPO"/kuar-vi/images/.                           "$DEST/kuar/images/"
