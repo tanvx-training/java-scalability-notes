@@ -219,7 +219,7 @@ export const ckabookWeeks = [
 
 **Bẫy.** Nghĩ ResourceQuota có thể ràng buộc từng Pod riêng lẻ — nó chỉ cộng dồn ở cấp namespace; muốn ép min/max hoặc gán mặc định cho một object đơn lẻ phải dùng LimitRange, hai primitive không thay thế nhau. Bẫy thứ hai: thông báo lỗi của ResourceQuota nêu đúng tên object đang chặn (ví dụ "failed quota: awesome-quota"), còn thông báo lỗi của LimitRange thì không — bạn phải chủ động chạy \`kubectl get limitranges\` mới biết ràng buộc nào đang thực thi. Bẫy thứ ba: tạo hai LimitRange trong cùng một namespace khiến giá trị mặc định được chọn không xác định (nondeterministic) — sách khuyến cáo chỉ nên có một LimitRange mỗi namespace.
 
-**Tự kiểm tra.** Một namespace có ResourceQuota chỉ giới hạn \`pods: 2\` (không ràng buộc CPU/memory) và LimitRange đặt CPU mặc định \`200m\`, tối thiểu \`100m\`, tối đa \`2\`. Bạn \`apply\` một Pod không khai báo \`resources\` gì, chưa chạm mức \`pods: 2\` — lệnh có thành công không, và CPU request cuối cùng của Pod là bao nhiêu? Sau đó bạn \`apply\` một Pod khác, tự khai CPU request \`50m\` — object nào (ResourceQuota hay LimitRange) chặn, dựa trên thông báo lỗi nào?`,
+**Tự kiểm tra.** Viết đủ lệnh xem bảng \`Used\`/\`Hard\` hiện tại của ResourceQuota \`awesome-quota\` trong namespace \`team-awesome\`, và đủ lệnh xem bảng \`Min\`/\`Max\`/\`Default Request\`/\`Default Limit\` của LimitRange \`cpu-resource-constraint\`. Cột nào trong đầu ra lệnh đầu cho biết mức tài nguyên đang tiêu thụ thực tế, khác với cột nào chỉ lặp lại đúng giá trị bạn đã khai trong manifest?`,
       },
       {
         id: "cb-w4-2",
