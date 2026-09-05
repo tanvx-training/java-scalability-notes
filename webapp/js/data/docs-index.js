@@ -1230,7 +1230,7 @@ export const docs = [
   {
     id: "kafka-14",
     field: "kafka",
-    title: "Kafka 14 — Xử lý luồng (Stream Processing)",
+    title: "Kafka 14 — Xử lý luồng",
     file: "content/kafka/14-stream-processing.md",
     icon: "🌊",
     desc: "Stream processing khác xử lý theo lô ở đâu, các design pattern hay dùng, và Kafka Streams làm được gì qua ví dụ thật.",
