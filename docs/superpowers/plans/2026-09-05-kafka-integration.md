@@ -598,7 +598,7 @@ git commit -m "feat: lộ trình đọc Kafka tuần 1-3 — 11 mục"
 
 Nối vào **cuối** mảng, sau `kf-w3`. `title`: `"AdminClient, và cơ chế bên trong Kafka"` · `resources` trỏ `#/docs/kafka-05` và `#/docs/kafka-06`.
 
-`practice`: Viết một chương trình dùng `AdminClient` làm đủ vòng: tạo topic, đổi một cấu hình của nó, liệt kê consumer group, và đọc metadata cluster — thay cho script dòng lệnh. Rồi chạy `kafka-dump-log.sh` trên một segment của topic đó để nhìn thấy tận mắt bố cục mà mục "Physical Storage (Lưu trữ vật lý)" mô tả.
+`practice`: Viết một chương trình dùng `AdminClient` làm đủ vòng: tạo topic, đổi một cấu hình của nó, liệt kê consumer group, và đọc metadata cluster — thay cho script dòng lệnh. Rồi dùng đúng lệnh mà chính mục "Physical Storage (Lưu trữ vật lý)" của ch.6 đưa ra — `kafka-run-class.sh kafka.tools.DumpLogSegments` — trên một segment của topic đó, để nhìn thấy tận mắt bố cục mà mục ấy mô tả. **Không dùng `kafka-dump-log.sh` ở đây:** công cụ đó thuộc ch.12, tức tuần 9, người đọc chưa gặp.
 
 | id | `text` | Mục sách phải đọc |
 |---|---|---|
