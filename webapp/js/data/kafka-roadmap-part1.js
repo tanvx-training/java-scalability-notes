@@ -177,7 +177,7 @@ export const kafkaWeeksPart1 = [
     title: "AdminClient, và cơ chế bên trong Kafka",
     goal: "Làm được mọi thao tác quản trị thường ngày từ trong code thay vì từ dòng lệnh, và giải thích được những hành vi khó hiểu của cluster bằng chính cơ chế bên trong sinh ra chúng.",
     practice:
-      "Viết một chương trình dùng `AdminClient` làm đủ vòng: tạo topic, đổi một cấu hình của nó, liệt kê consumer group, và đọc metadata cluster — thay cho script dòng lệnh. Rồi dùng đúng lệnh mà chính mục \"Physical Storage (Lưu trữ vật lý)\" của ch.6 đưa ra — `kafka-run-class.sh kafka.tools.DumpLogSegments` — trên một segment của topic đó, để nhìn thấy tận mắt bố cục mà mục ấy mô tả.",
+      "Viết một chương trình dùng `AdminClient` làm đủ vòng: tạo topic, đổi một cấu hình của nó, liệt kê consumer group, và đọc metadata cluster — thay cho script dòng lệnh. Rồi dùng đúng lệnh mà chính mục \"Physical Storage (Lưu trữ vật lý)\" của ch.6 đưa ra — `kafka-run-class.sh kafka.tools.DumpLogSegments` — trên một segment của topic đó, để nhìn thấy tận mắt bố cục mà mục ấy mô tả. Đừng với sang `kafka-dump-log.sh` ở bước này — công cụ đó thuộc chương 12, bạn sẽ gặp nó ở tuần 9.",
     resources: [
       { label: "Kafka 05 — Quản trị Apache Kafka bằng lập trình", href: "#/docs/kafka-05" },
       { label: "Kafka 06 — Cơ chế bên trong Kafka", href: "#/docs/kafka-06" },
