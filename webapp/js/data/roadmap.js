@@ -1,7 +1,8 @@
 // Lộ trình học nhiều track (3 chứng chỉ Kubernetes, đọc sách Kubernetes in
-// Action, lập trình hệ thống, đọc sách Spring Security in Action, đọc sách
-// Modern Concurrency in Java, đọc sách Designing Data-Intensive Applications,
-// đọc sách Modern Java in Action, đọc sách Kafka: The Definitive Guide, đọc
+// Action, đọc sách CKA Study Guide, đọc sách Kubernetes: Up and Running, lập
+// trình hệ thống, đọc sách Spring Security in Action, đọc sách Modern
+// Concurrency in Java, đọc sách Designing Data-Intensive Applications, đọc
+// sách Modern Java in Action, đọc sách Kafka: The Definitive Guide, đọc
 // sách Spring Start Here, và 4 giai đoạn của Lộ trình Senior Java) — mỗi
 // track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
 // (markdown), mỗi tuần kèm tài nguyên liên quan.

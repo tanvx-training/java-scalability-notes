@@ -1,8 +1,8 @@
 // Thư viện tài liệu — nhóm theo lĩnh vực.
 // File nguồn nằm trong repo (CKAD/, CKA/, CKS/, "Chủ đề …", System_Programming_VI/,
-// k8s-ebook/, spring-security-vi/, modern-concurrency-vi/, ddia-vi/,
-// modern-java-vi/, kafka-vi/, spring-start-vi/); khi deploy (hoặc chạy dev.sh)
-// chúng được copy vào webapp/content/ bởi build-content.sh.
+// k8s-ebook/, cka-book-vi/, kuar-vi/, spring-security-vi/, modern-concurrency-vi/,
+// ddia-vi/, modern-java-vi/, kafka-vi/, spring-start-vi/); khi deploy (hoặc chạy
+// dev.sh) chúng được copy vào webapp/content/ bởi build-content.sh.
 //
 // FIELDS đã chuyển sang fields.js (nguồn sự thật duy nhất); re-export để các
 // import cũ không phải đổi.

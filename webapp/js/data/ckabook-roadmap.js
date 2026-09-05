@@ -80,7 +80,7 @@ export const ckabookWeeks = [
     week: "Tuần 2",
     title: "etcd, xác thực/ủy quyền, CRD và đóng gói",
     goal: "Snapshot rồi khôi phục etcd trong 8 phút, và đọc được một lỗi `Forbidden` để chỉ ra thiếu Role hay thiếu RoleBinding.",
-    practice: "Làm **Bài tập mẫu** cuối chương 5, 6 và 8, đối chiếu [Phụ lục A](#/docs/ckabook-A). Riêng bài etcd làm hai lần: lần hai không mở tài liệu.",
+    practice: "Làm **Bài tập mẫu** cuối chương 5, 6, 7 và 8, đối chiếu [Phụ lục A](#/docs/ckabook-A). Riêng bài etcd làm hai lần: lần hai không mở tài liệu.",
     resources: [
       { label: "CKA Book 05 — Sao lưu và khôi phục etcd", href: "#/docs/ckabook-05" },
       { label: "CKA Book 06 — Xác thực, ủy quyền và kiểm soát tiếp nhận", href: "#/docs/ckabook-06" },
