@@ -29,8 +29,8 @@ const EXPECTED = {
     // 24 gốc + 23 chương CKA Study Guide (Muschko, O'Reilly) + 23 chương
     // Kubernetes: Up and Running, ấn bản 3 (Burns, Beda, Hightower, Evenson — O'Reilly).
     "docs:kubernetes": 70,
-    // 184 gốc + 24 mục nước rút CKA Study Guide.
-    "roadmap-items:kubernetes": 208,
+    // 184 gốc + 24 nước rút CKA Study Guide + 36 đọc Kubernetes: Up and Running.
+    "roadmap-items:kubernetes": 244,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
     // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.

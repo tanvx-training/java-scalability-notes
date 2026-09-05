@@ -13,6 +13,7 @@
 //   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
 //   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
 //   CKAB: ckabook-roadmap.js         (Tuần 1–6)              — 24 mục
+//   KUAR: kuar-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)        — 36 mục
 //   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
 //   MCJ : modconc-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)       — 32 mục
 //   DDIA: ddia-roadmap-part{1,2}.js  (Tuần 1–6 / 7–12)      — 48 mục
@@ -26,8 +27,8 @@
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
@@ -43,6 +44,8 @@ import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
 import { ckabookWeeks } from "./ckabook-roadmap.js";
+import { kuarWeeksPart1 } from "./kuar-roadmap-part1.js";
+import { kuarWeeksPart2 } from "./kuar-roadmap-part2.js";
 import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { modconcWeeksPart1 } from "./modconc-roadmap-part1.js";
@@ -130,6 +133,17 @@ export const tracks = [
     desc: "Vòng ôn thứ hai, chạy SAU giáo trình CKA: 6 tuần bám 22 chương sách luyện thi của O'Reilly, mỗi mục ưu tiên phần 'Trọng tâm cho kỳ thi' và giao bài tập mẫu cuối chương để bấm giờ.",
     prereq: "Khuyến nghị: đã hoàn thành lộ trình CKA. Track này ôn lại và bấm giờ, không dạy từ đầu.",
     weeks: ckabookWeeks,
+  },
+  {
+    id: "kuar",
+    field: "kubernetes",
+    label: "Kubernetes: Up and Running",
+    icon: "🚀",
+    name: "Đọc Kubernetes: Up and Running (ấn bản 3)",
+    durationWeeks: 9,
+    desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy thường gặp và câu tự kiểm tra; mỗi tuần một bài thực hành trên cluster thật.",
+    prereq: "Yêu cầu: biết dùng terminal Linux và Docker cơ bản. Không cần biết Kubernetes trước — đây là cuốn nhập môn, đọc song song hoặc trước giáo trình CKAD đều được.",
+    weeks: [...kuarWeeksPart1, ...kuarWeeksPart2],
   },
   {
     id: "sysprog",
