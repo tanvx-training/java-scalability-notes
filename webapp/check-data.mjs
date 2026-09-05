@@ -51,6 +51,8 @@ const EXPECTED = {
     // Lĩnh vực Modern Java in Action — 21 chương sách Manning.
     "docs:modern-java": 21,
     "roadmap-items:modern-java": 48,
+    // Lĩnh vực Kafka — 13 chương (2–14) Kafka: The Definitive Guide ấn bản 2.
+    "docs:kafka": 13,
   },
 };
 

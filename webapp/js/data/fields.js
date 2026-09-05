@@ -75,9 +75,18 @@ export const FIELDS = {
     modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "dev.java", href: "https://dev.java/" },
   },
+  kafka: {
+    label: "Kafka: The Definitive Guide",
+    icon: "📨",
+    desc: "Bản dịch tiếng Việt Kafka: The Definitive Guide, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — chương 2–14: cài đặt, producer, consumer, cơ chế bên trong, truyền tin cậy, exactly-once, data pipeline, mirroring, bảo mật, vận hành, giám sát và stream processing.",
+    certFilter: false,
+    // Module "roadmap" mở ở Task 7, khi đã có đủ 44 mục lộ trình.
+    modules: ["dashboard", "docs"],
+    externalRef: { label: "kafka.apache.org/documentation", href: "https://kafka.apache.org/documentation/" },
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "ddia", "modern-concurrency", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "ddia", "kafka", "modern-concurrency", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.
