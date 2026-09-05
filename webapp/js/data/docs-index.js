@@ -13,6 +13,7 @@ export const docs = [
   {
     id: "prerequisites",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "Kiến thức nền tảng (Prerequisites)",
     file: "content/CKAD-Prerequisites.md",
     icon: "🧱",
@@ -22,6 +23,7 @@ export const docs = [
   {
     id: "study-guide",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "CKAD Study Guide — Lộ trình 8–10 tuần",
     file: "content/CKAD-Study-Guide.md",
     icon: "🎯",
@@ -31,6 +33,7 @@ export const docs = [
   {
     id: "cheat-sheet",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "CKAD Cheat Sheet — Tra cứu nhanh",
     file: "content/CKAD-Cheat-Sheet.md",
     icon: "⚡",
@@ -40,6 +43,7 @@ export const docs = [
   {
     id: "cka-study-guide",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "CKA Study Guide — Quản trị cluster",
     file: "content/CKA-Study-Guide.md",
     icon: "🛠️",
@@ -49,6 +53,7 @@ export const docs = [
   {
     id: "cka-cheat-sheet",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "CKA Cheat Sheet — Tra cứu nhanh",
     file: "content/CKA-Cheat-Sheet.md",
     icon: "🔧",
@@ -58,6 +63,7 @@ export const docs = [
   {
     id: "cks-study-guide",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "CKS Study Guide — Bảo mật Kubernetes",
     file: "content/CKS-Study-Guide.md",
     icon: "🔐",
@@ -67,6 +73,7 @@ export const docs = [
   {
     id: "cks-cheat-sheet",
     field: "kubernetes",
+    group: "Luyện thi & tra cứu (tự biên)",
     title: "CKS Cheat Sheet — Tra cứu nhanh",
     file: "content/CKS-Cheat-Sheet.md",
     icon: "🛡️",
@@ -334,6 +341,7 @@ export const docs = [
   {
     id: "k8sbook-00",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 00 — Mở đầu: về cuốn sách",
     file: "content/k8sbook/00-mo-dau.md",
     icon: "📖",
@@ -343,6 +351,7 @@ export const docs = [
   {
     id: "k8sbook-02",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 02 — Tìm hiểu về container",
     file: "content/k8sbook/02-tim-hieu-ve-container.md",
     icon: "📦",
@@ -352,6 +361,7 @@ export const docs = [
   {
     id: "k8sbook-03",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 03 — Triển khai ứng dụng đầu tiên của bạn",
     file: "content/k8sbook/03-trien-khai-ung-dung-dau-tien-cua-ban.md",
     icon: "🚀",
@@ -361,6 +371,7 @@ export const docs = [
   {
     id: "k8sbook-04",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 04 — Giới thiệu các đối tượng API của Kubernetes",
     file: "content/k8sbook/04-gioi-thieu-cac-doi-tuong-api-cua-kubernetes.md",
     icon: "🧩",
@@ -370,6 +381,7 @@ export const docs = [
   {
     id: "k8sbook-05",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 05 — Chạy các workload trong Pod",
     file: "content/k8sbook/05-chay-cac-workload-trong-pod.md",
     icon: "🫙",
@@ -379,6 +391,7 @@ export const docs = [
   {
     id: "k8sbook-06",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 06 — Quản lý vòng đời của Pod",
     file: "content/k8sbook/06-quan-ly-vong-doi-cua-pod.md",
     icon: "♻️",
@@ -388,6 +401,7 @@ export const docs = [
   {
     id: "k8sbook-07",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 07 — Gắn kết các volume lưu trữ vào Pod",
     file: "content/k8sbook/07-gan-ket-cac-volume-luu-tru-vao-pod.md",
     icon: "💾",
@@ -397,6 +411,7 @@ export const docs = [
   {
     id: "k8sbook-08",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 08 — Lưu trữ dữ liệu trong PersistentVolume",
     file: "content/k8sbook/08-luu-tru-du-lieu-trong-persistentvolume.md",
     icon: "🗄️",
@@ -406,6 +421,7 @@ export const docs = [
   {
     id: "k8sbook-09",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 09 — Cấu hình ứng dụng qua ConfigMap, Secret và Downward API",
     file: "content/k8sbook/09-cau-hinh-ung-dung-qua-configmap-secret-va-downward-api.md",
     icon: "⚙️",
@@ -415,6 +431,7 @@ export const docs = [
   {
     id: "k8sbook-10",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 10 — Tổ chức các đối tượng bằng Namespace và Label",
     file: "content/k8sbook/10-to-chuc-cac-doi-tuong-bang-namespace-va-label.md",
     icon: "🏷️",
@@ -424,6 +441,7 @@ export const docs = [
   {
     id: "k8sbook-11",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 11 — Cung cấp quyền truy cập Pod qua Service",
     file: "content/k8sbook/11-cung-cap-quyen-truy-cap-pod-qua-service.md",
     icon: "🔌",
@@ -433,6 +451,7 @@ export const docs = [
   {
     id: "k8sbook-12",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 12 — Công khai dịch vụ ra ngoài bằng Ingress",
     file: "content/k8sbook/12-cong-khai-dich-vu-ra-ngoai-bang-ingress.md",
     icon: "🌐",
@@ -442,6 +461,7 @@ export const docs = [
   {
     id: "k8sbook-13",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 13 — Nhân bản Pod bằng ReplicaSet",
     file: "content/k8sbook/13-nhan-ban-pod-bang-replicaset.md",
     icon: "🔁",
@@ -451,6 +471,7 @@ export const docs = [
   {
     id: "k8sbook-14",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 14 — Quản lý Pod bằng Deployment",
     file: "content/k8sbook/14-quan-ly-pod-bang-deployment.md",
     icon: "🚢",
@@ -460,6 +481,7 @@ export const docs = [
   {
     id: "k8sbook-15",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 15 — Triển khai các workload có trạng thái bằng StatefulSet",
     file: "content/k8sbook/15-trien-khai-cac-workload-co-trang-thai-bang-statefulset.md",
     icon: "🧱",
@@ -469,6 +491,7 @@ export const docs = [
   {
     id: "k8sbook-16",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 16 — Triển khai các tác nhân node và daemon bằng DaemonSet",
     file: "content/k8sbook/16-trien-khai-cac-tac-nhan-node-va-daemon-bang-daemonset.md",
     icon: "🛰️",
@@ -478,6 +501,7 @@ export const docs = [
   {
     id: "k8sbook-17",
     field: "kubernetes",
+    group: "Kubernetes in Action (Lukša, Manning)",
     title: "KIA 17 — Chạy các khối công việc hữu hạn bằng Job và CronJob",
     file: "content/k8sbook/17-chay-cac-khoi-cong-viec-huu-han-bang-job-va-cronjob.md",
     icon: "⏲️",

@@ -35,22 +35,39 @@ function renderIndex(root) {
   ));
   page.append(h("p", { class: "muted small", style: "margin:-8px 0 20px" }, field.desc));
 
-  const grid = h("div", { class: "grid", style: "margin-bottom:26px" });
+  // Gom theo `group`, giữ thứ tự xuất hiện đầu tiên trong mảng docs — thứ tự
+  // mảng đang là thứ tự đọc có chủ ý, không được sắp xếp lại. Tài liệu không
+  // khai `group` rơi vào nhóm không tiêu đề đứng trước, render y như cũ.
+  const groups = new Map();
   for (const d of list) {
-    grid.append(
-      h("a", { class: "card card-link", href: `#/docs/${d.id}` },
-        h("div", { class: "flex" },
-          h("span", { style: "font-size:24px" }, d.icon),
-          h("div", { class: "grow" },
-            h("div", { class: "lab-title" }, d.title),
-            h("div", { class: "muted small" }, d.desc)),
-          h("span", { class: "faint" }, "Đọc →")),
-        h("div", { class: "chip-row", style: "margin-top:10px" },
-          d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))
-      )
-    );
+    const key = d.group ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(d);
   }
-  page.append(grid);
+
+  for (const [label, items] of groups) {
+    if (label) {
+      page.append(h("h2", { style: "margin:26px 0 12px;font-size:17px" },
+        label, h("span", { class: "faint", style: "margin-left:8px;font-weight:400" },
+          `${items.length} tài liệu`)));
+    }
+    const grid = h("div", { class: "grid", style: "margin-bottom:26px" });
+    for (const d of items) {
+      grid.append(
+        h("a", { class: "card card-link", href: `#/docs/${d.id}` },
+          h("div", { class: "flex" },
+            h("span", { style: "font-size:24px" }, d.icon),
+            h("div", { class: "grow" },
+              h("div", { class: "lab-title" }, d.title),
+              h("div", { class: "muted small" }, d.desc)),
+            h("span", { class: "faint" }, "Đọc →")),
+          h("div", { class: "chip-row", style: "margin-top:10px" },
+            d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))
+        )
+      );
+    }
+    page.append(grid);
+  }
   root.append(page);
 }
 
