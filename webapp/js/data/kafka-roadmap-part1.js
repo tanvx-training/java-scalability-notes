@@ -171,4 +171,189 @@ export const kafkaWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "kf-w4",
+    week: "Tuần 4",
+    title: "AdminClient, và cơ chế bên trong Kafka",
+    goal: "Làm được mọi thao tác quản trị thường ngày từ trong code thay vì từ dòng lệnh, và giải thích được những hành vi khó hiểu của cluster bằng chính cơ chế bên trong sinh ra chúng.",
+    practice:
+      "Viết một chương trình dùng `AdminClient` làm đủ vòng: tạo topic, đổi một cấu hình của nó, liệt kê consumer group, và đọc metadata cluster — thay cho script dòng lệnh. Rồi dùng đúng lệnh mà chính mục \"Physical Storage (Lưu trữ vật lý)\" của ch.6 đưa ra — `kafka-run-class.sh kafka.tools.DumpLogSegments` — trên một segment của topic đó, để nhìn thấy tận mắt bố cục mà mục ấy mô tả.",
+    resources: [
+      { label: "Kafka 05 — Quản trị Apache Kafka bằng lập trình", href: "#/docs/kafka-05" },
+      { label: "Kafka 06 — Cơ chế bên trong Kafka", href: "#/docs/kafka-06" },
+    ],
+    items: [
+      {
+        id: "kf-w4-1",
+        text: "AdminClient: vòng đời, quản lý topic và cấu hình",
+        lesson: `**Mục tiêu.** Thay được một chuỗi lệnh CLI bằng code: dựng \`AdminClient\`, kiểm tra topic có đúng số partition hay không, tạo nó nếu chưa có, rồi sửa cấu hình của nó — và nói được vì sao mọi phương thức đều trả về \`Future\`.
+
+**Đọc.** [Tổng quan về AdminClient (AdminClient Overview)](#/docs/kafka-05) chỉ vài dòng dẫn nhập. [API bất đồng bộ và nhất quán cuối (Asynchronous and Eventually Consistent API)](#/docs/kafka-05) là mục đọc chậm nhất tuần dù rất ngắn: nắm cặp \`Future\` bọc trong \`Result\`, và hiểu vì sao một \`listTopics\` ngay sau \`createTopics\` vẫn có thể không thấy topic vừa tạo. [Một số lưu ý bổ sung (Additional Notes)](#/docs/kafka-05) đọc lướt: nhớ \`timeoutMs\`, và nhớ ai xử lý create/delete/alter, ai xử lý list/describe. [Vòng đời của AdminClient: Tạo, cấu hình và đóng (AdminClient Lifecycle: Creating, Configuring, and Closing)](#/docs/kafka-05) — gõ lại đoạn \`Properties\` ba dòng, chú ý \`close\` nhận tham số timeout. [client.dns.lookup](#/docs/kafka-05) là hai tình huống loại trừ nhau — DNS alias, và một tên DNS trỏ nhiều IP — mỗi tình huống một giá trị cấu hình; [request.timeout.ms](#/docs/kafka-05) ngắn, nhớ mặc định 120 giây. [Quản lý topic thiết yếu (Essential Topic Management)](#/docs/kafka-05) là mục dài nhất — chạy thật listing \`describeTopics\` bắt \`ExecutionException\` rồi \`createTopics\`, và cả bản Vert.x dùng \`whenComplete\` thay cho \`get()\`. [Quản lý cấu hình (Configuration Management)](#/docs/kafka-05) khép lại với \`ConfigResource\`, \`isDefault()\` và bốn kiểu \`AlterConfigOp\`.
+
+**Bẫy.** Gọi \`deleteTopics\` trong một script dọn dẹp vì đoạn code quá đơn giản. Khung "Cảnh báo" ngay sau listing nói thẳng: trong Kafka việc xóa topic là vĩnh viễn — không có thùng rác nào cứu lại topic đã xóa, và không có bước kiểm tra nào xác nhận topic đang rỗng hay rằng bạn thực sự muốn xóa nó. Bẫy thứ hai: sửa metadata thẳng trong ZooKeeper khi \`AdminClient\` chưa có phương thức bạn cần. Mục Một số lưu ý bổ sung khuyến nghị hết sức đừng bao giờ làm vậy, và nếu buộc phải làm thì hãy báo cáo như một bug: cộng đồng sắp gỡ bỏ phụ thuộc vào ZooKeeper, mọi ứng dụng dùng nó trực tiếp sẽ phải sửa lại.
+
+**Tự kiểm tra.** Vì sao mọi đối tượng result của \`AdminClient\` đều ném \`ExecutionException\`, và phải làm gì để lấy được lỗi thật Kafka trả về? Và trong bản Vert.x, vì sao request timeout ngắn lại phản hồi trước request gửi trước nó?`,
+      },
+      {
+        id: "kf-w4-2",
+        text: "Quản lý consumer group, metadata và thao tác nâng cao bằng code",
+        lesson: `**Mục tiêu.** Đo được một consumer group đang tụt lại bao xa, đưa nó về đầu topic một cách có kiểm soát, và biết ba thao tác nguy hiểm mà một SRE sẽ cần vào đúng lúc tệ nhất.
+
+**Đọc.** [Quản lý consumer group (Consumer Group Management)](#/docs/kafka-05) mở bằng lý do: xử lý lại dữ liệu ngay cả khi ứng dụng không được viết sẵn khả năng đó. [Khám phá consumer group (Exploring Consumer Groups)](#/docs/kafka-05) đọc kỹ — phân biệt \`valid()\`, \`errors()\` và \`all()\`, rồi chạy thật listing ghép \`listConsumerGroupOffsets\` với \`listOffsets\` để in ra lag cho từng partition; nhớ ba hiện thực \`OffsetSpec\`: \`earliest()\`, \`latest()\`, \`forTimestamp()\`. [Sửa đổi consumer group (Modifying Consumer Groups)](#/docs/kafka-05) thì đọc chậm: vì sao xóa offset không tương đương với reset, và vì sao Kafka chặn bạn sửa offset khi group còn đang chạy. [Metadata của cluster (Cluster Metadata)](#/docs/kafka-05) chỉ vài dòng cùng listing \`describeCluster\`. [Các thao tác quản trị nâng cao (Advanced Admin Operations)](#/docs/kafka-05) mở bằng lời dặn đừng đợi tới lúc sự cố mới học chúng; [Thêm partition vào một topic (Adding Partitions to a Topic)](#/docs/kafka-05), [Xóa record khỏi một topic (Deleting Records from a Topic)](#/docs/kafka-05) — chú ý vì sao retention của Kafka không đủ để tuân thủ pháp lý — [Bầu chọn leader (Leader Election)](#/docs/kafka-05) với cặp preferred và unclean, rồi [Tái phân bổ replica (Reassigning Replicas)](#/docs/kafka-05) đọc kỹ bốn dòng \`reassignment.put\` và tự nói ra mỗi dòng làm gì. [Kiểm thử (Testing)](#/docs/kafka-05) khép chương: gõ lại \`TopicCreator\`, phần \`setUp\` với \`spy\` và hai test.
+
+**Bẫy.** Reset offset về đầu topic để "tính lại cho đúng" mà quên state store. Sách dựng đúng cảnh đó: ứng dụng đếm số giày bán ra, bạn reset về 3:00 sáng mà không sửa giá trị tổng hợp đã lưu, kết quả là mỗi đôi giày bán hôm nay bị đếm hai lần; trong môi trường phát triển các tác giả thường xóa hẳn state store trước khi reset. Bẫy thứ hai: truyền số partition muốn thêm vào \`createPartitions\`. Khung "Mẹo" nói rõ phương thức nhận tổng số partition mà topic sẽ có sau khi thêm, nên bạn có thể cần describe topic trước để biết nó đang có bao nhiêu.
+
+**Tự kiểm tra.** \`alterConsumerGroupOffsets\` thất bại với \`UnknownMemberIdException\` nghĩa là bạn quên làm gì? Và vì sao \`deleteRecords\` xóa được record mà chính sách retention của topic thì không?`,
+      },
+      {
+        id: "kf-w4-3",
+        text: "Thành viên cluster và controller — ZooKeeper và KRaft",
+        lesson: `**Mục tiêu.** Kể được chuyện gì xảy ra bên trong cluster từ lúc một broker khởi động tới lúc nó biến mất, ai bầu partition leader, và vì sao cộng đồng thay hẳn cơ chế đó bằng KRaft.
+
+**Đọc.** [Cluster Membership (Thành viên của cluster)](#/docs/kafka-06) ngắn nhưng đọc kỹ: ephemeral node dưới \`/brokers/ids\`, chuyện gì xảy ra khi broker mất kết nối ZooKeeper, và điều then chốt là broker ID vẫn tồn tại trong danh sách replica của mỗi topic ngay cả khi node biến mất. [The Controller (Controller)](#/docs/kafka-06) là phần cần đọc kỹ nhất — bám theo trình tự: node \`/controller\`, ngoại lệ "node already exists", ZooKeeper watch, controller epoch tăng bằng thao tác tăng có điều kiện, rồi request \`LeaderAndISR\` gửi tới các broker chứa replica và request \`UpdateMetadata\` gửi tới tất cả để cập nhật \`MetadataCache\`; tự kể lại thành một mạch. [KRaft: Controller mới dựa trên Raft của Kafka](#/docs/kafka-06) đọc chậm phần bốn mối lo ngại đã thúc đẩy thay đổi, rồi tới kiến trúc mới: metadata trở thành một log event, các controller node là một Raft quorum tự bầu leader, active controller xử lý mọi RPC, còn broker chuyển từ bị đẩy cập nhật sang tự \`MetadataFetch\` theo offset. Ghi lại trạng thái fenced dành cho broker online nhưng lạc hậu.
+
+**Bẫy.** Tin rằng một controller mất kết nối ZooKeeper vì GC thì cũng ngừng hành động. Mục The Controller mô tả kịch bản ngược lại: trong khoảng dừng đó một controller mới đã được bầu, và khi controller cũ sống lại nó vẫn gửi thông điệp tới các broker mà không biết mình đã bị thay — nó là một zombie, và thứ chặn nó là việc broker bỏ qua thông điệp mang epoch cũ hơn. Bẫy thứ hai: tái sử dụng broker ID của một máy đã chết cho một máy trắng. Mục Cluster Membership nói thẳng hệ quả: broker mới sẽ ngay lập tức gia nhập cluster thay chỗ broker đã mất, với cùng các partition và topic được gán cho nó — tiện khi bạn cố ý, tai hại khi bạn không.
+
+**Tự kiểm tra.** Vì sao việc khởi động lại controller lại chậm dần khi số partition tăng, và KRaft gỡ nút đó bằng cách nào? Và số epoch ngăn được chính xác kịch bản hỏng nào?`,
+      },
+      {
+        id: "kf-w4-4",
+        text: "Replication: leader, follower và ISR",
+        lesson: `**Mục tiêu.** Định nghĩa được chính xác "in sync" theo cách Kafka đo nó, và nói được vì sao chỉ in-sync replica mới đủ điều kiện làm leader mới.
+
+**Đọc.** [Replication](#/docs/kafka-06) đọc chậm, dù chỉ vài trang. Bắt đầu từ hai định nghĩa: leader replica nhận mọi produce request, follower replica chỉ replicate và không phục vụ client trừ khi được cấu hình khác đi. Khung "ĐỌC TỪ FOLLOWER (READ FROM FOLLOWER)" giới thiệu KIP-392 cùng cặp cấu hình \`client.rack\` phía consumer và \`replica.selector.class\` phía broker, với \`RackAwareReplicaSelector\` thay cho \`LeaderSelector\` mặc định — đọc kỹ, vì đoạn ngay sau nó giải thích high-water mark được đưa vào dữ liệu gửi cho follower để bảo toàn bảo đảm độ tin cậy. Rồi tới phần định nghĩa in sync: follower gửi Fetch request đúng như consumer, offset trong request cho leader biết mỗi replica đang ở đâu, và ngưỡng \`replica.lag.time.max.ms\` quyết định khi nào một replica bị coi là out of sync. Cuối mục là preferred leader cùng \`auto.leader.rebalance.enable=true\`, và khung "TÌM CÁC PREFERRED LEADER (FINDING THE PREFERRED LEADERS)" — đọc kỹ khung này, nó là cầu nối sang phần tái phân bổ replica bạn vừa gặp ở chương 5.
+
+**Bẫy.** Chuyển consumer sang đọc từ follower để tiết kiệm băng thông rồi kỳ vọng latency y như cũ. Sách nói rõ việc lan truyền high-water mark tạo ra một độ trễ nhỏ: dữ liệu khả dụng để consume từ leader sớm hơn so với khi khả dụng trên follower, và cần ghi nhớ độ trễ bổ sung này. Bẫy thứ hai: tái phân bổ replica thủ công mà xếp danh sách tùy tiện. Khung "TÌM CÁC PREFERRED LEADER (FINDING THE PREFERRED LEADERS)" cảnh báo replica bạn chỉ định đầu tiên sẽ là preferred replica, nên hãy bảo đảm trải chúng ra các broker khác nhau để tránh làm một số broker quá tải vì gánh nhiều leader trong khi các broker khác không làm phần việc công bằng của mình.
+
+**Tự kiểm tra.** Một follower vẫn đang fetch đều đặn nhưng không bao giờ bắt kịp — nó in sync hay out of sync, và theo điều kiện nào? Và vì sao một in-sync replica hơi chậm lại làm chậm cả producer lẫn consumer?`,
+      },
+      {
+        id: "kf-w4-5",
+        text: "Xử lý request, và lưu trữ vật lý trên đĩa",
+        lesson: `**Mục tiêu.** Đi theo một produce request và một fetch request từ socket tới đĩa và ngược lại, rồi mở một segment thật ra xem Kafka đã ghi gì vào đó.
+
+**Đọc.** [Request Processing (Xử lý request)](#/docs/kafka-06) mở bằng header chuẩn bốn trường và Hình 6-1 — acceptor thread, network thread, request queue, I/O thread, purgatory; vẽ lại hình này. [Produce Requests (Produce request)](#/docs/kafka-06) cho ba kiểm tra hợp lệ và lý do \`acks=all\` khiến request nằm lại purgatory. [Fetch Requests (Fetch request)](#/docs/kafka-06) đọc kỹ: zero-copy, giới hạn trên và dưới với Hình 6-3, rồi Hình 6-4 giải thích vì sao consumer không thấy dữ liệu chưa replicate xong; cuối mục là fetch session cache. [Other Requests (Các loại request khác)](#/docs/kafka-06) đọc lướt, nhớ vì sao phải nâng cấp broker trước client. [Physical Storage (Lưu trữ vật lý)](#/docs/kafka-06) rồi [Tiered Storage (Lưu trữ phân tầng)](#/docs/kafka-06) lấy ý tưởng hai tầng local/remote. [Partition Allocation (Phân bổ partition)](#/docs/kafka-06) tự chạy lại ví dụ 6 broker, 10 partition, RF 3 với Hình 6-5. [File Management (Quản lý file)](#/docs/kafka-06) cho khái niệm active segment. [File Format (Định dạng file)](#/docs/kafka-06) là mục nặng nhất — đọc hết header của batch và của record, rồi chạy thật \`kafka-run-class.sh kafka.tools.DumpLogSegments\` như phần thực hành. [Indexes (Chỉ mục)](#/docs/kafka-06), [Compaction (Nén log theo key)](#/docs/kafka-06), [How Compaction Works (Compaction hoạt động như thế nào)](#/docs/kafka-06) với Hình 6-6 và 6-7, rồi [When Are Topics Compacted? (Khi nào thì các topic được compact?)](#/docs/kafka-06) khép chương.
+
+**Bẫy.** Thêm một đĩa lớn vào broker rồi tin dữ liệu sẽ tự cân bằng. Khung "CHÚ Ý DUNG LƯỢNG ĐĨA (MIND THE DISK SPACE)" nói rõ việc phân bổ partition cho broker không tính đến dung lượng khả dụng hay tải hiện có, còn việc phân bổ cho đĩa thì đếm số partition chứ không nhìn kích thước. Bẫy thứ hai: để lại vài client cũ vì "chúng vẫn chạy được". Khung "CHUYỂN ĐỔI XUỐNG ĐỊNH DẠNG THÔNG ĐIỆP (MESSAGE FORMAT DOWN CONVERSION)" cho thấy cái giá: broker phải chuyển message v2 xuống v1 cho consumer cũ, việc này tốn CPU và bộ nhớ hơn nhiều so với consume thông thường, và KIP-188 cho bạn hai metric để nhìn thấy nó.
+
+**Tự kiểm tra.** Vì sao đặt retention một ngày mà mỗi segment chứa năm ngày dữ liệu thì bạn giữ đủ năm ngày? Và vì sao topic chứa key null làm compaction thất bại?`,
+      },
+    ],
+  },
+  {
+    id: "kf-w5",
+    week: "Tuần 5",
+    title: "Truyền dữ liệu tin cậy và exactly-once",
+    goal: "Chọn được đúng bộ cấu hình broker, producer và consumer cho mức bảo đảm mà nghiệp vụ đòi hỏi, và biết chính xác transaction của Kafka giải và không giải vấn đề gì.",
+    practice:
+      "Dựng cluster 3 broker. Tạo topic với `replication.factor=3` và `min.insync.replicas=2`. Dừng hai broker và quan sát producer `acks=all` bị chặn thế nào. Khôi phục, rồi viết một vòng read-process-write bọc trong transaction và xác nhận consumer đặt `isolation.level=read_committed` không thấy dữ liệu của transaction bị abort.",
+    resources: [
+      { label: "Kafka 07 — Truyền dữ liệu tin cậy", href: "#/docs/kafka-07" },
+      { label: "Kafka 08 — Ngữ nghĩa Exactly-Once", href: "#/docs/kafka-08" },
+    ],
+    items: [
+      {
+        id: "kf-w5-1",
+        text: "Kafka bảo đảm chính xác những gì, và replication làm nền ra sao",
+        lesson: `**Mục tiêu.** Đọc thuộc bốn bảo đảm Kafka thực sự hứa, tách chúng khỏi những thứ bạn tưởng nó hứa, và nói lại ba điều kiện để một replica được coi là in sync.
+
+**Đọc.** [Các bảo đảm về độ tin cậy (Reliability Guarantees)](#/docs/kafka-07) là mục đọc chậm nhất tuần dù chỉ hơn một trang: chép ra giấy bốn gạch đầu dòng — thứ tự trong một partition, định nghĩa "committed" là đã ghi vào toàn bộ in-sync replica nhưng không nhất thiết đã flush xuống đĩa, message đã commit không mất chừng nào còn ít nhất một replica sống, và consumer chỉ đọc được message đã commit. Nhớ câu ngay sau: chúng chỉ là vật liệu, chưa phải một hệ thống tin cậy. [Replication](#/docs/kafka-07) tóm tắt lại chương 6 nhưng thêm thứ chương 6 không có — ba điều kiện cụ thể để một follower được coi là in sync: có session ZooKeeper đang hoạt động, đã fetch trong 10 giây gần nhất, và ít nhất một lần trong 10 giây đó đã bắt kịp hoàn toàn; điều kiện thứ ba mới là cái dễ bỏ sót. Đọc kỹ khung "REPLICA MẤT ĐỒNG BỘ (OUT-OF-SYNC REPLICAS)". Đoạn cuối mục, về ảnh hưởng hiệu năng của một in-sync replica chậm, là bản lề sang mục cấu hình broker.
+
+**Bẫy.** Thấy một replica rơi khỏi ISR rồi latency đẹp lên, và kết luận cluster đã khoẻ. Sách nói đúng cơ chế: một in-sync replica hơi chậm làm chậm cả producer lẫn consumer vì phải chờ nó, nhưng khi nó rơi khỏi in sync thì ta không chờ nữa — cái giá là replication factor hiệu dụng thấp hơn, và rủi ro downtime hoặc mất dữ liệu cao hơn. Bẫy thứ hai: coi replica nhảy qua lại giữa in-sync và out-of-sync là chuyện vặt. Khung "REPLICA MẤT ĐỒNG BỘ (OUT-OF-SYNC REPLICAS)" gọi đó là dấu hiệu chắc chắn rằng cluster có gì đó không ổn, và chỉ ngay nguyên nhân phổ biến: kích thước request tối đa lớn cùng JVM heap lớn, đòi hỏi tinh chỉnh để tránh những khoảng dừng garbage collection kéo dài.
+
+**Tự kiểm tra.** "Message đã commit" theo định nghĩa của Kafka có nghĩa là dữ liệu đã nằm trên đĩa chưa, và điều đó đổi cách đánh giá rủi ro thế nào? Và vì sao điều kiện in sync thứ ba chặt hơn điều kiện thứ hai?`,
+      },
+      {
+        id: "kf-w5-2",
+        text: "Cấu hình broker cho độ tin cậy",
+        lesson: `**Mục tiêu.** Đặt được ba tham số broker quyết định độ tin cậy — và nói được mỗi tham số đổi tính sẵn sàng lấy tính nhất quán ở mức nào, ở cấp cluster hay cấp từng topic.
+
+**Đọc.** [Cấu hình broker (Broker Configuration)](#/docs/kafka-07) mở bằng một ý dễ bỏ qua: cùng một cluster có thể chứa cả topic rất tin cậy lẫn topic chấp nhận mất mát, vì các tham số này có ở cả cấp broker lẫn cấp topic — ví dụ ngân hàng đặt mặc định rất tin cậy toàn cluster nhưng nới lỏng cho topic khiếu nại khách hàng. [Replication Factor](#/docs/kafka-07) đọc chậm: cặp \`replication.factor\` và \`default.replication.factor\`, quy tắc mất N-1 broker mà vẫn đọc ghi được, rồi năm cân nhắc — tính sẵn sàng, độ bền dữ liệu, throughput với phép tính 10 MBps nhân theo số replica, latency đầu-cuối, và chi phí; đoạn cuối về \`broker.rack\` nối thẳng vào chương 6. [Unclean Leader Election](#/docs/kafka-07) là phần khó nhất — dựng lại cả hai kịch bản dẫn tới chỗ không còn in-sync replica nào, rồi tự kể ví dụ replica 0 với message 0–100 chống lại replica 2 với message 100–200 để thấy "bất nhất" ở đây không phải lời nói suông. [Số lượng In-Sync Replica tối thiểu (Minimum In-Sync Replicas)](#/docs/kafka-07) ngắn nhưng đọc kỹ. [Giữ cho các replica đồng bộ (Keeping Replicas In Sync)](#/docs/kafka-07) cho cặp \`zookeeper.session.timeout.ms\` và \`replica.lag.time.max.ms\` cùng các giá trị đã đổi ở bản 2.5.0. [Ghi bền xuống đĩa (Persisting to Disk)](#/docs/kafka-07) khép mục với \`flush.messages\` và \`flush.ms\`.
+
+**Bẫy.** Đặt \`min.insync.replicas=2\` rồi ngạc nhiên khi producer chết lúc mất hai broker. Sách mô tả đúng hành vi ấy như một tính năng: broker ngừng chấp nhận produce request và producer nhận \`NotEnoughReplicasException\`, consumer vẫn đọc được — một in-sync replica duy nhất trở thành chỉ-đọc, và đó chính là thứ ngăn dữ liệu được ghi rồi biến mất khi xảy ra unclean election. Bẫy thứ hai: bật \`unclean.leader.election.enable\` để cứu một partition rồi để đó. Sách dặn thẳng ngay sau khi cho phép làm vậy: chỉ cần đừng quên chuyển nó về false sau khi cluster đã hồi phục.
+
+**Tự kiểm tra.** Nâng \`replica.lag.time.max.ms\` lên 30 giây mua cho bạn gì và lấy đi của consumer gì? Và vì sao replication factor 2 đôi khi hợp lý trên một hệ lưu trữ vốn đã replicate ba lần?`,
+      },
+      {
+        id: "kf-w5-3",
+        text: "Producer và consumer trong hệ tin cậy, và cách kiểm chứng",
+        lesson: `**Mục tiêu.** Ghép cấu hình client vào cấu hình broker thành một chuỗi không đứt, và dựng bài kiểm chứng cho thấy chuỗi đó giữ được message khi bạn giết một broker.
+
+**Đọc.** [Sử dụng producer trong một hệ thống tin cậy (Using Producers in a Reliable System)](#/docs/kafka-07) mở bằng hai kịch bản mất message dù broker cấu hình hoàn hảo; đọc chậm cả hai. [Send Acknowledgments](#/docs/kafka-07) điểm lại ba giá trị \`acks\` từ góc độ độ tin cậy: \`acks=0\` cho produce latency thấp nhưng không cải thiện latency đầu-cuối. Mục cấu hình retry cho producer cho cặp lỗi retry được và không, kèm khuyến nghị để \`retries\` ở mặc định và điều khiển bằng \`delivery.timeout.ms\`; mục sau liệt kê bốn nhóm lỗi producer không tự lo. [Sử dụng consumer trong một hệ thống tin cậy (Using Consumers in a Reliable System)](#/docs/kafka-07) cùng khung phân biệt message đã commit với offset đã commit: hai chữ "commit" khác nghĩa. Bốn thuộc tính consumer cho xử lý tin cậy — \`group.id\`, \`auto.offset.reset\`, \`enable.auto.commit\`, \`auto.commit.interval.ms\` — đọc liền một mạch. [Commit offset một cách tường minh trong consumer (Explicitly Committing Offsets in Consumers)](#/docs/kafka-07) là mục cần đọc kỹ nhất — sáu mục con ngắn tới mức dễ lướt qua, hãy đọc từng cái và đối chiếu với code consumer của bạn. Cuối cùng [Kiểm chứng độ tin cậy của hệ thống (Validating System Reliability)](#/docs/kafka-07): chạy thật \`VerifiableProducer\` và \`VerifiableConsumer\`, rồi để mắt tới error-rate, retry-rate và consumer lag.
+
+**Bẫy.** Bỏ qua record #30 hỏng rồi commit offset #31 vì #31 xử lý xong. Mục Consumer có thể cần retry nói rõ consumer của Kafka commit offset chứ không "ack" từng message: commit #31 đánh dấu đã xử lý mọi record cho tới #31, gồm cả #30. Bẫy thứ hai: dùng \`acks=1\` rồi tin ba replica đã bảo vệ bạn. Kịch bản đầu mục cho thấy leader trả lời "đã ghi thành công" rồi sập trước khi replicate; các replica khác vẫn được coi là in sync, một trong số chúng lên leader, và message biến mất — hệ thống vẫn nhất quán vì chưa consumer nào thấy nó, nhưng với producer đó là mất dữ liệu.
+
+**Tự kiểm tra.** Hai mẫu retry sách đưa ra — \`pause()\` và topic riêng — mỗi mẫu đánh đổi gì? Và vì sao commit sau mỗi message chỉ nên làm trên topic throughput rất thấp?`,
+      },
+      {
+        id: "kf-w5-4",
+        text: "Idempotent producer giải và không giải vấn đề gì",
+        lesson: `**Mục tiêu.** Bật idempotent producer một cách có ý thức: biết nó thêm gì vào mỗi batch, chặn đúng loại trùng lặp nào, và loại nào nó không thấy.
+
+**Đọc.** [Idempotent Producer](#/docs/kafka-08) mở bằng cặp câu \`UPDATE\` kinh điển của cơ sở dữ liệu, rồi dựng kịch bản: leader nhận record, replicate xong, sập trước khi kịp phản hồi, producer gửi lại, thành một bản trùng. [Idempotent Producer hoạt động như thế nào?](#/docs/kafka-08) đọc kỹ: mỗi message mang producer ID và sequence number, broker theo dõi năm message cuối cho mỗi partition, và chính giới hạn đó buộc \`max.inflight.requests\` không quá 5. Hai mục con [Producer khởi động lại (Producer restart)](#/docs/kafka-08) và [Broker gặp sự cố (Broker failure)](#/docs/kafka-08) thì đọc chậm: mục đầu cho thấy producer mới nhận ID hoàn toàn mới nên bản trùng của producer cũ không bị phát hiện; mục sau đi qua ba tình huống phục hồi — follower lên leader đã sẵn sequence trong bộ nhớ, leader cũ quay lại đọc snapshot, và crash khi snapshot chưa kịp cập nhật. [Giới hạn của Idempotent Producer](#/docs/kafka-08) ngắn nhưng phải thuộc, cùng khung "Mẹo" ngay sau. [Làm thế nào để dùng Kafka Idempotent Producer?](#/docs/kafka-08) liệt kê bốn thứ đổi khi bật cờ, kể cả 96 bit thêm vào mỗi record batch; khung "Lưu ý" cuối mục kể KIP-360 đã sửa gì ở bản 2.5.
+
+**Bẫy.** Thấy lỗi "out of order sequence" trong log rồi bỏ qua vì producer vẫn chạy. Khung "Cảnh báo" nói rõ tuy producer tiếp tục hoạt động bình thường, lỗi này thường cho thấy message đã bị mất giữa producer và broker — nhận message số 2 rồi tới số 27 nghĩa là đã có chuyện với các message từ 3 đến 26; hãy soát lại cấu hình producer và topic, và kiểm tra có xảy ra unclean leader election hay không. Bẫy thứ hai: chạy hai instance ứng dụng cùng đọc một thư mục file và tin idempotence sẽ dọn hộ. Khung "Mẹo" chốt phạm vi: idempotent producer chỉ ngăn các bản trùng lặp gây ra bởi cơ chế retry của chính producer, ngoài ra không ngăn được gì khác — kể cả việc bạn gọi \`producer.send()\` hai lần với cùng một message.
+
+**Tự kiểm tra.** Nếu đã đặt \`acks=all\`, bật \`enable.idempotence\` tốn thêm gì về hiệu năng? Và vì sao broker chỉ cần nhớ năm sequence gần nhất mỗi partition?`,
+      },
+      {
+        id: "kf-w5-5",
+        text: "Transaction, exactly-once, và cái giá hiệu năng",
+        lesson: `**Mục tiêu.** Viết được một vòng consume-process-produce bọc trong transaction, và kể tên năm tình huống mà nhãn "exactly-once" không còn đúng.
+
+**Đọc.** [Transactions](#/docs/kafka-08) mở bằng phạm vi thiết kế: transaction sinh ra cho mẫu hình consume-process-produce của stream processing, kèm khung "Lưu ý" tách bạch cơ chế transaction với hành vi exactly-once. [Các tình huống sử dụng Transaction](#/docs/kafka-08) ngắn. [Transaction giải quyết những vấn đề gì?](#/docs/kafka-08) với [Xử lý lại do ứng dụng crash (Reprocessing caused by application crashes)](#/docs/kafka-08) và [Xử lý lại do ứng dụng zombie (Reprocessing caused by zombie applications)](#/docs/kafka-08) — hai kịch bản này là lý do tồn tại của cả mục. [Transaction bảo đảm Exactly-Once bằng cách nào?](#/docs/kafka-08) thì đọc chậm: atomic multipartition write với Hình 8-1, \`transactional.id\` bền qua các lần khởi động lại, zombie fencing bằng epoch, rồi phía consumer là \`isolation.level=read_committed\` với Hình 8-2 và Last Stable Offset. [Những vấn đề nào không được Transaction giải quyết?](#/docs/kafka-08) đọc hết năm mục con, từ [Tác dụng phụ trong lúc stream processing (Side effects while stream processing)](#/docs/kafka-08) tới [Mẫu hình publish/subscribe (Publish/subscribe pattern)](#/docs/kafka-08); khung "Lưu ý" về outbox pattern đáng ghi lại. [Làm thế nào để dùng Transaction?](#/docs/kafka-08) thì gõ lại trọn vòng lặp với \`initTransactions\`, \`beginTransaction\`, \`sendOffsetsToTransaction\`, \`commitTransaction\` và hai khối \`catch\`. [Transactional ID và Fencing](#/docs/kafka-08) cùng Hình 8-3 và 8-4, [Transaction hoạt động như thế nào](#/docs/kafka-08) với bốn bước two-phase commit, rồi [Hiệu năng của Transaction](#/docs/kafka-08) khép chương.
+
+**Bẫy.** Publish một message trong transaction rồi chờ ứng dụng khác phản hồi mới commit. Khung "Cảnh báo" cuối mục publish/subscribe gọi đây là mẫu hình quan trọng cần tránh: ứng dụng kia sẽ không nhận được message cho tới sau khi transaction được commit, và bạn có deadlock. Bẫy thứ hai: sinh \`transactional.id\` mới cho mỗi lần chạy cho tiện. Khung "Cảnh báo" cuối mục Transaction hoạt động như thế nào định lượng cái giá: broker giữ trạng thái mỗi producer trong \`transactional.id.expiration.ms\`, mặc định bảy ngày — ba producer mới mỗi giây suốt một tuần thành 1,8 triệu bản ghi trạng thái, khoảng 5 GB RAM, đủ gây hết bộ nhớ hoặc GC nghiêm trọng; sách khuyên khởi tạo vài producer sống lâu rồi tái sử dụng.
+
+**Tự kiểm tra.** Vì sao phải tắt auto-commit và không được gọi API commit của consumer khi dùng transaction? Và vì sao nhiều message hơn trong mỗi transaction lại làm throughput tổng thể cao hơn?`,
+      },
+    ],
+  },
+  {
+    id: "kf-w6",
+    week: "Tuần 6",
+    title: "Xây dựng data pipeline với Kafka Connect",
+    goal: "Nối được hai hệ thống qua Kafka bằng file cấu hình thay vì code, và biện hộ được lựa chọn đó trước các phương án thay thế.",
+    practice:
+      "Chạy Kafka Connect ở chế độ standalone với `FileStreamSource` đọc một tệp và `FileStreamSink` ghi ra tệp khác. Rồi đổi converter từ JSON sang String trong tệp cấu hình worker và dùng `kafka-console-consumer.sh` xem topic trung gian đổi hình dạng thế nào.",
+    resources: [
+      { label: "Kafka 09 — Xây dựng data pipeline", href: "#/docs/kafka-09" },
+      { label: "kafka.apache.org — Kafka Connect", href: "https://kafka.apache.org/documentation/#connect" },
+    ],
+    items: [
+      {
+        id: "kf-w6-1",
+        text: "Những gì phải cân nhắc khi nối hai hệ thống qua Kafka",
+        lesson: `**Mục tiêu.** Lập danh sách yêu cầu cho một pipeline trước khi chọn công cụ, và nhận ra ba kiểu ghép nối ngoài ý muốn ngay từ bản thiết kế.
+
+**Đọc.** [Những cân nhắc khi xây dựng data pipeline](#/docs/kafka-09) là phần đọc chậm nhất tuần: một danh sách yêu cầu, không phải dẫn nhập — đọc từng mục rồi tự trả lời cho một pipeline có thật của bạn. [Tính kịp thời (Timeliness)](#/docs/kafka-09) cho hình dung Kafka như buffer tách rời độ nhạy thời gian hai phía. [Độ tin cậy (Reliability)](#/docs/kafka-09) nối vào tuần trước: Kafka tự nó cho at-least-once, exactly-once cần một kho dữ liệu bên ngoài có transaction hoặc key duy nhất. [Định dạng dữ liệu (Data Formats)](#/docs/kafka-09) đọc kỹ đoạn schema với ví dụ MySQL tới Snowflake, cùng khác biệt push/pull giữa Syslog và cơ sở dữ liệu quan hệ. [Biến đổi dữ liệu (Transformations)](#/docs/kafka-09) là mục cần đọc kỹ nhất: đặt ETL cạnh ELT và tự nói ra ai gánh chi phí tính toán trong mỗi phương án. [Bảo mật (Security)](#/docs/kafka-09) cho năm câu hỏi phải trả lời và lời khuyên dùng external config provider thay vì để credential trong file cấu hình. [Sự ghép nối và tính linh hoạt (Coupling and Agility)](#/docs/kafka-09) khép mục với ba kiểu ghép nối: pipeline tùy tiện, mất metadata, xử lý thái quá.
+
+**Bẫy.** Làm sạch và chuẩn hoá dữ liệu thật kỹ ngay lúc nạp vào Kafka. Khung "Cảnh báo" cuối mục Biến đổi dữ liệu vạch ranh giới: một số bước tiền xử lý là điều được mong đợi — chuẩn hoá timestamp và kiểu dữ liệu, thêm thông tin nguồn gốc, loại bỏ thông tin cá nhân — nhưng đừng làm sạch và tối ưu quá sớm, bởi nơi khác có thể cần dữ liệu ở dạng ít tinh chế hơn. Bẫy thứ hai: bỏ qua schema vì "hai đầu đều do đội mình viết". Mục Mất metadata dựng đúng hậu quả: nếu pipeline không bảo tồn schema và không cho phép schema evolution, một DBA thêm một trường ở nguồn sẽ hoặc làm hỏng mọi ứng dụng đọc ở đích hoặc buộc mọi lập trình viên nâng cấp đồng loạt.
+
+**Tự kiểm tra.** Vì sao Kafka áp được back pressure mà không cần bạn viết cơ chế nào? Và lọc bỏ vài trường giữa đường trong pipeline MongoDB sang MySQL gây vấn đề gì về sau?`,
+      },
+      {
+        id: "kf-w6-2",
+        text: "Khi nào Connect thắng producer/consumer tự viết, và Connect gồm gì",
+        lesson: `**Mục tiêu.** Chọn giữa client tự viết và Connect bằng một tiêu chí rõ ràng, rồi chạy được pipeline hai đầu chỉ bằng file cấu hình và REST API.
+
+**Đọc.** [Khi nào dùng Kafka Connect thay vì producer và consumer](#/docs/kafka-09) ngắn nhưng đọc kỹ: dùng client khi bạn sửa được code ứng dụng cần kết nối, dùng Connect khi datastore không do bạn viết và bạn không muốn sửa. [Kafka Connect](#/docs/kafka-09) dựng bộ từ vựng — worker, connector, task, converter — cả mục sau xoay quanh bốn từ này. [Chạy Kafka Connect](#/docs/kafka-09) là mục nặng nhất: \`bootstrap.servers\`, \`group.id\`, \`plugin.path\` với quy ước thư mục con cho mỗi connector, cặp converter key/value, rồi \`rest.host.name\` và \`rest.port\`; chạy thật hai lệnh \`curl\` xem phiên bản và danh sách plug-in, rồi đọc khung "CHẾ ĐỘ STANDALONE" — phần thực hành tuần dùng chế độ ấy. [Ví dụ connector: File source và file sink](#/docs/kafka-09) thì chạy nửa đầu — nạp \`config/server.properties\` vào \`kafka-config-topic\` rồi soi bằng console consumer; lưu ý lệnh tạo file sink và vài dòng output Elasticsearch ở mục sau bị bản PDF gốc cắt cụt: đừng gõ lại, đừng đoán phần thiếu — tra tài liệu chính thức. Mục ví dụ MySQL tới Elasticsearch cho vai trò \`key.ignore\` và khung "CHANGE DATA CAPTURE VÀ DỰ ÁN DEBEZIUM"; [Single Message Transformations](#/docs/kafka-09) là bảng tra mười SMT, kèm khung "XỬ LÝ LỖI VÀ DEAD LETTER QUEUE". [Nhìn sâu hơn vào Kafka Connect](#/docs/kafka-09) khép mục: connector, task, worker, converter, quản lý offset — nắm cặp partition/offset logic.
+
+**Bẫy.** Đưa FileStream connector từ bài tập lên production. Khung "Cảnh báo" sau ví dụ nói thẳng: chúng có mặt vì đơn giản và tích hợp sẵn, nhưng không nên dùng cho pipeline production vì nhiều hạn chế và không có bảo đảm nào về độ tin cậy; ba lựa chọn thay thế được nêu tên: FilePulse Connector, FileSystem Connector, SpoolDir. Bẫy thứ hai: đổ jar của connector cùng dependency vào thẳng thư mục \`plugin.path\`. Sách dặn tạo một thư mục con cho mỗi connector, và nói rõ đặt dependency ở thư mục cấp cao nhất sẽ không hoạt động; nhét vào classpath cũng không được khuyến nghị vì dễ xung đột với dependency của chính Kafka.
+
+**Tự kiểm tra.** Ai quyết định số task của một connector, dựa trên cái gì? Và với source connector, "partition" và "offset" nghĩa là gì nếu không phải của Kafka?`,
+      },
+      {
+        id: "kf-w6-3",
+        text: "Các lựa chọn thay thế Connect, và khi nào chọn chúng",
+        lesson: `**Mục tiêu.** Biết ba họ công cụ cạnh tranh với Kafka Connect và điều kiện khiến mỗi họ là đúng — thay vì mặc định chọn Connect vì đang đọc sách Kafka.
+
+**Đọc.** [Các lựa chọn thay thế Kafka Connect](#/docs/kafka-09) chỉ hơn một trang nhưng đọc kỹ: phần duy nhất trong chương đặt Connect vào thế cạnh tranh. [Framework nạp dữ liệu cho các datastore khác](#/docs/kafka-09) cho tiêu chí rõ nhất: Kafka là phần không thể thiếu của kiến trúc và mục tiêu là nối rất nhiều source và sink thì dùng Connect; còn nếu bạn xây một hệ lấy Hadoop hoặc Elastic làm trung tâm, Kafka chỉ là một trong nhiều đầu vào, thì Flume, Logstash hay Fluentd hợp lý hơn. [Công cụ ETL dựa trên giao diện đồ họa (GUI)](#/docs/kafka-09) đọc chậm hơn — Informatica, Talend, Pentaho, NiFi, StreamSets đều coi Kafka vừa là nguồn vừa là đích, nên câu hỏi là bạn đã có sẵn hệ nào; ghi lại lời khuyên nhìn Kafka như nền tảng làm cả ba việc: tích hợp dữ liệu bằng Connect, tích hợp ứng dụng bằng client, và stream processing. [Framework stream processing](#/docs/kafka-09) ngắn nhất: nếu bạn vốn đã dùng một framework xử lý event từ Kafka và hệ thống đích được nó hỗ trợ, dùng luôn nó cho khâu tích hợp sẽ tiết kiệm một vòng ghi ngược.
+
+**Bẫy.** Kéo một công cụ ETL đồ hoạ vào chỉ để đưa dữ liệu ra vào Kafka. Sách nêu đúng nhược điểm chính: các hệ này thường được xây cho những luồng công việc phức tạp, thành ra khá nặng nề và rườm rà nếu tất cả những gì bạn muốn chỉ là đưa dữ liệu ra vào Kafka — hầu hết công cụ ETL đều thêm sự phức tạp không cần thiết, trong khi tích hợp dữ liệu nên tập trung vào việc phân phối message trung thực trong mọi điều kiện. Bẫy thứ hai: bỏ vòng ghi ngược về Kafka cho gọn khi dùng framework stream processing. Sách ghi rõ cái giá: có thể khó xử lý sự cố hơn với những chuyện như message bị mất hoặc bị hỏng.
+
+**Tự kiểm tra.** Điều kiện nào khiến Flume hoặc Logstash đúng hơn Connect, và nó nói gì về vai trò của Kafka? Và bỏ bước lưu event đã xử lý trở lại Kafka tiết kiệm gì, đánh đổi gì?`,
+      },
+    ],
+  },
 ];
