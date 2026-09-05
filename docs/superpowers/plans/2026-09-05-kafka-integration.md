@@ -561,7 +561,7 @@ import('./webapp/js/data/kafka-roadmap-part1.js').then(async m=>{
   const heads={};
   for(const [id,f] of Object.entries(map))
     heads[id]=new Set(fs.readFileSync('kafka-vi/'+f+'.md','utf8').split('\n')
-      .filter(l=>/^#{2,4} /.test(l)).map(l=>l.replace(/^#{2,4} /,'').trim()));
+      .filter(l=>/^#{2,6} /.test(l)).map(l=>l.replace(/^#{2,6} /,'').trim()));
   const bad=[];
   for(const w of m.kafkaWeeksPart1) for(const it of w.items)
     for(const x of it.lesson.matchAll(/\[([^\]]+)\]\(#\/docs\/(kafka-\d\d)\)/g))
@@ -699,7 +699,7 @@ Giống header Task 3 Step 2, đổi `Phần 1 (Tuần 1–6)` thành `Phần 2 
 | `kf-w7-3` | MirrorMaker 2: cấu hình, triển khai và tinh chỉnh | ch.10 §"MirrorMaker của Apache Kafka" |
 | `kf-w7-4` | Các giải pháp mirroring khác, và khi nào chọn chúng | ch.10 §"Các giải pháp mirroring liên cluster khác" |
 
-**Cảnh báo cho `kf-w7-3`:** mục này chứa lệnh bị cắt cụt (`kafka-consumer-groups.sh ... --reset-offsets --al`). Không lấy làm bài tập gõ lại.
+**Cảnh báo cho `kf-w7-2`:** lệnh bị cắt cụt `kafka-consumer-groups.sh ... --reset-offsets --al` nằm ở dòng 177 của ch.10, dưới `#### Offset khởi đầu cho ứng dụng sau khi failover` — tức trong §"Các kiến trúc multicluster", bài đọc của `kf-w7-2`, **không phải** §MirrorMaker. Đặt cảnh báo "đừng gõ lại, đừng đoán" ở đúng mục người đọc gặp nó.
 
 - [ ] **Step 4: Viết tuần 8 — `kf-w8`, 4 mục (ch.11)**
 
