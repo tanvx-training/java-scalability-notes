@@ -332,3 +332,14 @@ Xếp theo giá trị / công sức, nêu cả lý do chưa làm:
 | 5 | Trang đọc (tiến độ, thời gian, đã đọc, cỡ chữ, link `.md`, TOC mobile), dashboard mới, thay `alert`/`confirm`, README webapp | check-data xanh; smoke test trình duyệt desktop + 375px; ảnh chụp |
 
 Mỗi chặng một commit, thông điệp theo quy ước repo (`feat:`/`refactor:`/`docs:` tiếng Việt).
+
+## 8. Kết quả triển khai (cập nhật 2026-09-06)
+
+Năm chặng đã hoàn thành trên nhánh `claude/webapp-restructure-6b6de3`, mỗi chặng một commit;
+`check-data.mjs` xanh **46/46** (42 bất biến cũ + #2c + G1–G4) với số lượng bản ghi không đổi
+(196 tài liệu, 17 track / 804 mục, 174 thẻ, 220 câu, 22 lab, 96 tiêu chí). Smoke test trình duyệt
+desktop và 375px: không lỗi console, không tràn ngang.
+
+Lệch so với thiết kế: không có. Bổ sung ngoài thiết kế: `.claude/launch.json` (mở preview),
+`inbox/README.md` (ghi rõ việc còn lại với bản dịch KIA thứ hai), badge "Bắt đầu tại đây" dựa
+trên bước `track` đầu tiên của `fieldGuides`.
