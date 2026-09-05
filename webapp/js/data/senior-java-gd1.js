@@ -352,6 +352,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
     resources: [
       { label: "Giai đoạn 1 — bản đầy đủ", href: "#/docs/sj-01" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
+      { label: "🌱 Sang lĩnh vực Spring Start Here — lộ trình đọc 8 tuần", href: "#/roadmap/spring-start" },
     ],
     items: [
       {

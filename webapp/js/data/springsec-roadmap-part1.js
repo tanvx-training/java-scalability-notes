@@ -28,6 +28,7 @@ export const springsecWeeksPart1 = [
       { label: "SSIA 02 — Xin chào, Spring Security", href: "#/docs/springsec-02" },
       { label: "SSIA Phụ lục A — Liên kết tài liệu chính thức", href: "#/docs/springsec-pl-a" },
       { label: "docs.spring.io — Spring Security Reference", href: "https://docs.spring.io/spring-security/reference/" },
+      { label: "🌱 Sang lĩnh vực Spring Start Here — lộ trình đọc 8 tuần", href: "#/roadmap/spring-start" },
     ],
     items: [
       {

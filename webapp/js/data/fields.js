@@ -88,8 +88,7 @@ export const FIELDS = {
     icon: "🌱",
     desc: "Bản dịch tiếng Việt Spring Start Here (Laurențiu Spilcă, Manning 2021) — sách nhập môn Spring: context và bean, wiring, abstraction, bean scope, AOP, Spring Boot và MVC, web scope, REST, data source, transaction, Spring Data và kiểm thử.",
     certFilter: false,
-    // Module "roadmap" mở ở Task 7, khi đã có đủ 32 mục lộ trình.
-    modules: ["dashboard", "docs"],
+    modules: ["dashboard", "docs", "roadmap"],
     externalRef: { label: "spring.io — Spring Framework", href: "https://spring.io/projects/spring-framework" },
   },
 };

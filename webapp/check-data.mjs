@@ -56,6 +56,7 @@ const EXPECTED = {
     "roadmap-items:kafka": 44,
     // Lĩnh vực Spring Start Here — 15 chương + 1 hướng dẫn học (Manning 2021).
     "docs:spring-start": 16,
+    "roadmap-items:spring-start": 32,
   },
 };
 
