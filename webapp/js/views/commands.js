@@ -191,7 +191,7 @@ function renderCommands(body) {
       catch { copyBtn.textContent = "✗"; }
       setTimeout(() => (copyBtn.textContent = "📋"), 1200);
     });
-    return h("div", { class: "cmd-row" },
+    return h("div", { class: "cmd-row", id: c.id },
       h("div", { class: "cmd-desc" },
         pinButton(c.id, refresh),
         cat ? h("span", { class: "badge badge-blue" }, cat.label) : null,
@@ -259,7 +259,7 @@ function renderYaml(body) {
   const list = h("div", {});
 
   function card(s) {
-    const el = h("div", { class: "card", style: "margin-bottom:12px" },
+    const el = h("div", { class: "card", id: s.id, style: "margin-bottom:12px" },
       h("div", { class: "flex spread flex-wrap" },
         h("div", { class: "flex flex-wrap" },
           h("span", { class: "badge badge-purple" }, s.kind),
@@ -331,7 +331,7 @@ function renderPlaybooks(body) {
       docsHintLine(pb.docsHint),
       pb.lesson ? h("div", { style: "margin-top:8px" }, lessonChip(pb.lesson)) : null);
 
-    return h("details", { class: "reveal", style: "margin:0 0 10px" },
+    return h("details", { class: "reveal", id: pb.id, style: "margin:0 0 10px" },
       h("summary", {},
         h("span", { class: "flex flex-wrap", style: "display:inline-flex" },
           pinButton(pb.id, refresh),

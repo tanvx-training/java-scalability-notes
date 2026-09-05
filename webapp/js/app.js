@@ -1,7 +1,11 @@
-// KubePrep — shell của ứng dụng: router theo hash, theme, sidebar mobile.
+// DevPrep — shell của ứng dụng: router theo hash, theme, sidebar mobile, bộ chọn
+// lĩnh vực, tìm kiếm toàn cục, phím tắt.
 
 import { store } from "./lib/store.js";
 import { currentField, setCurrentField } from "./lib/field.js";
+import { h, openOverlay, hasOpenOverlay } from "./lib/ui.js";
+import { openSearch } from "./lib/search.js";
+import { roadmapStats, fieldSummary } from "./lib/stats.js";
 import { FIELDS, FIELD_ORDER, navFor, moduleAllowed } from "./data/fields.js";
 import { fieldOfDoc, fieldOfTrack, fieldOfMatrixModule } from "./data/index.js";
 import * as dashboard from "./views/dashboard.js";
@@ -14,6 +18,7 @@ import * as quiz from "./views/quiz.js";
 import * as exam from "./views/exam.js";
 import * as labs from "./views/labs.js";
 import * as tracker from "./views/tracker.js";
+import * as settings from "./views/settings.js";
 
 const routes = {
   dashboard,
@@ -26,6 +31,7 @@ const routes = {
   exam,
   labs,
   tracker,
+  settings,
 };
 
 // Khôi phục "chế độ gọn" (ẩn sidebar, mật độ cao) nếu người dùng đã bật.
@@ -37,16 +43,9 @@ const backdrop = document.getElementById("backdrop");
 
 // ---------- Theme ----------
 
-function currentTheme() {
-  const saved = store.get("theme");
-  if (saved === "light" || saved === "dark") return saved;
-  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 function toggleTheme() {
-  const next = currentTheme() === "dark" ? "light" : "dark";
-  store.set("theme", next);
-  document.documentElement.setAttribute("data-theme", next);
+  const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  settings.setThemePref(cur === "dark" ? "light" : "dark");
 }
 
 document.getElementById("theme-btn").addEventListener("click", toggleTheme);
@@ -67,11 +66,9 @@ backdrop.addEventListener("click", closeSidebar);
 
 // ---------- Lĩnh vực ----------
 
-function onFieldChange(id) {
+export function switchField(id) {
   if (!setCurrentField(id)) return;
-  renderFieldSwitch();
-  renderNav();
-  renderFooterLink();
+  renderSidebar();
   // Hash hiện tại có thể trỏ tới bản ghi của lĩnh vực khác (vd #/roadmap/cka).
   // Giữ nguyên thì navigate() sẽ suy ngược lĩnh vực từ nó và huỷ lựa chọn vừa
   // rồi của người dùng. Bỏ tham số: giữ lại view nếu lĩnh vực mới có module đó,
@@ -101,19 +98,39 @@ function renderFooterLink() {
 
 function renderFieldSwitch() {
   const cur = currentField();
+  const f = FIELDS[cur];
   fieldSwitch.innerHTML = "";
-  const sel = document.createElement("select");
-  sel.className = "select field-select";
-  sel.setAttribute("aria-label", "Chọn lĩnh vực học");
+  const btn = h("button", { class: "field-btn", type: "button", "aria-haspopup": "dialog", title: "Đổi lĩnh vực học" },
+    h("span", { class: "field-ico" }, f.icon),
+    h("span", { class: "field-txt" },
+      h("strong", {}, f.label),
+      h("small", {}, `Lĩnh vực · ${FIELD_ORDER.length} lựa chọn`)),
+    h("span", { class: "chev-down" }, "▾"));
+  btn.addEventListener("click", openFieldPicker);
+  fieldSwitch.append(btn);
+}
+
+// Bảng chọn lĩnh vực: 10 thẻ có icon, tiến độ lộ trình và số lượng nội dung.
+export function openFieldPicker() {
+  const cur = currentField();
+  const grid = h("div", { class: "picker-grid" });
+  let ov;
   for (const id of FIELD_ORDER) {
-    const opt = document.createElement("option");
-    opt.value = id;
-    opt.textContent = `${FIELDS[id].icon} ${FIELDS[id].label}`;
-    if (id === cur) opt.selected = true;
-    sel.append(opt);
+    const f = FIELDS[id];
+    const rm = roadmapStats(id);
+    const sum = fieldSummary(id);
+    const item = h("button", { class: `picker-item${id === cur ? " on" : ""}`, type: "button" },
+      h("span", { class: "p-ico" }, f.icon),
+      h("span", { class: "p-txt" },
+        h("strong", {}, f.label),
+        h("small", {}, sum.text),
+        rm.total
+          ? h("div", { class: "progress thin green" }, h("span", { style: `width:${rm.pct}%` }))
+          : null));
+    item.addEventListener("click", () => { ov.close(); switchField(id); });
+    grid.append(item);
   }
-  sel.addEventListener("change", () => onFieldChange(sel.value));
-  fieldSwitch.append(sel);
+  ov = openOverlay({ title: "Chọn lĩnh vực học", body: h("div", { class: "overlay-body" }, grid) });
 }
 
 function renderNav() {
@@ -141,6 +158,48 @@ function renderNav() {
   }
 }
 
+function renderSidebar() {
+  renderFieldSwitch();
+  renderNav();
+  renderFooterLink();
+}
+
+// ---------- Tìm kiếm & phím tắt ----------
+
+document.getElementById("search-btn").addEventListener("click", () => openSearch());
+document.getElementById("search-btn-mobile").addEventListener("click", () => openSearch());
+document.getElementById("shortcuts-btn").addEventListener("click", openShortcuts);
+
+function openShortcuts() {
+  const rows = [
+    ["Ctrl / ⌘ + K", "Mở tìm kiếm toàn cục"],
+    ["/", "Mở tìm kiếm (khi không gõ trong ô nhập)"],
+    ["?", "Bảng phím tắt này"],
+    ["Esc", "Đóng bảng đang mở"],
+    ["Space", "Lật flashcard"],
+    ["1 · 2 · 3 · 4", "Chấm Lại / Khó / Tốt / Dễ sau khi lật"],
+  ];
+  openOverlay({
+    title: "⌨️ Phím tắt",
+    body: h("div", { class: "overlay-body" },
+      h("table", { class: "shortcut-table" },
+        h("tbody", {}, rows.map(([k, d]) =>
+          h("tr", {}, h("td", {}, k.split(" · ").map((x, i) => [i ? " · " : null, h("kbd", { class: "kbd" }, x)])), h("td", {}, d)))))),
+  });
+}
+
+document.addEventListener("keydown", (e) => {
+  const typing = e.target instanceof Element && e.target.matches("input, select, textarea, [contenteditable]");
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    openSearch();
+    return;
+  }
+  if (typing || hasOpenOverlay() || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "/") { e.preventDefault(); openSearch(); }
+  else if (e.key === "?") { e.preventDefault(); openShortcuts(); }
+});
+
 // ---------- Router ----------
 
 function parseHash() {
@@ -159,11 +218,9 @@ function navigate() {
   if (name === "docs" && params[0]) owner = fieldOfDoc(params[0]);
   if (name === "roadmap" && params[0]) owner = fieldOfTrack(params[0]);
   if (name === "tracker" && params[0]) owner = fieldOfMatrixModule(params[0]);
-  if (owner && setCurrentField(owner)) {
-    renderFieldSwitch();
-    renderNav();
-    renderFooterLink();
-  }
+  if (owner) setCurrentField(owner);
+  // Sidebar luôn đồng bộ với lĩnh vực hiện tại — tìm kiếm/bộ chọn có thể đã đổi nó.
+  renderSidebar();
 
   // Route không thuộc lĩnh vực đang chọn → về bảng điều khiển.
   let routeName = routes[name] ? name : "dashboard";
@@ -178,6 +235,9 @@ function navigate() {
   document.querySelectorAll(".nav-link").forEach((a) => {
     a.classList.toggle("active", a.dataset.route === routeName);
   });
+  document.getElementById("settings-link")?.classList.toggle("active", routeName === "settings");
+  document.getElementById("read-progress").hidden = true;
+  main.dataset.route = routeName;
 
   closeSidebar();
   main.innerHTML = "";
@@ -189,7 +249,4 @@ function navigate() {
 }
 
 window.addEventListener("hashchange", navigate);
-renderFieldSwitch();
-renderNav();
-renderFooterLink();
 navigate();

@@ -1,8 +1,9 @@
 // Thi thử — mô phỏng áp lực phòng thi: bấm giờ, đánh dấu câu, không xem đáp án
 // cho tới khi nộp bài. Chấm điểm tổng + theo domain, lưu lịch sử.
 
-import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, fmtClock, fmtDate } from "../lib/ui.js";
+import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, fmtClock, fmtDate, confirmDialog } from "../lib/ui.js";
 import { store } from "../lib/store.js";
+import { recordActivity } from "../lib/activity.js";
 import { questions } from "../data/kubernetes/questions.js";
 import { DOMAINS } from "../data/meta.js";
 
@@ -92,7 +93,7 @@ function renderSetup(root) {
           h("strong", {}, "Lịch sử thi thử"),
           h("button", {
             class: "btn btn-ghost btn-sm",
-            onclick: () => { if (confirm("Xóa lịch sử thi thử?")) { store.set("exam.history", []); root.innerHTML = ""; renderSetup(root); } },
+            onclick: async () => { if (await confirmDialog("Xoá lịch sử thi thử?", { title: "Xoá lịch sử", okLabel: "Xoá", danger: true })) { store.set("exam.history", []); root.innerHTML = ""; renderSetup(root); } },
           }, "Xóa lịch sử")),
         h("div", { class: "table-wrap" },
           h("table", { class: "table" },
@@ -158,9 +159,12 @@ function startExam(root, count, minutes) {
     }
   }, 1000);
 
-  submitBtn.addEventListener("click", () => {
+  submitBtn.addEventListener("click", async () => {
     const left = answers.filter((a) => a == null).length;
-    if (left > 0 && !confirm(`Còn ${left} câu chưa trả lời. Nộp bài luôn?`)) return;
+    if (left > 0) {
+      const ok = await confirmDialog(`Còn ${left} câu chưa trả lời. Nộp bài luôn?`, { title: "Nộp bài", okLabel: "Nộp bài" });
+      if (!ok) return;
+    }
     submit(false);
   });
 
@@ -231,6 +235,7 @@ function startExam(root, count, minutes) {
     const hist = store.get("exam.history", []);
     hist.push({ date: Date.now(), total: results.length, correct, pct, pass, byDomain });
     store.set("exam.history", hist);
+    recordActivity();
 
     renderResult(page, { results, correct, pct, pass, byDomain, auto, root });
   }

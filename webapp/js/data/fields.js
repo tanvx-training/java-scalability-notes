@@ -101,6 +101,7 @@ export const DEFAULT_FIELD = "kubernetes";
 export const NAV_GROUPS = [
   { title: "Tổng quan", items: [
       { id: "dashboard",  label: "Bảng điều khiển", icon: "🏠", href: "#/" },
+      { id: "guide",      label: "Hướng dẫn học",   icon: "🧭", href: "#/guide" },
       { id: "certs",      label: "Chứng chỉ K8s",   icon: "🎓", href: "#/certs" },
       { id: "roadmap",    label: "Lộ trình học",    icon: "🗺️", href: "#/roadmap" },
       { id: "tracker",    label: "Ma trận năng lực", icon: "📊", href: "#/tracker" } ] },
@@ -118,8 +119,15 @@ export function isField(id) {
   return Object.prototype.hasOwnProperty.call(FIELDS, id);
 }
 
+// Module toàn cục: có ở MỌI lĩnh vực, không cần dữ liệu riêng và không nằm
+// trong sidebar nav (vào từ chân sidebar). Không khai trong FIELDS[].modules để
+// bất biến #5/#7 và navFor() không phải biết tới nó.
+export const GLOBAL_MODULES = ["settings"];
+
 export function moduleAllowed(fieldId, moduleId) {
-  return isField(fieldId) && FIELDS[fieldId].modules.includes(moduleId);
+  if (!isField(fieldId)) return false;
+  if (GLOBAL_MODULES.includes(moduleId)) return true;
+  return FIELDS[fieldId].modules.includes(moduleId);
 }
 
 // Nhóm nav của một lĩnh vực: giữ lại module lĩnh vực đó có, bỏ nhóm rỗng.

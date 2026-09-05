@@ -1,7 +1,8 @@
 // Trắc nghiệm luyện tập — phản hồi ngay sau mỗi câu, kèm giải thích.
 
-import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, diffBadge } from "../lib/ui.js";
+import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, diffBadge, toast } from "../lib/ui.js";
 import { store } from "../lib/store.js";
+import { recordActivity } from "../lib/activity.js";
 import { getQuestions, getDomains } from "../data/index.js";
 import { FIELDS, moduleAllowed } from "../data/fields.js";
 import { CERTS } from "../data/meta.js";
@@ -82,7 +83,7 @@ function renderSetup(root) {
   startBtn.addEventListener("click", () => {
     let pool = questions.filter((q) =>
       (!field.certFilter || certSel.has(q.cert)) && domainSel.has(q.domain));
-    if (!pool.length) { alert("Không có câu hỏi nào khớp bộ lọc."); return; }
+    if (!pool.length) { toast("Không có câu hỏi nào khớp bộ lọc.", "error"); return; }
     if (onlyWeak) {
       const stats = store.get("quiz.stats", {});
       const weight = (q) => {
@@ -173,6 +174,7 @@ function renderSession(root, list) {
       if (ok) s.correct++;
       stats[q.id] = s;
       store.set("quiz.stats", stats);
+      recordActivity();
 
       buttons.forEach((b, i) => {
         b.disabled = true;

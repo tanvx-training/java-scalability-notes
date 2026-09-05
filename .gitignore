@@ -7,3 +7,7 @@ temp/
 # DevPrep: webapp/content/ là ảnh gương của sources/ do scripts/build-content.sh tạo
 # lúc chạy dev.sh / Docker / deploy — không commit.
 webapp/content/
+
+# Cấu hình local của Claude Code (launch.json giữ lại để mở preview)
+.claude/*
+!.claude/launch.json

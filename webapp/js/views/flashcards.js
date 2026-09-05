@@ -1,8 +1,9 @@
 // Flashcards với spaced repetition rút gọn.
 // Mỗi thẻ lưu { reps, interval (ngày), due (epoch ms) } trong localStorage.
 
-import { h, pageHead, inlineMd, codeNode, shuffle } from "../lib/ui.js";
+import { h, pageHead, inlineMd, codeNode, shuffle, toast } from "../lib/ui.js";
 import { store } from "../lib/store.js";
+import { recordActivity } from "../lib/activity.js";
 import { getFlashcards, getTopics } from "../data/index.js";
 import { currentField } from "../lib/field.js";
 import { TOPICS } from "../data/meta.js";
@@ -99,7 +100,7 @@ function renderSetup(root) {
   const startBtn = h("button", { class: "btn btn-primary btn-lg" }, "Bắt đầu ôn tập");
   startBtn.addEventListener("click", () => {
     const pool = flashcards.filter((c) => selected.has(c.topic));
-    if (!pool.length) { alert("Hãy chọn ít nhất một chủ đề."); return; }
+    if (!pool.length) { toast("Hãy chọn ít nhất một chủ đề.", "error"); return; }
     let session;
     if (mode === "smart") {
       const now2 = Date.now();
@@ -166,6 +167,7 @@ function renderSession(root, cards) {
   function doGrade(card, g) {
     counts[g]++;
     grade(srs, card.id, g);
+    recordActivity();
     if (g === "again") {
       queue.push(card); // quay lại cuối phiên
       total++;

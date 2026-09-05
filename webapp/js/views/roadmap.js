@@ -9,8 +9,9 @@
 // tương tác theo tuần: mỗi mục là một bài học chi tiết (mở/đóng được), tiến độ
 // lưu localStorage.
 
-import { h, pageHead, inlineMd, mdInto } from "../lib/ui.js";
+import { h, pageHead, inlineMd, mdInto, toast, confirmDialog, stripMd } from "../lib/ui.js";
 import { store } from "../lib/store.js";
+import { recordActivity, pushRecent } from "../lib/activity.js";
 import { getTrack } from "../data/roadmap.js";
 import { getTracks } from "../data/index.js";
 import { FIELDS } from "../data/fields.js";
@@ -116,7 +117,7 @@ function renderTrack(root, track, focusItemId) {
   const continueBtn = h("button", { class: "btn btn-primary btn-sm" }, "▶ Tiếp tục học");
   continueBtn.addEventListener("click", () => {
     const next = allItems.find((it) => !checked[it.id]);
-    if (!next) { alert(`Bạn đã hoàn thành toàn bộ lộ trình ${track.label}! 🎉`); return; }
+    if (!next) { toast(`Bạn đã hoàn thành toàn bộ lộ trình ${track.label}! 🎉`, "success"); return; }
     lessonOpeners.get(next.id)?.();
   });
 
@@ -130,12 +131,13 @@ function renderTrack(root, track, focusItemId) {
         continueBtn,
         h("button", {
           class: "btn btn-sm btn-danger",
-          onclick: () => {
-            if (confirm(`Xóa tiến độ lộ trình ${track.label}? (Các lộ trình khác không bị ảnh hưởng)`)) {
-              for (const it of allItems) delete checked[it.id];
-              store.set("roadmap.checked", checked);
-              location.reload();
-            }
+          onclick: async () => {
+            const ok = await confirmDialog(`Xoá tiến độ lộ trình ${track.label}? Các lộ trình khác không bị ảnh hưởng.`,
+              { title: "Đặt lại tiến độ", okLabel: "Xoá", danger: true });
+            if (!ok) return;
+            for (const it of allItems) delete checked[it.id];
+            store.set("roadmap.checked", checked);
+            location.reload();
           },
         }, "Đặt lại tiến độ"))
     )
@@ -185,7 +187,7 @@ function renderTrack(root, track, focusItemId) {
     );
 
     for (const item of week.items) {
-      body.append(buildLessonItem(item, details));
+      body.append(buildLessonItem(item, details, week));
     }
 
     if (week.practice) {
@@ -206,7 +208,7 @@ function renderTrack(root, track, focusItemId) {
     page.append(details);
   }
 
-  function buildLessonItem(item, weekDetails) {
+  function buildLessonItem(item, weekDetails, week) {
     const cb = h("input", { type: "checkbox", title: "Đánh dấu đã nắm vững" });
     cb.checked = !!checked[item.id];
 
@@ -223,7 +225,7 @@ function renderTrack(root, track, focusItemId) {
       lessonBody);
 
     function setChecked(on) {
-      if (on) checked[item.id] = true;
+      if (on) { checked[item.id] = true; recordActivity(); }
       else delete checked[item.id];
       store.set("roadmap.checked", checked);
       cb.checked = on;
@@ -234,6 +236,10 @@ function renderTrack(root, track, focusItemId) {
 
     function toggleLesson(forceOpen) {
       const open = forceOpen === true ? true : lessonBody.hidden;
+      if (open) {
+        pushRecent({ type: "lesson", icon: track.icon, title: stripMd(item.text), sub: `${track.label} · ${week.week}`,
+          field: track.field ?? "kubernetes", href: `#/roadmap/${track.id}/${item.id}` });
+      }
       if (open && !rendered) {
         rendered = true;
         if (item.lesson) {

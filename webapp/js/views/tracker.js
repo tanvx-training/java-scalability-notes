@@ -7,8 +7,9 @@
 // Tiến độ lưu ở khoá riêng "tracker.checked", tách khỏi "roadmap.checked":
 // hai không gian id khác nhau và người dùng đặt lại được từng cái.
 
-import { h, pageHead, inlineMd } from "../lib/ui.js";
+import { h, pageHead, inlineMd, toast, confirmDialog } from "../lib/ui.js";
 import { store } from "../lib/store.js";
+import { recordActivity } from "../lib/activity.js";
 import { getMatrices } from "../data/index.js";
 import { currentField } from "../lib/field.js";
 
@@ -66,7 +67,7 @@ function renderMatrix(root, matrix, focusModuleId) {
   const openers = new Map();
   nextBtn.addEventListener("click", () => {
     const next = allCriteria.find((c) => !checked[c.id]);
-    if (!next) { alert("Bạn đã đạt toàn bộ tiêu chí của ma trận! 🎉"); return; }
+    if (!next) { toast("Bạn đã đạt toàn bộ tiêu chí của ma trận! 🎉", "success"); return; }
     openers.get(next.id)?.();
   });
 
@@ -80,12 +81,13 @@ function renderMatrix(root, matrix, focusModuleId) {
         nextBtn,
         h("button", {
           class: "btn btn-sm btn-danger",
-          onclick: () => {
-            if (confirm("Xóa tiến độ ma trận năng lực? (Lộ trình học không bị ảnh hưởng)")) {
-              for (const c of allCriteria) delete checked[c.id];
-              store.set("tracker.checked", checked);
-              location.reload();
-            }
+          onclick: async () => {
+            const ok = await confirmDialog("Xoá tiến độ ma trận năng lực? Lộ trình học không bị ảnh hưởng.",
+              { title: "Đặt lại tiến độ", okLabel: "Xoá", danger: true });
+            if (!ok) return;
+            for (const c of allCriteria) delete checked[c.id];
+            store.set("tracker.checked", checked);
+            location.reload();
           },
         }, "Đặt lại tiến độ")))
   );
@@ -164,7 +166,7 @@ function renderMatrix(root, matrix, focusModuleId) {
           h("span", { class: "badge", style: "flex:none" }, `L${c.level}`),
           h("span", { class: "check-text", html: inlineMd(c.criteria) }));
         cb.addEventListener("change", () => {
-          if (cb.checked) checked[c.id] = true;
+          if (cb.checked) { checked[c.id] = true; recordActivity(); }
           else delete checked[c.id];
           store.set("tracker.checked", checked);
           row.classList.toggle("done", cb.checked);

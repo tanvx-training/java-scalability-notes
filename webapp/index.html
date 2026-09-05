@@ -4,19 +4,33 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DevPrep — Học · Ôn tập · Luyện thi</title>
-  <meta name="description" content="Nền tảng học đa lĩnh vực: Kubernetes & chứng chỉ (CKAD, CKA, CKS), Lập trình hệ thống (UIUC CS 241), Java & Spring Boot Scalability, Modern Java in Action, Designing Data-Intensive Applications, Kafka: The Definitive Guide, Modern Concurrency in Java, Spring Start Here, Spring Security và lộ trình Senior Java 24 tháng. Tài liệu, lộ trình, ma trận năng lực, flashcards, trắc nghiệm, thi thử và labs thực hành." />
+  <meta name="description" content="Nền tảng học đa lĩnh vực: Kubernetes & chứng chỉ (CKAD, CKA, CKS), Lập trình hệ thống (UIUC CS 241), Java & Spring Boot Scalability, Modern Java in Action, Designing Data-Intensive Applications, Kafka: The Definitive Guide, Modern Concurrency in Java, Spring Start Here, Spring Security và lộ trình Senior Java 24 tháng. Hướng dẫn học, tài liệu, lộ trình, ma trận năng lực, flashcards, trắc nghiệm, thi thử và labs thực hành." />
+  <meta name="theme-color" content="#326ce5" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/style.css" />
   <script>
-    // Đặt theme trước khi render để tránh chớp màu (FOUC).
+    // Theme boot — chạy trước khi render để tránh chớp màu (FOUC).
+    // Luôn đặt data-theme (đã lưu, không có thì theo hệ thống) nên CSS chỉ cần
+    // MỘT bảng token dark. store.js lưu JSON nên phải bỏ dấu nháy kép.
     (function () {
+      var root = document.documentElement;
+      var saved = "";
+      try { saved = (localStorage.getItem("kubeprep.theme") || "").replace(/"/g, ""); } catch (e) { /* private mode */ }
+      var mq = window.matchMedia("(prefers-color-scheme: dark)");
+      function apply() {
+        var t = (saved === "light" || saved === "dark") ? saved : (mq.matches ? "dark" : "light");
+        root.setAttribute("data-theme", t);
+      }
+      apply();
+      if (mq.addEventListener) mq.addEventListener("change", function () { if (saved !== "light" && saved !== "dark") apply(); });
+      // app.js / settings phát sự kiện này khi người dùng đổi theme ("" = theo hệ thống).
+      window.addEventListener("devprep:theme", function (e) { saved = e.detail || ""; apply(); });
+      // Cỡ chữ đọc do người dùng chọn (settings / nút A− A+).
       try {
-        // store.js lưu giá trị dạng JSON nên cần bỏ dấu nháy kép.
-        var t = (localStorage.getItem("kubeprep.theme") || "").replace(/"/g, "");
-        if (t === "light" || t === "dark") {
-          document.documentElement.setAttribute("data-theme", t);
-        }
-      } catch (e) { /* private mode */ }
+        var fs = parseFloat((localStorage.getItem("kubeprep.reader.fontScale") || "").replace(/"/g, ""));
+        if (fs >= 0.8 && fs <= 1.4) root.style.setProperty("--reader-scale", String(fs));
+      } catch (e) { /* ignore */ }
     })();
   </script>
 </head>
@@ -25,6 +39,7 @@
     <header class="topbar">
       <button class="icon-btn" id="menu-btn" aria-label="Mở menu">☰</button>
       <a class="topbar-brand" href="#/">📚 DevPrep</a>
+      <button class="icon-btn" id="search-btn-mobile" aria-label="Tìm kiếm">🔍</button>
       <button class="icon-btn" id="theme-btn-mobile" aria-label="Đổi giao diện sáng/tối">◐</button>
     </header>
 
@@ -37,11 +52,19 @@
         </span>
       </a>
 
+      <button class="search-trigger" id="search-btn" type="button" aria-label="Tìm kiếm (Ctrl+K)">
+        <span>🔍</span>
+        <span class="grow">Tìm tài liệu, bài học, lệnh…</span>
+        <kbd class="kbd">⌘K</kbd>
+      </button>
+
       <div class="field-switch" id="field-switch"></div>
-      <nav class="nav" id="nav"></nav>
+      <nav class="nav" id="nav" aria-label="Điều hướng chính"></nav>
 
       <div class="sidebar-footer">
         <button class="btn btn-ghost btn-sm" id="theme-btn">◐ Sáng / Tối</button>
+        <a class="btn btn-ghost btn-sm" id="settings-link" href="#/settings">⚙️ Cài đặt & tiến độ</a>
+        <button class="btn btn-ghost btn-sm" id="shortcuts-btn">⌨️ Phím tắt</button>
         <a class="muted-link" id="ref-link" href="#" target="_blank" rel="noopener" hidden></a>
       </div>
     </aside>
@@ -51,6 +74,9 @@
       <noscript>Ứng dụng cần JavaScript để hoạt động.</noscript>
     </main>
   </div>
+
+  <div class="read-progress" id="read-progress" hidden><span></span></div>
+  <div id="overlay-root"></div>
 
   <script type="module" src="js/app.js"></script>
 </body>
