@@ -75,7 +75,8 @@ webapp/
 │   ├── meta.js, certs.js, roadmap.js, docs-index.js, …
 │   ├── sysprog-roadmap-part*.js, sysprog-flashcards.js,
 │   │   sysprog-questions-part*.js   # dữ liệu lĩnh vực System Programming
-│   ├── k8sbook-roadmap-part*.js, k8sbook-crossref.js  # sách Kubernetes in Action
+│   ├── k8sbook-roadmap-part*.js     # sách Kubernetes in Action
+│   ├── book-crossref.js             # chip "đọc thêm trong sách" → tuần giáo trình chứng chỉ (3 cuốn)
 │   ├── springsec-roadmap-part*.js   # sách Spring Security in Action
 │   ├── ddia-roadmap-part1.js        # sách Designing Data-Intensive Applications (tuần 1–6)
 │   ├── ddia-roadmap-part2.js        # sách Designing Data-Intensive Applications (tuần 7–12)
