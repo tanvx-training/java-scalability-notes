@@ -57,7 +57,7 @@ import { seniorJavaGd1 } from "./senior-java-gd1.js";
 import { seniorJavaGd2 } from "./senior-java-gd2.js";
 import { seniorJavaGd3 } from "./senior-java-gd3.js";
 import { seniorJavaGd4 } from "./senior-java-gd4.js";
-import { k8sbookCrossref } from "./k8sbook-crossref.js";
+import { bookCrossref } from "./book-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 
 // Nối chip "đọc thêm trong sách" vào resources của tuần, không ghi đè.
@@ -66,7 +66,7 @@ const docTitle = new Map(allDocsRaw.map((d) => [d.id, d.title]));
 
 function withBookRefs(weeks) {
   return weeks.map((w) => {
-    const refs = k8sbookCrossref[w.id];
+    const refs = bookCrossref[w.id];
     if (!refs) return w;
     const chips = refs.map((id) => ({
       label: `📖 ${docTitle.get(id) ?? id}`,

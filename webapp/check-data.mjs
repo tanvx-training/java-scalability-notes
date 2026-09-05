@@ -99,7 +99,7 @@ const { docs } = await import("./js/data/docs-index.js");
 const { tracks } = await import("./js/data/roadmap.js");
 const { allFlashcards: flashcards, allQuestions: questions, allMatrices: matrices } =
   await import("./js/data/index.js");
-const { k8sbookCrossref } = await import("./js/data/k8sbook-crossref.js");
+const { bookCrossref } = await import("./js/data/book-crossref.js");
 const { weeksPart1 } = await import("./js/data/roadmap-part1.js");
 const { weeksPart2 } = await import("./js/data/roadmap-part2.js");
 const { weeksPart3 } = await import("./js/data/roadmap-part3.js");
@@ -414,17 +414,27 @@ await check("Tài nguyên của ma trận là URL http(s)", () => {
 // N1 — bảng liên kết chéo phải trỏ tới thứ có thật.
 // Gõ nhầm id tuần là lỗi IM LẶNG: merge vào một tuần không tồn tại không ném
 // lỗi, chip chỉ đơn giản không bao giờ hiện ra.
-await check("k8sbookCrossref trỏ tới tuần và tài liệu có thật", () => {
+//
+// Mỗi cuốn sách: tiền tố doc id → tiền tố id tuần của track đọc chính cuốn đó.
+// Thêm cuốn thứ tư chỉ phải thêm một dòng ở đây.
+const BOOK_PREFIXES = { "k8sbook-": "kb-w", "ckabook-": "cb-w", "kuar-": "ku-w" };
+
+await check("bookCrossref trỏ tới tuần và tài liệu có thật", () => {
   const docIds = new Set(docs.map((d) => d.id));
   const bad = [];
-  for (const [weekId, refs] of Object.entries(k8sbookCrossref)) {
+  for (const [weekId, refs] of Object.entries(bookCrossref)) {
     if (!rawWeeks.has(weekId)) bad.push(`tuần "${weekId}" không tồn tại`);
-    if (weekId.startsWith("kb-w")) bad.push(`"${weekId}" là tuần của chính track k8sbook`);
+    for (const wp of Object.values(BOOK_PREFIXES)) {
+      if (weekId.startsWith(wp)) bad.push(`"${weekId}" là tuần của chính track sách`);
+    }
     const dup = dupes(refs);
     if (dup.length) bad.push(`tuần "${weekId}" trùng: ${dup.join(", ")}`);
     for (const id of refs) {
-      if (!id.startsWith("k8sbook-")) bad.push(`"${weekId}" → "${id}" không phải chương sách`);
-      else if (!docIds.has(id)) bad.push(`"${weekId}" → "${id}" không tồn tại`);
+      if (!Object.keys(BOOK_PREFIXES).some((p) => id.startsWith(p))) {
+        bad.push(`"${weekId}" → "${id}" không phải chương sách`);
+      } else if (!docIds.has(id)) {
+        bad.push(`"${weekId}" → "${id}" không tồn tại`);
+      }
     }
   }
   expect(!bad.length, bad.join("; "));
@@ -447,7 +457,7 @@ await check("Merge crossref giữ nguyên resource gốc và thêm đủ chip s�
   const merged = new Map(
     tracks.flatMap((t) => t.weeks).map((w) => [w.id, w]));
   const bad = [];
-  for (const [weekId, refs] of Object.entries(k8sbookCrossref)) {
+  for (const [weekId, refs] of Object.entries(bookCrossref)) {
     const raw = rawWeeks.get(weekId);
     const now = merged.get(weekId);
     if (!raw || !now) continue; // N1 đã báo
