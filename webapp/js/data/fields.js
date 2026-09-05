@@ -8,7 +8,7 @@ export const FIELDS = {
   kubernetes: {
     label: "Kubernetes & Chứng chỉ",
     icon: "☸️",
-    desc: "Luyện thi CKAD, CKA, CKS: giáo trình theo tuần, tra cứu kubectl, flashcards, trắc nghiệm, thi thử và labs mô phỏng đề thật.",
+    desc: "Luyện thi CKAD, CKA, CKS: giáo trình theo tuần, tra cứu kubectl, flashcards, trắc nghiệm, thi thử và labs mô phỏng đề thật — kèm bản dịch Kubernetes in Action và CKA Study Guide để đọc sâu.",
     certFilter: true,
     modules: ["dashboard", "certs", "roadmap", "docs", "commands",
               "flashcards", "quiz", "exam", "labs"],

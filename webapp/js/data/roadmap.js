@@ -26,8 +26,8 @@
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./roadmap-part1.js";
