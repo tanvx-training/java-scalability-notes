@@ -619,7 +619,7 @@ Nối vào **cuối** mảng, sau `sh-w2`. `title`: `"Wiring bean và lập trì
 
 `title`: `"Bean scope, vòng đời, và AOP"` · `resources` trỏ `#/docs/springstart-05` và `#/docs/springstart-06`.
 
-`practice`: Đổi một bean sang prototype và in `hashCode()` của hai lần lấy để thấy nó khác singleton. Rồi viết một aspect ghi lại thời gian thực thi theo mục 6.2.1, thêm một aspect thứ hai, và dùng `@Order` để quan sát chuỗi thực thi mà mục 6.3 mô tả đổi thế nào.
+`practice`: Đổi một bean sang prototype rồi lặp lại đúng phép so sánh sách dùng ở §5.1.1 và §5.2.1 — lấy hai tham chiếu và in `cs1 == cs2` — để thấy singleton in ra `true` còn prototype in ra `false`. Rồi viết một aspect ghi lại thời gian thực thi theo mục 6.2.1, thêm một aspect thứ hai, và dùng `@Order` để quan sát chuỗi thực thi mà mục 6.3 mô tả đổi thế nào.
 
 | id | `text` | Mục sách phải đọc |
 |---|---|---|
