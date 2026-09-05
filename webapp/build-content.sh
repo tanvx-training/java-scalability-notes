@@ -13,7 +13,8 @@ DEST="$(cd "$DEST" && pwd)"
 
 mkdir -p "$DEST/java" "$DEST/images" "$DEST/sysprog/images" \
          "$DEST/k8sbook/images" "$DEST/springsec" "$DEST/senior" \
-         "$DEST/modconc/images" "$DEST/ddia/images" "$DEST/mjia/images"
+         "$DEST/modconc/images" "$DEST/ddia/images" "$DEST/mjia/images" \
+         "$DEST/kafka/images"
 
 cp "$REPO"/CKAD/*.md "$REPO"/CKA/*.md "$REPO"/CKS/*.md  "$DEST/"
 cp "$REPO/Chủ đề"*/*.md                                 "$DEST/java/"
@@ -30,3 +31,5 @@ cp    "$REPO"/ddia-vi/*.md                              "$DEST/ddia/"
 cp -R "$REPO"/ddia-vi/images/.                          "$DEST/ddia/images/"
 cp    "$REPO"/modern-java-vi/*.md                        "$DEST/mjia/"
 cp -R "$REPO"/modern-java-vi/images/.                    "$DEST/mjia/images/"
+cp    "$REPO"/kafka-vi/*.md                              "$DEST/kafka/"
+cp -R "$REPO"/kafka-vi/images/.                          "$DEST/kafka/images/"
