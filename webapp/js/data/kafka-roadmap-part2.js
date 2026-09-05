@@ -181,4 +181,119 @@ export const kafkaWeeksPart2 = [
       },
     ],
   },
+  {
+    id: "kf-w10",
+    week: "Tuần 10",
+    title: "Giám sát Kafka",
+    goal: "Dựng được một bộ giám sát Kafka đủ dùng — vài metric bao phủ rộng thay vì hàng nghìn con số — và đặt cảnh báo theo SLO của khách hàng chứ không theo cảm giác của người vận hành.",
+    practice:
+      "Bật JMX trên broker và gắn `jconsole` (hoặc Prometheus JMX exporter). Dựng đúng ba biểu đồ: under-replicated partitions, request handler idle ratio, và consumer lag. Rồi viết một SLO cho một trong ba theo mục \"Mục tiêu mức dịch vụ (Service-Level Objectives)\" — nêu rõ ngưỡng và cửa sổ thời gian.",
+    resources: [
+      { label: "Kafka 13 — Giám sát Kafka", href: "#/docs/kafka-13" },
+    ],
+    items: [
+      {
+        id: "kf-w10-1",
+        text: "Metric cơ bản, JMX, và cách đặt SLO cho một cluster",
+        lesson: `**Mục tiêu.** Biết metric của Kafka được lấy ra bằng đường nào, chọn metric theo mục đích thay vì gom tất cả, và viết được một SLO đúng nghĩa: một SLI kèm giá trị mục tiêu và cửa sổ thời gian.
+
+**Đọc.** [Kiến thức cơ bản về metric (Metric Basics)](#/docs/kafka-13) mở phần nền. [Các metric nằm ở đâu?](#/docs/kafka-13) chốt rằng JMX là cửa duy nhất, với hai kiểu agent — tiến trình riêng như \`jmxtrans\`, hoặc agent nạp trong tiến trình như Jolokia — cùng khung "TÌM CỔNG JMX". [Metric không đến từ ứng dụng (Nonapplication metrics)](#/docs/kafka-13) thì chép Bảng 13-1 ra giấy: càng xuống dưới danh sách, góc nhìn càng khách quan. [Tôi cần những metric nào?](#/docs/kafka-13), [Cảnh báo hay gỡ lỗi?](#/docs/kafka-13) và [Tự động hóa hay con người?](#/docs/kafka-13) — nhớ ẩn dụ đèn "Check Engine" và cụm "alert fatigue". [Mục tiêu mức dịch vụ (Service-Level Objectives)](#/docs/kafka-13) là mục đọc chậm nhất tuần: [Các định nghĩa mức dịch vụ (Service-Level Definitions)](#/docs/kafka-13) tách bạch SLI, SLO và SLA cùng khung "THỎA THUẬN MỨC VẬN HÀNH"; [Metric nào tạo nên SLI tốt?](#/docs/kafka-13) với Bảng 13-2; [Dùng SLO trong cảnh báo (Using SLOs in Alerting)](#/docs/kafka-13) thì tự tính lại ví dụ burn rate — một triệu request mỗi tuần với SLO 99,9% cho phép một nghìn request chậm, nên tốc độ đốt 2% mỗi giờ nghĩa là vi phạm vào trưa thứ Sáu.
+
+**Bẫy.** Bật JMX từ xa cho tiện gắn công cụ giám sát. Khung "TÌM CỔNG JMX" nói rõ nó bị vô hiệu hóa mặc định vì lý do bảo mật, và nếu bật thì phải cấu hình bảo mật cho cổng đó đúng đắn, bởi JMX không chỉ cho nhìn trạng thái ứng dụng mà còn cho phép thực thi mã. Bẫy thứ hai: nhận hộ khách hàng một SLO về độ tươi mới hay tính đúng đắn của dữ liệu họ produce. Khung "KHÁCH HÀNG LUÔN MUỐN NHIỀU HƠN" dặn đừng đồng ý hỗ trợ các SLO bạn không chịu trách nhiệm, vì nó chỉ đẻ thêm việc làm loãng nhiệm vụ cốt lõi là giữ cho Kafka chạy đúng.
+
+**Tự kiểm tra.** Vì sao metric dạng quantile bị loại khỏi nhóm SLI tốt, và bucket thay nó bằng cách nào? Và vì sao cảnh báo đặt thẳng trên ngưỡng SLO thì luôn nổ quá muộn?`,
+      },
+      {
+        id: "kf-w10-2",
+        text: "Metric của broker — cái nào thật sự báo động",
+        lesson: `**Mục tiêu.** Chẩn đoán được ba nhóm sự cố cluster bằng đúng vài metric, và đọc under-replicated partitions như một triệu chứng phải truy tiếp chứ không như một chuông báo cháy.
+
+**Đọc.** [Metric của Kafka Broker (Kafka Broker Metrics)](#/docs/kafka-13) mở bằng khung "AI SẼ GIÁM SÁT NGƯỜI GIÁM SÁT?". [Chẩn đoán sự cố cluster (Diagnosing Cluster Problems)](#/docs/kafka-13) cho ba nhóm — broker đơn lẻ, cluster quá tải, sự cố controller — cùng khung "BẦU CHỌN PREFERRED REPLICA": chạy nó trước rồi xem sự cố có biến mất không. [Nghệ thuật của Under-Replicated Partitions](#/docs/kafka-13) đọc chậm nhất: Bảng 13-3, khung "CÁI BẪY CẢNH BÁO URP", cách phân biệt con số ổn định với con số dao động, và mẹo tìm broker chung trong output \`--under-replicated\`. [Sự cố ở mức cluster (Cluster-level problems)](#/docs/kafka-13) với Bảng 13-4; [Sự cố ở mức host (Host-level problems)](#/docs/kafka-13) với khung "MỘT QUẢ TRỨNG HỎNG". [Broker Metrics](#/docs/kafka-13) thì gõ lại từng MBean, bám bốn mục: [Active controller count](#/docs/kafka-13), [Controller queue size](#/docs/kafka-13), [Request handler idle ratio](#/docs/kafka-13) với hai ngưỡng 20% và 10%, và [Offline partitions](#/docs/kafka-13) — loại sự cố sập dịch vụ, phải xử lý ngay. [All topics bytes in](#/docs/kafka-13) đọc kèm bảy thuộc tính của metric dạng rate, rồi hai khung "CÓ TÍNH CẢ REPLICA FETCHER" và "TẠI SAO KHÔNG CÓ MESSAGES OUT?". [Request metrics](#/docs/kafka-13) với Bảng 13-15 và khung "PERCENTILE LÀ GÌ?". [Giám sát JVM (JVM Monitoring)](#/docs/kafka-13), [Giám sát hệ điều hành (OS Monitoring)](#/docs/kafka-13) và [Logging](#/docs/kafka-13) đọc lướt hơn.
+
+**Bẫy.** Đặt under-replicated partitions làm metric cảnh báo chính. Khung "CÁI BẪY CẢNH BÁO URP" rút lại chính lời khuyên của ấn bản trước: URP thường xuyên khác không vì những lý do vô hại, nên bạn sẽ nhận cảnh báo giả rồi bắt đầu bỏ qua cảnh báo — hãy dựa vào cảnh báo dựa trên SLO. Bẫy thứ hai: đẩy metric của Kafka qua chính cluster Kafka mà bạn đang giám sát. Khung "AI SẼ GIÁM SÁT NGƯỜI GIÁM SÁT?" nói thẳng: rất có khả năng bạn sẽ không bao giờ biết khi nào Kafka hỏng, bởi luồng dữ liệu cho hệ thống giám sát cũng hỏng theo.
+
+**Tự kiểm tra.** Hai broker cùng báo active controller count bằng một thì phải làm gì, và vì sao tắt an toàn một broker lúc đó thường thất bại? Và vì sao bytes out bằng bytes in chưa chắc đã có consumer nào?`,
+      },
+      {
+        id: "kf-w10-3",
+        text: "Giám sát client và giám sát lag",
+        lesson: `**Mục tiêu.** Chọn đúng vài thuộc tính đáng đặt cảnh báo trong đống metric của producer và consumer, và nói được vì sao lag phải đo từ bên ngoài chứ không từ chính consumer.
+
+**Đọc.** [Giám sát client (Client Monitoring)](#/docs/kafka-13) rồi [Producer Metrics](#/docs/kafka-13) với Bảng 13-19 ba bean. [Metric tổng thể của producer (Overall producer metrics)](#/docs/kafka-13) đọc kỹ hai thuộc tính đáng cảnh báo — \`record-error-rate\` luôn phải bằng không, và \`request-latency-avg\` cần một đường cơ sở dựng trong vận hành bình thường — rồi ba góc nhìn lưu lượng \`outgoing-byte-rate\`, \`record-send-rate\`, \`request-rate\`, và \`record-queue-time-avg\` đọc cùng cặp \`batch.size\` với \`linger.ms\`. [Metric theo broker và theo topic (Per-broker and per-topic metrics)](#/docs/kafka-13) đọc lướt. [Consumer Metrics](#/docs/kafka-13) với Bảng 13-20 năm bean; [Metric của fetch manager (Fetch manager metrics)](#/docs/kafka-13) đọc chậm — \`fetch-latency-avg\` bị chi phối bởi \`fetch.min.bytes\` và \`fetch.max.wait.ms\`, nên topic chậm sẽ cho độ trễ thất thường — cùng khung "KHOAN! KHÔNG CÓ LAG SAO?". [Metric của consumer coordinator (Consumer coordinator metrics)](#/docs/kafka-13) cho \`sync-time-avg\`, \`commit-latency-avg\` và \`assigned-partitions\`. [Quotas](#/docs/kafka-13) với Bảng 13-21 hai thuộc tính throttle time. [Giám sát lag (Lag Monitoring)](#/docs/kafka-13) đọc chậm và chép ra giấy: một tiến trình bên ngoài so offset produce mới nhất với offset đã commit, cho từng partition mà group consume — với MirrorMaker là hàng chục nghìn partition — và Burrow tính một trạng thái duy nhất cho mỗi group mà không cần ngưỡng.
+
+**Bẫy.** Dùng \`records-lag-max\` của consumer làm giám sát lag. Khung "KHOAN! KHÔNG CÓ LAG SAO?" chỉ ra vấn đề gồm hai mặt: nó chỉ cho thấy lag của một partition, partition tụt lại xa nhất, và nó dựa vào việc consumer hoạt động đúng — consumer hỏng hoặc offline thì metric hoặc không chính xác hoặc không khả dụng. Bẫy thứ hai: đặt ngưỡng tối thiểu cho \`bytes-consumed-rate\` để được báo khi consumer không làm đủ việc. Sách dặn phải cẩn thận: Kafka được thiết kế để tách rời consumer và producer, nên cảnh báo kiểu này đang ngầm giả định về trạng thái của producer và dễ đẻ ra cảnh báo giả.
+
+**Tự kiểm tra.** Vì sao \`request-latency-avg\` theo từng broker ổn định hơn \`outgoing-byte-rate\` theo từng broker? Và vì sao nên giám sát hai metric throttle time ngay cả khi cluster chưa bật quota?`,
+      },
+      {
+        id: "kf-w10-4",
+        text: "Giám sát đầu-cuối",
+        lesson: `**Mục tiêu.** Nói được vì sao toàn bộ metric ở ba mục trước vẫn chưa trả lời được hai câu hỏi mà người dùng cluster quan tâm, và biết giám sát đầu-cuối lấp chỗ đó bằng cách nào.
+
+**Đọc.** [Giám sát đầu-cuối (End-to-End Monitoring)](#/docs/kafka-13) chỉ hơn một trang nhưng đọc chậm, vì nó chốt lại cả chương. Bám hai câu hỏi mà sách đặt ra nguyên văn: tôi có thể produce message tới cluster Kafka không, và tôi có thể consume message từ cluster Kafka không. Rồi đọc kỹ đoạn giải thích vì sao metric của client không đủ để trả lời — nó biến việc độ trễ tăng lên thành một trò đoán mò, và đẩy người vận hành cluster vào chỗ phải giám sát luôn cả các client. Sau đó là Xinfra Monitor, trước đây gọi là Kafka Monitor, do nhóm Kafka tại LinkedIn phát hành mã nguồn mở: nó liên tục produce và consume dữ liệu từ một topic được trải trên tất cả broker trong cluster, đo tính sẵn sàng của cả produce request lẫn consume request trên mỗi broker, cùng tổng độ trễ từ lúc produce tới lúc consume. Đối chiếu ngược lên [Metric không đến từ ứng dụng (Nonapplication metrics)](#/docs/kafka-13) để thấy công cụ này rơi đúng vào nhóm synthetic client của Bảng 13-1, rồi lên [Metric nào tạo nên SLI tốt?](#/docs/kafka-13) để hiểu vì sao đó là nguồn SLI tốt. [Tóm tắt (Summary)](#/docs/kafka-13) khép chương.
+
+**Bẫy.** Kết luận cluster khỏe vì mọi metric broker đều xanh. Sách nói thẳng ở chính mục này: cũng giống như việc giám sát consumer lag, Kafka broker không thể báo cáo liệu các client có sử dụng được cluster đúng cách hay không. Bẫy thứ hai: định dựng giám sát đầu-cuối cho từng topic một. Sách gạt ngay: trong hầu hết các tình huống, việc bơm lưu lượng tổng hợp vào mọi topic để làm điều này là không hợp lý — cái khả thi, và cũng là cái Xinfra Monitor làm, là trả lời hai câu hỏi đó cho mọi broker trong cluster.
+
+**Tự kiểm tra.** Vì sao một phép đo dựng từ ngoài cluster lại là nguồn SLI tốt hơn mọi metric broker? Và nếu bạn vận hành cluster nhưng không vận hành client, việc thiếu giám sát đầu-cuối đẩy thêm gánh nặng gì lên bạn?`,
+      },
+    ],
+  },
+  {
+    id: "kf-w11",
+    week: "Tuần 11",
+    title: "Stream processing",
+    goal: "Nói được stream processing là gì bằng định nghĩa của sách chứ không bằng tên framework, và viết được một ứng dụng Kafka Streams có state mà biết rõ state ấy sống ở đâu và khôi phục bằng gì.",
+    practice:
+      "Viết một ứng dụng Kafka Streams đếm từ theo cửa sổ thời gian, bám theo mục \"Kafka Streams qua các ví dụ\". Rồi liệt kê các topic mà nó tự tạo (`kafka-topics.sh --list`) để thấy state store được backing bằng topic nội bộ thế nào — đó là điều mục \"Kafka Streams: Tổng quan kiến trúc\" mô tả.",
+    resources: [
+      { label: "Kafka 14 — Xử lý luồng (Stream Processing)", href: "#/docs/kafka-14" },
+      { label: "kafka.apache.org — Kafka Streams", href: "https://kafka.apache.org/documentation/streams/" },
+    ],
+    items: [
+      {
+        id: "kf-w11-1",
+        text: "Stream processing là gì, và các khái niệm nền của nó",
+        lesson: `**Mục tiêu.** Định nghĩa được data stream và stream processing theo đúng chữ của sách, rồi phân biệt ba khái niệm thời gian và hai loại state trước khi chạm vào bất kỳ API nào.
+
+**Đọc.** [Stream Processing là gì?](#/docs/kafka-14) đọc chậm: data stream là một trừu tượng đại diện cho tập dữ liệu không giới hạn, cộng ba thuộc tính — có thứ tự, record bất biến, có thể phát lại. Rồi ba mô hình lập trình đặt cạnh nhau: request-response tức OLTP, batch processing, và stream processing như lựa chọn liên tục và nonblocking; nhớ phản ví dụ khép mục — tiến trình thức dậy lúc 2:00 sáng, đọc 500 record rồi biến mất thì chưa phải stream processing. [Các khái niệm về Stream Processing](#/docs/kafka-14) đi hết sáu mục con. [Topology](#/docs/kafka-14) ngắn. [Time](#/docs/kafka-14) là mục đọc chậm nhất tuần — event time, log append time, processing time, interface \`TimestampExtractor\`, bốn quy tắc gán timestamp cho output record, cùng khung "CHÚ Ý MÚI GIỜ". [State](#/docs/kafka-14) tách local state với external state: nhanh nhưng bị giới hạn bởi bộ nhớ, so với gần như không giới hạn nhưng thêm latency. [Tính đối ngẫu Stream-Table (Stream-Table Duality)](#/docs/kafka-14) bám ví dụ cửa hàng giày và Hình 14-1. [Time Windows](#/docs/kafka-14) thì chép ra giấy ba câu hỏi — kích thước window, advance interval với cặp hopping và tumbling, grace period — cùng session window. [Đảm bảo xử lý (Processing Guarantees)](#/docs/kafka-14) khép mục bằng \`processing.guarantee\`.
+
+**Bẫy.** Trộn các stream khác múi giờ rồi mới cắt window. Khung "CHÚ Ý MÚI GIỜ" nói rõ toàn bộ data pipeline nên chuẩn hóa theo một múi giờ duy nhất; nếu không, kết quả của các thao tác stream sẽ gây bối rối và thường vô nghĩa. Bẫy thứ hai: giữ state trong biến cục bộ của ứng dụng, kiểu một hash table đếm động. Sách thú nhận chính nó đã làm vậy trong nhiều ví dụ, rồi cảnh báo ngay: đây không phải cách đáng tin cậy để quản lý state, vì khi ứng dụng dừng hoặc crash thì state mất và kết quả đổi theo.
+
+**Tự kiểm tra.** Vì sao processing time là khái niệm thời gian đáng tránh nhất trong ba khái niệm? Và với ví dụ cửa hàng giày, câu hỏi nào chỉ trả lời được bằng stream chứ không bằng table?`,
+      },
+      {
+        id: "kf-w11-2",
+        text: "Các design pattern trong xử lý luồng",
+        lesson: `**Mục tiêu.** Nhận ra các pattern ấy trong hệ thống của bạn, và biết mỗi pattern bắt bạn trả giá bằng gì: local state, một topic trung gian, hay một cửa sổ thời gian.
+
+**Đọc.** [Các Design Pattern trong Stream Processing](#/docs/kafka-14) đi tuần tự. [Xử lý event đơn lẻ (Single-Event Processing)](#/docs/kafka-14) là pattern map/filter: không state nên khôi phục cực dễ. [Xử lý với Local State (Processing with Local State)](#/docs/kafka-14) đọc chậm nhất, với ba vấn đề phải giải — sử dụng bộ nhớ, tính bền vững nhờ RocksDB nhúng cùng topic thay đổi có log compaction, và rebalance. [Xử lý nhiều giai đoạn / Repartitioning (Multiphase Processing/Repartitioning)](#/docs/kafka-14) với ví dụ 10 cổ phiếu hàng đầu và topic một partition ở giai đoạn hai. [Xử lý với tra cứu bên ngoài: Stream-Table Join](#/docs/kafka-14) đi từ ý tưởng tra cứu cơ sở dữ liệu cho từng event tới CDC và bản sao bảng giữ cục bộ. [Table-Table Join](#/docs/kafka-14) ngắn: luôn nonwindowed. [Streaming Join](#/docs/kafka-14) cho lý do join hai stream luôn là windowed join, với \`user_id:42\` rơi vào partition 5 của cả hai topic. [Event không đúng thứ tự (Out-of-Sequence Events)](#/docs/kafka-14) liệt kê bốn việc ứng dụng phải làm. [Xử lý lại (Reprocessing)](#/docs/kafka-14) hai biến thể, rồi [Truy vấn tương tác (Interactive Queries)](#/docs/kafka-14) khép mục.
+
+**Bẫy.** Làm giàu mỗi event bằng một truy vấn tới cơ sở dữ liệu bên ngoài. Sách gọi đó là ý tưởng hiển nhiên rồi đưa số làm nó sụp: mỗi lần tra cứu thêm khoảng 5 đến 15 mili giây cho một record, trong khi hệ thống stream processing thường xử lý 100K–500K event mỗi giây còn cơ sở dữ liệu có lẽ chỉ 10K. Bẫy thứ hai: sửa lỗi rồi reset ứng dụng để xử lý lại từ đầu. Sách khuyến nghị ngược lại: bất cứ khi nào đủ năng lực chạy hai bản sao, hãy chạy phiên bản mới như một consumer group mới sinh ra stream kết quả thứ hai, vì cách đó an toàn hơn nhiều: không có rủi ro mất dữ liệu quan trọng hay tạo ra lỗi trong quá trình dọn dẹp.
+
+**Tự kiểm tra.** Vì sao topic trung gian trong pattern hai giai đoạn chịu nổi việc chỉ có một partition? Và khi một event đến muộn, Kafka Streams ghi thêm gì vào result topic thay vì sửa kết quả cũ?`,
+      },
+      {
+        id: "kf-w11-3",
+        text: "Kafka Streams qua ví dụ, và kiến trúc bên trong",
+        lesson: `**Mục tiêu.** Gõ và chạy được ba ví dụ của chương, rồi giải thích vì sao khởi động thêm một instance là đủ để mở rộng, và một task lấy lại state ở đâu khi instance cũ chết.
+
+**Đọc.** [Kafka Streams qua các ví dụ](#/docs/kafka-14) mở bằng hai API — Processor API cấp thấp và Streams DSL cấp cao — cùng trình tự \`StreamsBuilder\`, topology, rồi \`KafkaStreams\`. [Word Count](#/docs/kafka-14) gõ lại trọn vẹn: khối \`Properties\` với \`APPLICATION_ID_CONFIG\` và hai Serde mặc định, rồi chuỗi \`flatMapValues\`, \`map\`, \`filter\`, \`groupByKey\`, \`count\`. Chạy thật, rồi mở thêm vài tab terminal chạy nhiều instance để thấy chúng tự điều phối. [Thống kê thị trường chứng khoán (Stock Market Statistics)](#/docs/kafka-14) đọc chậm nhất: \`TradeSerde\`, window năm giây dịch mỗi giây, \`aggregate\` với \`Materialized\` đặt tên store \`trade-aggregates\`, và lý do deserialization cần biết kích thước window. [Làm giàu ClickStream (ClickStream Enrichment)](#/docs/kafka-14) cho một \`KTable\` hồ sơ, một stream-table left join, rồi một stream-stream join có \`before\` bằng không giây để chỉ lấy click sau lượt tìm kiếm. [Kafka Streams: Tổng quan kiến trúc](#/docs/kafka-14) rồi [Xây dựng một Topology](#/docs/kafka-14) với source processor và sink processor. [Tối ưu hóa một Topology](#/docs/kafka-14) cho ba bước thực thi. [Kiểm thử một Topology](#/docs/kafka-14) với \`TopologyTestDriver\` và \`Testcontainers\`. [Mở rộng một Topology](#/docs/kafka-14) đọc kỹ: số task bằng số partition, và một bước repartition ghi qua topic mới chia topology thành hai subtopology chạy độc lập. [Vượt qua sự cố (Surviving Failures)](#/docs/kafka-14) khép mục với \`min.compaction.lag.ms\` thấp, segment 100 MB thay cho mặc định 1 GB, và \`standby replica\`.
+
+**Bẫy.** Đặt \`StreamsConfig.TOPOLOGY_OPTIMIZATION\` rồi tin topology đã được tối ưu. Sách nói rõ phải gọi \`build(props)\`: nếu bạn chỉ gọi \`build()\` mà không truyền config vào, việc tối ưu hóa vẫn bị tắt — và khuyến nghị kiểm thử cả khi có lẫn không có tối ưu hóa. Bẫy thứ hai: coi \`TopologyTestDriver\` xanh là ứng dụng đã an toàn. Sách cảnh báo nó không mô phỏng hành vi caching của Kafka Streams, nên có cả những lớp lỗi mà nó sẽ không phát hiện được; vì thế mới cần thêm integration test, với \`Testcontainers\` được khuyến nghị.
+
+**Tự kiểm tra.** Vì sao mọi topic tham gia một phép join phải có cùng số partition? Và vì sao \`standby replica\` rút ngắn được đúng đoạn thời gian tệ nhất của một lần failover?`,
+      },
+      {
+        id: "kf-w11-4",
+        text: "Khi nào dùng stream processing, và chọn framework nào",
+        lesson: `**Mục tiêu.** Nhận ra bài toán của bạn thuộc loại nào trong bốn loại ứng dụng mà chương liệt kê, và có một bộ tiêu chí để so các framework thay vì chọn theo tiếng tăm.
+
+**Đọc.** [Các tình huống sử dụng Stream Processing](#/docs/kafka-14) đọc như ba câu chuyện. Dịch vụ khách hàng: chuỗi khách sạn với batch job chạy một lần mỗi ngày và lời hẹn hai tới ba ngày làm việc. Internet of Things: bảo trì phòng ngừa, từ trạm phát sóng lỗi tới đầu thu truyền hình cáp. Phát hiện gian lận: đọc chậm đoạn beaconing — mã độc bên trong tổ chức thỉnh thoảng vươn ra ngoài nhận lệnh. [Cách chọn một Stream Processing Framework](#/docs/kafka-14) thì chép ra giấy bốn loại ứng dụng — ingest, hành động ở mức vài mili giây, microservice bất đồng bộ, phân tích dữ liệu gần thời gian thực — rồi đọc kỹ bốn gạch đầu dòng ghép từng loại với một yêu cầu cụ thể lên framework. Khép lại bằng bốn cân nhắc chung: khả năng vận hành của hệ thống, tính dễ dùng của API và mức độ dễ debug, làm cho những việc khó trở nên dễ dàng, và cộng đồng. [Tóm tắt](#/docs/kafka-14) đóng cả chương lẫn cuốn sách.
+
+**Bẫy.** Dựng một ứng dụng stream processing cho một bài toán ingest thuần túy. Sách bảo cân nhắc lại: thứ bạn cần có thể là một hệ thống tập trung vào ingest đơn giản hơn như Kafka Connect; còn nếu vẫn chắc chắn muốn stream processing thì phải kiểm cả độ phong phú lẫn chất lượng connector cho những hệ thống bạn nhắm tới. Bẫy thứ hai: tin lời tuyên bố rằng framework nào cũng làm được windowed aggregation nâng cao. Sách đặt lại câu hỏi đúng: gần như mọi hệ thống đều tuyên bố như vậy, nhưng chúng có làm cho việc đó dễ dàng cho bạn không, có tự xử lý những chi tiết gai góc quanh quy mô và khôi phục không, hay chỉ cung cấp những trừu tượng rò rỉ rồi bắt bạn tự dọn.
+
+**Tự kiểm tra.** Vì sao bài toán đòi phản hồi ở mức vài mili giây lại nên xét lại lựa chọn streams? Và một microservice bất đồng bộ đòi hỏi gì ở local store mà một engine phân tích phức tạp thì không?`,
+      },
+    ],
+  },
 ];
