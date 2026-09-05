@@ -26,7 +26,8 @@ const EXPECTED = {
     "questions:sysprog": 110,
     // Nội dung Kubernetes có từ trước — chốt luôn để xoá/thiếu bản ghi không
     // âm thầm lọt qua (vd xoá bớt câu hỏi vẫn qua đủ 23 bất biến trước đây).
-    "docs:kubernetes": 24,
+    // 24 gốc + 23 chương CKA Study Guide (Muschko, O'Reilly).
+    "docs:kubernetes": 47,
     "roadmap-items:kubernetes": 184,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
