@@ -76,6 +76,7 @@ webapp/
 │   ├── sysprog-roadmap-part*.js, sysprog-flashcards.js,
 │   │   sysprog-questions-part*.js   # dữ liệu lĩnh vực System Programming
 │   ├── k8sbook-roadmap-part*.js     # sách Kubernetes in Action
+│   ├── ckabook-roadmap.js           # sách CKA Study Guide, vòng ôn thứ hai sau track cka (6 tuần)
 │   ├── book-crossref.js             # chip "đọc thêm trong sách" → tuần giáo trình chứng chỉ (3 cuốn)
 │   ├── springsec-roadmap-part*.js   # sách Spring Security in Action
 │   ├── ddia-roadmap-part1.js        # sách Designing Data-Intensive Applications (tuần 1–6)

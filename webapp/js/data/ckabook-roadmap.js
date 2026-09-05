@@ -196,5 +196,185 @@ export const ckabookWeeks = [
       },
     ],
   },
-  // … 3 khối tuần ở Step 3–5, thêm 3 khối nữa ở Task 7 …
+  {
+    id: "cb-w4",
+    week: "Tuần 4",
+    title: "Tài nguyên, lập lịch và lưu trữ",
+    goal: "Đặt được Pod lên đúng node bằng ba cơ chế khác nhau, và nối được một PVC vào Pod từ con số không.",
+    practice: "Làm **Bài tập mẫu** cuối chương 13–16, đối chiếu [Phụ lục A](#/docs/ckabook-A). Bài chương 14 làm trên cluster nhiều node — chương có hướng dẫn dựng sẵn ở §\"Thiết lập cluster phát triển nhiều node\".",
+    resources: [
+      { label: "CKA Book 13 — Yêu cầu tài nguyên, giới hạn và quota", href: "#/docs/ckabook-13" },
+      { label: "CKA Book 14 — Lập lịch Pod", href: "#/docs/ckabook-14" },
+      { label: "CKA Book 15 — Volume", href: "#/docs/ckabook-15" },
+      { label: "CKA Book 16 — Persistent Volume", href: "#/docs/ckabook-16" },
+      { label: "Ôn lại: giáo trình CKA", href: "#/roadmap/cka" },
+    ],
+    items: [
+      {
+        id: "cb-w4-1",
+        text: "requests/limits, ResourceQuota và LimitRange",
+        lesson: `**Mục tiêu.** Viết đúng cú pháp resource request/limit cho container, và dự đoán được hành vi runtime khi một Pod chạm ResourceQuota hoặc bị LimitRange biến đổi (mutate) — không cần thử-sai trên cluster thật.
+
+**Đọc.** [CKA Book 13](#/docs/ckabook-13) §"Làm việc với yêu cầu tài nguyên" (bốn thuộc tính requests/limits, cách scheduler cộng tổng request để so với dung lượng node, thông báo lỗi \`PodExceedsFreeCPU\`/\`PodExceedsFreeMemory\`), §"Làm việc với ResourceQuota" (giới hạn cứng cộng dồn ở cấp namespace — số object, tổng CPU/memory — đọc bằng \`kubectl describe resourcequota\`) và §"Làm việc với LimitRange" (ràng buộc và giá trị mặc định ở cấp object đơn lẻ, annotation \`kubernetes.io/limit-ranger\` đánh dấu Pod đã bị mutate).
+
+**Bẫy.** Nghĩ ResourceQuota có thể ràng buộc từng Pod riêng lẻ — nó chỉ cộng dồn ở cấp namespace; muốn ép min/max hoặc gán mặc định cho một object đơn lẻ phải dùng LimitRange, hai primitive không thay thế nhau. Bẫy thứ hai: thông báo lỗi của ResourceQuota nêu đúng tên object đang chặn (ví dụ "failed quota: awesome-quota"), còn thông báo lỗi của LimitRange thì không — bạn phải chủ động chạy \`kubectl get limitranges\` mới biết ràng buộc nào đang thực thi. Bẫy thứ ba: tạo hai LimitRange trong cùng một namespace khiến giá trị mặc định được chọn không xác định (nondeterministic) — sách khuyến cáo chỉ nên có một LimitRange mỗi namespace.
+
+**Tự kiểm tra.** Một namespace có ResourceQuota chỉ giới hạn \`pods: 2\` (không ràng buộc CPU/memory) và LimitRange đặt CPU mặc định \`200m\`, tối thiểu \`100m\`, tối đa \`2\`. Bạn \`apply\` một Pod không khai báo \`resources\` gì, chưa chạm mức \`pods: 2\` — lệnh có thành công không, và CPU request cuối cùng của Pod là bao nhiêu? Sau đó bạn \`apply\` một Pod khác, tự khai CPU request \`50m\` — object nào (ResourceQuota hay LimitRange) chặn, dựa trên thông báo lỗi nào?`,
+      },
+      {
+        id: "cb-w4-2",
+        text: "Thuật toán lập lịch và node affinity",
+        lesson: `**Mục tiêu.** Giải thích đúng hai bước lọc/chấm điểm của scheduler, và viết được node affinity thay cho node selector khi đề bài cần biểu thức OR hoặc một ưu tiên mềm thay vì một yêu cầu cứng duy nhất.
+
+**Đọc.** [CKA Book 14](#/docs/ckabook-14) §"Thuật toán lập lịch Pod" (hai bước filtering rồi scoring; Pod ở lại trạng thái chưa lập lịch nếu không node nào qua được bước lọc), §"Các tùy chọn lập lịch Pod" (bốn khái niệm — node selector, node affinity/anti-affinity, taint/toleration, ràng buộc phân bố topology — và khi nào chọn cái nào) và §"Làm việc với node affinity và anti-affinity" (\`spec.affinity.nodeAffinity\`, hai loại \`requiredDuringSchedulingIgnoredDuringExecution\`/\`preferredDuringSchedulingIgnoredDuringExecution\`, các toán tử \`In\`/\`NotIn\`/\`Exists\`/\`DoesNotExist\`/\`Gt\`/\`Lt\`).
+
+**Bẫy.** Coi \`preferredDuringSchedulingIgnoredDuringExecution\` là một ràng buộc cứng — đây là ưu tiên mềm, scheduler cố gắng tuân thủ nhưng không đảm bảo, khác hẳn tiền tố \`requiredDuringScheduling\` biểu đạt yêu cầu bắt buộc. Bẫy thứ hai: hậu tố \`IgnoredDuringExecution\` trên cả hai loại nghĩa là quy tắc chỉ được đánh giá tại thời điểm lập lịch — sửa label node hoặc sửa affinity của Pod sau khi Pod đã chạy không kích hoạt lập lịch lại, Pod cứ đứng yên dù không còn thoả điều kiện. Bẫy thứ ba: dùng node selector khi đề bài cần "node A HOẶC node B" — node selector chỉ khớp chính xác một tập key-value, phải chuyển sang node affinity với toán tử \`In\` và danh sách nhiều value mới biểu đạt được logic OR.
+
+**Tự kiểm tra.** Viết đoạn \`spec.affinity.nodeAffinity\` với yêu cầu cứng để Pod chỉ chạy trên node có label \`disk=ssd\` hoặc \`disk=hdd\`, dùng đúng toán tử. Nếu bạn đổi toán tử đó thành \`NotIn\` với cùng danh sách value, tập node mà Pod có thể được lập lịch lên thay đổi ra sao?`,
+      },
+      {
+        id: "cb-w4-3",
+        text: "Taint, toleration và ràng buộc phân bố topology",
+        lesson: `**Mục tiêu.** Gán taint đúng cú pháp ba phần \`key=value:effect\`, viết toleration khớp chính xác để "mở khoá" một node bị taint, và cấu hình topology spread constraint phân bố Pod đều trên các zone.
+
+**Đọc.** [CKA Book 14](#/docs/ckabook-14) §"Làm việc với taint và toleration" (ba effect \`NoSchedule\`/\`PreferNoSchedule\`/\`NoExecute\`, lệnh \`kubectl taint\`, taint mặc định \`node-role.kubernetes.io/control-plane:NoSchedule\` trên node control plane), §"Làm việc với ràng buộc phân bố topology của Pod" (\`spec.topologySpreadConstraints\`, \`maxSkew\`, \`topologyKey\`, \`whenUnsatisfiable\`) và §"Trọng tâm cho kỳ thi" của chương.
+
+**Bẫy.** Nhầm taint/toleration với node affinity như hai cách làm cùng một việc — taint đẩy Pod ra khỏi node theo mặc định (cô lập node), còn node affinity/anti-affinity kéo hoặc đẩy Pod dựa trên lựa chọn của chính Pod; một node bị taint vẫn nhận được Pod không hề định nghĩa affinity nào, miễn Pod đó có toleration khớp. Bẫy thứ hai: quên trường \`effect\` trong toleration — thiếu nó, toleration không khớp bất kỳ taint nào trừ khi bạn dùng toán tử \`Exists\` không kèm \`value\`, và ngay cả khi đó sách vẫn khuyến nghị luôn khai báo effect tường minh. Bẫy thứ ba: hiểu nhầm ràng buộc phân bố topology tự cân bằng lại Pod cũ — nó chỉ tác động đến Pod mới được lập lịch, không di chuyển Pod đang chạy, và một ràng buộc quá chặt có thể khiến Pod mới kẹt ở trạng thái chưa lập lịch nếu tài nguyên hạn chế.
+
+**Tự kiểm tra.** Viết đủ lệnh \`kubectl taint\` gán taint \`special=true:NoSchedule\` cho node \`multi-node-m02\`, rồi viết đoạn YAML toleration khớp chính xác taint đó. Effect nào trong ba effect taint vừa chặn lập lịch Pod mới vừa trục xuất Pod đang chạy sẵn trên node?`,
+      },
+      {
+        id: "cb-w4-4",
+        text: "Volume, PersistentVolume, PVC và StorageClass",
+        lesson: `**Mục tiêu.** Đi trọn chuỗi bốn bước — tạo volume tạm thời, tạo PersistentVolume tĩnh, tạo PersistentVolumeClaim gắn kết với nó, rồi mount PVC vào Pod — và biết lúc nào nên chuyển sang cung cấp động bằng StorageClass thay vì tự tạo PV.
+
+**Đọc.** [CKA Book 15](#/docs/ckabook-15) §"Các loại Volume" (bảng rút gọn: \`emptyDir\`, \`hostPath\`, \`configMap\`/\`secret\`, \`nfs\`, \`persistentVolumeClaim\`) và §"Tạo và truy cập Volume" (hai bước bắt buộc — khai \`spec.volumes[]\` rồi mount qua \`spec.containers[].volumeMounts[]\`, ánh xạ theo tên khớp). Sang [CKA Book 16](#/docs/ckabook-16) §"Cung cấp tĩnh và cung cấp động" (khác biệt cốt lõi: tự tạo object PV so với để storage class tự cung cấp), §"Tạo PersistentVolume" (chỉ tạo được theo cách manifest-first, không có lệnh mệnh lệnh riêng cho PV như \`kubectl create persistentvolume\`), §"Tạo PersistentVolumeClaim" (\`storageClassName: ""\` để ép cung cấp tĩnh), §"Mount PersistentVolumeClaim trong Pod" (\`spec.volumes[].persistentVolumeClaim.claimName\`) và §"Storage Class" (provisioner bắt buộc, gán \`spec.storageClassName\` trong PVC để bật cung cấp động).
+
+**Bẫy.** Quên chuỗi ánh xạ tên hai tầng: PV không mount trực tiếp vào Pod — Pod chỉ tham chiếu PVC theo tên qua \`claimName\`, còn PVC chỉ gắn kết một-một với PV thoả cả dung lượng, access mode lẫn storage class. Bẫy thứ hai: để trống \`storageClassName\` khi muốn cung cấp tĩnh trong khi cluster có sẵn storage class mặc định — PVC sẽ tự động chuyển sang cung cấp động thay vì chờ PV bạn tạo tay, trừ khi bạn đặt tường minh chuỗi rỗng \`""\`. Bẫy thứ ba: gán cho PVC một storage class mà provisioner không thể cung cấp được — Kubernetes không báo lỗi hay cảnh báo, PVC chỉ đứng yên ở trạng thái \`Pending\` mãi mãi.
+
+**Tự kiểm tra.** Bạn tạo một PVC với \`storageClassName: standard\` nhưng không có PV tĩnh nào phù hợp và provisioner cũng không cung cấp động được. PVC sẽ hiển thị trạng thái gì? Viết đúng thuộc tính YAML mà một Pod dùng để tham chiếu tới PVC tên \`db-pvc\`.`,
+      },
+    ],
+  },
+  {
+    id: "cb-w5",
+    week: "Tuần 5",
+    title: "Service, Ingress, Gateway API và NetworkPolicy",
+    goal: "Chọn đúng loại Service cho một yêu cầu mô tả bằng lời, và viết được NetworkPolicy chặn đúng chiều cần chặn.",
+    practice: "Làm **Bài tập mẫu** cuối chương 17–20, đối chiếu [Phụ lục A](#/docs/ckabook-A). Sau khi xong bài chương 20, thử xoá policy và kiểm lại bằng Pod tạm — thấy tận mắt cluster mặc định cho mọi Pod nói chuyện với nhau.",
+    resources: [
+      { label: "CKA Book 17 — Service", href: "#/docs/ckabook-17" },
+      { label: "CKA Book 18 — Ingress", href: "#/docs/ckabook-18" },
+      { label: "CKA Book 19 — Gateway API", href: "#/docs/ckabook-19" },
+      { label: "CKA Book 20 — Network Policy", href: "#/docs/ckabook-20" },
+      { label: "Ôn lại: giáo trình CKA", href: "#/roadmap/cka" },
+      { label: "kubernetes.io — Network Policies", href: "https://kubernetes.io/docs/concepts/services-networking/network-policies/" },
+    ],
+    items: [
+      {
+        id: "cb-w5-1",
+        text: "Service: ClusterIP, NodePort và LoadBalancer",
+        lesson: `**Mục tiêu.** Chọn đúng loại Service — ClusterIP, NodePort hay LoadBalancer — khi đề bài chỉ mô tả yêu cầu bằng lời, và tự tay tạo cả ba loại bằng cả cách mệnh lệnh lẫn manifest YAML trong vài phút.
+
+**Đọc.** [CKA Book 17](#/docs/ckabook-17) §"Làm việc với Service" (lựa chọn label thay cho địa chỉ IP không ổn định, ánh xạ \`port\`/\`targetPort\`, ba cách tạo bằng \`kubectl create service\`/\`kubectl run --expose\`/\`kubectl expose deployment\`), §"Loại Service ClusterIP" (mặc định, chỉ truy cập được từ trong cluster, khám phá qua DNS và biến môi trường), §"Loại Service NodePort" (port 30000–32767 trên mọi node, kế thừa hành vi ClusterIP) và §"Loại Service LoadBalancer" (IP ngoài do cloud cấp, kế thừa cả hai loại trên), cùng §"Trọng tâm cho kỳ thi".
+
+**Bẫy.** Coi ba loại Service là ba lựa chọn tách biệt thay vì một chuỗi kế thừa — một Service NodePort vẫn truy cập được qua ClusterIP từ trong cluster, và một Service LoadBalancer vẫn mang đủ hành vi của cả ClusterIP lẫn NodePort; đề bài yêu cầu "truy cập được từ trong cluster" không tự động loại hai loại kia. Bẫy thứ hai: dùng NodePort cho production vì tưởng nó "công khai ra ngoài" là đủ — sách chỉ rõ nó không cân bằng tải qua nhiều node, port thường được cấp phát động nên khó đoán trước, và mở rộng bề mặt tấn công; NodePort chủ yếu dành cho dev/test. Bẫy thứ ba: gọi Service từ Pod ở namespace khác chỉ bằng tên ngắn — DNS ngắn chỉ phân giải trong cùng namespace, xuyên namespace phải thêm hậu tố \`.<namespace>\`.
+
+**Tự kiểm tra.** Viết đủ hai lệnh mệnh lệnh tạo một Pod chạy image cho trước và một Service loại NodePort ánh xạ port 5005 vào container port 8080, gán nhãn \`app=echoserver\`. Từ một Pod tạm trong namespace \`other\`, lệnh \`wget\` nào gọi đúng tới Service \`echoserver\` đang chạy ở namespace \`default\` bằng tên DNS đầy đủ?`,
+      },
+      {
+        id: "cb-w5-2",
+        text: "Ingress và luật định tuyến theo host/path",
+        lesson: `**Mục tiêu.** Viết một Ingress định tuyến nhiều đường dẫn URL tới nhiều Service backend khác nhau trên cùng một host, và chẩn đoán đúng khi \`describe ingress\` báo lỗi backend không tìm thấy endpoint.
+
+**Đọc.** [CKA Book 18](#/docs/ckabook-18) §"Làm việc với Ingress" — trọn mục, từ lý do Ingress thay thế nhiều Service LoadBalancer tốn kém, cài Ingress controller (Pod trong namespace riêng phải ở trạng thái \`Running\`), \`spec.ingressClassName\` khi có nhiều controller, ba thành phần một quy tắc (host tuỳ chọn, danh sách path, backend service:port), đến hai loại đường dẫn \`Exact\`/\`Prefix\` và cách xử lý sự cố bằng \`kubectl describe ingress\` — và §"Trọng tâm cho kỳ thi".
+
+**Bẫy.** Nhầm Ingress với Service — Ingress chỉ định tuyến lưu lượng HTTP(S) từ bên ngoài dựa trên host và path tới các Service \`ClusterIP\` có sẵn, nó không tự tạo hay thay thế Service. Bẫy thứ hai: quên rằng Ingress không hoạt động nếu chưa cài Ingress controller — quy tắc Ingress vẫn được API chấp nhận nhưng không được thực thi cho tới khi có Pod controller chạy; đề thi giả định controller đã được cài sẵn. Bẫy thứ ba, dễ mất điểm nhất: nhầm lẫn \`Exact\` và \`Prefix\` ở dấu gạch chéo cuối — path \`Exact: /app\` không khớp \`/app/\`, trong khi \`Prefix: /app\` khớp cả \`/app/\` lẫn \`/application\`; chọn sai loại khiến một URL hợp lệ trả về 404 dù backend hoàn toàn khoẻ mạnh.
+
+**Tự kiểm tra.** Viết đủ lệnh \`kubectl create ingress\` tạo một Ingress tên \`next-app\` với hai quy tắc trên host \`next.example.com\`: đường dẫn \`/app\` tới Service \`app-service:8080\` và đường dẫn \`/metrics\` tới Service \`metrics-service:9090\`. Nếu \`kubectl describe ingress\` báo \`<error: endpoints "app-service" not found>\`, nguyên nhân nhiều khả năng nhất là gì?`,
+      },
+      {
+        id: "cb-w5-3",
+        text: "Gateway API và đường chuyển từ Ingress",
+        lesson: `**Mục tiêu.** Dựng được chuỗi bốn object của Gateway API — GatewayClass, Gateway, HTTPRoute, và Service backend — để định tuyến lưu lượng HTTP theo path, và nói được lý do Gateway API ra đời thay vì mở rộng thêm Ingress.
+
+**Đọc.** [CKA Book 19](#/docs/ckabook-19) §"Tại sao primitive Ingress chưa đủ?" (hai hạn chế cốt lõi: annotation không khả chuyển giữa các Ingress controller, và mô hình phân quyền không đủ cho môi trường đa người thuê), §"Làm việc với Gateway API" (bốn loại tài nguyên GatewayClass/Gateway/HTTPRoute-GRPCRoute/ReferenceGrant, thiết kế hướng vai trò, cài CRD, tạo GatewayClass rồi Gateway rồi HTTPRoute) và §"Chuyển đổi từ Ingress sang Gateway API" (chuyển dần theo giai đoạn, công cụ ingress2gateway chỉ cần biết cho đủ, không cần dùng thi).
+
+**Bẫy.** Tưởng phải luôn tự tạo GatewayClass — sách nhắc rõ các cluster của nhà cung cấp cloud thường đã có sẵn GatewayClass, kiểm tra bằng \`kubectl get gatewayclasses\` trước khi tạo mới để khỏi trùng lặp không cần thiết. Bẫy thứ hai: quên rằng các CRD của Gateway API chưa nằm trong API chuẩn của Kubernetes — phải \`apply\` bộ CRD trước, nếu không object \`Gateway\`/\`HTTPRoute\` sẽ báo lỗi "no matches for kind". Bẫy thứ ba: nhầm vai trò ba loại tài nguyên — GatewayClass do nhà cung cấp nền tảng khai báo, Gateway/ReferenceGrant do quản trị viên cluster tạo, còn HTTPRoute là việc của nhà phát triển ứng dụng; gán nhầm chỗ dễ khiến bạn tạo sai đối tượng khi đề bài mô tả một vai trò cụ thể.
+
+**Tự kiểm tra.** Liệt kê đúng thứ tự bốn loại tài nguyên bạn phải tạo (không tính CRD) để một request HTTP đi từ bên ngoài tới một Service tên \`web\` trên port 3000. Trường nào trong HTTPRoute xác định host mà quy tắc định tuyến áp dụng, và trường nào chọn loại khớp path là tiền tố?`,
+      },
+      {
+        id: "cb-w5-4",
+        text: "NetworkPolicy: mặc định mở, đóng bằng tay",
+        lesson: `**Mục tiêu.** Viết một NetworkPolicy chặn đúng một chiều lưu lượng theo yêu cầu đề bài, và giải thích được vì sao mặc định mọi Pod trong cluster nói chuyện được với nhau cho tới khi có policy đầu tiên chọn trúng chúng.
+
+**Đọc.** [CKA Book 20](#/docs/ckabook-20) §"Làm việc với Network Policy" — trọn mục: hành vi mặc định cho phép giao tiếp Pod-với-Pod không hạn chế xuyên namespace, network policy controller (không phải mọi CNI đều có, ví dụ flannel không thực thi), cấu trúc \`podSelector\`/\`policyTypes\`/\`ingress\`/\`egress\`, các thuộc tính \`podSelector\`/\`namespaceSelector\` trong \`from\`/\`to\`, policy \`default-deny-all\` với \`podSelector: {}\`, và giới hạn theo port — cùng §"Trọng tâm cho kỳ thi".
+
+**Bẫy.** Tin rằng network policy có thể chọn hoặc chặn theo Service — sách nói thẳng network policy hoàn toàn không liên quan tới Service, mọi quy tắc gắn với namespace và Pod cụ thể qua label selector. Bẫy thứ hai, bẫy khó nhận ra nhất trong cả chương: một khi bất kỳ network policy nào chọn trúng một Pod theo \`podSelector\`, Pod đó lập tức bị cô lập theo hướng mà \`policyTypes\` liệt kê — chỉ còn nhận đúng lưu lượng được cho phép tường minh, kể cả khi policy đó chỉ định nghĩa \`ingress\` mà không hề nhắc tới \`egress\`. Bẫy thứ ba: quên rằng network policy có tính cộng dồn (additive) — nhiều policy cùng chọn một Pod thì hợp lại bằng phép OR, không phải AND, nên không thể dùng một policy để "thu hẹp" quyền một policy khác đã mở.
+
+**Tự kiểm tra.** Viết đủ manifest YAML một NetworkPolicy tên \`default-deny-all\` cấm toàn bộ ingress và egress cho mọi Pod trong namespace \`internal-tools\`. Nếu sau đó bạn thêm một NetworkPolicy thứ hai chỉ cho phép ingress từ Pod có label \`app=consumer\`, Pod đích có egress ra ngoài được không, và vì sao?`,
+      },
+    ],
+  },
+  {
+    id: "cb-w6",
+    week: "Tuần 6",
+    title: "Xử lý sự cố (30% đề thi) và tổng duyệt",
+    goal: "Đi từ triệu chứng tới nguyên nhân theo một trình tự cố định, không đoán mò — và đóng được mọi khoảng trống còn lại trước ngày thi.",
+    practice: "Làm lại **toàn bộ Bài tập mẫu** của 19 chương có bài (ch.4–22), bấm giờ, rồi đối chiếu [Phụ lục A](#/docs/ckabook-A). Ghi lại chương nào còn phải mở sách — đó chính là danh sách ôn của ngày cuối.",
+    resources: [
+      { label: "CKA Book 21 — Xử lý sự cố ứng dụng", href: "#/docs/ckabook-21" },
+      { label: "CKA Book 22 — Xử lý sự cố cluster", href: "#/docs/ckabook-22" },
+      { label: "CKA Book A — Đáp án câu hỏi ôn tập", href: "#/docs/ckabook-A" },
+      { label: "Ôn lại: giáo trình CKA", href: "#/roadmap/cka" },
+      { label: "kubernetes.io — Troubleshooting Clusters", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/" },
+    ],
+    items: [
+      {
+        id: "cb-w6-1",
+        text: "Xử lý sự cố Pod và container",
+        lesson: `**Mục tiêu.** Đi từ \`kubectl get pods\` tới nguyên nhân gốc rễ của một Pod lỗi theo đúng trình tự sách khuyến nghị — trạng thái, event, rồi log — và biết chọn giữa \`exec\` hay ephemeral container tuỳ image có shell hay không.
+
+**Đọc.** [CKA Book 21](#/docs/ckabook-21) §"Xử lý sự cố Pod" (đọc cột READY/STATUS/RESTARTS, bảng trạng thái lỗi phổ biến \`ImagePullBackOff\`/\`CrashLoopBackOff\`/\`CreateContainerConfigError\`, đọc event bằng \`kubectl describe pod\` khi Pod kẹt ở \`ContainerCreating\` mà không có trạng thái lỗi rõ ràng, và \`kubectl port-forward\` để chạm trực tiếp một Pod nghi vấn) và §"Xử lý sự cố container" (\`kubectl logs\` với \`-f\`/\`--previous\`, mở shell tương tác bằng \`exec\`, và ephemeral container qua \`kubectl debug\` cho image distroless không có \`/bin/sh\`).
+
+**Bẫy.** Nhảy thẳng vào \`exec\` hay \`logs\` khi Pod còn chưa qua khỏi \`ContainerCreating\` — ở giai đoạn đó chưa có container nào chạy để lấy log hay mở shell, thông tin duy nhất nằm trong event, chỉ thấy được qua \`describe pod\`. Bẫy thứ hai: coi \`Running\` đồng nghĩa "ứng dụng hoạt động đúng" — sách nói thẳng một Pod hoàn toàn có thể ở trạng thái \`Running\` trong khi ứng dụng bên trong đã hỏng logic; số lần restart lớn hơn 0 là dấu hiệu cần soi kỹ liveness probe. Bẫy thứ ba: cố \`kubectl exec ... -- /bin/sh\` vào một image distroless — lệnh này chắc chắn lỗi \`stat /bin/sh: no such file\`, công cụ đúng là ephemeral container qua \`kubectl debug -it <pod> --image=busybox\`.
+
+**Tự kiểm tra.** Một Pod hiển thị \`0/1 CrashLoopBackOff\`. Bạn chạy lệnh nào trước để xem lý do container thoát, và cờ nào lấy log của lần khởi động trước nếu container đã restart? Với một Pod chạy image \`k8s.gcr.io/pause:3.1\` không có shell, lệnh \`kubectl debug\` đầy đủ để chèn một ephemeral container \`busybox\` và mở shell tương tác là gì?`,
+      },
+      {
+        id: "cb-w6-2",
+        text: "Xử lý sự cố Service/mạng và đọc số liệu tài nguyên",
+        lesson: `**Mục tiêu.** Chẩn đoán một Service không định tuyến được lưu lượng theo đúng bốn điểm kiểm sách liệt kê — label selector, ánh xạ port, endpoint, rồi DNS/network policy — và đọc được số liệu CPU/memory bằng \`kubectl top\`.
+
+**Đọc.** [CKA Book 21](#/docs/ckabook-21) §"Xử lý sự cố Service và mạng" (chẩn đoán label selector bằng \`describe service\` đối chiếu \`--show-labels\`, khớp \`targetPort\` với \`containerPort\`, \`kubectl get endpoints\` — không endpoint nghĩa là selector hoặc port sai, phạm vi truy cập theo loại Service, FQDN \`<svc>.<namespace>.svc.cluster.local\` khi gọi xuyên namespace, log CoreDNS, và mô hình "mặc định từ chối" của network policy khiến kết nối thất bại trong im lặng) và §"Kiểm tra số liệu tài nguyên" (Metrics Server là nguồn cho \`kubectl top nodes\`/\`kubectl top pod\`, cần vài phút sau khi cài để có dữ liệu) — cùng §"Trọng tâm cho kỳ thi".
+
+**Bẫy.** Kết luận "Service hỏng" ngay khi \`get endpoints\` trả về rỗng, mà không kiểm tra tiếp xem đó là do label selector không khớp Pod nào hay do \`targetPort\` không khớp \`containerPort\` — hai nguyên nhân khác nhau, cùng một triệu chứng. Bẫy thứ hai: khi một kết nối trước đây chạy tốt bỗng timeout, vội đổ lỗi cho DNS hoặc Service trong khi network policy không hề báo lỗi tường minh — sách nhấn mạnh đây là loại sự cố "thất bại trong im lặng", buộc phải chủ động \`kubectl get networkpolicies\` rồi \`describe\` để loại trừ. Bẫy thứ ba: chạy \`kubectl top pod\` ngay sau khi bật Metrics Server và kết luận cluster không có tải — dữ liệu cần vài phút để thu thập, lỗi \`Metrics API not available\` lúc mới bật không phải sự cố thật.
+
+**Tự kiểm tra.** \`kubectl get endpoints myservice\` trả về danh sách rỗng. Liệt kê đúng thứ tự hai điều bạn kiểm tra tiếp theo, và lệnh \`kubectl\` cho từng bước. Lệnh nào hiển thị mức CPU/memory hiện tại của node \`worker-1\`, và của Pod \`frontend\`?`,
+      },
+      {
+        id: "cb-w6-3",
+        text: "Xử lý sự cố node và thành phần control plane",
+        lesson: `**Mục tiêu.** Từ một node \`NotReady\`, đi đúng trình tự sách khuyến nghị — \`describe node\` đọc Conditions, rồi SSH kiểm \`systemctl\`/\`journalctl\` — để tìm ra tiến trình hay tài nguyên nào đang gây sự cố, và biết vị trí manifest của static Pod control plane khi một thành phần cluster bị crash.
+
+**Đọc.** [CKA Book 22](#/docs/ckabook-22) §"Kiểm tra trạng thái của các node trong cluster" (STATUS và VERSION lệch nhau là hai chỉ báo sớm), §"Kiểm tra trạng thái của các thành phần trong cluster" (bảy thành phần control plane/node và namespace \`kube-system\` chứa Pod của chúng, ngoại lệ ở managed cluster), §"Xử lý sự cố node" (bốn Condition MemoryPressure/DiskPressure/PIDPressure/Ready qua \`describe node\`, \`systemctl status kubelet\` và \`journalctl -u kubelet\`, gia hạn chứng chỉ bằng \`kubeadm certs check-expiration\`/\`renew all\`, kiểm Pod \`kube-proxy\`) và §"Trọng tâm cho kỳ thi".
+
+**Bẫy.** Thấy Condition nào đó hiển thị \`True\` mà vội yên tâm — với \`MemoryPressure\`/\`DiskPressure\`/\`PIDPressure\`, giá trị \`True\` (hoặc \`Unknown\`) mới là dấu hiệu có vấn đề; chỉ riêng \`Ready\` thì \`True\` mới là trạng thái tốt. Bẫy thứ hai: sửa file YAML trong \`/etc/kubernetes/manifests\` rồi đi tìm lệnh "restart" cho thành phần đó — static Pod không cần lệnh restart, kubelet tự phát hiện thay đổi file và khởi động lại Pod ngay. Bẫy thứ ba: gia hạn xong chứng chỉ bằng \`kubeadm certs renew all\` rồi coi như xong việc — sách nhắc bạn vẫn phải tự khởi động lại kube-apiserver, kube-controller-manager, kube-scheduler và etcd thì các thành phần mới thực sự dùng chứng chỉ mới.
+
+**Tự kiểm tra.** Node \`worker-1\` hiển thị \`NotReady\`. Viết đúng ba lệnh theo thứ tự bạn chạy để đi từ triệu chứng tới việc xác nhận tiến trình kubelet đang dừng. Thư mục nào chứa manifest của các static Pod control plane, và vì sao sửa file trong đó không cần lệnh khởi động lại thủ công?`,
+      },
+      {
+        id: "cb-w6-4",
+        text: "Tổng duyệt: chạy lại bài tập 19 chương và đối chiếu đáp án",
+        lesson: `**Mục tiêu.** Trong một buổi, chạy lại toàn bộ bài tập mẫu của 19 chương có bài (ch.4–22) dưới áp lực thời gian như phòng thi thật, rồi biến kết quả tự chấm thành danh sách ôn cụ thể cho những ngày còn lại trước kỳ thi — không phải đọc lại sách từ đầu.
+
+**Đọc.** Không có chương mới trong mục này. Tài nguyên duy nhất là [Phụ lục A](#/docs/ckabook-A) — đáp án của toàn bộ 19 chương có bài tập, xếp theo đúng thứ tự chương 4 đến chương 22. Chỉ mở phụ lục này **sau khi** đã tự làm xong bài của một chương; mở trước sẽ biến bài tập thành chép đáp án và làm hỏng mục đích của buổi tổng duyệt.
+
+**Bẫy.** Chỉ làm lại các chương bạn thấy "quen tay" (ví dụ Pod, Deployment) mà bỏ qua các chương ít luyện — nước rút hiệu quả nhất nhắm đúng lĩnh vực trọng số cao và ít được ôn: 30% Xử lý sự cố (ch.21–22) không nằm gọn trong một chương nên dễ bị đánh giá thấp, và Gateway API (ch.19) là nội dung mới nhất trong đề cương nên thường bị bỏ sót. Bẫy thứ hai: đối chiếu Phụ lục A rồi coi một đáp án "gần đúng" là đã thuộc — kỳ thi chấm theo kết quả object thực tế trên cluster (Pod có \`Running\` không, PVC có \`Bound\` không), không chấm theo việc bạn hiểu đúng ý; hãy luôn kiểm bằng \`kubectl get\`/\`describe\` trước khi coi một bài là xong. Bẫy thứ ba: không ghi lại thời gian mỗi bài — nếu không bấm giờ, bạn sẽ không biết chương nào cần luyện thêm tốc độ trước ngày thi thật.
+
+**Tự kiểm tra.** Sau khi làm xong toàn bộ 19 chương và đối chiếu Phụ lục A, liệt kê tên chương của ba bài bạn phải mở sách hoặc tra cứu mới làm được — đó chính là danh sách ưu tiên cho buổi ôn cuối cùng, không phải danh sách để đọc lại từ đầu.`,
+      },
+    ],
+  },
 ];

@@ -12,6 +12,7 @@
 //   CKS : cks-roadmap-part{1,2}.js    (Tuần 1–4 / 5–10)       — 44 bài
 //   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
 //   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
+//   CKAB: ckabook-roadmap.js         (Tuần 1–6)              — 24 mục
 //   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
 //   MCJ : modconc-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)       — 32 mục
 //   DDIA: ddia-roadmap-part{1,2}.js  (Tuần 1–6 / 7–12)      — 48 mục
@@ -41,6 +42,7 @@ import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
 import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
 import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
 import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
+import { ckabookWeeks } from "./ckabook-roadmap.js";
 import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
 import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
 import { modconcWeeksPart1 } from "./modconc-roadmap-part1.js";
@@ -117,6 +119,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra. Bổ trợ chiều sâu cho ba giáo trình chứng chỉ.",
     prereq: "Yêu cầu: biết dùng terminal Linux và Docker cơ bản. Không cần biết Kubernetes trước.",
     weeks: [...k8sbookWeeksPart1, ...k8sbookWeeksPart2],
+  },
+  {
+    id: "ckabook",
+    field: "kubernetes",
+    label: "CKA Study Guide",
+    icon: "📘",
+    name: "Nước rút CKA với CKA Study Guide (Muschko)",
+    durationWeeks: 6,
+    desc: "Vòng ôn thứ hai, chạy SAU giáo trình CKA: 6 tuần bám 22 chương sách luyện thi của O'Reilly, mỗi mục ưu tiên phần 'Trọng tâm cho kỳ thi' và giao bài tập mẫu cuối chương để bấm giờ.",
+    prereq: "Khuyến nghị: đã hoàn thành lộ trình CKA. Track này ôn lại và bấm giờ, không dạy từ đầu.",
+    weeks: ckabookWeeks,
   },
   {
     id: "sysprog",

@@ -28,7 +28,8 @@ const EXPECTED = {
     // âm thầm lọt qua (vd xoá bớt câu hỏi vẫn qua đủ 23 bất biến trước đây).
     // 24 gốc + 23 chương CKA Study Guide (Muschko, O'Reilly).
     "docs:kubernetes": 47,
-    "roadmap-items:kubernetes": 184,
+    // 184 gốc + 24 mục nước rút CKA Study Guide.
+    "roadmap-items:kubernetes": 208,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
     // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.
