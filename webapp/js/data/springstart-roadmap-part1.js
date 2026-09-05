@@ -192,7 +192,7 @@ export const springStartWeeksPart1 = [
     practice:
       "Đổi một bean sang prototype rồi lặp lại đúng phép so sánh sách dùng ở §5.1.1 và §5.2.1 — lấy hai tham chiếu và in `cs1 == cs2` — để thấy singleton in ra `true` còn prototype in ra `false`. Rồi viết một aspect ghi lại thời gian thực thi theo mục 6.2.1, thêm một aspect thứ hai, và dùng `@Order` để quan sát chuỗi thực thi mà mục 6.3 mô tả đổi thế nào.",
     resources: [
-      { label: "Spring Start 05 — Bean scope và vòng đời", href: "#/docs/springstart-05" },
+      { label: "Spring Start 05 — Spring context: Bean scope và vòng đời", href: "#/docs/springstart-05" },
       { label: "Spring Start 06 — Sử dụng aspect với Spring AOP", href: "#/docs/springstart-06" },
     ],
     items: [
@@ -225,7 +225,7 @@ export const springStartWeeksPart1 = [
 
 **Đọc.** [6.1 Cách aspect hoạt động trong Spring](#/docs/springstart-06) đọc trước khi gõ dòng code nào: chép ra bốn thuật ngữ theo đúng định nghĩa của sách — aspect là đoạn logic, advice là "khi nào", pointcut là "những method nào", target object là bean khai báo method bị chặn; còn join point trong Spring luôn là một lời gọi method. Rồi bám Hình 6.3 và Hình 6.4 cho cơ chế weaving: Spring không trả bean thật mà trả một proxy, dù bạn lấy bằng \`getBean()\` hay bằng DI. Mục 6.2 nêu kịch bản: ghi log mốc bắt đầu và kết thúc mỗi use case. [6.2.1 Triển khai một aspect đơn giản](#/docs/springstart-06) là mục đọc chậm nhất tuần — thêm dependency \`spring-aspects\`, rồi làm đủ bốn bước: \`@EnableAspectJAutoProxy\` ở Listing 6.3, class \`@Aspect\` ở Listing 6.4, advice \`@Around\` với biểu thức pointcut ở Listing 6.5, và logic thật ở Listing 6.6. Đừng học thuộc biểu thức AspectJ; hiểu Hình 6.6 tách nó thành từng phần là đủ. [6.2.2 Thay đổi các tham số của method bị chặn và giá trị trả về](#/docs/springstart-06) thêm \`getArgs()\` ở Listing 6.7, rồi Listing 6.9 đổi hẳn tham số và trả về "FAILED" trong khi method thật trả "SUCCESS".
 
-**Bẫy.** Đánh dấu class bằng \`@Aspect\` rồi tưởng đã xong. Sách gọi đây là một sai lầm phổ biến: \`@Aspect\` không phải stereotype annotation, nó chỉ báo cho Spring biết class này định nghĩa một aspect chứ không đồng thời tạo bean — bạn vẫn phải thêm bean bằng \`@Bean\` hoặc stereotype annotation. Bẫy thứ hai: viết logic aspect mà quên gọi \`joinPoint.proceed()\`. Sách nói thẳng: nếu bạn không gọi \`proceed()\`, aspect sẽ không bao giờ ủy quyền tiếp cho method bị chặn — nó thực thi thay cho method đó, và bên gọi hoàn toàn không biết method thật chưa từng chạy.
+**Bẫy.** Đánh dấu class bằng \`@Aspect\` rồi tưởng đã xong. Sách gọi đây là một sai lầm phổ biến: \`@Aspect\` không phải stereotype annotation, nó chỉ báo cho Spring biết class này định nghĩa một aspect chứ không đồng thời tạo bean — bạn vẫn phải thêm bean bằng \`@Bean\` hoặc stereotype annotation. Bẫy thứ hai: nghĩ càng nhiều aspect càng gọn code. Ngay mục 6.2.2, sách tự lặp lại vì thấy điểm này quan trọng: hãy cẩn thận khi dùng aspect, chỉ dùng chúng để che dòng mã không liên quan và dễ suy ra được — aspect đủ mạnh để đưa bạn đến "mặt tối" của việc che giấu mã quan trọng, khiến ứng dụng khó bảo trì hơn.
 
 **Tự kiểm tra.** \`proceed()\` được thiết kế để ném ra thứ gì, và điều đó buộc chữ ký method aspect khai thêm gì? Và ở Listing 6.9, \`main()\` in ra giá trị nào trong khi \`publishComment()\` thật sự trả về giá trị nào?`,
       },
