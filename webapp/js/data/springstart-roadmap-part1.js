@@ -126,4 +126,120 @@ export const springStartWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "sh-w3",
+    week: "Tuần 3",
+    title: "Wiring bean và lập trình theo abstraction",
+    goal: "Nối được hai bean bằng mọi cú pháp chương 3 đưa ra, nhận ra và gỡ được circular dependency đầu tiên bạn tự tạo, rồi thiết kế lại các phụ thuộc qua interface để đổi implementation mà không phải sửa đối tượng đang dùng nó.",
+    practice:
+      "Lấy project tuần 2, thêm bean `Person` phụ thuộc `Parrot`. Nối chúng bằng cả ba cách mục 3.2 mô tả (tham số của `@Bean`, `@Autowired` trên trường, `@Autowired` trên constructor). Rồi cố tình tạo circular dependency giữa hai bean để thấy đúng thông báo lỗi mục 3.3 nói tới, và gỡ nó ra. Cuối cùng thêm bean thứ hai cùng kiểu và dùng một cách của mục 3.4 để Spring biết chọn cái nào.",
+    resources: [
+      { label: "Spring Start 03 — Spring context: Wiring bean", href: "#/docs/springstart-03" },
+      { label: "Spring Start 04 — Spring context: Sử dụng abstraction", href: "#/docs/springstart-04" },
+    ],
+    items: [
+      {
+        id: "sh-w3-1",
+        text: "Nối bean trong file cấu hình, và ba kiểu @Autowired",
+        lesson: `**Mục tiêu.** Nối được hai bean bằng cả năm cú pháp của chương — hai cách trong class cấu hình, ba cách với \`@Autowired\` — và chọn đúng cách cho từng tình huống.
+
+**Đọc.** [3.1 Triển khai quan hệ giữa các bean được định nghĩa trong file cấu hình](#/docs/springstart-03) mở bằng Hình 3.1 và Hình 3.2: hai bean đã ở trong context, việc còn lại là dựng quan hệ "has-A". Gõ lại Listing 3.1 rồi Listing 3.2, chạy tới khi thấy dòng thứ ba in \`Person's parrot: null\`. [3.1.1 Wiring các bean bằng cách gọi trực tiếp method giữa các method @Bean](#/docs/springstart-03) chỉ đổi một dòng ở Listing 3.3; phần đáng giá là đoạn ngay sau: thêm constructor không tham số in "Parrot created" rồi đếm số lần nó xuất hiện. Mục 3.1.2 là biến thể dùng tham số, Listing 3.4, cũng là chỗ sách định nghĩa chính thức dependency injection. [3.2 Sử dụng annotation @Autowired để inject bean](#/docs/springstart-03) là mục đọc chậm nhất tuần: chép ra ba gạch đầu dòng mở mục — field cho ví dụ, constructor cho thực tế, setter thì hiếm — rồi đi lần lượt [3.2.1 Dùng @Autowired để inject giá trị qua field của class](#/docs/springstart-03), [3.2.2 Dùng @Autowired để inject giá trị qua constructor](#/docs/springstart-03) với Listing 3.5, và mục 3.2.3, kèm khối LƯU Ý khép mục 3.2.2.
+
+**Bẫy.** Tưởng gọi \`parrot()\` từ trong \`person()\` sẽ sinh ra hai con vẹt. Sách dựng hẳn câu hỏi này rồi trả lời: thực tế chỉ có một instance parrot, vì nếu bean đã tồn tại trong context thì Spring lấy thẳng từ đó chứ không gọi lại method — dòng "Parrot created" in đúng một lần là bằng chứng. Bẫy thứ hai: dùng \`@Autowired\` trên field vì nó ngắn nhất. Mục 3.2.1 nói rõ cách này có "tội lỗi" riêng nên ta tránh nó trong code production: bạn mất khả năng đặt field là \`final\` — sách in hẳn đoạn code không biên dịch được — và tự quản lý giá trị khi khởi tạo cũng khó hơn.
+
+**Tự kiểm tra.** Thí nghiệm thêm constructor vào \`Parrot\` in ra "Parrot created" mấy lần, và con số đó bác bỏ điều gì? Và từ phiên bản Spring nào thì một class chỉ có một constructor được phép bỏ hẳn \`@Autowired\`?`,
+      },
+      {
+        id: "sh-w3-2",
+        text: "Circular dependency, và cách chọn giữa nhiều bean cùng kiểu",
+        lesson: `**Mục tiêu.** Nhận ra circular dependency ngay từ thông báo exception và gỡ nó đúng cách, rồi chỉ định được bean nào cần inject khi context có nhiều bean cùng kiểu.
+
+**Đọc.** [3.3 Xử lý circular dependency](#/docs/springstart-03) ngắn nhưng đọc chậm: định nghĩa deadlock của sách, Hình 3.11, rồi project "sq-ch3-ex7" nơi \`Person\` nhận \`Parrot\` qua constructor và \`Parrot\` nhận lại \`Person\`. Chép nguyên câu cuối trong khối exception, "Is there an unresolvable circular reference?". [3.4 Chọn từ nhiều bean trong Spring context](#/docs/springstart-03) dài hơn hẳn: trước khi đọc chi tiết, chép ra cây quyết định ở đầu mục — nếu định danh của tham số khớp tên một bean, Spring chọn bean đó; nếu không khớp thì lần lượt xét bean được đánh dấu primary, rồi \`@Qualifier\`, và nếu không có cả hai thì ứng dụng thất bại với exception. Sau đó chạy thật từng bước: Listing 3.6 với tham số tên \`parrot2\` kéo về con vẹt Miki, Listing 3.7 thay bằng \`@Qualifier("parrot2")\`. Nửa sau mục lặp lại tình huống đó với \`@Autowired\`: "sq-ch3-ex9" có Listing 3.8 khai hai bean \`Parrot\` bằng \`@Bean\` còn \`Person\` bằng stereotype annotation, tham số constructor cố ý đặt tên "parrot2"; rồi "sq-ch3-ex10" thay tên đó bằng \`@Qualifier\`.
+
+**Bẫy.** Gặp circular dependency rồi đi tìm một annotation để gỡ. Sách không cho lối tắt nào: nó gọi thẳng việc hai đối tượng phụ thuộc lẫn nhau là thiết kế class tệ và nói trong trường hợp đó bạn cần viết lại code; mỗi khi thấy exception này, việc phải làm là mở đúng các class mà exception chỉ ra và loại bỏ vòng phụ thuộc. Bẫy thứ hai: chọn bean bằng cách đặt tên tham số cho khớp. Cách này chạy được — Listing 3.6 chứng minh — nhưng tác giả khuyên tránh dựa vào tên tham số, thứ có thể dễ dàng bị refactor và thay đổi nhầm bởi một lập trình viên khác; khi đó hành vi ứng dụng đổi mà trình biên dịch không hề báo gì.
+
+**Tự kiểm tra.** Trong cây quyết định của mục 3.4, trường hợp nào khiến ứng dụng thất bại với exception, và hai lối ra đứng trước nó là gì? Và exception của circular dependency mang tên gì, khác thế nào với exception bạn đã gặp ở tuần 2 khi context có ba bean \`Parrot\`?`,
+      },
+      {
+        id: "sh-w3-3",
+        text: "Interface làm contract, và tiêm phụ thuộc qua abstraction",
+        lesson: `**Mục tiêu.** Thiết kế được một use case thật bằng ba trách nhiệm tách rời qua interface, giao chúng cho Spring, và biết đối tượng nào KHÔNG nên vào context.
+
+**Đọc.** [4.1 Dùng interface để định nghĩa contract](#/docs/springstart-04) mở bằng câu chốt: interface nói "cái gì", implementation nói "như thế nào". [4.1.1 Dùng interface để tách rời các implementation](#/docs/springstart-04) đọc chậm cặp Hình 4.2 với Hình 4.4: cùng một yêu cầu đổi cách sắp xếp, chỉ bản có interface \`Sorter\` mới không phải sửa \`DeliveryDetailsPrinter\`. Mục 4.1.2 chỉ vài dòng, nhưng là kịch bản còn dùng lại ở chương 5 và 6: đăng bình luận thì vừa lưu vừa gửi mail. [4.1.3 Triển khai yêu cầu mà không dùng framework](#/docs/springstart-04) gõ lại toàn bộ theo thứ tự Listing 4.1 đến Listing 4.7 và tách package như Hình 4.7 — vẫn là Java thuần, chưa có Spring. Sang [4.2 Dùng dependency injection với abstraction](#/docs/springstart-04), phần nặng nhất là 4.2.1: tự trả lời "đối tượng này có cần được framework quản lý không?" cho từng class, và để ý Listing 4.11 chỉ khai ba package, bỏ \`model\` ra ngoài. [4.2.2 Chọn cái gì để auto-wire từ nhiều implementation của một abstraction](#/docs/springstart-04) chạy cho ra bằng được \`NoUniqueBeanDefinitionException\`, rồi thử hai lối ra: \`@Primary\` ở Listing 4.14 và \`@Qualifier\` ở Listing 4.15.
+
+**Bẫy.** Đánh dấu \`@Component\` lên interface \`CommentRepository\` cho đồng bộ. Tác giả nói ông thường thấy học viên bối rối chỗ này, rồi chốt: stereotype annotation chỉ dành cho class mà Spring cần tạo instance, còn thêm nó lên interface hay abstract class là vô nghĩa vì chúng không thể được khởi tạo. Bẫy thứ hai: đưa mọi đối tượng vào context, kể cả \`Comment\`. Mục 4.2.1 chặn ngay suy nghĩ đó: thêm đối tượng mà framework không cần quản lý chỉ làm tăng độ phức tạp, khiến ứng dụng vừa khó bảo trì vừa kém hiệu năng hơn — không nhận lợi ích nào từ framework thì bạn chỉ đang over-engineer.
+
+**Tự kiểm tra.** Trong thiết kế ở mục 4.1.3, đối tượng nào không được đưa vào Spring context, và tiêu chí nào loại nó ra? Và hai lối ra của mục 4.2.2 khác nhau ở điểm nào — cái nào hợp khi các đối tượng khác nhau cần implementation khác nhau?`,
+      },
+      {
+        id: "sh-w3-4",
+        text: "Stereotype annotation gán trách nhiệm cho từng đối tượng",
+        lesson: `**Mục tiêu.** Đánh dấu đúng trách nhiệm của từng component bằng \`@Service\` và \`@Repository\`, và nói được ba stereotype annotation này giống nhau ở đâu, khác nhau ở đâu.
+
+**Đọc.** [4.3 Tập trung vào trách nhiệm của đối tượng với các stereotype annotation](#/docs/springstart-04) là mục ngắn nhất tuần — đọc một mạch rồi quay lại làm. Bắt đầu ở đoạn mở: đến giờ mọi ví dụ đều dùng \`@Component\`, nhưng trong dự án thật lập trình viên đôi khi dùng annotation khác cho cùng mục đích. Dừng lại ở hai định nghĩa trách nhiệm mà chương 4 đã dựng sẵn từ mục 4.1.3: service là đối tượng triển khai use case, repository là đối tượng quản lý việc lưu trữ bền vững dữ liệu — chưa gọi được tên trách nhiệm của một class thì đừng vội chọn annotation cho nó. Rồi đọc kỹ câu chốt: \`@Component\`, \`@Service\` và \`@Repository\` đều là stereotype annotation và đều chỉ thị Spring tạo rồi thêm một instance của class được chú thích vào context. Cuối cùng làm luôn phần thực hành nằm trong chính mục: đổi \`@Component\` trên \`CommentService\` thành \`@Service\`, đổi \`@Component\` trên \`DBCommentRepository\` thành \`@Repository\`, chạy lại và xác nhận đầu ra không đổi một chữ; đối chiếu với project "sq-ch4-ex7" đi kèm sách.
+
+**Bẫy.** Đổi sang \`@Repository\` rồi chờ Spring bật thêm khả năng nào đó cho tầng dữ liệu. Mục này nói rõ cả ba annotation làm đúng một việc với framework — tạo instance và thêm vào context; thứ bạn nhận được khi đổi là đánh dấu tường minh trách nhiệm của đối tượng và làm nó dễ thấy hơn với bất kỳ lập trình viên nào đọc class, tức là giá trị cho người đọc code chứ không phải cho lúc chạy. Bẫy thứ hai: rải \`@Component\` khắp nơi cho khỏi phải nghĩ. Sách gọi thẳng \`@Component\` là chung chung và không cho bạn biết chi tiết gì về trách nhiệm của đối tượng đang cài đặt — trong khi trách nhiệm lại quan trọng trong thiết kế class.
+
+**Tự kiểm tra.** Nếu đổi \`@Component\` trên \`DBCommentRepository\` thành \`@Repository\`, đầu ra của ứng dụng đổi thế nào, và vì sao? Và với một class không rơi vào hai trách nhiệm mà mục 4.3 gọi tên, bạn dùng annotation nào?`,
+      },
+    ],
+  },
+  {
+    id: "sh-w4",
+    week: "Tuần 4",
+    title: "Bean scope, vòng đời, và AOP",
+    goal: "Chọn được scope cho từng bean thay vì luôn nhận mặc định singleton, và viết xong aspect đầu tiên trong khi hiểu rõ vì sao Spring trả về proxy chứ không phải bean thật.",
+    practice:
+      "Đổi một bean sang prototype rồi lặp lại đúng phép so sánh sách dùng ở §5.1.1 và §5.2.1 — lấy hai tham chiếu và in `cs1 == cs2` — để thấy singleton in ra `true` còn prototype in ra `false`. Rồi viết một aspect ghi lại thời gian thực thi theo mục 6.2.1, thêm một aspect thứ hai, và dùng `@Order` để quan sát chuỗi thực thi mà mục 6.3 mô tả đổi thế nào.",
+    resources: [
+      { label: "Spring Start 05 — Bean scope và vòng đời", href: "#/docs/springstart-05" },
+      { label: "Spring Start 06 — Sử dụng aspect với Spring AOP", href: "#/docs/springstart-06" },
+    ],
+    items: [
+      {
+        id: "sh-w4-1",
+        text: "Singleton scope: cách hoạt động, tình huống thật, eager và lazy",
+        lesson: `**Mục tiêu.** Nói được "singleton" trong Spring nghĩa là gì và không nghĩa là gì, tự tay chứng minh hai lần lấy bean cho cùng một tham chiếu, rồi chọn giữa khởi tạo eager và lazy.
+
+**Đọc.** [5.1 Sử dụng singleton bean scope](#/docs/springstart-05) chỉ vài dòng dẫn nhập. [5.1.1 Singleton bean hoạt động như thế nào](#/docs/springstart-05) là gốc của cả chương: đọc chậm đoạn phân biệt singleton của Spring với singleton design pattern, bám Hình 5.1. Rồi chạy đủ hai ví dụ. Project "sq-ch5-ex1": Listing 5.1 khai \`CommentService\` bằng \`@Bean\`, Listing 5.2 lấy bean hai lần theo tên rồi in \`cs1 == cs2\`, phải ra \`true\`. Project "sq-ch5-ex2" chứng minh điều tương tự với stereotype annotation: \`CommentService\` và \`UserService\` cùng \`@Autowired\` một \`CommentRepository\`, và Listing 5.3 so sánh hai dependency Spring đã inject. [5.1.2 Singleton bean trong các tình huống thực tế](#/docs/springstart-05) đọc kỹ nhất trong ba mục con: instance dùng chung giữa nhiều thread, Hình 5.5 cùng định nghĩa race condition, rồi lý do inject qua constructor cho phép đặt field \`final\`. Khép mục bằng sidebar "Việc dùng bean quy về ba điểm". [5.1.3 Sử dụng khởi tạo eager và lazy](#/docs/springstart-05) làm thật cả hai project: "sq-ch5-ex3" in "CommentService instance created!" dù không ai dùng bean, còn "sq-ch5-ex4" thêm \`@Lazy\` thì dòng đó biến mất cho tới khi có \`getBean()\`.
+
+**Bẫy.** Đem singleton design pattern áp thẳng vào Spring rồi kết luận mỗi kiểu chỉ có một bean. Sách dừng lại cảnh báo "Nhưng hãy cẩn thận!": context hoàn toàn có thể chứa nhiều instance cùng kiểu nếu chúng khác tên, vì với Spring singleton nghĩa là duy nhất theo tên chứ không phải duy nhất trong ứng dụng. Bẫy thứ hai: cho singleton bean một thuộc tính rồi sửa nó trong lúc xử lý. Sidebar "Việc dùng bean quy về ba điểm" chốt rằng một bean chỉ nên là singleton nếu nó bất biến; mục 5.1.2 nói thêm rằng đồng bộ hóa thread trên một instance dùng chung tuy khả thi nhưng không phải thực hành tốt và có thể ảnh hưởng nghiêm trọng đến hiệu năng.
+
+**Tự kiểm tra.** Trong project "sq-ch5-ex3", dòng nào chứng minh Spring đã tạo bean dù \`Main\` không hề dùng tới nó? Và mục 5.1.3 nêu hai ưu điểm nào của khởi tạo eager mà lazy không có?`,
+      },
+      {
+        id: "sh-w4-2",
+        text: "Prototype scope và khi nào thật sự cần nó",
+        lesson: `**Mục tiêu.** Đổi được scope của bean sang prototype, tự chứng minh mỗi lần lấy là một instance mới, và nhận ra tình huống hiếm hoi mà prototype thật sự đáng dùng.
+
+**Đọc.** [5.2 Sử dụng prototype bean scope](#/docs/springstart-05) dẫn nhập ngắn. [5.2.1 Prototype bean hoạt động như thế nào](#/docs/springstart-05) bám hình ảnh sách dùng: singleton là hạt cà phê, prototype là cây cà phê — Spring không quản lý instance nữa mà quản lý kiểu, tạo instance mới mỗi lần có người yêu cầu. Học đúng một annotation mới, \`@Scope\`, và nhớ nó đi kèm \`@Bean\` phía trên method hoặc đi kèm stereotype annotation phía trên class. Chạy hai project: "sq-ch5-ex5" với Listing 5.4 và Listing 5.5 in ra \`false\` — chính phép so sánh bạn sẽ lặp lại ở phần thực hành tuần này; rồi "sq-ch5-ex6" với Listing 5.6, nơi hai service nhận hai instance \`CommentRepository\` khác nhau. [5.2.2 Prototype bean trong các tình huống thực tế](#/docs/springstart-05) mới là mục quyết định: theo dõi \`CommentProcessor\` đi qua bốn nấc — Listing 5.7 là một đối tượng khả biến, Listing 5.8 dùng \`new\` nên chưa cần là bean, rồi nó cần \`CommentRepository\` nên buộc phải thành bean, và Listing 5.9 lấy nó bằng \`getBean()\` ngay bên trong \`sendComment()\`. Khép lại bằng Bảng 5.1.
+
+**Bẫy.** Khai \`CommentProcessor\` là prototype rồi \`@Autowired\` thẳng nó vào \`CommentService\`. Sách gọi đích danh đây là sai lầm đừng mắc: vì \`CommentService\` là singleton, Spring chỉ tạo và inject dependency đúng một lần lúc dựng nó, nên mọi lời gọi \`sendComment()\` dùng chung một instance và bạn quay lại đúng race condition của mục 5.1.2 — Listing 5.10 in ra cách làm sai đó để bạn tự chứng minh. Bẫy thứ hai: coi prototype là câu trả lời cho mọi đối tượng khả biến. Tác giả nói ngược lại: nhìn chung ông tránh dùng prototype và tránh các instance khả biến nói chung; trong câu chuyện của ông, prototype là công cụ để refactor dần một ứng dụng cũ chứ không phải mặc định cho thiết kế mới.
+
+**Tự kiểm tra.** Trong Bảng 5.1, dòng nào nói về thứ mà chỉ singleton mới cấu hình được còn prototype thì không? Và ở Listing 5.9, vì sao lời gọi \`getBean()\` bắt buộc phải nằm bên trong method chứ không phải trên một field?`,
+      },
+      {
+        id: "sh-w4-3",
+        text: "Aspect hoạt động thế nào, và viết aspect đầu tiên",
+        lesson: `**Mục tiêu.** Giải thích được vì sao lấy bean ra lại nhận một proxy, và viết xong aspect đầu tiên đọc được tham số cùng giá trị trả về của method bị chặn.
+
+**Đọc.** [6.1 Cách aspect hoạt động trong Spring](#/docs/springstart-06) đọc trước khi gõ dòng code nào: chép ra bốn thuật ngữ theo đúng định nghĩa của sách — aspect là đoạn logic, advice là "khi nào", pointcut là "những method nào", target object là bean khai báo method bị chặn; còn join point trong Spring luôn là một lời gọi method. Rồi bám Hình 6.3 và Hình 6.4 cho cơ chế weaving: Spring không trả bean thật mà trả một proxy, dù bạn lấy bằng \`getBean()\` hay bằng DI. Mục 6.2 nêu kịch bản: ghi log mốc bắt đầu và kết thúc mỗi use case. [6.2.1 Triển khai một aspect đơn giản](#/docs/springstart-06) là mục đọc chậm nhất tuần — thêm dependency \`spring-aspects\`, rồi làm đủ bốn bước: \`@EnableAspectJAutoProxy\` ở Listing 6.3, class \`@Aspect\` ở Listing 6.4, advice \`@Around\` với biểu thức pointcut ở Listing 6.5, và logic thật ở Listing 6.6. Đừng học thuộc biểu thức AspectJ; hiểu Hình 6.6 tách nó thành từng phần là đủ. [6.2.2 Thay đổi các tham số của method bị chặn và giá trị trả về](#/docs/springstart-06) thêm \`getArgs()\` ở Listing 6.7, rồi Listing 6.9 đổi hẳn tham số và trả về "FAILED" trong khi method thật trả "SUCCESS".
+
+**Bẫy.** Đánh dấu class bằng \`@Aspect\` rồi tưởng đã xong. Sách gọi đây là một sai lầm phổ biến: \`@Aspect\` không phải stereotype annotation, nó chỉ báo cho Spring biết class này định nghĩa một aspect chứ không đồng thời tạo bean — bạn vẫn phải thêm bean bằng \`@Bean\` hoặc stereotype annotation. Bẫy thứ hai: viết logic aspect mà quên gọi \`joinPoint.proceed()\`. Sách nói thẳng: nếu bạn không gọi \`proceed()\`, aspect sẽ không bao giờ ủy quyền tiếp cho method bị chặn — nó thực thi thay cho method đó, và bên gọi hoàn toàn không biết method thật chưa từng chạy.
+
+**Tự kiểm tra.** \`proceed()\` được thiết kế để ném ra thứ gì, và điều đó buộc chữ ký method aspect khai thêm gì? Và ở Listing 6.9, \`main()\` in ra giá trị nào trong khi \`publishComment()\` thật sự trả về giá trị nào?`,
+      },
+      {
+        id: "sh-w4-4",
+        text: "Chặn method theo annotation, các advice khác, và chuỗi thực thi",
+        lesson: `**Mục tiêu.** Chặn method bằng annotation tùy chỉnh thay cho biểu thức pointcut phức tạp, chọn được advice nhẹ nhất đủ dùng, và điều khiển thứ tự khi nhiều aspect cùng chặn một method.
+
+**Đọc.** [6.2.3 Chặn các method được đánh dấu bằng annotation](#/docs/springstart-06) làm đủ hai bước: khai annotation \`@ToLog\` với \`@Retention(RetentionPolicy.RUNTIME)\` và \`@Target(ElementType.METHOD)\`, rồi đổi biểu thức pointcut thành \`@annotation(ToLog)\` như Listing 6.11. Listing 6.10 cố ý cho \`CommentService\` ba method mà chỉ đánh dấu \`deleteComment()\` — chạy project "sq-ch6-ex4" và soi console để tự xác nhận aspect bỏ qua hai method còn lại. [6.2.4 Các advice annotation khác bạn có thể dùng](#/docs/springstart-06) đọc như một bảng tra bốn dòng: \`@Before\`, \`@AfterReturning\`, \`@AfterThrowing\`, \`@After\`. Ghi lại đúng khác biệt của từng dòng khi method bị chặn ném exception, và nhớ rằng các advice này không nhận \`ProceedingJoinPoint\` nên không tự quyết định lúc nào ủy quyền. Xem ví dụ \`@AfterReturning\` cùng thuộc tính \`returning\` trong "sq-ch6-ex5". [6.3 Chuỗi thực thi aspect](#/docs/springstart-06) dựng hai aspect cùng chặn \`publishComment()\`: chạy "sq-ch6-ex6" khi chưa có \`@Order\`, rồi "sq-ch6-ex7" sau khi đặt \`@Order(1)\` cho \`SecurityAspect\` và \`@Order(2)\` cho \`LoggingAspect\`, và đối chiếu hai khối log với Hình 6.15 và Hình 6.16.
+
+**Bẫy.** Viết xong annotation tùy chỉnh mà aspect chẳng chặn gì cả. Mục 6.2.3 chỉ ra nguyên nhân trước cả khi bạn kịp gặp: mặc định trong Java annotation không thể bị chặn lúc runtime, nên việc khai tường minh \`@Retention(RetentionPolicy.RUNTIME)\` là rất quan trọng. Bẫy thứ hai: có hai aspect rồi suy ra thứ tự từ một lần chạy thấy log ra như ý. Mục 6.3 nói thẳng rằng mặc định Spring không đảm bảo thứ tự mà hai aspect trong cùng một chuỗi thực thi được gọi — và ngay cả khi đã dùng \`@Order\`, nếu hai giá trị giống nhau thì thứ tự lại không được xác định; số càng nhỏ thì aspect càng thực thi sớm.
+
+**Tự kiểm tra.** Trong bốn advice của mục 6.2.4, cái nào không được gọi khi method bị chặn ném exception, và cái nào vẫn được gọi? Và khi \`SecurityAspect\` mang \`@Order(1)\`, dòng log nào xuất hiện đầu tiên trên console và dòng nào cuối cùng?`,
+      },
+    ],
+  },
 ];
