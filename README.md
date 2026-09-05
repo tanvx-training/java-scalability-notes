@@ -7,33 +7,33 @@ Bộ ghi chú nghiên cứu về khả năng mở rộng (scalability) của ứ
 ### Chủ đề I — Connection & Request Lifecycle
 | # | Tài liệu | Nội dung chính |
 |---|---|---|
-| 01 | [Hành trình một request](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/01-connection-request-flow.md) | 3-way handshake, SYN/Accept Queue, `somaxconn` cắt ngọn `accept-count`, mã nguồn Acceptor + LimitLatch, Poller/epoll (C10K), keep-alive, bảng "5 cánh cửa", playbook chẩn đoán 5 phút, thí nghiệm tự kiểm chứng |
-| 02 | [Giải phẫu các Timeout](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/02-timeouts-and-exceptions.md) | 4 lỗi ở tầng gói tin (SYN retransmit, RST, FIN), ai-là-người-ngắt, retry + idempotency key, idle-timeout lệch pha client/LB/server, timeout budget giảm dần, bảng chẩn đoán 2h sáng |
+| 01 | [Hành trình một request](./sources/java/01-connection-request-flow.md) | 3-way handshake, SYN/Accept Queue, `somaxconn` cắt ngọn `accept-count`, mã nguồn Acceptor + LimitLatch, Poller/epoll (C10K), keep-alive, bảng "5 cánh cửa", playbook chẩn đoán 5 phút, thí nghiệm tự kiểm chứng |
+| 02 | [Giải phẫu các Timeout](./sources/java/02-timeouts-and-exceptions.md) | 4 lỗi ở tầng gói tin (SYN retransmit, RST, FIN), ai-là-người-ngắt, retry + idempotency key, idle-timeout lệch pha client/LB/server, timeout budget giảm dần, bảng chẩn đoán 2h sáng |
 
 ### Chủ đề II — Concurrency Model
 | # | Tài liệu | Nội dung chính |
 |---|---|---|
-| 03 | [Sync ≠ Blocking, Async ≠ Non-blocking](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/03-sync-async-blocking-nonblocking.md) | Hai trục độc lập, cơ chế từng ô (socketRead0, Selector, event loop), bẫy `@Async` + JDBC và pool 8 thread mặc định, BlockHound, cây quyết định chọn mô hình |
-| 04 | [Thread Lifecycle & bí ẩn RUNNABLE](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/04-java-thread-lifecycle.md) | 6 trạng thái + điều kiện chuyển, ranh giới JVM/kernel (vì sao chờ DB vẫn RUNNABLE), bảng đối chiếu JVM state vs Linux state, ReentrantLock=WAITING, đọc thread dump bằng pattern đỉnh stack, bẫy jstack với virtual thread (bài học Netflix) |
-| 05 | [Virtual Threads](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/05-virtual-threads.md) | Mount/unmount/continuation từng bước, carrier = ForkJoinPool ≈ số core, scale-not-speed, pinning + JEP 491 (Java 24), Semaphore thay pool, ThreadLocal/ScopedValue, điểm nghẽn dời sang connection pool |
+| 03 | [Sync ≠ Blocking, Async ≠ Non-blocking](./sources/java/03-sync-async-blocking-nonblocking.md) | Hai trục độc lập, cơ chế từng ô (socketRead0, Selector, event loop), bẫy `@Async` + JDBC và pool 8 thread mặc định, BlockHound, cây quyết định chọn mô hình |
+| 04 | [Thread Lifecycle & bí ẩn RUNNABLE](./sources/java/04-java-thread-lifecycle.md) | 6 trạng thái + điều kiện chuyển, ranh giới JVM/kernel (vì sao chờ DB vẫn RUNNABLE), bảng đối chiếu JVM state vs Linux state, ReentrantLock=WAITING, đọc thread dump bằng pattern đỉnh stack, bẫy jstack với virtual thread (bài học Netflix) |
+| 05 | [Virtual Threads](./sources/java/05-virtual-threads.md) | Mount/unmount/continuation từng bước, carrier = ForkJoinPool ≈ số core, scale-not-speed, pinning + JEP 491 (Java 24), Semaphore thay pool, ThreadLocal/ScopedValue, điểm nghẽn dời sang connection pool |
 
 ### Chủ đề III — Capacity Planning & Pool Sizing
 | # | Tài liệu | Nội dung chính |
 |---|---|---|
-| 06 | [Tomcat TaskQueue internals](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md) | Mã nguồn `TaskQueue.offer()` "nói dối" (thread-trước-queue-sau, ngược executor chuẩn), phép tính latency khi queue vô hạn, cascading failure, van 2 tầng (max-queue-capacity vs Bulkhead), Bulkhead-concurrency ≠ Bucket4j-rate |
-| 07 | [Thread pool sizing](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md) | Chi phí thật của thread (10GB off-heap, context switch), công thức Goetz `core×U×(1+W/C)` + trực giác đằng sau, Little's Law → capacity, container-aware JVM (cgroup/CFS throttling), Cloud Run concurrency phải khớp threads.max, 2 kiểu nghẽn cùng triệu chứng |
-| 08 | [DB connection pool sizing](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) | Chuỗi 5 phép tính: 1600 RPS → 5 instance → Hikari 17 → 85 tổng → 17 execute → 8 core DB; vì sao more-connections-is-slower (Oracle RWP ~50×), 3 con số 17/85/max_connections, 4 ca giữ-connection-quá-lâu kèm code fix, virtual threads dời van sang connection pool |
+| 06 | [Tomcat TaskQueue internals](./sources/java/06-tomcat-threadpool-taskqueue.md) | Mã nguồn `TaskQueue.offer()` "nói dối" (thread-trước-queue-sau, ngược executor chuẩn), phép tính latency khi queue vô hạn, cascading failure, van 2 tầng (max-queue-capacity vs Bulkhead), Bulkhead-concurrency ≠ Bucket4j-rate |
+| 07 | [Thread pool sizing](./sources/java/07-threadpool-sizing.md) | Chi phí thật của thread (10GB off-heap, context switch), công thức Goetz `core×U×(1+W/C)` + trực giác đằng sau, Little's Law → capacity, container-aware JVM (cgroup/CFS throttling), Cloud Run concurrency phải khớp threads.max, 2 kiểu nghẽn cùng triệu chứng |
+| 08 | [DB connection pool sizing](./sources/java/08-database-connection-pool-sizing.md) | Chuỗi 5 phép tính: 1600 RPS → 5 instance → Hikari 17 → 85 tổng → 17 execute → 8 core DB; vì sao more-connections-is-slower (Oracle RWP ~50×), 3 con số 17/85/max_connections, 4 ca giữ-connection-quá-lâu kèm code fix, virtual threads dời van sang connection pool |
 
 ### Chủ đề IV — Transaction Management
 | # | Tài liệu | Nội dung chính |
 |---|---|---|
-| 09 | [Proxy & ThreadLocal trong @Transactional](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/09-transactional-proxy-threadlocal.md) | Tắt `autoCommit`, cơ chế AOP Proxy (JDK Dynamic vs CGLIB), `TransactionInterceptor`, cất Connection vào `ThreadLocal` via `TransactionSynchronizationManager`, lý do self-invocation lơ annotation |
-| 10 | [Năm cái bẫy @Transactional](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) | 5 bẫy production: Annotation bị lơ, Captive Connection (I/O REST call trong Transaction), Exception Mismatch (Unchecked vs Checked), Transactional Event Listener, Deadlock `REQUIRES_NEW` |
+| 09 | [Proxy & ThreadLocal trong @Transactional](./sources/java/09-transactional-proxy-threadlocal.md) | Tắt `autoCommit`, cơ chế AOP Proxy (JDK Dynamic vs CGLIB), `TransactionInterceptor`, cất Connection vào `ThreadLocal` via `TransactionSynchronizationManager`, lý do self-invocation lơ annotation |
+| 10 | [Năm cái bẫy @Transactional](./sources/java/10-transactional-five-traps.md) | 5 bẫy production: Annotation bị lơ, Captive Connection (I/O REST call trong Transaction), Exception Mismatch (Unchecked vs Checked), Transactional Event Listener, Deadlock `REQUIRES_NEW` |
 
 ### System Programming — Lập trình hệ thống (UIUC CS 241)
 | # | Tài liệu | Nội dung chính |
 |---|---|---|
-| — | [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt đầy đủ **System Programming Coursebook** (University of Illinois, CS 241 — B. Venkatesh, L. Angrave et al.), giấy phép **CC BY 4.0**. 18 chương: C, tiến trình, bộ cấp phát bộ nhớ, luồng, đồng bộ hoá, deadlock, bộ nhớ ảo & IPC, lập lịch, mạng, hệ thống tệp, tín hiệu, bảo mật và các chủ đề nâng cao. Xem [mục lục đầy đủ](./System_Programming_VI/README.md). |
+| — | [`sources/sysprog/`](./sources/sysprog/) | Bản dịch tiếng Việt đầy đủ **System Programming Coursebook** (University of Illinois, CS 241 — B. Venkatesh, L. Angrave et al.), giấy phép **CC BY 4.0**. 18 chương: C, tiến trình, bộ cấp phát bộ nhớ, luồng, đồng bộ hoá, deadlock, bộ nhớ ảo & IPC, lập lịch, mạng, hệ thống tệp, tín hiệu, bảo mật và các chủ đề nâng cao. Xem [mục lục đầy đủ](./sources/sysprog/README.md). |
 
 ## Phương pháp tiếp thu & Lộ trình đọc
 
@@ -47,10 +47,10 @@ flowchart TD
 ```
 
 ### 🎯 Lộ trình đọc khuyến nghị theo vai trò
-* **Backend Engineer (Med-Senior):** [01](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/01-connection-request-flow.md) → [03](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/03-sync-async-blocking-nonblocking.md) → [04](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/04-java-thread-lifecycle.md) → [05](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/05-virtual-threads.md) → [08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) → [09](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/09-transactional-proxy-threadlocal.md) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) *(Nắm vững Request Flow, Threading, Sizing và Transaction Traps)*.
-* **SRE / DevOps Engineer:** [01](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/01-connection-request-flow.md) → [02](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/02-timeouts-and-exceptions.md) → [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md) → [07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md) *(Nắm Kernel Queue, Timeouts, OS Limits và Container Throttling)*.
-* **Software Architect / Tech Lead:** [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md) → [07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md) → [08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) → [05](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/05-virtual-threads.md) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) *(Nắm System Sizing, Architectural Limits, Virtual Threads và Ranh giới Transaction)*.
-* **Đang chữa cháy production:** [02](./Chủ%20đề%20I%20%E2%80%94%20Connection%20%26%20Request%20Lifecycle/02-timeouts-and-exceptions.md) (tra lỗi socket/timeout) → [04](./Chủ%20đề%20II%20%E2%80%94%20Concurrency%20Model/04-java-thread-lifecycle.md) §6 (đọc Thread Dump) → [10](./Chủ%20đề%20IV%20%E2%80%94%20Transaction%20Management/10-transactional-five-traps.md) (check cạn connection do Transaction) → [06](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/06-tomcat-threadpool-taskqueue.md)/[07](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/07-threadpool-sizing.md)/[08](./Chủ%20đề%20III%20%E2%80%94%20Capacity%20Planning%20%26%20Pool%20Sizing/08-database-connection-pool-sizing.md) (tuỳ điểm nghẽn).
+* **Backend Engineer (Med-Senior):** [01](./sources/java/01-connection-request-flow.md) → [03](./sources/java/03-sync-async-blocking-nonblocking.md) → [04](./sources/java/04-java-thread-lifecycle.md) → [05](./sources/java/05-virtual-threads.md) → [08](./sources/java/08-database-connection-pool-sizing.md) → [09](./sources/java/09-transactional-proxy-threadlocal.md) → [10](./sources/java/10-transactional-five-traps.md) *(Nắm vững Request Flow, Threading, Sizing và Transaction Traps)*.
+* **SRE / DevOps Engineer:** [01](./sources/java/01-connection-request-flow.md) → [02](./sources/java/02-timeouts-and-exceptions.md) → [06](./sources/java/06-tomcat-threadpool-taskqueue.md) → [07](./sources/java/07-threadpool-sizing.md) *(Nắm Kernel Queue, Timeouts, OS Limits và Container Throttling)*.
+* **Software Architect / Tech Lead:** [06](./sources/java/06-tomcat-threadpool-taskqueue.md) → [07](./sources/java/07-threadpool-sizing.md) → [08](./sources/java/08-database-connection-pool-sizing.md) → [05](./sources/java/05-virtual-threads.md) → [10](./sources/java/10-transactional-five-traps.md) *(Nắm System Sizing, Architectural Limits, Virtual Threads và Ranh giới Transaction)*.
+* **Đang chữa cháy production:** [02](./sources/java/02-timeouts-and-exceptions.md) (tra lỗi socket/timeout) → [04](./sources/java/04-java-thread-lifecycle.md) §6 (đọc Thread Dump) → [10](./sources/java/10-transactional-five-traps.md) (check cạn connection do Transaction) → [06](./sources/java/06-tomcat-threadpool-taskqueue.md)/[07](./sources/java/07-threadpool-sizing.md)/[08](./sources/java/08-database-connection-pool-sizing.md) (tuỳ điểm nghẽn).
 
 ## 📊 Bảng tra cứu Prometheus & Micrometer Metrics cốt lõi
 
@@ -73,9 +73,30 @@ flowchart TD
 
 ## Ảnh minh hoạ
 
-Thư mục [`images/`](./images/) — 10 hình được nhúng đúng ngữ cảnh trong từng tài liệu.
+Thư mục [`sources/java/images/`](./sources/java/images/) — 21 hình được nhúng đúng ngữ cảnh trong từng tài liệu.
 
 ---
+
+## 🗂️ Cấu trúc repo
+
+```
+.
+├── sources/            # MỌI nguồn học — 1 thư mục = 1 lĩnh vực, tên = id trong webapp/js/data/fields.js
+│   ├── README.md       # quy ước đặt tên, cách thêm nguồn mới
+│   ├── kubernetes/     # certs/ · kubernetes-in-action/ · cka-study-guide/ · kubernetes-up-and-running/
+│   ├── java/           # 10 bài Java & Spring Boot Scalability + images/
+│   ├── sysprog/ · modern-java/ · ddia/ · kafka/ · modern-concurrency/
+│   └── spring-start/ · spring-security/ · senior-java/
+├── inbox/              # nguồn thô CHƯA tích hợp (không vào app)
+├── webapp/             # DevPrep — vanilla JS, không build
+│   ├── js/data/<lĩnh vực>/   # dữ liệu học tập, gương của sources/
+│   ├── scripts/        # dev.sh · build-content.sh · check-data.mjs
+│   └── content/        # ảnh gương của sources/ trừ PDF, sinh lúc chạy (gitignored)
+├── docs/superpowers/   # spec & kế hoạch từng lần tích hợp
+└── Dockerfile · docker-compose.yml · .github/workflows/deploy-pages.yml
+```
+
+PDF sách gốc nằm trong `pdf/` của từng thư mục nguồn và **không** được đưa vào bản deploy hay image Docker. Chi tiết quy ước: [`sources/README.md`](./sources/README.md).
 
 ## 📚 DevPrep — nền tảng học đa lĩnh vực
 
@@ -83,27 +104,27 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 
 | Thành phần | Mô tả |
 |---|---|
-| [`CKAD/CKAD-Prerequisites.md`](./CKAD/CKAD-Prerequisites.md) | Kiến thức nền: Linux, vim, Docker, YAML |
-| [`CKAD/CKAD-Study-Guide.md`](./CKAD/CKAD-Study-Guide.md) | Lộ trình học 8–10 tuần + chiến lược làm bài thi |
-| [`CKAD/CKAD-Cheat-Sheet.md`](./CKAD/CKAD-Cheat-Sheet.md) | Tra cứu nhanh lệnh & YAML mẫu theo 20 chủ đề |
-| [`CKA/`](./CKA/), [`CKS/`](./CKS/) | Study guide + cheat sheet cho CKA (quản trị cluster) và CKS (bảo mật) |
-| [`System_Programming_VI/`](./System_Programming_VI/) | Bản dịch tiếng Việt System Programming Coursebook (UIUC CS 241), 18 chương, CC BY 4.0 |
-| [`k8s-ebook/`](./k8s-ebook/) | Bản dịch tiếng Việt *Kubernetes in Action*, ấn bản 2 (Marko Lukša, Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 17 chương, 184 hình. Đọc trong app ở lĩnh vực Kubernetes. |
-| [`cka-book-vi/`](./cka-book-vi/) | Bản dịch tiếng Việt *Certified Kubernetes Administrator (CKA) Study Guide*, ấn bản 2 (Benjamin Muschko, O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 22 chương + 1 phụ lục đáp án, 50 hình. Đọc trong app ở lĩnh vực Kubernetes, kèm lộ trình nước rút ôn thi 6 tuần. |
-| [`kuar-vi/`](./kuar-vi/) | Bản dịch tiếng Việt *Kubernetes: Up and Running*, ấn bản 3 (Brendan Burns, Joe Beda, Kelsey Hightower, Lachlan Evenson — O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 22 chương + 1 phụ lục, 18 hình. Đọc trong app ở lĩnh vực Kubernetes, kèm lộ trình đọc 9 tuần. |
-| [`spring-start-vi/`](./spring-start-vi/) | Bản dịch tiếng Việt *Spring Start Here* (Laurențiu Spilcă, Manning 2021) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 15 chương + 1 hướng dẫn học, 179 hình. Đọc trong app ở lĩnh vực Spring Start Here, kèm lộ trình đọc 8 tuần. |
-| [`spring-security-vi/`](./spring-security-vi/) | Bản dịch tiếng Việt *Spring Security in Action*, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. Lời giới thiệu + 18 chương + 2 phụ lục (21 tệp). Đọc trong app ở lĩnh vực Spring Security. |
-| [`senior-java-roadmap/`](./senior-java-roadmap/) | Kế hoạch tự học 24 tháng từ Mid-level lên Senior Java + DevOps: 4 giai đoạn (Java/Spring, DevOps, K8s/Cloud, System Design), 5 tài liệu. Đọc trong app ở lĩnh vực Lộ trình Senior Java, kèm ma trận năng lực 96 tiêu chí. |
-| [`modern-concurrency-vi/`](./modern-concurrency-vi/) | Bản dịch tiếng Việt *Modern Concurrency in Java* (O'Reilly, ISBN 9781098165406) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 8 chương, 19 hình. Đọc trong app ở lĩnh vực Modern Concurrency in Java. |
-| [`ddia-vi/`](./ddia-vi/) | Bản dịch tiếng Việt *Designing Data-Intensive Applications*, ấn bản 2 (Martin Kleppmann, O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 14 chương, 105 hình. Đọc trong app ở lĩnh vực Designing Data-Intensive Applications, kèm lộ trình đọc 12 tuần. |
-| [`kafka-vi/`](./kafka-vi/) | Bản dịch tiếng Việt *Kafka: The Definitive Guide*, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 13 chương (2–14), 47 hình. Đọc trong app ở lĩnh vực Kafka: The Definitive Guide, kèm lộ trình đọc 11 tuần. |
-| [`modern-java-vi/`](./modern-java-vi/) | Bản dịch tiếng Việt *Modern Java in Action* (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 21 chương, 100 hình. Đọc trong app ở lĩnh vực Modern Java in Action, kèm lộ trình đọc 12 tuần. |
+| [`sources/kubernetes/certs/CKAD-Prerequisites.md`](./sources/kubernetes/certs/CKAD-Prerequisites.md) | Kiến thức nền: Linux, vim, Docker, YAML |
+| [`sources/kubernetes/certs/CKAD-Study-Guide.md`](./sources/kubernetes/certs/CKAD-Study-Guide.md) | Lộ trình học 8–10 tuần + chiến lược làm bài thi |
+| [`sources/kubernetes/certs/CKAD-Cheat-Sheet.md`](./sources/kubernetes/certs/CKAD-Cheat-Sheet.md) | Tra cứu nhanh lệnh & YAML mẫu theo 20 chủ đề |
+| [`sources/kubernetes/certs/`](./sources/kubernetes/certs/) (CKA-*, CKS-*) | Study guide + cheat sheet cho CKA (quản trị cluster) và CKS (bảo mật) |
+| [`sources/sysprog/`](./sources/sysprog/) | Bản dịch tiếng Việt System Programming Coursebook (UIUC CS 241), 18 chương, CC BY 4.0 |
+| [`sources/kubernetes/kubernetes-in-action/`](./sources/kubernetes/kubernetes-in-action/) | Bản dịch tiếng Việt *Kubernetes in Action*, ấn bản 2 (Marko Lukša, Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 17 chương, 184 hình. Đọc trong app ở lĩnh vực Kubernetes. |
+| [`sources/kubernetes/cka-study-guide/`](./sources/kubernetes/cka-study-guide/) | Bản dịch tiếng Việt *Certified Kubernetes Administrator (CKA) Study Guide*, ấn bản 2 (Benjamin Muschko, O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 22 chương + 1 phụ lục đáp án, 50 hình. Đọc trong app ở lĩnh vực Kubernetes, kèm lộ trình nước rút ôn thi 6 tuần. |
+| [`sources/kubernetes/kubernetes-up-and-running/`](./sources/kubernetes/kubernetes-up-and-running/) | Bản dịch tiếng Việt *Kubernetes: Up and Running*, ấn bản 3 (Brendan Burns, Joe Beda, Kelsey Hightower, Lachlan Evenson — O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 22 chương + 1 phụ lục, 18 hình. Đọc trong app ở lĩnh vực Kubernetes, kèm lộ trình đọc 9 tuần. |
+| [`sources/spring-start/`](./sources/spring-start/) | Bản dịch tiếng Việt *Spring Start Here* (Laurențiu Spilcă, Manning 2021) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 15 chương + 1 hướng dẫn học, 179 hình. Đọc trong app ở lĩnh vực Spring Start Here, kèm lộ trình đọc 8 tuần. |
+| [`sources/spring-security/`](./sources/spring-security/) | Bản dịch tiếng Việt *Spring Security in Action*, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. Lời giới thiệu + 18 chương + 2 phụ lục (21 tệp). Đọc trong app ở lĩnh vực Spring Security. |
+| [`sources/senior-java/`](./sources/senior-java/) | Kế hoạch tự học 24 tháng từ Mid-level lên Senior Java + DevOps: 4 giai đoạn (Java/Spring, DevOps, K8s/Cloud, System Design), 5 tài liệu. Đọc trong app ở lĩnh vực Lộ trình Senior Java, kèm ma trận năng lực 96 tiêu chí. |
+| [`sources/modern-concurrency/`](./sources/modern-concurrency/) | Bản dịch tiếng Việt *Modern Concurrency in Java* (O'Reilly, ISBN 9781098165406) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 8 chương, 19 hình. Đọc trong app ở lĩnh vực Modern Concurrency in Java. |
+| [`sources/ddia/`](./sources/ddia/) | Bản dịch tiếng Việt *Designing Data-Intensive Applications*, ấn bản 2 (Martin Kleppmann, O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 14 chương, 105 hình. Đọc trong app ở lĩnh vực Designing Data-Intensive Applications, kèm lộ trình đọc 12 tuần. |
+| [`sources/kafka/`](./sources/kafka/) | Bản dịch tiếng Việt *Kafka: The Definitive Guide*, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 13 chương (2–14), 47 hình. Đọc trong app ở lĩnh vực Kafka: The Definitive Guide, kèm lộ trình đọc 11 tuần. |
+| [`sources/modern-java/`](./sources/modern-java/) | Bản dịch tiếng Việt *Modern Java in Action* (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 21 chương, 100 hình. Đọc trong app ở lĩnh vực Modern Java in Action, kèm lộ trình đọc 12 tuần. |
 | [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (Kubernetes & chứng chỉ, System Programming, Java & Spring Boot Scalability, Modern Java in Action, Designing Data-Intensive Applications, Kafka: The Definitive Guide, Modern Concurrency in Java, Spring Start Here, Spring Security, Lộ trình Senior Java): lộ trình tương tác (17 giáo trình, 804 mục), thư viện tài liệu (196 tài liệu), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs thực hành, tra cứu kubectl. Không cần build, không dependency. |
 
 ### Chạy local
 
 ```bash
-./webapp/dev.sh          # mở http://localhost:8888
+./webapp/scripts/dev.sh          # mở http://localhost:8888
 ```
 
 ### Deploy lên GitHub Pages

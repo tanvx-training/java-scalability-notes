@@ -3,7 +3,7 @@
 
 import { h, pageHead, inlineMd, codeNode, shuffle, certBadge, domainBadge, fmtClock, fmtDate } from "../lib/ui.js";
 import { store } from "../lib/store.js";
-import { questions } from "../data/questions.js";
+import { questions } from "../data/kubernetes/questions.js";
 import { DOMAINS } from "../data/meta.js";
 
 const OPT_KEYS = ["A", "B", "C", "D"];

@@ -3,7 +3,8 @@
 // và mermaid diagram (nạp lười từ CDN, offline thì hiển thị nguồn).
 
 import { h, pageHead, mdInto } from "../lib/ui.js";
-import { docs, FIELDS } from "../data/docs-index.js";
+import { docs } from "../data/docs-index.js";
+import { FIELDS } from "../data/fields.js";
 import { getDocs, fieldOfRecord } from "../data/index.js";
 import { currentField } from "../lib/field.js";
 
@@ -102,8 +103,8 @@ async function renderDoc(root, doc) {
         h("p", {}, h("strong", {}, "Chưa tải được nội dung tài liệu.")),
         h("p", { class: "small" },
           "Khi chạy local, hãy khởi động bằng script ",
-          h("code", {}, "webapp/dev.sh"),
-          " (script sẽ copy các file markdown của repo vào webapp/content/ rồi mở server)."))
+          h("code", {}, "webapp/scripts/dev.sh"),
+          " (script sẽ sao chép sources/ vào webapp/content/ rồi mở server)."))
     );
     return;
   }

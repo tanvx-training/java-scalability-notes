@@ -4,7 +4,7 @@ import { h } from "../lib/ui.js";
 import { store } from "../lib/store.js";
 import { getDocs, getFlashcards, getQuestions, getMatrices, getTracks } from "../data/index.js";
 import { FIELDS, FIELD_ORDER, moduleAllowed } from "../data/fields.js";
-import { labs } from "../data/labs.js";
+import { labs } from "../data/kubernetes/labs.js";
 import { currentField } from "../lib/field.js";
 
 function roadmapStats(fieldKey) {

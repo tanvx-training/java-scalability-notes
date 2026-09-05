@@ -32,7 +32,7 @@ Bản ghi Kubernetes không khai trường `field` tường minh — được co
 ## Chạy local
 
 ```bash
-./webapp/dev.sh        # http://localhost:8888 (cổng tùy chọn: ./webapp/dev.sh 3000)
+./webapp/scripts/dev.sh        # http://localhost:8888 (cổng tùy chọn: ./webapp/scripts/dev.sh 3000)
 ```
 
 Script gọi `build-content.sh` để copy toàn bộ markdown của repo (`CKAD/`, `CKA/`, `CKS/`, `System_Programming_VI/`, `k8s-ebook/`, `spring-security-vi/`, `senior-java-roadmap/`, các bài `Chủ đề *`) và ảnh minh họa vào `webapp/content/` (thư mục này nằm trong `.gitignore` — nguồn chuẩn vẫn ở repo) rồi chạy `python3 -m http.server`.
@@ -47,8 +47,8 @@ Chỉ cần bật một lần: **Settings → Pages → Source: GitHub Actions**
 ## Kiểm tra dữ liệu
 
 ```bash
-./webapp/build-content.sh webapp/content
-node webapp/check-data.mjs
+./webapp/scripts/build-content.sh webapp/content
+node webapp/scripts/check-data.mjs
 ```
 
 Kiểm id trùng, link `#/docs` hỏng, khoá phân loại sai và số lượng bản ghi.
@@ -90,4 +90,4 @@ webapp/
                           # flashcards, quiz, exam, labs, tracker
 ```
 
-Muốn thêm câu hỏi/flashcard/lab: sửa file tương ứng trong `js/data/` theo đúng schema có sẵn ở đầu mỗi file, chạy `node webapp/check-data.mjs` để kiểm — không cần đụng vào code view.
+Muốn thêm câu hỏi/flashcard/lab: sửa file tương ứng trong `js/data/` theo đúng schema có sẵn ở đầu mỗi file, chạy `node webapp/scripts/check-data.mjs` để kiểm — không cần đụng vào code view.

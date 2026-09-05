@@ -1,5 +1,5 @@
 services:
-  kubeprep:
+  devprep:
     build: .
     ports:
       - "9020:80"

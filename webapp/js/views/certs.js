@@ -1,7 +1,7 @@
 // Tổng quan các chứng chỉ Kubernetes + lộ trình gợi ý.
 
 import { h, pageHead, certBadge } from "../lib/ui.js";
-import { certs, certPaths } from "../data/certs.js";
+import { certs, certPaths } from "../data/kubernetes/certs.js";
 
 export function render(root) {
   const page = h("div", { class: "page page-wide" });

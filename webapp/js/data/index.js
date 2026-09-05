@@ -7,12 +7,12 @@ import { DEFAULT_FIELD, isField } from "./fields.js";
 import { DOMAINS, TOPICS } from "./meta.js";
 import { docs } from "./docs-index.js";
 import { tracks } from "./roadmap.js";
-import { flashcards } from "./flashcards.js";
-import { sysprogFlashcards } from "./sysprog-flashcards.js";
-import { questions } from "./questions.js";
-import { sysprogQuestionsPart1 } from "./sysprog-questions-part1.js";
-import { sysprogQuestionsPart2 } from "./sysprog-questions-part2.js";
-import { seniorJavaMatrix } from "./senior-java-matrix.js";
+import { flashcards } from "./kubernetes/flashcards.js";
+import { sysprogFlashcards } from "./sysprog/flashcards.js";
+import { questions } from "./kubernetes/questions.js";
+import { sysprogQuestionsPart1 } from "./sysprog/questions-part1.js";
+import { sysprogQuestionsPart2 } from "./sysprog/questions-part2.js";
+import { seniorJavaMatrix } from "./senior-java/matrix.js";
 
 export const allDocs = docs;
 export const allTracks = tracks;

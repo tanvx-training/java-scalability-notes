@@ -1,14 +1,16 @@
 # syntax=docker/dockerfile:1
 
 ########################
-# Stage 1: build nội dung (giống logic dev.sh)
+# Stage 1: dựng nội dung (cùng logic với webapp/scripts/dev.sh)
 ########################
 FROM debian:bookworm-slim AS builder
 
 WORKDIR /repo
-COPY . .
+COPY sources/ sources/
+COPY webapp/  webapp/
 
-RUN webapp/build-content.sh webapp/content
+RUN webapp/scripts/build-content.sh webapp/content \
+ && rm -rf webapp/scripts webapp/package.json webapp/README.md
 
 ########################
 # Stage 2: serve bằng nginx

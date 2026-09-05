@@ -6,11 +6,11 @@
 import { h, pageHead, inlineMd, codeNode, certBadge } from "../lib/ui.js";
 import { escapeHtml } from "../lib/markdown.js";
 import { store } from "../lib/store.js";
-import { commands } from "../data/commands.js";
-import { adminCommands } from "../data/commands-admin.js";
-import { snippets } from "../data/snippets.js";
-import { playbooks } from "../data/playbooks.js";
-import { examDay } from "../data/examday.js";
+import { commands } from "../data/kubernetes/commands.js";
+import { adminCommands } from "../data/kubernetes/commands-admin.js";
+import { snippets } from "../data/kubernetes/snippets.js";
+import { playbooks } from "../data/kubernetes/playbooks.js";
+import { examDay } from "../data/kubernetes/examday.js";
 import { COMMAND_CATEGORIES } from "../data/meta.js";
 
 const ALL_CMDS = [...commands, ...adminCommands];

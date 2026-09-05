@@ -1,0 +1,10 @@
+# Chỉ những gì build-content.sh và nginx cần mới vào build context.
+.git
+.github
+.superpowers
+docs
+inbox
+**/pdf/
+*.pdf
+webapp/content
+**/.DS_Store

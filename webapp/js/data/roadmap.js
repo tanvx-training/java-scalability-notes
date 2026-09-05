@@ -7,24 +7,21 @@
 // track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
 // (markdown), mỗi tuần kèm tài nguyên liên quan.
 //
-// Nội dung tách file theo track/tuần để dễ bảo trì:
-//   CKAD: roadmap-part{1,2,3}.js      (Tuần 1–3 / 4–5 / 6–10) — 55 bài
-//   CKA : cka-roadmap-part{1,2,3}.js  (Tuần 1–3 / 4–6 / 7–10) — 55 bài
-//   CKS : cks-roadmap-part{1,2}.js    (Tuần 1–4 / 5–10)       — 44 bài
-//   SP  : sysprog-roadmap-part{1,2}.js  (Tuần 1–5 / 6–10)      — 50 mục
-//   KIA : k8sbook-roadmap-part{1,2}.js   (Tuần 1–5 / 6–9)       — 30 mục
-//   CKAB: ckabook-roadmap.js         (Tuần 1–6)              — 24 mục
-//   KUAR: kuar-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)        — 36 mục
-//   SSIA: springsec-roadmap-part{1,2}.js (Tuần 1–5 / 6–9)       — 30 mục
-//   MCJ : modconc-roadmap-part{1,2}.js  (Tuần 1–5 / 6–9)       — 32 mục
-//   DDIA: ddia-roadmap-part{1,2}.js  (Tuần 1–6 / 7–12)      — 48 mục
-//   MJIA: mjia-roadmap-part{1,2}.js (Tuần 1–6 / 7–12)      — 48 mục
-//   Kafka: kafka-roadmap-part{1,2}.js (Tuần 1–6 / 7–11)      — 44 mục
-//   SSH : springstart-roadmap-part{1,2}.js (Tuần 1–4 / 5–8)   — 32 mục
-//   SJ1 : senior-java-gd1.js (Tuần 1–26) — 81 mục
-//   SJ2 : senior-java-gd2.js (Tuần 1–26) — 66 mục
-//   SJ3 : senior-java-gd3.js (Tuần 1–26) — 64 mục
-//   SJ4 : senior-java-gd4.js (Tuần 1–26) — 65 mục
+// Nội dung tách tệp theo lĩnh vực (js/data/<fieldId>/) rồi theo track/tuần:
+//   kubernetes/roadmap-ckad-part{1,2,3}.js  (Tuần 1–3 / 4–5 / 6–10) — 55 bài
+//   kubernetes/roadmap-cka-part{1,2,3}.js   (Tuần 1–3 / 4–6 / 7–10) — 55 bài
+//   kubernetes/roadmap-cks-part{1,2}.js     (Tuần 1–4 / 5–10)       — 44 bài
+//   kubernetes/roadmap-kia-part{1,2}.js     (Tuần 1–5 / 6–9)        — 30 mục  (Kubernetes in Action)
+//   kubernetes/roadmap-ckabook.js           (Tuần 1–6)              — 24 mục  (CKA Study Guide)
+//   kubernetes/roadmap-kuar-part{1,2}.js    (Tuần 1–5 / 6–9)        — 36 mục  (Kubernetes: Up and Running)
+//   sysprog/roadmap-part{1,2}.js            (Tuần 1–5 / 6–10)       — 50 mục
+//   spring-security/roadmap-part{1,2}.js    (Tuần 1–5 / 6–9)        — 30 mục
+//   modern-concurrency/roadmap-part{1,2}.js (Tuần 1–5 / 6–9)        — 32 mục
+//   ddia/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
+//   modern-java/roadmap-part{1,2}.js        (Tuần 1–6 / 7–12)       — 48 mục
+//   kafka/roadmap-part{1,2}.js              (Tuần 1–6 / 7–11)       — 44 mục
+//   spring-start/roadmap-part{1,2}.js       (Tuần 1–4 / 5–8)        — 32 mục
+//   senior-java/roadmap-gd{1,2,3,4}.js      (Tuần 1–26 mỗi giai đoạn) — 81 / 66 / 64 / 65 mục
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
@@ -32,37 +29,37 @@
 // mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
-import { weeksPart1 } from "./roadmap-part1.js";
-import { weeksPart2 } from "./roadmap-part2.js";
-import { weeksPart3 } from "./roadmap-part3.js";
-import { ckaWeeksPart1 } from "./cka-roadmap-part1.js";
-import { ckaWeeksPart2 } from "./cka-roadmap-part2.js";
-import { ckaWeeksPart3 } from "./cka-roadmap-part3.js";
-import { cksWeeksPart1 } from "./cks-roadmap-part1.js";
-import { cksWeeksPart2 } from "./cks-roadmap-part2.js";
-import { sysprogWeeksPart1 } from "./sysprog-roadmap-part1.js";
-import { sysprogWeeksPart2 } from "./sysprog-roadmap-part2.js";
-import { k8sbookWeeksPart1 } from "./k8sbook-roadmap-part1.js";
-import { k8sbookWeeksPart2 } from "./k8sbook-roadmap-part2.js";
-import { ckabookWeeks } from "./ckabook-roadmap.js";
-import { kuarWeeksPart1 } from "./kuar-roadmap-part1.js";
-import { kuarWeeksPart2 } from "./kuar-roadmap-part2.js";
-import { springsecWeeksPart1 } from "./springsec-roadmap-part1.js";
-import { springsecWeeksPart2 } from "./springsec-roadmap-part2.js";
-import { modconcWeeksPart1 } from "./modconc-roadmap-part1.js";
-import { modconcWeeksPart2 } from "./modconc-roadmap-part2.js";
-import { ddiaWeeksPart1 } from "./ddia-roadmap-part1.js";
-import { ddiaWeeksPart2 } from "./ddia-roadmap-part2.js";
-import { mjiaWeeksPart1 } from "./mjia-roadmap-part1.js";
-import { mjiaWeeksPart2 } from "./mjia-roadmap-part2.js";
-import { kafkaWeeksPart1 } from "./kafka-roadmap-part1.js";
-import { kafkaWeeksPart2 } from "./kafka-roadmap-part2.js";
-import { springStartWeeksPart1 } from "./springstart-roadmap-part1.js";
-import { springStartWeeksPart2 } from "./springstart-roadmap-part2.js";
-import { seniorJavaGd1 } from "./senior-java-gd1.js";
-import { seniorJavaGd2 } from "./senior-java-gd2.js";
-import { seniorJavaGd3 } from "./senior-java-gd3.js";
-import { seniorJavaGd4 } from "./senior-java-gd4.js";
+import { weeksPart1 } from "./kubernetes/roadmap-ckad-part1.js";
+import { weeksPart2 } from "./kubernetes/roadmap-ckad-part2.js";
+import { weeksPart3 } from "./kubernetes/roadmap-ckad-part3.js";
+import { ckaWeeksPart1 } from "./kubernetes/roadmap-cka-part1.js";
+import { ckaWeeksPart2 } from "./kubernetes/roadmap-cka-part2.js";
+import { ckaWeeksPart3 } from "./kubernetes/roadmap-cka-part3.js";
+import { cksWeeksPart1 } from "./kubernetes/roadmap-cks-part1.js";
+import { cksWeeksPart2 } from "./kubernetes/roadmap-cks-part2.js";
+import { sysprogWeeksPart1 } from "./sysprog/roadmap-part1.js";
+import { sysprogWeeksPart2 } from "./sysprog/roadmap-part2.js";
+import { k8sbookWeeksPart1 } from "./kubernetes/roadmap-kia-part1.js";
+import { k8sbookWeeksPart2 } from "./kubernetes/roadmap-kia-part2.js";
+import { ckabookWeeks } from "./kubernetes/roadmap-ckabook.js";
+import { kuarWeeksPart1 } from "./kubernetes/roadmap-kuar-part1.js";
+import { kuarWeeksPart2 } from "./kubernetes/roadmap-kuar-part2.js";
+import { springsecWeeksPart1 } from "./spring-security/roadmap-part1.js";
+import { springsecWeeksPart2 } from "./spring-security/roadmap-part2.js";
+import { modconcWeeksPart1 } from "./modern-concurrency/roadmap-part1.js";
+import { modconcWeeksPart2 } from "./modern-concurrency/roadmap-part2.js";
+import { ddiaWeeksPart1 } from "./ddia/roadmap-part1.js";
+import { ddiaWeeksPart2 } from "./ddia/roadmap-part2.js";
+import { mjiaWeeksPart1 } from "./modern-java/roadmap-part1.js";
+import { mjiaWeeksPart2 } from "./modern-java/roadmap-part2.js";
+import { kafkaWeeksPart1 } from "./kafka/roadmap-part1.js";
+import { kafkaWeeksPart2 } from "./kafka/roadmap-part2.js";
+import { springStartWeeksPart1 } from "./spring-start/roadmap-part1.js";
+import { springStartWeeksPart2 } from "./spring-start/roadmap-part2.js";
+import { seniorJavaGd1 } from "./senior-java/roadmap-gd1.js";
+import { seniorJavaGd2 } from "./senior-java/roadmap-gd2.js";
+import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
+import { seniorJavaGd4 } from "./senior-java/roadmap-gd4.js";
 import { bookCrossref } from "./book-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 

@@ -1,7 +1,7 @@
-# Deploy KubePrep (webapp/) lên GitHub Pages.
+# Deploy DevPrep (webapp/) lên GitHub Pages.
 # Kích hoạt: Settings → Pages → Source: "GitHub Actions" (chỉ cần làm 1 lần).
 
-name: Deploy KubePrep to GitHub Pages
+name: Deploy DevPrep to GitHub Pages
 
 on:
   push:
@@ -30,10 +30,10 @@ jobs:
           node-version: "22"
 
       - name: Build content
-        run: webapp/build-content.sh webapp/content
+        run: webapp/scripts/build-content.sh webapp/content
 
       - name: Check data integrity
-        run: node webapp/check-data.mjs
+        run: node webapp/scripts/check-data.mjs
 
   deploy:
     needs: check
@@ -49,8 +49,8 @@ jobs:
         run: |
           mkdir -p _site
           cp -r webapp/. _site/
-          rm -f _site/dev.sh _site/build-content.sh _site/check-data.mjs _site/package.json
-          webapp/build-content.sh _site/content
+          rm -rf _site/scripts _site/package.json _site/README.md
+          webapp/scripts/build-content.sh _site/content
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

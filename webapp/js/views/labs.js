@@ -2,7 +2,7 @@
 // kèm đồng hồ bấm giờ so với thời gian mục tiêu.
 
 import { h, pageHead, mdInto, inlineMd, domainBadge, diffBadge, fmtClock } from "../lib/ui.js";
-import { labs } from "../data/labs.js";
+import { labs } from "../data/kubernetes/labs.js";
 import { DOMAINS, DIFFICULTY } from "../data/meta.js";
 
 let watchId = null;

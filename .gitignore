@@ -4,5 +4,6 @@
 *.tmp
 temp/
 
-# KubePrep: nội dung markdown được copy vào lúc chạy dev.sh / deploy
+# DevPrep: webapp/content/ là ảnh gương của sources/ do scripts/build-content.sh tạo
+# lúc chạy dev.sh / Docker / deploy — không commit.
 webapp/content/
