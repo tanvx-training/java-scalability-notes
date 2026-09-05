@@ -127,4 +127,121 @@ export const springStartWeeksPart2 = [
       },
     ],
   },
+  {
+    id: "sh-w7",
+    week: "Tuần 7",
+    title: "Gọi REST endpoint và dùng data source",
+    goal: "Mở ứng dụng ra hai phía: gọi được REST endpoint của một service khác bằng cả ba công cụ Spring cung cấp và chọn đúng công cụ theo tiêu chí sách đưa ra, rồi nối được ứng dụng xuống một relational database qua data source và đọc ghi bằng `JdbcTemplate`.",
+    practice:
+      "Viết một ứng dụng thứ hai gọi chính REST endpoint bạn đã viết ở tuần 6, bằng cả ba cách của chương 11 — OpenFeign, `RestTemplate`, `WebClient`. Ghi lại cách nào ít code nhất và cách nào chặn thread. Rồi nối một H2 in-memory data source vào ứng dụng và viết một insert cùng một select bằng `JdbcTemplate`.",
+    resources: [
+      { label: "Spring Start 11 — Sử dụng các REST endpoint", href: "#/docs/springstart-11" },
+      { label: "Spring Start 12 — Sử dụng data source trong ứng dụng Spring", href: "#/docs/springstart-12" },
+    ],
+    items: [
+      {
+        id: "sh-w7-1",
+        text: "Gọi REST endpoint bằng Spring Cloud OpenFeign",
+        lesson: `**Mục tiêu.** Gọi được một REST endpoint từ ứng dụng Spring mà không tự viết dòng code HTTP nào: khai một interface, gắn annotation, và để OpenFeign cung cấp phần triển khai.
+
+**Đọc.** Phần mở chương 11 xếp hạng ba công cụ ngay từ đầu: OpenFeign là thứ tác giả khuyên dùng cho mọi triển khai mới. Dựng dự án nền "sq-ch11-payments" theo Listing 11.1 — action \`@PostMapping("/payment")\` nhận \`@RequestHeader\` cùng \`@RequestBody\`, gán một ID ngẫu nhiên rồi trả \`ResponseEntity\` có header; bạn sẽ gọi lại đúng endpoint này ở cả ba mục. [11.1 Gọi các REST endpoint bằng Spring Cloud OpenFeign](#/docs/springstart-11) là phần làm thật trong "sq-ch11-ex1": thêm dependency \`spring-cloud-starter-openfeign\`, rồi gõ lại Listing 11.2 — interface \`PaymentsProxy\` mang \`@FeignClient\` với hai thuộc tính \`name\` và \`url\`. Đọc kỹ Hình 11.5 tới khi nói được OpenFeign đặt cái gì vào Spring context. Chép ra ba dòng annotation tái sử dụng: \`@PostMapping\` cho đường dẫn và HTTP method, \`@RequestHeader\` cho header, \`@RequestBody\` cho body — đúng bộ tuần 6 đã dùng, không có gì mới phải học. Listing 11.3 bật client bằng \`@EnableFeignClients\`, Listing 11.4 inject proxy vào controller. Khép buổi bằng chạy thật cả hai ứng dụng rồi gọi cURL POST tới port 9090.
+
+**Bẫy.** Viết thẳng địa chỉ "http://localhost:8080" vào thuộc tính \`url\` của \`@FeignClient\` cho nhanh. Khối LƯU Ý ngay sau đoạn giải thích \`@FeignClient\` nói rõ: hãy đảm bảo bạn luôn lưu các URI và những chi tiết khác có thể khác nhau giữa các môi trường trong các properties file, và không bao giờ hardcode chúng trong ứng dụng. Bẫy thứ hai: khai xong \`@FeignClient\` rồi tưởng thế là đủ, và không hiểu vì sao chẳng có bean nào để inject. Sách nêu điều kiện còn thiếu ngay trước Listing 11.3: OpenFeign cần biết nơi tìm các interface định nghĩa các hợp đồng client, nên bạn phải đặt \`@EnableFeignClients\` trên một class cấu hình và trỏ \`basePackages\` vào đúng package chứa interface đó.
+
+**Tự kiểm tra.** Trong Listing 11.2, thuộc tính nào của \`@FeignClient\` định danh duy nhất client trong ứng dụng, và thuộc tính nào chỉ ra URI gốc của endpoint? Và theo Hình 11.5, thứ bạn inject vào controller là do ai triển khai?`,
+      },
+      {
+        id: "sh-w7-2",
+        text: "RestTemplate và WebClient — ba lựa chọn khác nhau ở đâu",
+        lesson: `**Mục tiêu.** Viết được cùng một lời gọi bằng \`RestTemplate\` rồi bằng \`WebClient\`, đọc ra khác biệt về lượng code và về cách thread hành xử, và chọn được công cụ theo tiêu chí sách đưa ra.
+
+**Đọc.** [11.2 Gọi các REST endpoint bằng RestTemplate](#/docs/springstart-11) chép ba bước ra giấy trước khi gõ code: tạo và cấu hình một \`HttpHeaders\`, tạo một \`HttpEntity\` đại diện cho header cùng body, rồi gửi bằng method \`exchange()\`. Gõ lại Listing 11.5 trong "sq-ch11-ex2" rồi đếm số dòng so với Listing 11.2 buổi trước — đó là bằng chứng cho ba thứ sách nói lập trình viên muốn mà công cụ này không cho dễ dàng. [11.3 Gọi các REST endpoint bằng WebClient](#/docs/springstart-11) là mục đọc chậm nhất tuần, nhưng đọc để hiểu ý chứ không để thuộc. Đặt Hình 11.8 cạnh Hình 11.10 rồi chép ra hai vấn đề sách nêu ở cách không reactive: thread nằm rảnh chờ I/O mà vẫn chiếm bộ nhớ, và các tác vụ vốn độc lập bị ép chạy tuần tự. Rồi làm "sq-ch11-ex3" với dependency \`spring-boot-starter-webflux\`: Listing 11.7 đặt bean \`WebClient\`, Listing 11.8 xâu chuỗi \`post()\`, \`uri()\`, \`header()\`, \`body()\`, \`retrieve()\`, \`bodyToMono()\`.
+
+**Bẫy.** Bỏ qua \`RestTemplate\` vì nó đã vào chế độ bảo trì và sẽ bị đánh dấu lỗi thời. Khối LƯU Ý giữa mục 11.2 chặn đúng phản xạ đó: khi thứ gì bị gọi là "deprecated" hay "legacy", điều đó không nhất thiết có nghĩa là bạn không nên học nó — các công nghệ lỗi thời vẫn được dùng trong dự án nhiều năm sau khi bị tuyên bố lỗi thời. Bẫy thứ hai: đọc tài liệu thấy khuyến nghị \`WebClient\` rồi chuyển cả ứng dụng sang nó. Khối LƯU Ý khép mục 11.3 nói ngược lại: nếu bạn quyết định không triển khai một ứng dụng reactive, hãy dùng OpenFeign; chỉ ứng dụng reactive mới nên dùng một công cụ reactive đúng nghĩa là \`WebClient\`.
+
+**Tự kiểm tra.** Trong Listing 11.8, method của proxy trả về kiểu \`Mono\`, và theo sách \`Mono\` đóng vai trò gì trong cặp producer với subscriber? Và giữa ba công cụ của chương, phần Tóm tắt nói bạn không nên dùng cái nào trong các triển khai mới?`,
+      },
+      {
+        id: "sh-w7-3",
+        text: "Data source là gì, và làm việc với dữ liệu bằng JdbcTemplate",
+        lesson: `**Mục tiêu.** Nói được data source giải quyết vấn đề gì so với việc tự xin kết nối cho từng thao tác, và viết được một insert cùng một select bằng \`JdbcTemplate\` mà không đụng tới \`PreparedStatement\`.
+
+**Đọc.** [12.1 Data source là gì](#/docs/springstart-12) đọc lướt nhưng dừng ở hai mốc. Hình 12.3: JDK chỉ cho abstraction, còn implementation đến từ một runtime dependency tên là JDBC driver. Và khối định nghĩa data source ngay sau Hình 12.5 — chép nguyên câu đó, rồi nhớ tên implementation Spring Boot mặc định chọn: HikariCP. [12.2 Dùng JdbcTemplate để làm việc với dữ liệu được lưu trữ](#/docs/springstart-12) là buổi gõ code, dựng "sq-ch12-ex1" theo ba bước sách liệt kê. Ba dependency: starter web, starter jdbc, và h2 scope "runtime". File "schema.sql" tạo bảng purchase ba cột id, product, price. Listing 12.1 gắn \`@Repository\`; Listing 12.2 inject \`JdbcTemplate\` qua constructor — Spring Boot thấy dependency H2 thì tự cấu hình cả data source lẫn \`JdbcTemplate\`. Listing 12.3 gọi \`update()\` cho câu INSERT, dấu chấm hỏi thay chỗ cho tham số; Listing 12.4 gọi \`query()\` kèm một \`RowMapper\` viết dạng lambda. Listing 12.5 mở hai endpoint, kiểm bằng cURL POST và GET tới /purchase.
+
+**Bẫy.** Khai \`price\` là \`double\` vì ví dụ Java cơ bản nào cũng làm thế. Khối LƯU Ý ngay sau class model \`Purchase\` chặn: khi bạn muốn lưu chính xác một giá trị dấu phẩy động, hãy dùng \`BigDecimal\` chứ không phải \`double\` hay \`float\` — bạn có thể mất độ chính xác ngay cả với phép cộng hay trừ đơn giản. Bẫy thứ hai: mang cách tạo bảng bằng "schema.sql" sang một dự án thật. Khối LƯU Ý ngay sau câu CREATE TABLE giới hạn phạm vi: cách này chỉ phù hợp cho ví dụ lý thuyết; trong ví dụ thực tế bạn cần một dependency quản lý được phiên bản các script database, và tác giả chỉ đích danh Flyway cùng Liquibase.
+
+**Tự kiểm tra.** Theo chú thích của Listing 12.4, hai tham số r và i trong lambda \`RowMapper\` lần lượt là gì? Và nếu bỏ hẳn data source khỏi thiết kế, ứng dụng sẽ phải làm gì cho mỗi thao tác với dữ liệu?`,
+      },
+      {
+        id: "sh-w7-4",
+        text: "Tuỳ chỉnh cấu hình của data source",
+        lesson: `**Mục tiêu.** Trỏ được ứng dụng sang một DBMS bên ngoài chỉ bằng file properties, và biết khi nào phải tự định nghĩa bean \`DataSource\` thay vì để Spring Boot làm hộ.
+
+**Đọc.** [12.3 Tùy chỉnh cấu hình của data source](#/docs/springstart-12) đi theo đúng hai bước sách vạch ra ở đầu mục. [12.3.1 Định nghĩa data source trong file application properties](#/docs/springstart-12) làm trên "sq-ch12-ex2": bỏ dependency H2 khỏi \`pom.xml\`, thêm JDBC driver của MySQL với scope "runtime", rồi khai bốn property. Ba cái đầu dễ đoán — \`spring.datasource.url\`, \`spring.datasource.username\`, \`spring.datasource.password\`. Cái thứ tư mới là chỗ dễ mất cả buổi tối: \`spring.datasource.initialization-mode\` phải đặt giá trị "always" thì Spring Boot mới chạy "schema.sql" và tạo bảng purchase, còn với H2 thì mặc định nó đã chạy file này rồi. [12.3.2 Dùng bean DataSource tùy chỉnh](#/docs/springstart-12) chép ra bốn tình huống buộc bạn tự khai bean: cần một implementation chỉ xác định được lúc runtime, ứng dụng nối nhiều database nên phải phân biệt bằng qualifier, phải chỉnh tham số theo môi trường khởi động, và ứng dụng dùng Spring nhưng không dùng Spring Boot. Rồi gõ lại Listing 12.6 trong "sq-ch12-ex3": ba \`@Value\` đọc property tên bắt đầu bằng "custom", một method \`@Bean\` trả về \`HikariDataSource\` đã đặt url, username, password và \`setConnectionTimeout(1000)\`.
+
+**Bẫy.** Coi file "application.properties" là chỗ để mật khẩu database. Khối LƯU Ý ngay sau đoạn cấu hình MySQL nói rõ: lưu các bí mật như mật khẩu trong file properties không phải là thực hành tốt trong ứng dụng sẵn sàng cho production, những chi tiết riêng tư như vậy được lưu trong các kho bí mật. Bẫy thứ hai: chạy "sq-ch12-ex3", thấy GET /purchase trả về nhiều bản ghi hơn số lần bạn POST, rồi đi lục lỗi trong code. Khối LƯU Ý cuối mục giải thích: nếu bạn không dọn dẹp bảng purchase và dùng cùng database như dự án "sq-ch12-ex2", kết quả sẽ chứa cả các bản ghi bạn đã thêm trước đó.
+
+**Tự kiểm tra.** Theo chú thích của Listing 12.6, nếu context đã có sẵn một bean \`DataSource\` do bạn khai thì Spring Boot làm gì? Và vì sao ba property trong ví dụ này mang tiền tố "custom" chứ không phải "spring.datasource"?`,
+      },
+    ],
+  },
+  {
+    id: "sh-w8",
+    week: "Tuần 8",
+    title: "Transaction, Spring Data và kiểm thử",
+    goal: "Đưa dữ liệu vào cho đúng rồi chứng minh nó đúng: bọc use case trong transaction và tự kiểm chứng rollback thay vì tin nó xảy ra, thay repository viết tay bằng một interface Spring Data, và viết được cả unit test lẫn integration test cho cùng một hành vi.",
+    practice:
+      "Bọc hai lệnh ghi vào một method `@Transactional`, ném exception ở giữa, và xác nhận cả hai bị rollback. Rồi thay `JdbcTemplate` bằng một repository của Spring Data JDBC cho cùng bảng đó. Cuối cùng viết một unit test và một integration test cho **cùng một hành vi**, và ghi lại chúng khác nhau ở chỗ nào — đó chính là điểm mục 15.2 muốn dạy.",
+    resources: [
+      { label: "Spring Start 13 — Sử dụng transaction trong ứng dụng Spring", href: "#/docs/springstart-13" },
+      { label: "Spring Start 14 — Triển khai lưu trữ dữ liệu với Spring Data", href: "#/docs/springstart-14" },
+      { label: "Spring Start 15 — Kiểm thử ứng dụng Spring", href: "#/docs/springstart-15" },
+    ],
+    items: [
+      {
+        id: "sh-w8-1",
+        text: "Transaction là gì, và Spring cài đặt nó bằng cơ chế nào",
+        lesson: `**Mục tiêu.** Định nghĩa được commit và rollback bằng đúng lời của sách, và nói được Spring dựng transaction bằng cơ chế nào cùng điều kiện chính xác để nó rollback.
+
+**Đọc.** Mở chương 13 bằng ví dụ ví điện tử: John gửi $100 cho Jane, bước một rút xong, bước hai hỏng, $100 biến mất — Hình 13.2 là bức tranh dữ liệu không nhất quán mà cả chương muốn xoá bỏ. [13.1 Transaction](#/docs/springstart-13) ngắn, chép ra ba thứ: transaction là một tập hợp xác định các thao tác khả biến hoặc thực thi đúng tất cả cùng nhau hoặc hoàn toàn không, tên gọi của tính chất đó là atomicity, và hai khối định nghĩa COMMIT với ROLLBACK. [13.2 Transaction hoạt động như thế nào trong Spring](#/docs/springstart-13) là mục đọc chậm nhất tuần dù chỉ dài hai trang. Nối nó với tuần AOP: transaction là một aspect do Spring cấu hình sẵn, chặn các method bạn đánh dấu \`@Transactional\` rồi quyết định commit hay rollback. Đọc Hình 13.4 và Hình 13.5 liền nhau rồi nói ra khác biệt giữa hai hình bằng đúng một động từ. Khép buổi bằng sidebar về checked exception ở cuối mục.
+
+**Bẫy.** Bọc \`try/catch\` bên trong một method \`@Transactional\` rồi tin transaction vẫn rollback. Đây đúng là bẫy sách kể học viên trên lớp thường vấp: tác giả nhấn mạnh từ "ném ra" và nói thẳng rằng chỉ xảy ra exception bên trong method là không đủ — method transactional phải ném exception ra ngoài để aspect biết nó cần rollback; nếu method tự xử lý, aspect không thể biết exception đã xảy ra. Bẫy thứ hai: nghĩ mọi exception đều gây rollback. Sidebar "Còn checked exception trong transaction thì sao?" trả lời gọn rằng mặc định là không, Spring chỉ rollback khi gặp runtime exception; \`@Transactional\` có thuộc tính để đổi hành vi đó, nhưng tác giả khuyên trừ khi cần thiết hãy cứ dựa vào mặc định.
+
+**Tự kiểm tra.** Theo sidebar, vì sao tác giả cho rằng một tình huống được biểu diễn bằng checked exception không phải là vấn đề có thể gây không nhất quán dữ liệu? Và trong tình huống của Hình 13.5, aspect kết thúc transaction bằng commit hay bằng rollback?`,
+      },
+      {
+        id: "sh-w8-2",
+        text: "Dùng @Transactional trong ứng dụng thật",
+        lesson: `**Mục tiêu.** Dựng xong use case chuyển tiền có \`@Transactional\`, rồi tự chứng minh rollback thật sự xảy ra thay vì tin rằng nó xảy ra.
+
+**Đọc.** [13.3 Sử dụng transaction trong ứng dụng Spring](#/docs/springstart-13) là một buổi gõ code liền mạch trên "sq-ch13-ex1". Dependency: starter web, \`spring-boot-starter-data-jdbc\`, và h2 với scope "runtime". Hai file trong thư mục resources — "schema.sql" tạo bảng account ba cột id, name, amount; "data.sql" chèn hai bản ghi Helen Down và Peter Read, mỗi người 1000. Rồi theo thiết kế Hình 13.6 từ dưới lên. Listing 13.2 là \`AccountRepository\` với \`findAccountById()\` dùng \`queryForObject()\` và \`changeAmount()\` dùng \`update()\`. Listing 13.3 là \`AccountRowMapper\` triển khai contract \`RowMapper\`. Listing 13.5 là trái tim của mục: \`transferMoney()\` mang \`@Transactional\`, lấy hai tài khoản, tính hai số tiền mới, gọi \`changeAmount()\` hai lần. Đọc Hình 13.7 để thấy transaction mở ngay trước method và đóng ngay sau khi method kết thúc thành công. Chạy thật ba lệnh cURL theo đúng thứ tự sách đưa: xem trước, chuyển $100, xem lại. Rồi mở "sq-ch13-ex2" — bản sao chỉ khác đúng một dòng của Listing 13.9 — và chạy lại đủ ba lệnh đó.
+
+**Bẫy.** Thấy /accounts trả về 900 với 1100 rồi kết luận transaction đang hoạt động. Sách dừng lại đúng chỗ đó để hỏi ngược: làm sao bạn biết ứng dụng thật sự khôi phục dữ liệu khi có runtime exception? Khối LƯU Ý ngay sau đó là câu chốt — bạn không bao giờ nên tin thứ gì đó hoạt động trừ khi đã kiểm tra nó đúng cách; đó là lý do "sq-ch13-ex2" tồn tại. Bẫy thứ hai: gắn \`@Transactional\` lên class, gắn thêm một \`@Transactional\` cấu hình khác lên một method, rồi chờ hai cấu hình cộng lại. Sidebar "Sử dụng @Transactional" nói rõ luật: dùng trên class thì annotation áp dụng cho tất cả các method của class, còn khi dùng trên cả hai thì cấu hình ở cấp method ghi đè cấu hình trên class.
+
+**Tự kiểm tra.** Trong Listing 13.9, dòng code duy nhất được thêm nằm ở chỗ nào của method, và sau khi chạy nó thì /accounts trả về bao nhiêu cho Helen? Và theo sidebar, vì sao ứng dụng thực tế thường gắn \`@Transactional\` lên class?`,
+      },
+      {
+        id: "sh-w8-3",
+        text: "Spring Data: là gì, hoạt động ra sao, và Spring Data JDBC",
+        lesson: `**Mục tiêu.** Thay được cả class repository viết tay bằng một interface gần như rỗng, chọn đúng contract trong ba contract chuẩn, và thêm thao tác tuỳ chỉnh bằng \`@Query\`.
+
+**Đọc.** [14.1 Spring Data là gì](#/docs/springstart-14) đọc nhanh, chỉ cần lấy lý do tồn tại: Hình 14.2 với Hình 14.3 bày ra mớ lựa chọn — JDBC trần, \`JdbcTemplate\`, Hibernate, NoSQL — mỗi thứ một bộ API phải học, còn Hình 14.4 đặt Spring Data thành một lớp abstraction chung phía trên. [14.2 Spring Data hoạt động như thế nào](#/docs/springstart-14) là phần phải chép ra giấy. Trước hết: không có "dependency Spring Data" duy nhất, mỗi công nghệ lưu trữ có module riêng. Sau đó là ba contract của Hình 14.6, học theo thứ tự tăng dần — \`Repository\` là marker interface không khai báo method nào, \`CrudRepository\` cho các thao tác tạo, truy xuất, cập nhật, xoá, còn \`PagingAndSortingRepository\` thêm sắp xếp cùng phân trang. [14.3 Sử dụng Spring Data JDBC](#/docs/springstart-14) làm thật trên "sq-ch14-ex1": Listing 14.1 đánh dấu primary key bằng \`@Id\`; Listing 14.2 là toàn bộ repository, một interface rỗng mở rộng \`CrudRepository<Account, Long>\`; Listing 14.3 thêm \`findAccountsByName\`; Listing 14.4 gắn \`@Query\`; Listing 14.5 thêm \`@Modifying\` cho câu UPDATE. Cuối buổi so Listing 14.7 với bản \`JdbcTemplate\` tuần trước.
+
+**Bẫy.** Nhầm annotation \`@Repository\` với interface \`Repository\` của Spring Data. Khối LƯU Ý ngay sau Hình 14.6 tách bạch: \`@Repository\` là stereotype annotation bạn dùng với class để Spring thêm một instance vào application context, còn \`Repository\` là interface đặc thù của Spring Data mà bạn mở rộng — hoặc mở rộng một interface kế thừa từ nó — để định nghĩa một repository. Bẫy thứ hai: viết \`@Query\` cho một câu UPDATE rồi dừng ở đó. Sách nói thẳng thứ còn thiếu: khi truy vấn của bạn thay đổi dữ liệu, tức là UPDATE, INSERT hoặc DELETE, bạn cũng cần đánh dấu method bằng \`@Modifying\`; phần Tóm tắt nhắc lại bằng chữ "phải".
+
+**Tự kiểm tra.** Theo chú thích của Listing 14.4, tên tham số trong câu truy vấn phải quan hệ thế nào với tham số của method? Và theo phần Tóm tắt, chuyện gì xảy ra nếu Spring Data không giải quyết được tên một method mà bạn không gắn \`@Query\`?`,
+      },
+      {
+        id: "sh-w8-4",
+        text: "Viết test đúng cách: unit test và integration test",
+        lesson: `**Mục tiêu.** Viết được một unit test có đủ ba phần, chuyển chính nó thành một Spring integration test, và nói được vì sao không nên dùng loại thứ hai để thay loại thứ nhất.
+
+**Đọc.** [15.1 Viết test được triển khai đúng cách](#/docs/springstart-15) đọc để lấy phương pháp chứ không lấy code. Lấy lại use case chuyển tiền rồi chép ra năm kịch bản sách liệt kê, vì mỗi kịch bản sẽ thành một method test. [15.2.1 Triển khai unit test](#/docs/springstart-15) là phần gõ code dài nhất tuần. Học thuộc ba phần của một test trước đã: giả định, gọi, xác nhận. Rồi đi theo chuỗi listing đúng thứ tự. Listing 15.2 tạo mock bằng \`mock(AccountRepository.class)\` rồi dựng \`TransferService\` quanh nó. Listing 15.3 điều khiển mock bằng \`given(...).willReturn(...)\`. Listing 15.4 thêm hai lời \`verify()\` khẳng định \`changeAmount()\` đã được gọi với 900 và với 1100. Listing 15.5 viết lại đúng test đó bằng \`@Mock\`, \`@InjectMocks\` và \`@ExtendWith(MockitoExtension.class)\`. Listing 15.6 là luồng exception. [15.2.2 Triển khai integration test](#/docs/springstart-15) ngắn hơn nhiều: gõ Listing 15.10 và tự nhận ra nó gần như chép lại test cũ, chỉ đổi sang \`@SpringBootTest\`, \`@MockBean\` và \`@Autowired\`.
+
+**Bẫy.** Thấy integration test chạy được mọi thứ nên viết luôn mọi kịch bản bằng \`@SpringBootTest\`. Khối LƯU Ý khép chương cấm đúng nước đi này: hãy dùng unit test để xác nhận hành vi của các thành phần và integration test cho các kịch bản tích hợp cần thiết; dùng integration test cho mục đích kia không phải ý hay vì chúng mất nhiều thời gian hơn do phải cấu hình Spring context. Bẫy thứ hai: không mock repository trong integration test rồi trỏ thẳng vào database thật. Khối LƯU Ý ngay trước Listing 15.10 nói ngược lại: hãy dùng một database in-memory như H2, vì database thật gây độ trễ và có thể làm test thất bại khi hạ tầng trục trặc — bạn kiểm thử ứng dụng chứ không phải hạ tầng.
+
+**Tự kiểm tra.** Trong Listing 15.6, lệnh nào khẳng định exception được ném ra, và lệnh nào khẳng định \`changeAmount()\` chưa hề được gọi? Và theo khối LƯU Ý về \`@MockBean\`, loại ứng dụng nào không dùng được annotation này, và sách bảo đánh dấu class cấu hình bằng gì để thay thế?`,
+      },
+    ],
+  },
 ];
