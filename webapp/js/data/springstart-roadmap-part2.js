@@ -65,7 +65,7 @@ export const springStartWeeksPart2 = [
 
 **Bẫy.** Bỏ trống một request parameter rồi chờ server nhận \`null\`. Khối LƯU Ý ngay sau Hình 8.7 nói rõ: mặc định request parameter là bắt buộc, thiếu nó thì server trả về status "400 Bad Request", muốn tuỳ chọn phải khai tường minh trên annotation — nhưng để ý khối này viết \`optional=true\` trong khi code chạy được ở "sq-ch8-ex3" dùng \`@RequestParam(required = false)\`; tin vào listing. Bẫy thứ hai: dùng GET cho một chức năng có sửa dữ liệu vì gõ thẳng lên thanh địa chỉ cho nhanh. Sách mở mục 8.2 bằng cảnh báo gắt nhất chương: về mặt kỹ thuật bạn làm được, nhưng đó là một lựa chọn rất, rất tệ — đừng bao giờ dùng một HTTP method trái với mục đích thiết kế của nó.
 
-**Tự kiểm tra.** Theo Bảng 8.1, giá trị tuỳ chọn thì gửi bằng cách nào, và vì sao cách còn lại không hợp? Và trong Listing 8.11, hai action cùng ánh xạ vào \`/products\` mà không xung đột nhờ thứ gì?`,
+**Tự kiểm tra.** Theo mục 8.1.3, giá trị tuỳ chọn thì gửi bằng cách nào, và vì sao cách còn lại không hợp? Và trong Listing 8.11, hai action cùng ánh xạ vào \`/products\` mà không xung đột nhờ thứ gì?`,
       },
     ],
   },
