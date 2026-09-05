@@ -16,6 +16,8 @@ import { getTrack } from "../data/roadmap.js";
 import { getTracks } from "../data/index.js";
 import { FIELDS } from "../data/fields.js";
 import { currentField } from "../lib/field.js";
+import { trackGuide, firstTrackOf } from "../lib/guides.js";
+import { trackGuideBody } from "./guide.js";
 
 export function render(root, params) {
   const track = getTrack(params[0]);
@@ -57,6 +59,12 @@ function renderChooser(root) {
     );
   }
 
+  page.append(
+    h("p", { class: "muted small", style: "margin:-8px 0 16px" },
+      "Chưa biết bắt đầu từ track nào? Xem ",
+      h("a", { href: "#/guide" }, "🧭 Hướng dẫn học"), " — lộ trình khuyến nghị theo thứ tự cho lĩnh vực này."));
+
+  const startHere = firstTrackOf(fieldKey);
   const grid = h("div", { class: "grid" });
   for (const track of list) {
     const s = trackStats(track, checked);
@@ -68,7 +76,8 @@ function renderChooser(root) {
           h("div", { class: "grow", style: "min-width:0" },
             h("div", { class: "flex flex-wrap" },
               h("strong", { style: "font-size:17px" }, track.label),
-              h("span", { class: "muted small" }, track.name)),
+              h("span", { class: "muted small" }, track.name),
+              track.id === startHere && !started ? h("span", { class: "badge badge-green" }, "Bắt đầu tại đây") : null),
             h("p", { class: "muted small", style: "margin:6px 0" }, track.desc),
             h("p", { class: "faint", style: "margin:0 0 8px" }, `ℹ️ ${track.prereq}`),
             h("div", { class: "flex" },
@@ -142,6 +151,19 @@ function renderTrack(root, track, focusItemId) {
         }, "Đặt lại tiến độ"))
     )
   );
+
+  const tg = trackGuide(track.id);
+  if (tg) {
+    const details = h("details", { class: "card track-guide" },
+      h("summary", {},
+        h("span", {}, "📌"),
+        h("span", { class: "grow" }, "Cách học track này"),
+        h("a", { class: "faint", href: "#/guide", onclick: (e) => e.stopPropagation() }, "Hướng dẫn học đầy đủ →"),
+        h("span", { class: "chev" }, "▸")),
+      trackGuideBody(tg));
+    if (doneCount() === 0) details.setAttribute("open", "");
+    page.append(details);
+  }
 
   const firstOpen = track.weeks.find((w) => w.items.some((it) => !checked[it.id]))?.id;
 

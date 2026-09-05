@@ -19,6 +19,7 @@ import * as exam from "./views/exam.js";
 import * as labs from "./views/labs.js";
 import * as tracker from "./views/tracker.js";
 import * as settings from "./views/settings.js";
+import * as guide from "./views/guide.js";
 
 const routes = {
   dashboard,
@@ -32,6 +33,7 @@ const routes = {
   labs,
   tracker,
   settings,
+  guide,
 };
 
 // Khôi phục "chế độ gọn" (ẩn sidebar, mật độ cao) nếu người dùng đã bật.

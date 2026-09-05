@@ -781,6 +781,92 @@ await check("Câu hỏi sysprog phân bổ đúng theo domain", () => {
   expect(!bad.length, bad.join("; "));
 });
 
+// ---- Hướng dẫn học (module guide) ----
+const { fieldGuides, trackGuides, groupGuides } = await import("../js/data/guides.js");
+const VIEW_ROUTES = new Set(readdirSync(join(WEBAPP, "js/views")).map((f) => f.replace(/\.js$/, "")));
+const DONE_KINDS = new Set(["track", "roadmap", "docs", "doc", "flashcards", "quiz", "exam", "tracker", "manual"]);
+
+// G1 — khai module guide ⇔ có fieldGuides[field]; và hình dạng tối thiểu.
+await check("Lĩnh vực khai module guide có fieldGuides và ngược lại", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    const has = !!fieldGuides[id];
+    if (f.modules.includes("guide") && !has) bad.push(`${id} khai guide nhưng thiếu fieldGuides`);
+    if (!f.modules.includes("guide") && has) bad.push(`${id} có fieldGuides nhưng không khai module guide`);
+  }
+  for (const id of Object.keys(fieldGuides)) if (!FIELDS[id]) bad.push(`fieldGuides.${id} không phải lĩnh vực`);
+  for (const [id, g] of Object.entries(fieldGuides)) {
+    for (const k of ["tagline", "audience", "hoursPerWeek"]) if (typeof g[k] !== "string" || !g[k].trim()) bad.push(`${id}.${k} rỗng`);
+    for (const k of ["prereqs", "steps", "method", "pitfalls", "doneWhen"]) if (!Array.isArray(g[k]) || !g[k].length) bad.push(`${id}.${k} rỗng`);
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// G2 — mọi track có trackGuides, không khoá thừa, đủ 4 phần.
+await check("Mọi track có trackGuides (rhythm/before/during/after), không khoá thừa", () => {
+  const bad = [];
+  const ids = new Set(tracks.map((t) => t.id));
+  for (const t of tracks) {
+    const g = trackGuides[t.id];
+    if (!g) { bad.push(`thiếu trackGuides.${t.id}`); continue; }
+    if (typeof g.rhythm !== "string" || !g.rhythm.trim()) bad.push(`${t.id}.rhythm rỗng`);
+    for (const k of ["before", "during", "after"]) if (!Array.isArray(g[k]) || !g[k].length) bad.push(`${t.id}.${k} rỗng`);
+  }
+  for (const id of Object.keys(trackGuides)) if (!ids.has(id)) bad.push(`trackGuides.${id} không phải track`);
+  expect(!bad.length, bad.join("; "));
+});
+
+// G3 — steps: id duy nhất, href trỏ tới route/track/doc có thật và thuộc đúng lĩnh
+// vực, done.kind hợp lệ, done.id tồn tại, ngưỡng trong (0, 100].
+await check("fieldGuides[].steps: id duy nhất, href/done hợp lệ", () => {
+  const bad = [];
+  const docIds = new Set(docs.map((d) => d.id));
+  const trackIds = new Set(tracks.map((t) => t.id));
+  const allStepIds = [];
+  for (const [field, g] of Object.entries(fieldGuides)) {
+    for (const s of g.steps) {
+      allStepIds.push(s.id);
+      if (!s.title || !s.desc) bad.push(`${field}/${s.id} thiếu title/desc`);
+      const d = s.done ?? {};
+      if (!DONE_KINDS.has(d.kind)) bad.push(`${field}/${s.id} done.kind "${d.kind}" lạ`);
+      if (d.kind === "track") {
+        if (!trackIds.has(d.id)) bad.push(`${field}/${s.id} done.id track "${d.id}" không tồn tại`);
+        else if (fieldOf(tracks.find((t) => t.id === d.id)) !== field) bad.push(`${field}/${s.id} trỏ track của lĩnh vực khác`);
+      }
+      if (d.kind === "doc") {
+        if (!docIds.has(d.id)) bad.push(`${field}/${s.id} done.id doc "${d.id}" không tồn tại`);
+        else if (fieldOf(docs.find((x) => x.id === d.id)) !== field) bad.push(`${field}/${s.id} trỏ doc của lĩnh vực khác`);
+      }
+      for (const k of ["pct", "learnedPct", "seenPct", "accuracy", "bestPct", "readPct"]) {
+        if (d[k] != null && !(d[k] > 0 && d[k] <= 100)) bad.push(`${field}/${s.id} done.${k}=${d[k]} ngoài (0,100]`);
+      }
+      // Module mà bước nhắm tới phải được lĩnh vực khai.
+      const need = { flashcards: "flashcards", quiz: "quiz", exam: "exam", tracker: "tracker", track: "roadmap", roadmap: "roadmap", docs: "docs", doc: "docs" }[d.kind];
+      if (need && !FIELDS[field].modules.includes(need)) bad.push(`${field}/${s.id} cần module "${need}" mà lĩnh vực không khai`);
+      if (s.href) {
+        const m = s.href.match(/^#\/([a-z-]+)(?:\/([^/]+))?/);
+        if (!m) { bad.push(`${field}/${s.id} href lạ: ${s.href}`); continue; }
+        const [, route, param] = m;
+        if (!VIEW_ROUTES.has(route)) bad.push(`${field}/${s.id} href route "${route}" không có view`);
+        else if (!FIELDS[field].modules.includes(route) && route !== "settings") bad.push(`${field}/${s.id} href tới module "${route}" mà lĩnh vực không khai`);
+        if (route === "docs" && param && !docIds.has(param)) bad.push(`${field}/${s.id} href doc "${param}" không tồn tại`);
+        if (route === "roadmap" && param && !trackIds.has(param)) bad.push(`${field}/${s.id} href track "${param}" không tồn tại`);
+      }
+    }
+  }
+  const dup = dupes(allStepIds);
+  if (dup.length) bad.push(`step id trùng: ${dup.join(", ")}`);
+  expect(!bad.length, bad.join("; "));
+});
+
+// G4 — groupGuides khoá phải là group có thật trong docs.
+await check("groupGuides trỏ tới nhóm tài liệu có thật", () => {
+  const groups = new Set(docs.map((d) => d.group).filter(Boolean));
+  const bad = Object.keys(groupGuides).filter((g) => !groups.has(g));
+  expect(!bad.length, `nhóm không tồn tại: ${bad.join(", ")}`);
+  for (const [k, g] of Object.entries(groupGuides)) expect(typeof g.howToRead === "string" && g.howToRead.trim(), `${k}.howToRead rỗng`);
+});
+
 // N3 — bảng kỳ vọng phải phủ mọi lĩnh vực khai docs/roadmap/tracker.
 // Vòng kiểm đếm bên dưới chỉ so những key CÓ MẶT trong EXPECTED, nên một lĩnh
 // vực mới quên khai key sẽ trôi tự do: xoá sạch dữ liệu của nó vẫn xanh.

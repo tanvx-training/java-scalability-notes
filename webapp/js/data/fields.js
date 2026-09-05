@@ -10,7 +10,7 @@ export const FIELDS = {
     icon: "☸️",
     desc: "Luyện thi CKAD, CKA, CKS: giáo trình theo tuần, tra cứu kubectl, flashcards, trắc nghiệm, thi thử và labs mô phỏng đề thật — kèm ba bản dịch Kubernetes in Action, CKA Study Guide và Kubernetes: Up and Running để đọc sâu.",
     certFilter: true,
-    modules: ["dashboard", "certs", "roadmap", "docs", "commands",
+    modules: ["dashboard", "guide", "certs", "roadmap", "docs", "commands",
               "flashcards", "quiz", "exam", "labs"],
     // Liên kết tham khảo ngoài, hiện ở chân sidebar. Tuỳ chọn — bỏ qua nếu
     // lĩnh vực không có nguồn ngoài phù hợp (xem "java" bên dưới).
@@ -23,7 +23,7 @@ export const FIELDS = {
     certFilter: false,
     // Mở dần theo dữ liệu: "docs" thêm ở Task 6, "roadmap" Task 8,
     // "flashcards" Task 10, "quiz" Task 11. Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard", "roadmap", "docs", "flashcards", "quiz"],
+    modules: ["dashboard", "guide", "roadmap", "docs", "flashcards", "quiz"],
     externalRef: { label: "illinois-cs241/coursebook", href: "https://github.com/illinois-cs241/coursebook" },
   },
   java: {
@@ -31,7 +31,7 @@ export const FIELDS = {
     icon: "☕",
     desc: "Series 10 bài về khả năng mở rộng của ứng dụng Java/Spring Boot trên Tomcat: TCP/kernel → Tomcat internals → JVM concurrency → capacity planning → transaction.",
     certFilter: false,
-    modules: ["dashboard", "docs"],
+    modules: ["dashboard", "guide", "docs"],
     // Không có nguồn ngoài phù hợp cho series này — bỏ qua thay vì bịa link.
   },
   "spring-security": {
@@ -39,7 +39,7 @@ export const FIELDS = {
     icon: "🔒",
     desc: "Bản dịch tiếng Việt Spring Security in Action, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — xác thực, phân quyền, CSRF/CORS, OAuth 2 & OIDC, ứng dụng phản ứng và kiểm thử cấu hình bảo mật.",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "docs.spring.io/spring-security", href: "https://docs.spring.io/spring-security/reference/" },
   },
   "senior-java": {
@@ -47,7 +47,7 @@ export const FIELDS = {
     icon: "🧭",
     desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, 276 mục tick (mốc Java 17–21) — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ (mốc Java 25 / Spring Boot 4.1, tự đánh giá độc lập, không ánh xạ 1-1 với lộ trình).",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap", "tracker"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "tracker"],
     // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —
     // không nguồn ngoài nào bao hết, nên bỏ externalRef thay vì bịa link.
   },
@@ -56,7 +56,7 @@ export const FIELDS = {
     icon: "🧵",
     desc: "Bản dịch tiếng Việt Modern Concurrency in Java (O'Reilly, ISBN 9781098165406) — virtual thread, structured concurrency, scoped values, và chỗ đứng của reactive sau Loom.",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "openjdk.org — Project Loom", href: "https://wiki.openjdk.org/display/loom/Main" },
   },
   ddia: {
@@ -64,7 +64,7 @@ export const FIELDS = {
     icon: "🗄️",
     desc: "Bản dịch tiếng Việt Designing Data-Intensive Applications, ấn bản 2 (Martin Kleppmann, O'Reilly) — mô hình dữ liệu, lưu trữ, replication, sharding, transaction, hệ phân tán, batch và stream processing.",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "dataintensive.net", href: "https://dataintensive.net/" },
   },
   "modern-java": {
@@ -72,7 +72,7 @@ export const FIELDS = {
     icon: "🌊",
     desc: "Bản dịch tiếng Việt Modern Java in Action (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — lambda, stream, collector, Optional, Date/Time API, module system, CompletableFuture và reactive, tư duy hàm.",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "dev.java", href: "https://dev.java/" },
   },
   kafka: {
@@ -80,7 +80,7 @@ export const FIELDS = {
     icon: "📨",
     desc: "Bản dịch tiếng Việt Kafka: The Definitive Guide, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — chương 2–14: cài đặt, producer, consumer, cơ chế bên trong, truyền tin cậy, exactly-once, data pipeline, mirroring, bảo mật, vận hành, giám sát và stream processing.",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "kafka.apache.org/documentation", href: "https://kafka.apache.org/documentation/" },
   },
   "spring-start": {
@@ -88,7 +88,7 @@ export const FIELDS = {
     icon: "🌱",
     desc: "Bản dịch tiếng Việt Spring Start Here (Laurențiu Spilcă, Manning 2021) — sách nhập môn Spring: context và bean, wiring, abstraction, bean scope, AOP, Spring Boot và MVC, web scope, REST, data source, transaction, Spring Data và kiểm thử.",
     certFilter: false,
-    modules: ["dashboard", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "spring.io — Spring Framework", href: "https://spring.io/projects/spring-framework" },
   },
 };
