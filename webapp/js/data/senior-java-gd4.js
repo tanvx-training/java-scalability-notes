@@ -36,6 +36,7 @@ export const seniorJavaGd4 = [
       { label: "Giai đoạn 4 — bản đầy đủ", href: "#/docs/sj-04" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
       { label: "developer.confluent.io", href: "https://developer.confluent.io/" },
+      { label: "📨 Sang lĩnh vực Kafka — lộ trình đọc 11 tuần", href: "#/roadmap/kafka" },
     ],
     items: [
       {

@@ -256,6 +256,7 @@ export const ddiaWeeksPart2 = [
     resources: [
       { label: "DDIA 12 — Stream Processing", href: "#/docs/ddia-12" },
       { label: "kafka.apache.org — Design", href: "https://kafka.apache.org/documentation/#design" },
+      { label: "📨 Sang lĩnh vực Kafka — lộ trình đọc 11 tuần", href: "#/roadmap/kafka" },
     ],
     items: [
       {
