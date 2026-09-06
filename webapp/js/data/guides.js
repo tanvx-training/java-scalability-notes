@@ -36,7 +36,7 @@ export const fieldGuides = {
       { id: "k8s-5", title: "Trắc nghiệm theo domain", desc: "110 câu có giải thích. Dùng chế độ ưu tiên câu sai; mục tiêu gặp 60 % ngân hàng câu và đúng từ 75 %.", href: "#/quiz", done: { kind: "quiz", seenPct: 60, accuracy: 75 } },
       { id: "k8s-6", title: "Làm 22 lab trong thời gian mục tiêu", desc: "Lab mô phỏng đề thật: tự làm trên cluster, bấm giờ, rồi mới mở lời giải. Tự đánh dấu khi mọi lab đều xong trong thời gian mục tiêu.", href: "#/labs", done: { kind: "manual" } },
       { id: "k8s-7", title: "Thi thử đạt ≥ 80 %", desc: "Điểm đậu CKAD là 66 %, nhưng phòng thi thật chậm hơn — nhắm 80 % ở thi thử để có biên an toàn. Xem điểm theo domain để biết ôn gì.", href: "#/exam", done: { kind: "exam", bestPct: 80 } },
-      { id: "k8s-8", title: "Đọc sâu: Kubernetes in Action", desc: "Sau CKAD, đọc cuốn của Lukša để hiểu cơ chế bên dưới những lệnh đã thuộc. 9 tuần, mỗi mục có mục tiêu / bẫy / tự kiểm tra.", href: "#/roadmap/k8sbook", done: { kind: "track", id: "k8sbook" } },
+      { id: "k8s-8", title: "Đọc sâu: Kubernetes in Action", desc: "Sau CKAD, đọc cuốn của Lukša (ấn bản 2, 18 chương) để hiểu cơ chế bên dưới những lệnh đã thuộc. 9 tuần, mỗi mục có mục tiêu / bẫy / tự kiểm tra.", href: "#/roadmap/k8sbook", done: { kind: "track", id: "k8sbook" } },
       { id: "k8s-9", title: "Giáo trình CKA — 10 tuần", desc: "Góc nhìn admin: kubeadm, etcd, upgrade, troubleshooting (30 % đề). Khoảng nửa kiến thức trùng CKAD nên đi nhanh hơn ở tuần 4–7.", href: "#/roadmap/cka", done: { kind: "track", id: "cka" } },
       { id: "k8s-10", title: "Nước rút CKA với CKA Study Guide", desc: "Vòng ôn thứ hai, 6 tuần, bám sách luyện thi của Muschko: ưu tiên mục “Trọng tâm cho kỳ thi” và bấm giờ bài tập mẫu cuối chương.", href: "#/roadmap/ckabook", done: { kind: "track", id: "ckabook" } },
       { id: "k8s-11", title: "Giáo trình CKS — 10 tuần", desc: "Chỉ thi được khi CKA còn hiệu lực. Bảo mật chuyên sâu: CIS benchmark, AppArmor/seccomp, Trivy, Falco, audit logging.", href: "#/roadmap/cks", done: { kind: "track", id: "cks" } },
@@ -388,7 +388,7 @@ export const trackGuides = {
     after: ["Thi thử; đọc thẻ “Trước giờ thi” CKS.", "Áp dụng Pod Security Admission và NetworkPolicy mặc định ở cluster công ty.", "Theo dõi thay đổi curriculum CKS — đề đổi nhanh hơn CKAD/CKA."],
   },
   k8sbook: {
-    rhythm: "9 tuần, 3–4 mục mỗi tuần; mỗi mục nêu mục tiêu, chỉ đúng mục sách cần đọc, bẫy và câu tự kiểm tra. Đọc chương (40–60 phút) rồi trả lời câu tự kiểm tra bằng lời của mình.",
+    rhythm: "9 tuần, mỗi tuần 2 chương và 4 mục; mỗi mục nêu mục tiêu, chỉ đúng mục sách cần đọc, bẫy và câu tự kiểm tra. Đọc chương (40–60 phút) rồi trả lời câu tự kiểm tra bằng lời của mình.",
     before: ["Biết terminal Linux và Docker; không cần biết Kubernetes.", "Có cluster để chạy ví dụ của sách (kind là đủ).", "Nếu đang luyện CKAD: dùng chip 📖 từ tuần giáo trình để đọc đúng chương, không đọc tuần tự."],
     during: ["Đọc phần được chỉ, không đọc cả chương nếu mục không yêu cầu.", "Trả lời câu tự kiểm tra bằng lời trước khi tick.", "Ghi lại bẫy bạn từng gặp ở công ty khớp với bẫy trong mục."],
     after: ["Quay lại giáo trình chứng chỉ với hiểu biết cơ chế — tốc độ làm lab sẽ tăng.", "Đọc Kubernetes: Up and Running nếu muốn góc nhìn vận hành của Google.", "Sang CKA."],

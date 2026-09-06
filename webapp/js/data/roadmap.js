@@ -118,7 +118,7 @@ export const tracks = [
     icon: "📖",
     name: "Đọc Kubernetes in Action (ấn bản 2)",
     durationWeeks: 9,
-    desc: "Kế hoạch đọc 9 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra. Bổ trợ chiều sâu cho ba giáo trình chứng chỉ.",
+    desc: "Kế hoạch đọc 9 tuần × 2 chương bám theo bản dịch ấn bản 2 (18 chương): mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra. Bổ trợ chiều sâu cho ba giáo trình chứng chỉ.",
     prereq: "Yêu cầu: biết dùng terminal Linux và Docker cơ bản. Không cần biết Kubernetes trước.",
     weeks: [...k8sbookWeeksPart1, ...k8sbookWeeksPart2],
   },

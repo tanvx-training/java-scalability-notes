@@ -1,204 +1,243 @@
 // Lộ trình đọc Kubernetes in Action — Phần 2 (Tuần 6–9).
 //
-// Nguồn: bản dịch tiếng Việt "Kubernetes in Action", ấn bản 2 (MEAP V15) —
-// Marko Lukša, Manning. Thư mục nguồn: sources/kubernetes/kubernetes-in-action/
-//
-// Mỗi mục là KẾ HOẠCH ĐỌC trỏ vào sách, không chép lại nội dung sách.
-// GIỮ NGUYÊN id (kb-w<N> / kb-w<N>-<M>) — tiến độ localStorage lưu theo id này.
-//
-// Một số mục trong bản dịch còn giữ nguyên tiêu đề tiếng Anh (§9.2.5, §9.2.6,
-// §9.3, §9.4). Ở những chỗ đó, nhãn liên kết trích đúng tiêu đề sách thật sự
-// có, và phần diễn giải tiếng Việt nằm trong câu văn — không bịa tiêu đề.
+// Xem đầu roadmap-kia-part1.js cho quy ước chung của lộ trình này.
+// Tuần 6–9 phủ chương 11–18: mạng (Service, Ingress, Gateway API) rồi các
+// controller workload (ReplicaSet, Deployment, StatefulSet, DaemonSet, Job).
 
 export const k8sbookWeeksPart2 = [
   {
     id: "kb-w6",
     week: "Tuần 6",
-    title: "Cấu hình & tổ chức đối tượng",
-    goal: "Tách được toàn bộ cấu hình ra khỏi image, và tổ chức đối tượng trong cụm bằng namespace và label thay vì bằng quy ước đặt tên.",
-    practice: "Chuyển toàn bộ biến môi trường hard-code của Kiada sang ConfigMap và Secret, rồi gắn nhãn `app`/`rel` cho pod và thử lọc bằng `kubectl get pod -l`.",
+    title: "Service & Ingress — cho ứng dụng một địa chỉ ổn định",
+    goal: "Giải thích được một request đi từ client bên ngoài tới đúng container qua những chặng nào, và tự dựng được cả chuỗi đó.",
+    practice: "Phơi Kiada bằng ClusterIP rồi NodePort rồi Ingress, mỗi bước kiểm chứng bằng `curl`; thêm readiness probe và quan sát pod bị gỡ khỏi endpoint khi probe trượt.",
     resources: [
-      { label: "KIA 09 — ConfigMap, Secret, Downward API", href: "#/docs/k8sbook-09" },
-      { label: "KIA 10 — Namespace và Label", href: "#/docs/k8sbook-10" },
-      { label: "Tra cứu nhanh: CKAD Cheat Sheet", href: "#/docs/cheat-sheet" },
+      { label: "KIA 11 — Expose pod bằng Service", href: "#/docs/k8sbook-11" },
+      { label: "KIA 12 — Sử dụng Ingress để định tuyến lưu lượng đến Service", href: "#/docs/k8sbook-12" },
+      { label: "Ôn lại: CKAD tuần 6", href: "#/roadmap/ckad" },
+      { label: "kubernetes.io — Service", href: "https://kubernetes.io/docs/concepts/services-networking/service/" },
     ],
     items: [
       {
         id: "kb-w6-1",
-        text: "command, args, biến môi trường và ConfigMap",
-        lesson: `**Mục tiêu.** Đổi được cấu hình của một container mà không build lại image, rồi đưa cấu hình đó ra khỏi pod manifest để một manifest chạy được ở mọi môi trường.
+        text: "Service tìm pod bằng cách nào, và ClusterIP thực ra là cái gì",
+        lesson: `**Mục tiêu.** Nói được vì sao ClusterIP không ping được nhưng vẫn nhận kết nối, và selector của service liên hệ với label của pod ra sao.
 
-**Đọc.** [§9.1 Thiết lập command, argument và biến môi trường](#/docs/k8sbook-09) — chú ý Bảng 9.1 ánh xạ \`ENTRYPOINT\`/\`CMD\` sang \`command\`/\`args\`. Rồi [§9.2 Sử dụng config map để tách biệt cấu hình khỏi pod](#/docs/k8sbook-09); hai mục cuối của nó bản dịch còn giữ tiêu đề tiếng Anh — §9.2.5 "Updating and deleting config maps" và §9.2.6 "Understanding how configMap volumes work" — đừng bỏ qua.
+**Đọc.** [§11.1 Expose pod thông qua service](#/docs/k8sbook-11) — cả §11.1.1, §11.1.2 và §11.1.3.
 
-**Bẫy.** Tưởng \`$(VAR_NAME)\` phân giải được mọi biến. Cú pháp này **chỉ tham chiếu được biến khai trong cùng manifest, và phải khai trước** — nên \`$(NODE_VERSION)\` vốn đến từ image sẽ nằm nguyên trong chuỗi kết quả. Bẫy thứ hai ở §9.2.5: sửa config map thì **tệp trong volume \`configMap\` tự cập nhật** (có thể mất tới một phút), còn **biến môi trường thì không** — chúng chỉ đổi khi container khởi động lại. Mount bằng \`subPath\` là mất luôn cơ chế tự cập nhật đó.
+**Bẫy.** Tìm "máy" nào đang giữ ClusterIP. Không có máy nào cả: ClusterIP là **địa chỉ ảo** do \`kube-proxy\` hiện thực bằng luật iptables/IPVS trên từng node. Nó không trả lời ICMP, nên \`ping\` một ClusterIP thất bại là chuyện bình thường — dùng \`curl\` hoặc \`nc\` để kiểm tra. Bẫy thứ hai: selector của service gõ lệch một ký tự so với label của pod — service vẫn được tạo, chỉ đơn giản là không có endpoint nào.
 
-**Tự kiểm tra.** Theo §9.1.2, vì sao tham chiếu \`$(NODE_VERSION)\` không được phân giải, và bạn viết thế nào nếu muốn giữ nguyên chuỗi ký tự \`$(VAR_NAME)\` trong giá trị biến?`,
+**Tự kiểm tra.** Service tồn tại nhưng \`curl\` bị treo. Lệnh nào cho bạn biết ngay là selector không khớp pod nào?`,
       },
       {
         id: "kb-w6-2",
-        text: "Secret, Downward API và projected volume",
-        lesson: `**Mục tiêu.** Đặt dữ liệu nhạy cảm vào đúng loại đối tượng, và lấy được thông tin của chính pod mà không phải chép tay vào manifest.
+        text: "Phơi ra ngoài cụm, và endpoint thực sự được quản lý thế nào",
+        lesson: `**Mục tiêu.** Chọn đúng giữa NodePort và LoadBalancer, và đọc được EndpointSlice để biết service đang trỏ vào đâu.
 
-**Đọc.** [§9.3 Using Secrets to pass sensitive data to containers](#/docs/k8sbook-09) và [§9.4 Passing pod metadata to the application via the Downward API](#/docs/k8sbook-09) — bản dịch giữ nguyên tiêu đề tiếng Anh của hai mục này; chúng nói về Secret và Downward API. Bảng 9.3 và Bảng 9.5 cần thuộc. Rồi [§9.5 Sử dụng volume tích hợp để gộp nhiều volume làm một](#/docs/k8sbook-09).
+**Đọc.** [§11.2 Expose service ra bên ngoài](#/docs/k8sbook-11) — §11.2.3 (external traffic policy) giải thích vì sao IP client đôi khi bị mất. Rồi [§11.3 Quản lý các endpoint của service](#/docs/k8sbook-11), gồm §11.3.2 (EndpointSlice) và §11.3.3 (quản lý endpoint thủ công).
 
-**Bẫy.** Nghĩ trường \`data\` của Secret cũng là văn bản thuần như \`data\` của ConfigMap. Bảng 9.3 cho thấy hai tên trường **bắt chéo nhau**: \`data\` của Secret ứng với \`binaryData\` của ConfigMap và chứa giá trị **mã hoá Base64**, còn \`stringData\` mới là văn bản thuần — và nó **chỉ ghi**, đọc lại đối tượng thì nội dung đã nằm ở \`data\`. Bẫy thứ hai, có khuyến nghị riêng ở §9.3.3: đừng truyền Secret qua biến môi trường, vì ứng dụng hay in hết biến môi trường ra log và tiến trình con kế thừa toàn bộ chúng.
+**Bẫy.** Ngạc nhiên vì ứng dụng thấy IP nguồn là IP của node chứ không phải của client. Với \`externalTrafficPolicy: Cluster\` (mặc định), traffic có thể bị chuyển tiếp thêm một chặng giữa các node và bị SNAT — mất IP thật. Đổi sang \`Local\` giữ được IP nguồn nhưng đánh đổi bằng cân bằng tải kém đều. Bẫy thứ hai: quên rằng \`type: LoadBalancer\` trên cụm local (kind, Minikube) sẽ nằm \`Pending\` mãi vì không có cloud provider cấp IP.
 
-**Tự kiểm tra.** Theo Bảng 9.5, những trường nào chỉ truyền được qua biến môi trường mà không dùng được trong volume \`downwardAPI\`, và trường nào thì ngược lại?`,
+**Tự kiểm tra.** Vì sao Kubernetes thay Endpoints bằng EndpointSlice, và điều đó quan trọng ở cụm bao nhiêu pod trở lên?`,
       },
       {
         id: "kb-w6-3",
-        text: "Namespace, label, label selector và annotation",
-        lesson: `**Mục tiêu.** Biết namespace bảo vệ bạn khỏi cái gì và **không** bảo vệ khỏi cái gì, rồi tổ chức hàng trăm pod bằng nhãn thay vì bằng cách đặt tên dài dòng.
+        text: "DNS, headless service, định tuyến tới endpoint ở gần, và readiness probe",
+        lesson: `**Mục tiêu.** Gọi được service bằng tên DNS đúng dạng, biết khi nào cần headless service, và dùng readiness probe để pod tự rút khỏi luồng traffic.
 
-**Đọc.** [§10.1 Tổ chức các đối tượng vào các Namespace](#/docs/k8sbook-10) — §10.1.4 là mục quan trọng nhất của cả phần này. Rồi [§10.2 Tổ chức các pod bằng label](#/docs/k8sbook-10) với §10.2.3 về quy tắc cú pháp, [§10.3 Lọc các đối tượng bằng bộ chọn nhãn (label selector)](#/docs/k8sbook-10) và [§10.4 Chú thích đối tượng (annotation)](#/docs/k8sbook-10).
+**Đọc.** [§11.4 Tìm hiểu các bản ghi DNS cho Service object](#/docs/k8sbook-11) — §11.4.2 (headless service) là mục nền cho chương 16. Rồi [§11.5 Cấu hình service để định tuyến traffic tới các endpoint ở gần](#/docs/k8sbook-11) và [§11.6 Quản lý việc đưa pod vào các endpoint của service](#/docs/k8sbook-11), đọc kỹ §11.6.3.
 
-**Bẫy.** Coi namespace là ranh giới cách ly. §10.1.4 nói thẳng: các node vẫn dùng chung, pod ở hai namespace khác nhau vẫn có thể nằm trên cùng một node và **chung kernel**; mặc định cũng **không có cách ly mạng** giữa các namespace. Kết luận của tác giả: đừng dùng namespace để chia production/staging/development trên một cụm vật lý. Bẫy thứ hai: nhét dữ liệu dài vào nhãn — giá trị nhãn tối đa **63 ký tự** và không được chứa khoảng trắng.
+**Bẫy.** Lẫn readiness với liveness. **Liveness trượt → container bị giết và khởi động lại. Readiness trượt → pod bị gỡ khỏi endpoint nhưng vẫn sống.** Dùng nhầm liveness cho việc "chưa sẵn sàng nhận request" là cách chắc chắn nhất để biến một phụ thuộc chậm thành một vòng lặp restart toàn hệ thống. Bẫy thứ hai: readiness probe kiểm tra quá hời hợt (\`/\` trả 200 ngay khi HTTP server lên) nên pod nhận traffic trước khi kết nối database sẵn sàng.
 
-**Tự kiểm tra.** Bạn muốn đính kèm mô tả một đoạn văn và mã băm commit Git vào pod. Theo §10.2.3 và §10.4.1, hai giới hạn nào của nhãn buộc bạn chuyển sang annotation?`,
+**Tự kiểm tra.** Từ pod ở namespace \`dev\`, tên DNS đầy đủ của service \`kiada\` ở namespace \`prod\` là gì? Headless service trả về bản ghi khác service thường ở chỗ nào?`,
+      },
+      {
+        id: "kb-w6-4",
+        text: "Ingress: một điểm vào HTTP cho nhiều service",
+        lesson: `**Mục tiêu.** Định tuyến theo host và path tới nhiều service, cấu hình TLS, và biết IngressClass dùng để làm gì.
+
+**Đọc.** [§12.1 Giới thiệu về Ingress](#/docs/k8sbook-12) — §12.1.2 phân biệt Ingress object với ingress controller. Rồi [§12.2 Tạo và sử dụng các Ingress object](#/docs/k8sbook-12), [§12.3 Cấu hình TLS cho một Ingress](#/docs/k8sbook-12) và [§12.5 Sử dụng nhiều ingress controller](#/docs/k8sbook-12). §12.4 và §12.6 lướt để biết có gì.
+
+**Bẫy.** Tạo Ingress object trên cụm chưa cài controller nào rồi chờ nó hoạt động. **Ingress object chỉ là bản khai báo ý định**; không có controller đọc nó thì trường \`ADDRESS\` trống mãi và không có gì xảy ra — không lỗi, không cảnh báo. Bẫy thứ hai: hai controller cùng cài trên một cụm và cùng nhận một Ingress vì bạn quên khai \`ingressClassName\` (§12.5.2).
+
+**Tự kiểm tra.** Theo §12.3, TLS passthrough khác terminating TLS tại Ingress ở chỗ nào, và cái nào cho phép Ingress định tuyến theo path?`,
       },
     ],
   },
   {
     id: "kb-w7",
     week: "Tuần 7",
-    title: "Mạng — Service và Ingress",
-    goal: "Cho một pod gọi được pod khác qua một địa chỉ không bao giờ đổi, chọn đúng cách phơi ứng dụng ra ngoài theo hạ tầng đang có, và kiểm soát được thời điểm một pod bắt đầu nhận lưu lượng.",
-    practice: "Tạo Service ClusterIP cho quote và quiz rồi gọi chúng bằng `kubectl exec ... curl`; đổi Service của kiada sang NodePort; chạy `kubectl run -it --rm dns-test --image=giantswarm/tiny-tools` và `nslookup` tên Service; gộp hai Ingress thành một đối tượng nhiều quy tắc; cuối cùng thêm readiness probe trỏ vào `/quote` rồi xoá tệp `quote` trong pod để xem nó rời khỏi danh sách endpoint.",
+    title: "Gateway API & ReplicaSet",
+    goal: "Dùng được lớp định tuyến thế hệ mới thay cho annotation của Ingress, và hiểu vòng lặp đối chiếu — cơ chế đứng sau mọi controller trong Kubernetes.",
+    practice: "Cài Istio làm Gateway API provider, phơi Kiada bằng HTTPRoute, chia 90/10 traffic giữa hai phiên bản; rồi tạo ReplicaSet, xoá tay một pod và đo xem bao lâu thì pod thay thế xuất hiện.",
     resources: [
-      { label: "KIA 11 — Cung cấp quyền truy cập Pod qua Service", href: "#/docs/k8sbook-11" },
-      { label: "KIA 12 — Công khai dịch vụ ra ngoài bằng Ingress", href: "#/docs/k8sbook-12" },
-      { label: "Ôn lại: CKAD tuần 6 — Services & Networking", href: "#/roadmap/ckad" },
-      { label: "kubernetes.io — Service", href: "https://kubernetes.io/docs/concepts/services-networking/service/" },
+      { label: "KIA 13 — Định tuyến lưu lượng bằng Gateway API", href: "#/docs/k8sbook-13" },
+      { label: "KIA 14 — Mở rộng quy mô và duy trì pod với ReplicaSet", href: "#/docs/k8sbook-14" },
+      { label: "Ôn lại: CKA tuần 6", href: "#/roadmap/cka" },
+      { label: "gateway-api.sigs.k8s.io — Introduction", href: "https://gateway-api.sigs.k8s.io/" },
     ],
     items: [
       {
         id: "kb-w7-1",
-        text: "Service tìm pod thế nào, và ba cách phơi ra ngoài",
-        lesson: `**Mục tiêu.** Viết được manifest Service từ đầu, và chọn đúng loại Service cho cụm bạn đang có thay vì chép loại đầu tiên gặp trên mạng.
+        text: "Gateway API khác Ingress ở đâu, và dựng một Gateway",
+        lesson: `**Mục tiêu.** Nói được vì sao Gateway API tách vai trò quản trị viên hạ tầng khỏi vai trò chủ ứng dụng, và triển khai được một Gateway chạy được.
 
-**Đọc.** [§11.1 Cung cấp quyền truy cập Pod qua Service](#/docs/k8sbook-11) — ba lý do ở đầu mục giải thích vì sao không nối thẳng vào IP pod được. Rồi [§11.2 Cung cấp quyền truy cập Service từ bên ngoài](#/docs/k8sbook-11): mục này mở đầu bằng **bốn** lựa chọn, trong đó \`externalIPs\`, \`NodePort\` và \`LoadBalancer\` nằm ngay trong đối tượng Service, còn Ingress để dành cho chương 12.
+**Đọc.** [§13.1 Giới thiệu Gateway API](#/docs/k8sbook-13) — §13.1.1 (so sánh với Ingress) và §13.1.3 (triển khai Istio làm provider). Rồi [§13.2 Triển khai một Gateway](#/docs/k8sbook-13), gồm §13.2.1 (GatewayClass) và §13.2.3 (đọc status).
 
-**Bẫy.** Chạy \`kubectl port-forward svc/my-service\` rồi tin rằng mình đang thử Service. Sách ghi rõ lệnh này **không kết nối tới chính Service** — nó chỉ mượn Service để tìm một pod phù hợp rồi nối thẳng vào pod đó. Muốn thử thật thì \`kubectl exec\` một \`curl\` từ bên trong pod khác. Bẫy thứ hai ở §11.2.3: đặt \`externalTrafficPolicy: Local\` để giữ được IP nguồn thật, nhưng node nào không có pod cục bộ thì kết nối **bị treo**, và tải chia không đều giữa các pod.
+**Bẫy.** Nghĩ Gateway API chỉ là "Ingress viết lại cho đẹp". Điểm khác cốt lõi là **tách vai trò**: GatewayClass và Gateway thuộc về người vận hành hạ tầng, còn HTTPRoute thuộc về đội ứng dụng — và ranh giới đó được chính API cưỡng chế, thay vì phải nhồi mọi thứ vào annotation của một object Ingress duy nhất. Bẫy thứ hai: quên rằng Gateway API cần **CRD được cài riêng** cộng với một implementation; thiếu một trong hai thì object tạo ra nhưng không ai xử lý.
 
-**Tự kiểm tra.** Theo §11.2.3, chính sách \`Local\` giải quyết hai vấn đề nào của chính sách \`Cluster\`, và đổi lại nó tạo ra hai vấn đề mới nào?`,
+**Tự kiểm tra.** Theo §13.2.3, bạn đọc trường nào trong status của Gateway để biết listener đã sẵn sàng và địa chỉ nào đang lắng nghe?`,
       },
       {
         id: "kb-w7-2",
-        text: "Endpoints và bản ghi DNS của Service",
-        lesson: `**Mục tiêu.** Nhìn một Service không hoạt động và biết ngay phải mở đối tượng nào tiếp theo, đồng thời gọi được dịch vụ bằng tên DNS thay vì bằng IP.
+        text: "HTTPRoute: định tuyến, chia tách và biến đổi lưu lượng",
+        lesson: `**Mục tiêu.** Viết HTTPRoute khớp theo path/header, chia traffic theo tỉ lệ, và dùng filter để sửa request trên đường đi.
 
-**Đọc.** [§11.3 Quản lý các Endpoint của Service](#/docs/k8sbook-11) — §11.3.1 (Endpoints), §11.3.2 (EndpointSlice), §11.3.3 (tự quản lý endpoint cho dịch vụ ngoài cụm). Rồi [§11.4 Tìm hiểu các bản ghi DNS dành cho đối tượng Service](#/docs/k8sbook-11) trọn vẹn: bản ghi \`A\` và \`SRV\`, headless service, và bí danh \`CNAME\` qua Service kiểu \`ExternalName\`.
+**Đọc.** [§13.3 Public các HTTP service bằng HTTPRoute](#/docs/k8sbook-13) — §13.3.2 (chia traffic giữa nhiều backend) và §13.3.4 (filter) là hai mục có giá trị thực dụng nhất. Rồi [§13.4 Cấu hình gateway cho TLS](#/docs/k8sbook-13).
 
-**Bẫy.** Đi tìm danh sách pod bên trong YAML của Service. Ngoài bộ chọn nhãn, **\`spec\` và \`status\` của Service không chứa danh sách đó** — nó nằm trong một đối tượng **Endpoints trùng tên với Service**. Chi tiết dễ vấp: loại đối tượng là \`Endpoints\` ở dạng số nhiều, gõ \`kubectl get endpoint\` sẽ báo lỗi. Bẫy thứ hai: EndpointSlice **không** trùng tên Service mà có thêm hậu tố ngẫu nhiên, và mặc định mỗi slice chỉ chứa tối đa 100 endpoint nên một Service có thể đi kèm nhiều slice.
+**Bẫy.** Dùng tỉ lệ \`weight\` mà quên rằng nó chia theo **kết nối/luồng request, không theo người dùng**. Một client giữ kết nối lâu có thể ở nguyên một phía suốt phiên; canary theo tỉ lệ không đồng nghĩa với "10% người dùng thấy phiên bản mới". Nếu cần dính theo người dùng thì phải khớp theo header (§13.3.3), không phải theo weight.
 
-**Tự kiểm tra.** Theo §11.3.3, khi bạn tạo Service không khai bộ chọn nhãn thì đối tượng nào bạn buộc phải tự tạo bằng tay, và đối tượng nào Kubernetes vẫn tự sinh giúp bạn?`,
+**Tự kiểm tra.** Bạn muốn mọi request có header \`x-beta: true\` đi vào phiên bản mới, phần còn lại giữ nguyên. Viết bằng match hay bằng weight, và vì sao?`,
       },
       {
         id: "kb-w7-3",
-        text: "Định tuyến tới endpoint ở gần và điều kiện pod được nhận lưu lượng",
-        lesson: `**Mục tiêu.** Ép được lưu lượng ở lại trong node khi ngữ nghĩa dịch vụ đòi hỏi, và viết readiness probe phản ánh đúng khả năng phục vụ của ứng dụng.
+        text: "Service không phải HTTP, dùng gateway xuyên namespace, và ranh giới với service mesh",
+        lesson: `**Mục tiêu.** Phơi được TCP/UDP/gRPC qua gateway, chia sẻ một gateway cho nhiều đội, và biết điểm dừng giữa ingress gateway và service mesh.
 
-**Đọc.** [§11.5 Cấu hình service để định tuyến lưu lượng đến các endpoint ở gần](#/docs/k8sbook-11) — §11.5.1 về \`internalTrafficPolicy\`; §11.5.2 chỉ cần đọc hiểu nguyên lý, vì sách nói rõ topology-aware hints còn ở mức alpha nên không hướng dẫn thực hành. Rồi [§11.6 Quản lý việc đưa pod vào danh sách endpoint của service](#/docs/k8sbook-11) trọn vẹn, nhất là §11.6.3.
+**Đọc.** [§13.5 Public các kiểu service khác](#/docs/k8sbook-13) (TCPRoute, UDPRoute, GRPCRoute), [§13.6 Sử dụng các resource của Gateway API xuyên namespace](#/docs/k8sbook-13) và [§13.7 Từ ingress gateway tới service mesh](#/docs/k8sbook-13).
 
-**Bẫy.** Lẫn \`internalTrafficPolicy\` với \`externalTrafficPolicy\` ở mục trước. Chúng cùng nhận giá trị \`Local\` nhưng một cái áp cho lưu lượng **từ ngoài cụm đi vào**, cái kia áp cho lưu lượng **giữa các pod trong cụm**. Bẫy thứ hai, khác biệt cốt lõi với chương 6: container trượt readiness probe **không bị khởi động lại** — nó chỉ bị gỡ khỏi danh sách endpoint, dù nhãn vẫn khớp bộ chọn. Và §11.6.3 cảnh báo: không khai readiness probe thì pod thành endpoint **ngay khi vừa được tạo**.
+**Bẫy.** Tạo HTTPRoute ở namespace của đội mình trỏ vào một Gateway ở namespace khác rồi tưởng là xong. Gateway phải **cho phép** namespace đó gắn route vào (\`allowedRoutes\`), và route trỏ sang service ở namespace khác còn cần **ReferenceGrant** — thiếu thì route bị từ chối lặng lẽ và bạn chỉ thấy nó trong status.
 
-**Tự kiểm tra.** Theo §11.6.1, readiness probe có một thuộc tính cấu hình mà liveness probe không có — đó là thuộc tính nào và nó quy định điều gì?`,
+**Tự kiểm tra.** Theo §13.6, hai cơ chế nào phải cùng có mặt để một route ở namespace A dùng được gateway ở namespace B và trỏ tới service ở namespace C?`,
       },
       {
         id: "kb-w7-4",
-        text: "Ingress, định tuyến theo host/path và cấu hình TLS",
-        lesson: `**Mục tiêu.** Phơi nhiều dịch vụ qua một địa chỉ IP công khai duy nhất, và biết phần nào của cấu hình HTTPS là chuẩn Kubernetes còn phần nào phụ thuộc vào bộ điều khiển bạn chọn.
+        text: "ReplicaSet và vòng lặp đối chiếu — cơ chế thật của mọi controller",
+        lesson: `**Mục tiêu.** Giải thích được pod "tự mọc lại" bằng vòng lặp đối chiếu, và biết quyền sở hữu object quyết định điều gì khi xoá.
 
-**Đọc.** [§12.1 Giới thiệu về Ingress](#/docs/k8sbook-12) — ba thành phần cấu thành Ingress ở đầu mục là thứ cần thuộc; §12.1.3 hướng dẫn cài Nginx Ingress Controller nếu cụm chưa có. Rồi [§12.2 Tạo và sử dụng các đối tượng Ingress](#/docs/k8sbook-12), đọc kỹ Bảng 12.1–12.3 về \`pathType\`. Cuối cùng [§12.3 Cấu hình TLS cho Ingress](#/docs/k8sbook-12).
+**Đọc.** [§14.1 Giới thiệu ReplicaSet](#/docs/k8sbook-14) — §14.1.3 (quyền sở hữu pod) rất quan trọng. Rồi [§14.2 Cập nhật một ReplicaSet](#/docs/k8sbook-14), [§14.3 Tìm hiểu hoạt động của ReplicaSet controller](#/docs/k8sbook-14) và [§14.4 Xóa một ReplicaSet](#/docs/k8sbook-14).
 
-**Bẫy.** Hiểu \`pathType: Prefix\` như phép so khớp chuỗi đơn thuần. Bảng 12.3 cho thấy đường dẫn được **cắt theo từng thành phần phân tách bởi dấu \`/\`** rồi mới so: quy tắc \`/foo\` khớp \`/foo/bar\` nhưng **không** khớp \`/foobar\`. Bẫy thứ hai: coi TLS passthrough là tính năng chuẩn. Sách nói thẳng Kubernetes **không có phương thức chuẩn hoá nào** để khai passthrough trong đối tượng Ingress — với Nginx Ingress Controller phải thêm annotation riêng và chạy controller kèm cờ \`--enable-ssl-passthrough\`.
+**Bẫy.** Sửa Pod template của ReplicaSet rồi chờ pod cũ được thay. ReplicaSet **không tự thay pod đang chạy** khi template đổi (§14.2.2) — template mới chỉ áp cho pod được tạo sau đó. Việc thay thế có kiểm soát là của Deployment, và đó chính là lý do chương 15 tồn tại. Bẫy thứ hai: xoá ReplicaSet mà quên \`--cascade=orphan\` khi bạn thực sự muốn giữ pod lại (§14.4.2).
 
-**Tự kiểm tra.** Theo §12.1.2, khi proxy nhận một yêu cầu HTTP, nó chuyển tiếp tới IP của Service hay tới IP của pod, và điều đó nói gì về vai trò của Service trong luồng Ingress?`,
+**Tự kiểm tra.** Bạn đổi label của một pod đang thuộc ReplicaSet sao cho nó không còn khớp selector. Có bao nhiêu pod tồn tại sau đó, và \`ownerReferences\` của pod cũ ra sao?`,
       },
     ],
   },
   {
     id: "kb-w8",
     week: "Tuần 8",
-    title: "Nhân bản & cập nhật không gián đoạn",
-    goal: "Giải thích được vòng lặp điều hoà của một bộ điều khiển bằng lời của mình, và chạy một đợt cập nhật ứng dụng mà Service không lúc nào thiếu pod để chuyển tiếp lưu lượng.",
-    practice: "Tạo ReplicaSet `kiada` ba bản sao, xoá tay một pod rồi đổi nhãn `rel` của một pod khác thành `debug` để xem bộ điều khiển phản ứng ra sao. Sau đó chuyển sang Deployment, cập nhật image từ 0.5 lên 0.6 với `maxSurge: 0` và `maxUnavailable: 1`, tạm dừng giữa chừng bằng `kubectl rollout pause` để hai phiên bản chạy song song, rồi quay lui bằng `kubectl rollout undo`.",
+    title: "Deployment & StatefulSet",
+    goal: "Cập nhật ứng dụng không gián đoạn và quay lui được khi hỏng; nói được vì sao ứng dụng có trạng thái cần một controller khác hẳn.",
+    practice: "Rollout Kiada v2 bằng RollingUpdate, cố tình đẩy một image lỗi rồi rollback; sau đó dựng StatefulSet 3 bản sao có PVC riêng, xoá pod giữa và kiểm chứng nó quay lại đúng tên và đúng volume cũ.",
     resources: [
-      { label: "KIA 13 — Nhân bản Pod bằng ReplicaSet", href: "#/docs/k8sbook-13" },
-      { label: "KIA 14 — Quản lý Pod bằng Deployment", href: "#/docs/k8sbook-14" },
-      { label: "Ôn lại: CKAD tuần 3 — Workloads", href: "#/roadmap/ckad" },
+      { label: "KIA 15 — Tự động hóa việc cập nhật ứng dụng với Deployment", href: "#/docs/k8sbook-15" },
+      { label: "KIA 16 — Xử lý ứng dụng stateful với StatefulSet", href: "#/docs/k8sbook-16" },
+      { label: "Ôn lại: CKAD tuần 3", href: "#/roadmap/ckad" },
       { label: "kubernetes.io — Deployments", href: "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/" },
     ],
     items: [
       {
         id: "kb-w8-1",
-        text: "ReplicaSet giữ đúng số bản sao — và nguyên lý bộ điều khiển",
-        lesson: `**Mục tiêu.** Mô tả được vòng lặp điều hoà mà **mọi** bộ điều khiển Kubernetes đều chạy, và chỉ ra chính xác giới hạn của ReplicaSet — thứ khiến chương sau phải tồn tại.
+        text: "Deployment, rollout và rollback",
+        lesson: `**Mục tiêu.** Điều khiển được tốc độ rollout, dừng nó giữa chừng, và quay lui về phiên bản trước bằng một lệnh.
 
-**Đọc.** [§13.1 Giới thiệu về ReplicaSet](#/docs/k8sbook-13), chú ý §13.1.3 về \`ownerReferences\` và bộ thu gom rác. Rồi [§13.2 Cập nhật một ReplicaSet](#/docs/k8sbook-13) — đọc §13.2.2 thật chậm. [§13.3 Tìm hiểu nguyên lý hoạt động của bộ điều khiển ReplicaSet](#/docs/k8sbook-13) là trái tim của chương. Cuối cùng [§13.4 Xóa một ReplicaSet](#/docs/k8sbook-13).
+**Đọc.** [§15.1 Giới thiệu Deployment](#/docs/k8sbook-15) rồi [§15.2 Cập nhật một Deployment](#/docs/k8sbook-15) — làm hết §15.2.1 tới §15.2.6, đặc biệt §15.2.3 (\`maxSurge\`/\`maxUnavailable\`), §15.2.4 (tạm dừng) và §15.2.5 (rollout lên phiên bản lỗi).
 
-**Bẫy.** Sửa mẫu Pod của ReplicaSet rồi chờ các pod đang chạy đổi theo. Thí nghiệm ở §13.2.2 cho kết quả ngược lại: pod cũ **giữ nguyên nhãn cũ**, chỉ pod tạo sau đó mới mang nhãn mới — sách ví mẫu Pod như chiếc khuôn cắt bánh quy, đổi khuôn không đổi những chiếc bánh đã cắt. Đó đúng là lý do bạn cần Deployment. Bẫy thứ hai: bộ chọn nhãn của ReplicaSet là **bất biến**; muốn đổi thì phải xoá đối tượng, và nếu không muốn mất pod thì xoá kèm \`--cascade=orphan\`.
+**Bẫy.** Tin rằng rollout thành công nghĩa là ứng dụng khỏe. Kubernetes chỉ biết pod **Ready**; nếu readiness probe hời hợt, một phiên bản hỏng vẫn đi hết vòng rollout và thay sạch pod cũ. Probe tốt (tuần 3 và tuần 6) chính là thứ biến \`maxUnavailable\` thành một cái phanh thật. Bẫy thứ hai: \`kubectl rollout undo\` chỉ quay lui được trong phạm vi \`revisionHistoryLimit\` — đặt nó quá thấp là tự cắt đường lui.
 
-**Tự kiểm tra.** Theo §13.3.3, bạn đổi nhãn \`rel\` của một pod hỏng thành \`debug\`. Bộ điều khiển làm gì ngay sau đó, và trường nào trong \`metadata\` của chính pod đó thay đổi theo?`,
+**Tự kiểm tra.** Với \`maxSurge: 1\` và \`maxUnavailable: 0\` trên Deployment 3 bản sao, tối đa có bao nhiêu pod tồn tại cùng lúc trong lúc rollout, và tối thiểu bao nhiêu pod phục vụ được?`,
       },
       {
         id: "kb-w8-2",
-        text: "Deployment, rollout, quay lui và các chiến lược cập nhật",
-        lesson: `**Mục tiêu.** Cấu hình được một đợt rollout đủ chậm để phát hiện phiên bản lỗi trước khi nó lan ra toàn bộ bản sao, và quay lui trong vài giây khi cần.
+        text: "Canary, A/B, Blue/Green và traffic shadowing",
+        lesson: `**Mục tiêu.** Chọn được chiến lược triển khai phù hợp với rủi ro của thay đổi, và biết chiến lược nào Deployment tự làm được, chiến lược nào cần lớp định tuyến.
 
-**Đọc.** [§14.1 Giới thiệu về Deployment](#/docs/k8sbook-14) để thấy chuỗi Deployment → ReplicaSet → Pod. Trọng tâm là [§14.2 Cập nhật một Deployment](#/docs/k8sbook-14): Bảng 14.2 (hai chiến lược), §14.2.3 (\`maxSurge\`/\`maxUnavailable\`), §14.2.4 (tạm dừng), §14.2.5 (\`minReadySeconds\`), §14.2.6 (quay lui). [§14.3 Triển khai các chiến lược deployment khác](#/docs/k8sbook-14) chỉ cần đọc để biết Kubernetes hỗ trợ tới đâu.
+**Đọc.** [§15.3 Hiện thực các chiến lược triển khai khác](#/docs/k8sbook-15) — §15.3.1 (canary), §15.3.2 (A/B), §15.3.3 (blue/green) và §15.3.4 (traffic shadowing).
 
-**Bẫy.** Đánh đồng "sẵn sàng" (ready) với "khả dụng" (available). Một pod chỉ khả dụng sau khi đã giữ trạng thái sẵn sàng đủ \`minReadySeconds\`, và rollout chờ mốc khả dụng — nhưng sách có lưu ý dễ bỏ sót: pod **đã sẵn sàng mà chưa khả dụng vẫn nằm trong Service và vẫn nhận yêu cầu của client**. Bẫy thứ hai ở §14.2.6: khi Deployment đang bị tạm dừng, \`kubectl rollout undo\` **không có tác dụng gì** cho tới khi bạn \`rollout resume\`.
+**Bẫy.** Nghĩ Deployment có sẵn "chế độ canary". Nó chỉ có **Recreate và RollingUpdate**; canary, A/B và blue/green được **dựng bằng tay** từ nhiều Deployment cộng với label/selector của service — hoặc từ HTTPRoute của Gateway API bạn vừa học ở tuần 7. Bẫy thứ hai: traffic shadowing gửi bản sao request tới phiên bản mới; nếu phiên bản đó ghi vào cùng database thật, bạn vừa nhân đôi mọi thao tác ghi.
 
-**Tự kiểm tra.** Theo §14.2.5, bạn đặt \`minReadySeconds: 60\` và một pod phiên bản mới vừa sẵn sàng được 20 giây. Service đã chuyển lưu lượng tới nó chưa, và bộ điều khiển Deployment lúc đó đang làm gì?`,
+**Tự kiểm tra.** Blue/Green đổi traffic bằng cách nào ở mức Kubernetes thuần, và vì sao cách đó tốn gấp đôi tài nguyên trong thời gian chuyển?`,
+      },
+      {
+        id: "kb-w8-3",
+        text: "StatefulSet: danh tính ổn định, volume riêng, và headless Service",
+        lesson: `**Mục tiêu.** Nói được ba thứ StatefulSet đảm bảo mà Deployment không đảm bảo, và giải thích vai trò của headless Service trong đó.
+
+**Đọc.** [§16.1 Giới thiệu StatefulSet](#/docs/k8sbook-16) — §16.1.2 (so sánh với Deployment) và §16.1.5 (vai trò của headless Service). Rồi [§16.2 Tìm hiểu hành vi của StatefulSet](#/docs/k8sbook-16), đọc kỹ §16.2.2 (lỗi node) và §16.2.4 (chính sách giữ lại PVC).
+
+**Bẫy.** Chờ StatefulSet tự thay pod khi node chết như Deployment vẫn làm. Vì StatefulSet phải đảm bảo **không bao giờ có hai pod cùng danh tính**, nó **không tạo pod thay thế** khi node mất liên lạc mà chưa xác nhận pod cũ đã chết — pod nằm \`Terminating\` vô hạn cho tới khi có can thiệp. Đây là hành vi cố ý, không phải lỗi. Bẫy thứ hai: scale xuống rồi tưởng đã dọn sạch — PVC mặc định **được giữ lại**, và hoá đơn lưu trữ vẫn chạy.
+
+**Tự kiểm tra.** Pod \`db-1\` bị xoá. Pod thay thế tên gì, gắn PVC nào, và tên DNS của nó là gì?`,
+      },
+      {
+        id: "kb-w8-4",
+        text: "Cập nhật StatefulSet, và khi nào nên nhường việc cho Operator",
+        lesson: `**Mục tiêu.** Rollout an toàn cho ứng dụng có trạng thái bằng partition, và nhận ra ranh giới nơi Operator làm tốt hơn bạn.
+
+**Đọc.** [§16.3 Cập nhật một StatefulSet](#/docs/k8sbook-16) — §16.3.2 (RollingUpdate với partition) là kỹ thuật canary cho StatefulSet; §16.3.3 (OnDelete). Rồi [§16.4 Quản lý ứng dụng stateful bằng Kubernetes Operator](#/docs/k8sbook-16), làm theo ví dụ MongoDB operator.
+
+**Bẫy.** Tự viết StatefulSet cho một database phân tán rồi phát hiện phần khó không nằm ở Kubernetes. Bầu chọn leader, tham gia/rời cụm, backup, nâng cấp có thứ tự — **Operator sinh ra để làm đúng những việc đó**. Bẫy thứ hai: quên rằng StatefulSet cập nhật **theo thứ tự giảm dần** (ordinal cao trước), nên partition đặt ở đâu quyết định pod nào được thử nghiệm trước.
+
+**Tự kiểm tra.** Với StatefulSet 5 bản sao và \`partition: 3\`, những pod nào nhận template mới khi bạn đổi image?`,
       },
     ],
   },
   {
     id: "kb-w9",
     week: "Tuần 9",
-    title: "Workload chuyên biệt — StatefulSet, DaemonSet, Job",
-    goal: "Chọn đúng loại đối tượng cho những workload không phải web phi trạng thái, và đọc được manifest của các pod hệ thống trong namespace kube-system mà không thấy chỗ nào lạ.",
-    practice: "Chuyển dịch vụ Quiz từ Deployment sang StatefulSet ba bản sao kèm headless Service, xoá pod `quiz-1` rồi kiểm chứng tên và PVC của pod thay thế. Sau đó mở `kubectl -n kube-system get ds kube-proxy -o yaml` và tự tìm `privileged`, `hostNetwork`, `priorityClassName`. Cuối cùng chạy một Job với `completions: 5` và `parallelism: 2`, quan sát thứ tự pod bằng `kubectl get pods -w`.",
+    title: "DaemonSet, Job & CronJob — nốt hai loại workload còn lại",
+    goal: "Chạy được tác nhân trên mọi node và các khối công việc hữu hạn, khép lại bức tranh đầy đủ về controller workload của Kubernetes.",
+    practice: "Dựng DaemonSet thu log chỉ chạy trên node có label nhất định; viết Job xử lý work queue với `completions`/`parallelism`, rồi bọc nó trong CronJob chạy mỗi 5 phút và quan sát cơ chế xoá Job cũ.",
     resources: [
-      { label: "KIA 15 — Triển khai workload có trạng thái bằng StatefulSet", href: "#/docs/k8sbook-15" },
-      { label: "KIA 16 — Tác nhân node và daemon bằng DaemonSet", href: "#/docs/k8sbook-16" },
-      { label: "KIA 17 — Khối công việc hữu hạn bằng Job và CronJob", href: "#/docs/k8sbook-17" },
-      { label: "kubernetes.io — StatefulSets", href: "https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/" },
+      { label: "KIA 17 — Triển khai workload trên từng node với DaemonSet", href: "#/docs/k8sbook-17" },
+      { label: "KIA 18 — Xử lý batch với Job và CronJob", href: "#/docs/k8sbook-18" },
+      { label: "Ôn lại: CKAD tuần 3", href: "#/roadmap/ckad" },
+      { label: "kubernetes.io — Jobs", href: "https://kubernetes.io/docs/concepts/workloads/controllers/job/" },
     ],
     items: [
       {
         id: "kb-w9-1",
-        text: "StatefulSet: danh tính ổn định và volume riêng từng bản sao",
-        lesson: `**Mục tiêu.** Nói được vì sao một Deployment gắn PersistentVolumeClaim không scale lên nhiều bản sao được, và triển khai được cụm cơ sở dữ liệu ba nút chỉ bằng một StatefulSet cộng một headless Service.
+        text: "DaemonSet: một pod trên mỗi node (hoặc một tập con node)",
+        lesson: `**Mục tiêu.** Nói được DaemonSet khác ReplicaSet ở chỗ nào về mặt lập lịch, và giới hạn nó xuống một tập con node.
 
-**Đọc.** [§15.1 Giới thiệu về StatefulSet](#/docs/k8sbook-15) — §15.1.1 (thí nghiệm scale Deployment \`quiz\` lên 3), §15.1.2 (so với Deployment), §15.1.5 (vai trò headless Service). Rồi [§15.2 Tìm hiểu hành vi của StatefulSet](#/docs/k8sbook-15), nhất là §15.2.1 và §15.2.4. [§15.3 Cập nhật một StatefulSet](#/docs/k8sbook-15) đọc §15.3.1–§15.3.2; [§15.4 Quản lý ứng dụng có trạng thái bằng Kubernetes Operator](#/docs/k8sbook-15) chỉ cần lướt.
+**Đọc.** [§17.1 Giới thiệu DaemonSet](#/docs/k8sbook-17) — §17.1.3 (triển khai lên một tập con node bằng node selector) và §17.1.4 (cập nhật DaemonSet).
 
-**Bẫy.** Nghĩ scale Deployment lên ba là có ba bản sao cơ sở dữ liệu. Cả ba pod dùng chung **một** PersistentVolumeClaim nên chung luôn một thư mục dữ liệu; MongoDB trong thí nghiệm của sách dừng ngay với lỗi \`DBPathInUse\`. Bẫy thứ hai: cho rằng thu nhỏ StatefulSet là dọn sạch. Mặc định PersistentVolumeClaim **được giữ lại**; muốn xoá tự động phải khai \`persistentVolumeClaimRetentionPolicy\`, mà đây vẫn là tính năng alpha cần bật feature gate khi tạo cụm.
+**Bẫy.** Đặt \`replicas\` cho DaemonSet. Không có trường đó: **số bản sao bằng số node khớp selector**, và nó tự tăng khi node mới gia nhập cụm. Bẫy thứ hai: DaemonSet không xuất hiện trên node control plane vì node đó có **taint**; muốn chạy ở đó phải khai toleration — đúng cơ chế mà các add-on mạng và giám sát vẫn dùng.
 
-**Tự kiểm tra.** Theo §15.2.1, bạn xoá pod \`quiz-1\`. Pod thay thế mang tên gì, gắn PersistentVolumeClaim nào, và vì sao client dùng hostname không nhận ra pod đã bị thay?`,
+**Tự kiểm tra.** Bạn thêm một node mới vào cụm lúc 3 giờ sáng. Ai tạo pod của DaemonSet trên node đó, và scheduler đóng vai trò gì?`,
       },
       {
         id: "kb-w9-2",
-        text: "DaemonSet: một pod mỗi node và các đặc quyền đi kèm",
-        lesson: `**Mục tiêu.** Triển khai được một tác nhân chạy trên đúng tập node bạn chọn, và cấp cho nó lượng đặc quyền tối thiểu thay vì bật \`privileged\` cho xong việc.
+        text: "Đặc quyền của pod tác nhân node, và cách gọi daemon cục bộ",
+        lesson: `**Mục tiêu.** Cấp đúng (và chỉ đúng) quyền mà một tác nhân node cần, và chọn được cách để pod khác gọi tới daemon trên chính node của nó.
 
-**Đọc.** [§16.1 Giới thiệu về DaemonSet](#/docs/k8sbook-16) — §16.1.1 (vòng lặp điều hoà), §16.1.3 (bộ chọn node), §16.1.4 (Bảng 16.2, hai chiến lược cập nhật). Rồi [§16.2 Các tính năng đặc biệt trong các Pod chạy tác nhân node và daemon](#/docs/k8sbook-16), đọc kèm manifest thật của \`kube-proxy\` và \`kindnet\`. Cuối cùng [§16.3 Giao tiếp với daemon Pod cục bộ](#/docs/k8sbook-16).
+**Đọc.** [§17.2 Các tính năng đặc biệt trong pod chạy node agent và daemon](#/docs/k8sbook-17) — §17.2.1 (quyền truy cập kernel), §17.2.3 (dùng namespace mạng của node) và §17.2.4 (đánh dấu pod là quan trọng). Rồi [§17.3 Giao tiếp với daemon Pod cục bộ](#/docs/k8sbook-17), so ba cách ở §17.3.1–17.3.3.
 
-**Bẫy.** Lẫn bộ chọn node với bộ chọn pod. §16.1.3 nhắc riêng: DaemonSet dùng **bộ chọn node để lọc node đủ điều kiện**, còn **bộ chọn pod để nhận diện pod nào thuộc về nó**. Bẫy thứ hai: bật \`privileged: true\` chỉ vì thấy \`kube-proxy\` làm vậy — container đặc quyền **bỏ qua mọi bước kiểm tra quyền của kernel**, trong khi \`kindnet\` cho thấy cách đúng hơn là liệt kê capability tối thiểu. Bẫy thứ ba: pod của DaemonSet **không** mặc nhiên quan trọng hơn pod của Deployment; muốn vậy phải tự đặt \`priorityClassName\`.
+**Bẫy.** Bật \`privileged: true\` cho tiện. Container đặc quyền gần như **vô hiệu hoá toàn bộ ranh giới container**; đa số nhu cầu thật chỉ cần một vài capability cụ thể hoặc \`hostPID\`/\`hostNetwork\` riêng lẻ. Đây cũng là thứ Pod Security Admission chặn đầu tiên khi bạn học CKS. Bẫy thứ hai: dùng Service thường để gọi daemon cục bộ — traffic có thể bị chuyển sang node khác; cần \`internalTrafficPolicy: Local\` (§17.3.3, nối tiếp §11.5.1).
 
-**Tự kiểm tra.** Theo §16.2.3, đặt \`hostNetwork: true\` khiến pod mất đi thứ gì so với pod thường, và những loại namespace nào nó vẫn giữ riêng nếu bạn không khai thêm gì?`,
+**Tự kiểm tra.** Theo §17.2.4, priority class giúp gì cho pod tác nhân node khi node hết tài nguyên?`,
       },
       {
         id: "kb-w9-3",
-        text: "Job chạy tới khi xong, CronJob chạy theo lịch",
-        lesson: `**Mục tiêu.** Chạy được một tác vụ hữu hạn mà không phải ngồi canh, và cấu hình lịch định kỳ không tự dẫm lên chân mình khi một lượt chạy quá lâu.
+        text: "Job: chạy tới khi hoàn thành, chạy song song, và xử lý lỗi",
+        lesson: `**Mục tiêu.** Chọn đúng \`completions\`/\`parallelism\` cho một khối công việc, và cấu hình hành vi khi pod của Job thất bại.
 
-**Đọc.** [§17.1 Chạy các tác vụ bằng tài nguyên Job](#/docs/k8sbook-17) — §17.1.1 (vì sao không dùng pod trần), §17.1.2 (Bảng 17.1 về \`completions\` và \`parallelism\`), §17.1.3 (xử lý lỗi). §17.1.4–§17.1.6 có thể để sau. Rồi [§17.2 Lập lịch cho Job bằng CronJob](#/docs/k8sbook-17): định dạng crontab, \`startingDeadlineSeconds\` và Bảng 17.5 về \`concurrencyPolicy\`.
+**Đọc.** [§18.1 Chạy tác vụ với Job resource](#/docs/k8sbook-18) — §18.1.3 (xử lý lỗi), §18.1.5 (work queue) và §18.1.7 (sidecar trong Job pod) là ba mục quan trọng nhất.
 
-**Bẫy.** Đặt \`restartPolicy\` cho có. Trong Job, chính trường này quyết định lỗi được xử lý ở **cấp nào**: với \`OnFailure\`, Kubelet khởi động lại container ngay trong pod cũ trên cùng node; với \`Never\`, cả pod bị đánh dấu thất bại và bộ điều khiển Job tạo pod mới, có thể trên node khác. Bẫy thứ hai: mặc định \`concurrencyPolicy\` là \`Allow\`, nên một lượt chạy dài hơn chu kỳ lịch sẽ bị lượt sau chồng lên. Bẫy thứ ba: \`ttlSecondsAfterFinished\` xoá Job **kể cả khi nó thất bại** — log biến mất trước khi bạn kịp đọc.
+**Bẫy.** Dùng \`restartPolicy: Always\` trong Job pod. Job **không chấp nhận** giá trị đó — pod của Job phải là \`OnFailure\` hoặc \`Never\`, vì một tác vụ hữu hạn cần được phép **kết thúc**. Bẫy thứ hai: \`backoffLimit\` mặc định khiến một tác vụ lỗi vĩnh viễn vẫn bị thử lại nhiều lần với độ trễ tăng dần, còn Job thì nằm đó không báo hỏng ngay. Bẫy thứ ba: sidecar không bao giờ thoát sẽ giữ Job không bao giờ hoàn thành — đó chính là lý do có native sidecar (§5.5.4).
 
-**Tự kiểm tra.** Theo §17.1.2, nếu bạn chỉ khai \`parallelism\` mà bỏ trống \`completions\` thì Job được coi là hoàn tất khi nào, và điều gì xảy ra nếu \`parallelism\` lớn hơn \`completions\`?`,
+**Tự kiểm tra.** Job có \`completions: 10\`, \`parallelism: 3\`. Tối đa bao nhiêu pod chạy cùng lúc, và Job kết thúc khi nào?`,
+      },
+      {
+        id: "kb-w9-4",
+        text: "CronJob: lịch, đồng thời, hạn chót và dọn dẹp",
+        lesson: `**Mục tiêu.** Lập lịch một Job định kỳ và kiểm soát được chuyện gì xảy ra khi lần chạy trước chưa xong hoặc cụm vừa ngừng một lúc.
+
+**Đọc.** [§18.2 Lập lịch Job với CronJob](#/docs/k8sbook-18) — §18.2.5 (hạn chót bắt đầu), §18.2.6 (xử lý đồng thời) và §18.2.4 (tự động xoá Job đã kết thúc).
+
+**Bẫy.** Để \`concurrencyPolicy\` mặc định (\`Allow\`) cho một tác vụ chạy lâu hơn chu kỳ lịch. Các lần chạy **chồng lên nhau**, tranh nhau cùng dữ liệu, và tải tăng dần cho tới khi cụm ngộp — dùng \`Forbid\` hoặc \`Replace\` khi tác vụ không an toàn để chạy song song. Bẫy thứ hai: cụm ngừng qua giờ chạy rồi khi tỉnh dậy khởi động một loạt Job bù; \`startingDeadlineSeconds\` (§18.2.5) là thứ chặn chuyện đó. Bẫy thứ ba: quên \`ttlSecondsAfterFinished\` nên Job và pod đã xong tích tụ hàng nghìn object.
+
+**Tự kiểm tra.** CronJob chạy mỗi 5 phút, mỗi lần mất 8 phút. Với từng giá trị \`Allow\`, \`Forbid\`, \`Replace\`, sau 30 phút bạn có bao nhiêu Job đang chạy?`,
       },
     ],
   },
