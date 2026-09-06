@@ -1,13 +1,18 @@
 // Tài liệu lĩnh vực "Lập trình hệ thống" — 18 tài liệu.
-// Nguồn markdown: sources/sysprog/ — được scripts/build-content.sh sao chép nguyên cây
+// Nguồn markdown: sources/sysprog/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/sysprog/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
+// `chapter` (số / chữ phụ lục / null) và `part` (Phần trong sách / null): nhãn hiển thị
+// sinh bởi labels.js ("Ch. 5 · Pod"), `title` chỉ còn tên chương (bất biến D1).
+// Giáo trình không chia Phần → part null.
 
 export const docs = [
   {
     id: "sysprog-01",
     field: "sysprog",
-    title: "01 — Giới thiệu",
+    chapter: 1,
+    part: null,
+    title: "Giới thiệu",
     file: "content/sysprog/01-introduction.md",
     icon: "📖",
     desc: "Vì sao học lập trình hệ thống, cách dùng cuốn sách, quy ước ký hiệu và lời khuyên cho người mới.",
@@ -16,7 +21,9 @@ export const docs = [
   {
     id: "sysprog-02",
     field: "sysprog",
-    title: "02 — Kiến thức nền tảng",
+    chapter: 2,
+    part: null,
+    title: "Kiến thức nền tảng",
     file: "content/sysprog/02-background.md",
     icon: "🧱",
     desc: "Kiến trúc hệ thống, ranh giới user space / kernel space, môi trường làm việc, Valgrind và GDB.",
@@ -25,7 +32,9 @@ export const docs = [
   {
     id: "sysprog-03",
     field: "sysprog",
-    title: "03 — Ngôn ngữ lập trình C",
+    chapter: 3,
+    part: null,
+    title: "Ngôn ngữ lập trình C",
     file: "content/sysprog/03-c-programming-language.md",
     icon: "🔤",
     desc: "Cú pháp C, mô hình bộ nhớ (text/data/heap/stack), con trỏ, số học con trỏ và các lỗi kinh điển.",
@@ -34,7 +43,9 @@ export const docs = [
   {
     id: "sysprog-04",
     field: "sysprog",
-    title: "04 — Tiến trình",
+    chapter: 4,
+    part: null,
+    title: "Tiến trình",
     file: "content/sysprog/04-processes.md",
     icon: "⚙️",
     desc: "File descriptor, nội dung một process, fork/wait/exec và mẫu fork-exec-wait.",
@@ -43,7 +54,9 @@ export const docs = [
   {
     id: "sysprog-05",
     field: "sysprog",
-    title: "05 — Bộ cấp phát bộ nhớ",
+    chapter: 5,
+    part: null,
+    title: "Bộ cấp phát bộ nhớ",
     file: "content/sysprog/05-memory-allocators.md",
     icon: "🧮",
     desc: "malloc/free/calloc/realloc, first–best–worst fit, tự xây allocator, buddy và SLUB.",
@@ -52,7 +65,9 @@ export const docs = [
   {
     id: "sysprog-06",
     field: "sysprog",
-    title: "06 — Luồng",
+    chapter: 6,
+    part: null,
+    title: "Luồng",
     file: "content/sysprog/06-threads.md",
     icon: "🧵",
     desc: "Process khác thread ở đâu, bên trong một thread, pthread_create/join và race condition.",
@@ -61,7 +76,9 @@ export const docs = [
   {
     id: "sysprog-07",
     field: "sysprog",
-    title: "07 — Đồng bộ hoá",
+    chapter: 7,
+    part: null,
+    title: "Đồng bộ hoá",
     file: "content/sysprog/07-synchronization.md",
     icon: "🔒",
     desc: "Mutex, condition variable, semaphore, barrier, ring buffer và các lời giải cho vùng găng.",
@@ -70,7 +87,9 @@ export const docs = [
   {
     id: "sysprog-08",
     field: "sysprog",
-    title: "08 — Deadlock",
+    chapter: 8,
+    part: null,
+    title: "Deadlock",
     file: "content/sysprog/08-deadlock.md",
     icon: "🪤",
     desc: "Đồ thị cấp phát tài nguyên, bốn điều kiện Coffman, bài toán triết gia ăn tối và các lời giải.",
@@ -79,7 +98,9 @@ export const docs = [
   {
     id: "sysprog-09",
     field: "sysprog",
-    title: "09 — Bộ nhớ ảo và IPC",
+    chapter: 9,
+    part: null,
+    title: "Bộ nhớ ảo và IPC",
     file: "content/sysprog/09-virtual-memory-and-ipc.md",
     icon: "🗺️",
     desc: "Dịch địa chỉ, page table, TLB, mmap, pipe và named pipe — bốn cách để process nói chuyện với nhau.",
@@ -88,7 +109,9 @@ export const docs = [
   {
     id: "sysprog-10",
     field: "sysprog",
-    title: "10 — Lập lịch",
+    chapter: 10,
+    part: null,
+    title: "Lập lịch",
     file: "content/sysprog/10-scheduling.md",
     icon: "📅",
     desc: "Các thước đo hiệu quả (turnaround, response, waiting time) và thuật toán FCFS, SJF, RR, PS.",
@@ -97,7 +120,9 @@ export const docs = [
   {
     id: "sysprog-11",
     field: "sysprog",
-    title: "11 — Lập trình mạng",
+    chapter: 11,
+    part: null,
+    title: "Lập trình mạng",
     file: "content/sysprog/11-networking.md",
     icon: "🌐",
     desc: "Mô hình OSI, IP, TCP client/server, UDP, HTTP, I/O không chặn và remote procedure call.",
@@ -106,7 +131,9 @@ export const docs = [
   {
     id: "sysprog-12",
     field: "sysprog",
-    title: "12 — Hệ thống tệp",
+    chapter: 12,
+    part: null,
+    title: "Hệ thống tệp",
     file: "content/sysprog/12-filesystems.md",
     icon: "💾",
     desc: "inode, lưu dữ liệu trên đĩa, bit quyền, virtual filesystem, memory mapped IO và tính tin cậy.",
@@ -115,7 +142,9 @@ export const docs = [
   {
     id: "sysprog-13",
     field: "sysprog",
-    title: "13 — Tín hiệu",
+    chapter: 13,
+    part: null,
+    title: "Tín hiệu",
     file: "content/sysprog/13-signals.md",
     icon: "📡",
     desc: "Gửi và xử lý signal, hàm async-signal-safe, signal mask, tín hiệu trong process con và thread.",
@@ -124,7 +153,9 @@ export const docs = [
   {
     id: "sysprog-14",
     field: "sysprog",
-    title: "14 — Bảo mật",
+    chapter: 14,
+    part: null,
+    title: "Bảo mật",
     file: "content/sysprog/14-security.md",
     icon: "🛡️",
     desc: "Thuật ngữ và đạo đức bảo mật, lỗ hổng trong chương trình C (buffer overflow, format string), an ninh mạng.",
@@ -133,7 +164,9 @@ export const docs = [
   {
     id: "sysprog-15",
     field: "sysprog",
-    title: "15 — Ôn tập",
+    chapter: 15,
+    part: null,
+    title: "Ôn tập",
     file: "content/sysprog/15-review.md",
     icon: "📝",
     desc: "Ngân hàng câu hỏi ôn tập cho 10 mảng: C, process, bộ nhớ, threading, deadlock, IPC, filesystem, mạng, bảo mật, signal.",
@@ -142,7 +175,9 @@ export const docs = [
   {
     id: "sysprog-16",
     field: "sysprog",
-    title: "16 — Chủ đề nâng cao",
+    chapter: 16,
+    part: null,
+    title: "Chủ đề nâng cao",
     file: "content/sysprog/16-honors-topics.md",
     icon: "🎖️",
     desc: "Các chủ đề mở rộng ngoài chương trình chuẩn của môn học.",
@@ -151,7 +186,9 @@ export const docs = [
   {
     id: "sysprog-17",
     field: "sysprog",
-    title: "17 — Phụ lục",
+    chapter: 17,
+    part: null,
+    title: "Phụ lục",
     file: "content/sysprog/17-appendix.md",
     icon: "📎",
     desc: "Shell, stack smashing, biên dịch & liên kết, giải thuật Banker, mô hình Actor, spurious wakeup, trang man.",
@@ -160,7 +197,9 @@ export const docs = [
   {
     id: "sysprog-18",
     field: "sysprog",
-    title: "18 — Phân tích hậu sự cố",
+    chapter: 18,
+    part: null,
+    title: "Phân tích hậu sự cố",
     file: "content/sysprog/18-post-mortems.md",
     icon: "🔍",
     desc: "16 sự cố thật: Shellshock, Heartbleed, Dirty COW, Meltdown, Spectre, Mars Pathfinder, AT&T 1990, Year 2038…",

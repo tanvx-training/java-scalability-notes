@@ -246,19 +246,24 @@ await check("Mọi link #/docs/<id> trỏ tới tài liệu có thật", () => {
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
-// #3b — Link #/docs/<id> trong lộ trình phải cùng lĩnh vực với track đang chứa
-// nó. Bất biến #3 chỉ kiểm id có tồn tại, không kiểm nó có "lạc" sang lĩnh
-// vực khác — một link như vậy sẽ âm thầm đổi lĩnh vực đang chọn của người
-// dùng giữa chừng bài học (xem navigate() trong app.js: #/docs/<id> suy ra
-// lĩnh vực từ chính tài liệu đó).
-await check("Link #/docs/<id> trong lộ trình khớp lĩnh vực với track", () => {
+// #3b — Link #/docs/<id> trong lộ trình phải "cùng đường" với track chứa nó:
+// cùng lĩnh vực, HOẶC cùng con đường học (paths.js), HOẶC track thuộc trục
+// Senior Java (đi qua mọi con đường). Bất biến #3 chỉ kiểm id có tồn tại; link
+// lạc đường (vd Kafka → CKS) sẽ âm thầm đổi lĩnh vực của người dùng giữa bài
+// (navigate() trong app.js suy lĩnh vực từ chính tài liệu).
+const { PATHS, PATH_ORDER, SPINE, MATRIX_PATHS, pathOfField } = await import("../js/data/paths.js");
+const sameWay = (docFieldId, trackFieldId) =>
+  docFieldId === trackFieldId ||
+  trackFieldId === SPINE.field ||
+  (pathOfField(docFieldId) != null && pathOfField(docFieldId) === pathOfField(trackFieldId));
+await check("Link #/docs/<id> trong lộ trình cùng lĩnh vực / cùng con đường với track", () => {
   const docField = new Map(docs.map((d) => [d.id, fieldOf(d)]));
   const bad = [];
   const scan = (text, where, trackField) => {
     for (const m of String(text ?? "").matchAll(/#\/docs\/([A-Za-z0-9_-]+)/g)) {
       const df = docField.get(m[1]);
       // id không tồn tại đã bị bất biến #3 báo — ở đây chỉ xét id có thật.
-      if (df && df !== trackField) {
+      if (df && !sameWay(df, trackField)) {
         bad.push(`${where} → #/docs/${m[1]} (doc field="${df}", track field="${trackField}")`);
       }
     }
@@ -865,6 +870,83 @@ await check("groupGuides trỏ tới nhóm tài liệu có thật", () => {
   const bad = Object.keys(groupGuides).filter((g) => !groups.has(g));
   expect(!bad.length, `nhóm không tồn tại: ${bad.join(", ")}`);
   for (const [k, g] of Object.entries(groupGuides)) expect(typeof g.howToRead === "string" && g.howToRead.trim(), `${k}.howToRead rỗng`);
+});
+
+// ---- Con đường học, chương/Phần, liên kết chéo ----
+
+// P1 — mọi lĩnh vực nằm đúng một con đường (fields ∪ foundation), trừ trục SPINE;
+// stages trỏ track thật của SPINE.field; MATRIX_PATHS phủ đúng tập module ma trận.
+await check("PATHS phủ mọi lĩnh vực đúng một lần; SPINE và MATRIX_PATHS hợp lệ", () => {
+  const bad = [];
+  const seen = new Map();
+  for (const pid of PATH_ORDER) {
+    const p = PATHS[pid];
+    if (!p) { bad.push(`PATH_ORDER có "${pid}" không tồn tại`); continue; }
+    for (const f of [...p.fields, ...p.foundation]) {
+      if (!FIELDS[f]) bad.push(`PATHS.${pid} chứa lĩnh vực lạ "${f}"`);
+      seen.set(f, (seen.get(f) ?? 0) + 1);
+    }
+  }
+  for (const [f, n] of seen) if (n > 1) bad.push(`lĩnh vực "${f}" xuất hiện ${n} lần trong PATHS`);
+  for (const f of Object.keys(FIELDS)) {
+    if (f === SPINE.field) { if (seen.has(f)) bad.push(`trục "${f}" không được nằm trong PATHS`); continue; }
+    if (!seen.has(f)) bad.push(`lĩnh vực "${f}" không thuộc con đường nào`);
+  }
+  if (!FIELDS[SPINE.field]) bad.push(`SPINE.field "${SPINE.field}" không tồn tại`);
+  for (const s of SPINE.stages) {
+    const t = tracks.find((x) => x.id === s.track);
+    if (!t) bad.push(`SPINE stage track "${s.track}" không tồn tại`);
+    else if (fieldOf(t) !== SPINE.field) bad.push(`SPINE stage "${s.track}" không thuộc ${SPINE.field}`);
+    if (s.path != null && !PATHS[s.path]) bad.push(`SPINE stage "${s.track}" trỏ con đường lạ "${s.path}"`);
+  }
+  const modIds = new Set(matrixModules.map((m) => m.id));
+  for (const id of modIds) if (!(id in MATRIX_PATHS)) bad.push(`MATRIX_PATHS thiếu module "${id}"`);
+  for (const [id, p] of Object.entries(MATRIX_PATHS)) {
+    if (!modIds.has(id)) bad.push(`MATRIX_PATHS có module lạ "${id}"`);
+    if (p != null && !PATHS[p]) bad.push(`MATRIX_PATHS.${id} trỏ con đường lạ "${p}"`);
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// D1 — chapter/part đúng hình dạng; chapter không trùng trong cùng (lĩnh vực, nhóm);
+// title không còn tiền tố cũ (nhãn giờ sinh bởi labels.js).
+await check("docs[].chapter/part hợp lệ, title không còn tiền tố cũ", () => {
+  const bad = [];
+  const OLD_PREFIX = /^(KIA|KUAR|CKA Book|SSIA|MCJ|MJIA|Kafka|Spring Start|Chương) (\d+|[A-Z]|Phụ lục [A-Z]) — |^\d\d — /;
+  const seen = new Map();
+  for (const d of docs) {
+    if (!("chapter" in d) || !("part" in d)) { bad.push(`${d.id} thiếu chapter/part`); continue; }
+    const c = d.chapter;
+    if (!(c === null || (Number.isInteger(c) && c > 0) || /^[A-Z]$/.test(String(c)) && typeof c === "string")) bad.push(`${d.id} chapter=${JSON.stringify(c)} không hợp lệ`);
+    if (!(d.part === null || (typeof d.part === "string" && d.part.trim()))) bad.push(`${d.id} part không hợp lệ`);
+    if (OLD_PREFIX.test(d.title)) bad.push(`${d.id} title còn tiền tố cũ: "${d.title}"`);
+    if (c !== null) {
+      const key = `${fieldOf(d)}|${d.group ?? ""}|${c}`;
+      if (seen.has(key)) bad.push(`${d.id} trùng chapter ${c} với ${seen.get(key)}`);
+      seen.set(key, d.id);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// R1 — related: id tồn tại, không tự trỏ, không lặp, và KHÁC lĩnh vực (cùng lĩnh
+// vực đã có prev/next và lộ trình).
+const { related } = await import("../js/data/related.js");
+await check("related.js: id thật, khác lĩnh vực, không tự trỏ, không lặp", () => {
+  const bad = [];
+  const byId = new Map(docs.map((d) => [d.id, d]));
+  for (const [from, tos] of Object.entries(related)) {
+    if (!byId.has(from)) { bad.push(`khoá "${from}" không tồn tại`); continue; }
+    if (!Array.isArray(tos) || !tos.length) { bad.push(`"${from}" rỗng`); continue; }
+    const dup = dupes(tos);
+    if (dup.length) bad.push(`"${from}" lặp: ${dup.join(", ")}`);
+    for (const to of tos) {
+      if (!byId.has(to)) { bad.push(`"${from}" → "${to}" không tồn tại`); continue; }
+      if (to === from) bad.push(`"${from}" tự trỏ`);
+      if (fieldOf(byId.get(to)) === fieldOf(byId.get(from))) bad.push(`"${from}" → "${to}" cùng lĩnh vực`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
 });
 
 // N3 — bảng kỳ vọng phải phủ mọi lĩnh vực khai docs/roadmap/tracker.

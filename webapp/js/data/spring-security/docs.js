@@ -1,23 +1,32 @@
 // Tài liệu lĩnh vực "Spring Security" — 21 tài liệu.
-// Nguồn markdown: sources/spring-security/ — được scripts/build-content.sh sao chép nguyên cây
+// Nguồn markdown: sources/spring-security/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/spring-security/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
+// `chapter` (số / chữ phụ lục / null) và `part` (Phần trong sách / null): nhãn hiển thị
+// sinh bởi labels.js ("Ch. 5 · Pod"), `title` chỉ còn tên chương (bất biến D1).
+// Phần theo README nguồn (6 Phần) + Mở đầu + Phụ lục.
 // Nguồn PDF gốc thiếu thân chương 14 (§14.1–14.5) và mục 15.1; các mục dưới đây nói rõ chỗ nào thiếu thay vì giấu đi.
 
 export const docs = [
+  // ----- Mở đầu -----
   {
     id: "springsec-00",
     field: "spring-security",
-    title: "SSIA 00 — Lời giới thiệu & về cuốn sách",
+    chapter: null,
+    part: "Mở đầu",
+    title: "Lời giới thiệu & về cuốn sách",
     file: "content/spring-security/00-loi-gioi-thieu-va-ve-cuon-sach.md",
     icon: "📖",
     desc: "Lời giới thiệu, lời nói đầu, cách cuốn sách được tổ chức và cách đọc. Đọc dạo đầu trước khi vào chương 1.",
     tags: ["Spring Security in Action", "Mở đầu"],
   },
+  // ----- Phần 1 — Chào đón Spring Security -----
   {
     id: "springsec-01",
     field: "spring-security",
-    title: "SSIA 01 — Bảo mật ngày nay",
+    chapter: 1,
+    part: "Phần 1 — Chào đón Spring Security",
+    title: "Bảo mật ngày nay",
     file: "content/spring-security/01-bao-mat-ngay-nay.md",
     icon: "🛡️",
     desc: "Bảo mật phần mềm là gì, vì sao nó quan trọng, và lộ trình cuốn sách sẽ dẫn bạn đi.",
@@ -26,16 +35,21 @@ export const docs = [
   {
     id: "springsec-02",
     field: "spring-security",
-    title: "SSIA 02 — Xin chào, Spring Security",
+    chapter: 2,
+    part: "Phần 1 — Chào đón Spring Security",
+    title: "Xin chào, Spring Security",
     file: "content/spring-security/02-xin-chao-spring-security.md",
     icon: "👋",
     desc: "Dự án Spring Security đầu tiên, bức tranh tổng thể về thiết kế lớp, và cách ghi đè cấu hình mặc định.",
     tags: ["Spring Security in Action", "Khởi động", "Kiến trúc"],
   },
+  // ----- Phần 2 — Cấu hình xác thực -----
   {
     id: "springsec-03",
     field: "spring-security",
-    title: "SSIA 03 — Quản lý người dùng",
+    chapter: 3,
+    part: "Phần 2 — Cấu hình xác thực",
+    title: "Quản lý người dùng",
     file: "content/spring-security/03-quan-ly-nguoi-dung.md",
     icon: "👤",
     desc: "Giao ước UserDetails và GrantedAuthority, UserDetailsService và UserDetailsManager — cách Spring Security biết người dùng là ai.",
@@ -44,7 +58,9 @@ export const docs = [
   {
     id: "springsec-04",
     field: "spring-security",
-    title: "SSIA 04 — Quản lý mật khẩu",
+    chapter: 4,
+    part: "Phần 2 — Cấu hình xác thực",
+    title: "Quản lý mật khẩu",
     file: "content/spring-security/04-quan-ly-mat-khau.md",
     icon: "🔑",
     desc: "Giao ước PasswordEncoder, các cài đặt có sẵn, DelegatingPasswordEncoder để nâng cấp thuật toán, và mô-đun Spring Security Crypto.",
@@ -53,7 +69,9 @@ export const docs = [
   {
     id: "springsec-05",
     field: "spring-security",
-    title: "SSIA 05 — Bảo mật ứng dụng web bắt đầu từ các bộ lọc",
+    chapter: 5,
+    part: "Phần 2 — Cấu hình xác thực",
+    title: "Bảo mật ứng dụng web bắt đầu từ các bộ lọc",
     file: "content/spring-security/05-bao-mat-cua-ung-dung-web-bat-dau-tu-cac-bo-loc.md",
     icon: "🧱",
     desc: "Chuỗi bộ lọc trong kiến trúc Spring Security, cách chèn bộ lọc của bạn vào trước/sau/thay vị trí một bộ lọc có sẵn.",
@@ -62,16 +80,21 @@ export const docs = [
   {
     id: "springsec-06",
     field: "spring-security",
-    title: "SSIA 06 — Triển khai các phương thức xác thực",
+    chapter: 6,
+    part: "Phần 2 — Cấu hình xác thực",
+    title: "Triển khai các phương thức xác thực",
     file: "content/spring-security/06-trien-khai-cac-phuong-thuc-xac-thuc.md",
     icon: "🔐",
     desc: "AuthenticationProvider và logic xác thực tuỳ chỉnh, SecurityContext và chiến lược lưu giữ, HTTP Basic và đăng nhập bằng biểu mẫu.",
     tags: ["Spring Security in Action", "AuthenticationProvider", "SecurityContext"],
   },
+  // ----- Phần 3 — Cấu hình phân quyền -----
   {
     id: "springsec-07",
     field: "spring-security",
-    title: "SSIA 07 — Phân quyền cấp endpoint: giới hạn truy cập",
+    chapter: 7,
+    part: "Phần 3 — Cấu hình phân quyền",
+    title: "Phân quyền cấp endpoint: giới hạn truy cập",
     file: "content/spring-security/07-cau-hinh-phan-quyen-cap-endpoint-gioi-han-truy-cap.md",
     icon: "🚧",
     desc: "Giới hạn truy cập dựa trên quyền hạn (authority) và vai trò (role), cùng khác biệt giữa hai khái niệm này.",
@@ -80,7 +103,9 @@ export const docs = [
   {
     id: "springsec-08",
     field: "spring-security",
-    title: "SSIA 08 — Phân quyền cấp endpoint: áp dụng các giới hạn",
+    chapter: 8,
+    part: "Phần 3 — Cấu hình phân quyền",
+    title: "Phân quyền cấp endpoint: áp dụng các giới hạn",
     file: "content/spring-security/08-cau-hinh-phan-quyen-cap-endpoint-ap-dung-cac-gioi-han.md",
     icon: "🎯",
     desc: "Dùng requestMatchers() để chọn endpoint, chọn yêu cầu áp hạn chế, và bộ khớp yêu cầu bằng biểu thức chính quy.",
@@ -89,7 +114,9 @@ export const docs = [
   {
     id: "springsec-09",
     field: "spring-security",
-    title: "SSIA 09 — Cấu hình bảo vệ chống CSRF",
+    chapter: 9,
+    part: "Phần 3 — Cấu hình phân quyền",
+    title: "Cấu hình bảo vệ chống CSRF",
     file: "content/spring-security/09-cau-hinh-bao-ve-chong-csrf.md",
     icon: "🎭",
     desc: "Cơ chế CSRF hoạt động thế nào trong Spring Security, dùng nó trong kịch bản thực tế, và cách tuỳ chỉnh.",
@@ -98,7 +125,9 @@ export const docs = [
   {
     id: "springsec-10",
     field: "spring-security",
-    title: "SSIA 10 — Cấu hình CORS",
+    chapter: 10,
+    part: "Phần 3 — Cấu hình phân quyền",
+    title: "Cấu hình CORS",
     file: "content/spring-security/10-cau-hinh-cors.md",
     icon: "🌍",
     desc: "CORS hoạt động thế nào, áp dụng chính sách bằng annotation @CrossOrigin và bằng CorsConfigurer.",
@@ -107,7 +136,9 @@ export const docs = [
   {
     id: "springsec-11",
     field: "spring-security",
-    title: "SSIA 11 — Phân quyền ở cấp độ phương thức",
+    chapter: 11,
+    part: "Phần 3 — Cấu hình phân quyền",
+    title: "Phân quyền ở cấp độ phương thức",
     file: "content/spring-security/11-trien-khai-phan-quyen-o-cap-do-phuong-thuc.md",
     icon: "🧩",
     desc: "Kích hoạt bảo mật phương thức, quy tắc tiền ủy quyền và hậu ủy quyền, và permission tuỳ chỉnh cho phương thức.",
@@ -116,16 +147,21 @@ export const docs = [
   {
     id: "springsec-12",
     field: "spring-security",
-    title: "SSIA 12 — Lọc ở cấp độ phương thức",
+    chapter: 12,
+    part: "Phần 3 — Cấu hình phân quyền",
+    title: "Lọc ở cấp độ phương thức",
     file: "content/spring-security/12-trien-khai-loc-o-cap-do-phuong-thuc.md",
     icon: "🧹",
     desc: "Tiền lọc và hậu lọc trong phân quyền phương thức, và cách dùng cơ chế lọc với repository Spring Data.",
     tags: ["Spring Security in Action", "PreFilter", "PostFilter"],
   },
+  // ----- Phần 4 — Triển khai OAuth 2 và OpenID Connect -----
   {
     id: "springsec-13",
     field: "spring-security",
-    title: "SSIA 13 — OAuth 2 và OpenID Connect là gì?",
+    chapter: 13,
+    part: "Phần 4 — Triển khai OAuth 2 và OpenID Connect",
+    title: "OAuth 2 và OpenID Connect là gì?",
     file: "content/spring-security/13-oauth-2-va-openid-connect-la-gi.md",
     icon: "🪪",
     desc: "Các vai trò trong OAuth 2, token đục và token rõ, các phương thức cấp quyền kèm PKCE và refresh token, cùng điểm yếu của OAuth 2.",
@@ -134,7 +170,9 @@ export const docs = [
   {
     id: "springsec-14",
     field: "spring-security",
-    title: "SSIA 14 — Máy chủ ủy quyền OAuth 2 (nguồn thiếu thân chương)",
+    chapter: 14,
+    part: "Phần 4 — Triển khai OAuth 2 và OpenID Connect",
+    title: "Máy chủ ủy quyền OAuth 2 (nguồn thiếu thân chương)",
     file: "content/spring-security/14-trien-khai-mot-may-chu-uy-quyen-oauth-2.md",
     icon: "⚠️",
     desc: "CHỈ CÓ phần mở đầu giới thiệu vai trò máy chủ ủy quyền. Toàn bộ §14.1–14.5 (JWT, authorization code, client credentials, opaque token & introspection, thu hồi token) thiếu trong bản PDF gốc.",
@@ -143,7 +181,9 @@ export const docs = [
   {
     id: "springsec-15",
     field: "spring-security",
-    title: "SSIA 15 — Máy chủ tài nguyên OAuth 2",
+    chapter: 15,
+    part: "Phần 4 — Triển khai OAuth 2 và OpenID Connect",
+    title: "Máy chủ tài nguyên OAuth 2",
     file: "content/spring-security/15-trien-khai-mot-may-chu-tai-nguyen-oauth-2.md",
     icon: "🗝️",
     desc: "JWT tuỳ chỉnh, xác thực token qua cơ chế introspection, và hệ thống đa khách thuê. Bản PDF gốc thiếu cả phần mở đầu Chương 15 lẫn toàn bộ mục 15.1.",
@@ -152,34 +192,45 @@ export const docs = [
   {
     id: "springsec-16",
     field: "spring-security",
-    title: "SSIA 16 — Triển khai một client OAuth 2",
+    chapter: 16,
+    part: "Phần 4 — Triển khai OAuth 2 và OpenID Connect",
+    title: "Triển khai một client OAuth 2",
     file: "content/spring-security/16-trien-khai-mot-client-oauth-2.md",
     icon: "📱",
     desc: "Đăng nhập bằng OAuth 2 và xây dựng một client gọi tới tài nguyên được bảo vệ.",
     tags: ["Spring Security in Action", "OAuth 2", "Client"],
   },
+  // ----- Phần 5 — Bước vào lập trình phản ứng -----
   {
     id: "springsec-17",
     field: "spring-security",
-    title: "SSIA 17 — Bảo mật trong các ứng dụng phản ứng",
+    chapter: 17,
+    part: "Phần 5 — Bước vào lập trình phản ứng",
+    title: "Bảo mật trong các ứng dụng phản ứng",
     file: "content/spring-security/17-trien-khai-bao-mat-trong-cac-ung-dung-phan-ung.md",
     icon: "🌊",
     desc: "Ứng dụng phản ứng là gì, quản lý người dùng và quy tắc phân quyền trong ngữ cảnh phản ứng, và reactive OAuth 2 resource server.",
     tags: ["Spring Security in Action", "Reactive", "WebFlux"],
   },
+  // ----- Phần 6 — Kiểm thử cấu hình bảo mật -----
   {
     id: "springsec-18",
     field: "spring-security",
-    title: "SSIA 18 — Kiểm thử cấu hình bảo mật",
+    chapter: 18,
+    part: "Phần 6 — Kiểm thử cấu hình bảo mật",
+    title: "Kiểm thử cấu hình bảo mật",
     file: "content/spring-security/18-kiem-thu-cau-hinh-bao-mat.md",
     icon: "🧪",
     desc: "Người dùng giả lập, người dùng lấy từ UserDetailsService, đối tượng Authentication tuỳ chỉnh, kiểm thử bảo mật phương thức, xác thực và CSRF.",
     tags: ["Spring Security in Action", "Kiểm thử"],
   },
+  // ----- Phụ lục -----
   {
     id: "springsec-pl-a",
     field: "spring-security",
-    title: "SSIA Phụ lục A — Liên kết tài liệu chính thức",
+    chapter: "A",
+    part: "Phụ lục",
+    title: "Liên kết tài liệu chính thức",
     file: "content/spring-security/phu-luc-a-lien-ket-tai-lieu-chinh-thuc.md",
     icon: "🔗",
     desc: "Các đường dẫn tới tài liệu chính thức của Spring Security và Spring Boot.",
@@ -188,7 +239,9 @@ export const docs = [
   {
     id: "springsec-pl-b",
     field: "spring-security",
-    title: "SSIA Phụ lục B — Tài liệu đọc thêm",
+    chapter: "B",
+    part: "Phụ lục",
+    title: "Tài liệu đọc thêm",
     file: "content/spring-security/phu-luc-b-tai-lieu-doc-them.md",
     icon: "📗",
     desc: "Danh mục sách và tài liệu đọc thêm về bảo mật ứng dụng, mật mã học và Spring.",

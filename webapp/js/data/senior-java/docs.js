@@ -1,12 +1,17 @@
 // Tài liệu lĩnh vực "Lộ trình Senior Java" — 5 tài liệu.
-// Nguồn markdown: sources/senior-java/ — được scripts/build-content.sh sao chép nguyên cây
+// Nguồn markdown: sources/senior-java/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/senior-java/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
+// `chapter` (số / chữ phụ lục / null) và `part` (Phần trong sách / null): nhãn hiển thị
+// sinh bởi labels.js ("Ch. 5 · Pod"), `title` chỉ còn tên chương (bất biến D1).
+// Không phải sách: chapter/part null.
 
 export const docs = [
   {
     id: "sj-00",
     field: "senior-java",
+    chapter: null,
+    part: null,
     title: "Tổng quan roadmap 24 tháng",
     file: "content/senior-java/00-tong-quan.md",
     icon: "🧭",
@@ -16,6 +21,8 @@ export const docs = [
   {
     id: "sj-01",
     field: "senior-java",
+    chapter: null,
+    part: null,
     title: "Giai đoạn 1 — Java & Spring chuyên sâu (tháng 1–6)",
     file: "content/senior-java/01-giai-doan-1-java-spring.md",
     icon: "☕",
@@ -25,6 +32,8 @@ export const docs = [
   {
     id: "sj-02",
     field: "senior-java",
+    chapter: null,
+    part: null,
     title: "Giai đoạn 2 — DevOps nền tảng (tháng 6–12)",
     file: "content/senior-java/02-giai-doan-2-devops.md",
     icon: "🔧",
@@ -34,6 +43,8 @@ export const docs = [
   {
     id: "sj-03",
     field: "senior-java",
+    chapter: null,
+    part: null,
     title: "Giai đoạn 3 — Kubernetes, AWS & Terraform (tháng 12–18)",
     file: "content/senior-java/03-giai-doan-3-k8s-cloud.md",
     icon: "☸️",
@@ -43,6 +54,8 @@ export const docs = [
   {
     id: "sj-04",
     field: "senior-java",
+    chapter: null,
+    part: null,
     title: "Giai đoạn 4 — Distributed Systems & System Design (tháng 18–24)",
     file: "content/senior-java/04-giai-doan-4-system-design.md",
     icon: "🌐",

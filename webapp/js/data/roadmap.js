@@ -62,10 +62,11 @@ import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
 import { seniorJavaGd4 } from "./senior-java/roadmap-gd4.js";
 import { bookCrossref } from "./book-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
+import { docLabelWithBook } from "./labels.js";
 
 // Nối chip "đọc thêm trong sách" vào resources của tuần, không ghi đè.
-// Nhãn lấy từ title của chính tài liệu để không phải viết tay lần thứ hai.
-const docTitle = new Map(allDocsRaw.map((d) => [d.id, d.title]));
+// Nhãn sinh từ labels.js ("KIA · Ch. 5 · Pod") để không phải viết tay lần thứ hai.
+const docTitle = new Map(allDocsRaw.map((d) => [d.id, docLabelWithBook(d)]));
 
 function withBookRefs(weeks) {
   return weeks.map((w) => {

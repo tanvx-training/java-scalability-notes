@@ -1,13 +1,19 @@
 // Tài liệu lĩnh vực "Modern Java in Action" — 21 tài liệu.
-// Nguồn markdown: sources/modern-java/ — được scripts/build-content.sh sao chép nguyên cây
+// Nguồn markdown: sources/modern-java/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/modern-java/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
+// `chapter` (số / chữ phụ lục / null) và `part` (Phần trong sách / null): nhãn hiển thị
+// sinh bởi labels.js ("Ch. 5 · Pod"), `title` chỉ còn tên chương (bất biến D1).
+// Phần theo README nguồn (6 Phần).
 
 export const docs = [
+  // ----- Phần 1 — Nền tảng -----
   {
     id: "mjia-01",
     field: "modern-java",
-    title: "MJIA 01 — Java 8, 9, 10 và 11: có gì mới?",
+    chapter: 1,
+    part: "Phần 1 — Nền tảng",
+    title: "Java 8, 9, 10 và 11: có gì mới?",
     file: "content/modern-java/01-java-8-9-10-11-co-gi-moi.md",
     icon: "🚀",
     desc: "Vì sao một ngôn ngữ 20 năm tuổi lại phải đổi, và ba thay đổi lớn nhất — hàm là giá trị, stream, default method — trả lời sức ép nào.",
@@ -16,7 +22,9 @@ export const docs = [
   {
     id: "mjia-02",
     field: "modern-java",
-    title: "MJIA 02 — Truyền code với behavior parameterization",
+    chapter: 2,
+    part: "Phần 1 — Nền tảng",
+    title: "Truyền code với behavior parameterization",
     file: "content/modern-java/02-truyen-code-voi-behavior-parameterization.md",
     icon: "🎯",
     desc: "Làm sao viết code chịu được yêu cầu đổi liên tục, bằng cách truyền hành vi vào thay vì thêm tham số và nhánh if.",
@@ -25,16 +33,21 @@ export const docs = [
   {
     id: "mjia-03",
     field: "modern-java",
-    title: "MJIA 03 — Lambda expressions",
+    chapter: 3,
+    part: "Phần 1 — Nền tảng",
+    title: "Lambda expressions",
     file: "content/modern-java/03-lambda-expressions.md",
     icon: "✨",
     desc: "Lambda dùng được ở đâu và vì sao chỉ ở đó, functional interface hoạt động thế nào, và method reference gọn hơn lambda chỗ nào.",
     tags: ["Lambda", "Functional interface", "Method reference"],
   },
+  // ----- Phần 2 — Xử lý dữ liệu với stream -----
   {
     id: "mjia-04",
     field: "modern-java",
-    title: "MJIA 04 — Giới thiệu về stream",
+    chapter: 4,
+    part: "Phần 2 — Xử lý dữ liệu với stream",
+    title: "Giới thiệu về stream",
     file: "content/modern-java/04-gioi-thieu-stream.md",
     icon: "💧",
     desc: "Stream khác collection ở ba điểm nào, vì sao nó chỉ duyệt được một lần, và pipeline chỉ chạy khi gặp thao tác kết thúc.",
@@ -43,7 +56,9 @@ export const docs = [
   {
     id: "mjia-05",
     field: "modern-java",
-    title: "MJIA 05 — Làm việc với stream",
+    chapter: 5,
+    part: "Phần 2 — Xử lý dữ liệu với stream",
+    title: "Làm việc với stream",
     file: "content/modern-java/05-lam-viec-voi-stream.md",
     icon: "🔎",
     desc: "Bộ thao tác dùng hằng ngày — filter, slicing, map/flatMap, matching, reduce — và numeric stream để tránh chi phí boxing.",
@@ -52,7 +67,9 @@ export const docs = [
   {
     id: "mjia-06",
     field: "modern-java",
-    title: "MJIA 06 — Thu thập dữ liệu với stream",
+    chapter: 6,
+    part: "Phần 2 — Xử lý dữ liệu với stream",
+    title: "Thu thập dữ liệu với stream",
     file: "content/modern-java/06-thu-thap-du-lieu-voi-stream.md",
     icon: "🧺",
     desc: "Collector làm gì ở cuối pipeline, cách gom nhóm nhiều tầng bằng downstream collector, và khi nào phải tự viết Collector.",
@@ -61,16 +78,21 @@ export const docs = [
   {
     id: "mjia-07",
     field: "modern-java",
-    title: "MJIA 07 — Xử lý dữ liệu song song và hiệu năng",
+    chapter: 7,
+    part: "Phần 2 — Xử lý dữ liệu với stream",
+    title: "Xử lý dữ liệu song song và hiệu năng",
     file: "content/modern-java/07-xu-ly-du-lieu-song-song-va-hieu-nang.md",
     icon: "⚡",
     desc: "Khi nào parallelStream thật sự nhanh hơn và khi nào nó chậm hơn tuần tự, fork/join chia việc ra sao, spliterator quyết định gì.",
     tags: ["Parallel stream", "Fork/Join", "Spliterator"],
   },
+  // ----- Phần 3 — Lập trình hiệu quả với stream và lambda -----
   {
     id: "mjia-08",
     field: "modern-java",
-    title: "MJIA 08 — Các cải tiến của Collection API",
+    chapter: 8,
+    part: "Phần 3 — Lập trình hiệu quả với stream và lambda",
+    title: "Các cải tiến của Collection API",
     file: "content/modern-java/08-cai-tien-collection-api.md",
     icon: "📦",
     desc: "Collection factory tạo collection bất biến, các default method mới của List/Set/Map, và những gì ConcurrentHashMap được thêm.",
@@ -79,7 +101,9 @@ export const docs = [
   {
     id: "mjia-09",
     field: "modern-java",
-    title: "MJIA 09 — Refactoring, testing và debugging",
+    chapter: 9,
+    part: "Phần 3 — Lập trình hiệu quả với stream và lambda",
+    title: "Refactoring, testing và debugging",
     file: "content/modern-java/09-refactoring-testing-va-debugging.md",
     icon: "🧹",
     desc: "Đưa code cũ sang lambda/stream mà không làm nó khó đọc hơn, viết lại design pattern OOP bằng lambda, và đọc stack trace của code hàm.",
@@ -88,16 +112,21 @@ export const docs = [
   {
     id: "mjia-10",
     field: "modern-java",
-    title: "MJIA 10 — Domain-specific language với lambda",
+    chapter: 10,
+    part: "Phần 3 — Lập trình hiệu quả với stream và lambda",
+    title: "Domain-specific language với lambda",
     file: "content/modern-java/10-domain-specific-language-voi-lambda.md",
     icon: "🗣️",
     desc: "DSL nội bộ trong Java được dựng bằng những pattern nào, và các thư viện thật (jOOQ, Cucumber, Spring Integration) chọn pattern nào.",
     tags: ["DSL", "Fluent API", "Method chaining"],
   },
+  // ----- Phần 4 — Java hằng ngày -----
   {
     id: "mjia-11",
     field: "modern-java",
-    title: "MJIA 11 — Dùng Optional thay cho null",
+    chapter: 11,
+    part: "Phần 4 — Java hằng ngày",
+    title: "Dùng Optional thay cho null",
     file: "content/modern-java/11-dung-optional-thay-cho-null.md",
     icon: "🎁",
     desc: "Vì sao null là một lỗi thiết kế, Optional mô hình hoá sự vắng mặt thế nào, và các khuôn mẫu dùng nó mà không biến code thành đống if mới.",
@@ -106,7 +135,9 @@ export const docs = [
   {
     id: "mjia-12",
     field: "modern-java",
-    title: "MJIA 12 — Date and Time API mới",
+    chapter: 12,
+    part: "Phần 4 — Java hằng ngày",
+    title: "Date and Time API mới",
     file: "content/modern-java/12-date-and-time-api-moi.md",
     icon: "🕰️",
     desc: "Bộ kiểu bất biến thay cho Date/Calendar, cách thao tác và định dạng ngày tháng, và làm việc với time zone cùng hệ lịch khác.",
@@ -115,7 +146,9 @@ export const docs = [
   {
     id: "mjia-13",
     field: "modern-java",
-    title: "MJIA 13 — Default method",
+    chapter: 13,
+    part: "Phần 4 — Java hằng ngày",
+    title: "Default method",
     file: "content/modern-java/13-default-method.md",
     icon: "🧩",
     desc: "Cách thêm phương thức vào interface đã phát hành mà không phá code người dùng, và ba quy tắc gỡ xung đột khi nhiều interface cùng cho một default.",
@@ -124,16 +157,21 @@ export const docs = [
   {
     id: "mjia-14",
     field: "modern-java",
-    title: "MJIA 14 — Hệ thống module của Java",
+    chapter: 14,
+    part: "Phần 4 — Java hằng ngày",
+    title: "Hệ thống module của Java",
     file: "content/modern-java/14-he-thong-module-cua-java.md",
     icon: "🧱",
     desc: "Vấn đề mà package và JAR không giải được, module-info khai gì, và cách biên dịch, đóng gói, chạy một ứng dụng nhiều module.",
     tags: ["Module", "module-info", "requires/exports"],
   },
+  // ----- Phần 5 — Java nâng cao: hướng bất đồng bộ -----
   {
     id: "mjia-15",
     field: "modern-java",
-    title: "MJIA 15 — Khái niệm nền tảng của CompletableFuture và reactive programming",
+    chapter: 15,
+    part: "Phần 5 — Java nâng cao: hướng bất đồng bộ",
+    title: "Khái niệm nền tảng của CompletableFuture và reactive programming",
     file: "content/modern-java/15-khai-niem-nen-tang-completablefuture-va-reactive-programming.md",
     icon: "🧠",
     desc: "API đồng bộ khác bất đồng bộ ở đâu, mô hình box-and-channel để nghĩ về luồng dữ liệu, và reactive programming khác reactive system chỗ nào.",
@@ -142,7 +180,9 @@ export const docs = [
   {
     id: "mjia-16",
     field: "modern-java",
-    title: "MJIA 16 — CompletableFuture: lập trình bất đồng bộ khả kết hợp",
+    chapter: 16,
+    part: "Phần 5 — Java nâng cao: hướng bất đồng bộ",
+    title: "CompletableFuture: lập trình bất đồng bộ khả kết hợp",
     file: "content/modern-java/16-completablefuture-lap-trinh-bat-dong-bo-kha-ket-hop.md",
     icon: "🔗",
     desc: "Dựng API bất đồng bộ, nối ống nhiều lời gọi bằng thenCompose/thenCombine, và chọn executor sao cho không tự bóp cổ chính mình.",
@@ -151,16 +191,21 @@ export const docs = [
   {
     id: "mjia-17",
     field: "modern-java",
-    title: "MJIA 17 — Reactive programming",
+    chapter: 17,
+    part: "Phần 5 — Java nâng cao: hướng bất đồng bộ",
+    title: "Reactive programming",
     file: "content/modern-java/17-reactive-programming.md",
     icon: "📡",
     desc: "Bốn tính chất của Reactive Manifesto, bốn interface của Flow API, backpressure giải quyết vấn đề gì, và RxJava dùng thế nào.",
     tags: ["Flow API", "Backpressure", "RxJava"],
   },
+  // ----- Phần 6 — Lập trình hàm và sự tiến hoá của Java -----
   {
     id: "mjia-18",
     field: "modern-java",
-    title: "MJIA 18 — Tư duy hàm",
+    chapter: 18,
+    part: "Phần 6 — Lập trình hàm và sự tiến hoá của Java",
+    title: "Tư duy hàm",
     file: "content/modern-java/18-tu-duy-ham.md",
     icon: "🧮",
     desc: "Hàm thuần và tính trong suốt tham chiếu nghĩa là gì trong Java thật, và đệ quy đổi lấy được gì so với vòng lặp.",
@@ -169,7 +214,9 @@ export const docs = [
   {
     id: "mjia-19",
     field: "modern-java",
-    title: "MJIA 19 — Các kỹ thuật lập trình hàm",
+    chapter: 19,
+    part: "Phần 6 — Lập trình hàm và sự tiến hoá của Java",
+    title: "Các kỹ thuật lập trình hàm",
     file: "content/modern-java/19-ky-thuat-lap-trinh-ham.md",
     icon: "🪄",
     desc: "Hàm bậc cao và currying, cấu trúc dữ liệu bền vững, lazy evaluation tự cài, và pattern matching mô phỏng bằng lambda.",
@@ -178,7 +225,9 @@ export const docs = [
   {
     id: "mjia-20",
     field: "modern-java",
-    title: "MJIA 20 — Kết hợp OOP và FP: so sánh Java và Scala",
+    chapter: 20,
+    part: "Phần 6 — Lập trình hàm và sự tiến hoá của Java",
+    title: "Kết hợp OOP và FP: so sánh Java và Scala",
     file: "content/modern-java/20-ket-hop-oop-va-fp-so-sanh-java-va-scala.md",
     icon: "⚖️",
     desc: "Scala làm gọn hơn Java ở chỗ nào với cùng một bài toán, và trait khác interface có default method ra sao.",
@@ -187,7 +236,9 @@ export const docs = [
   {
     id: "mjia-21",
     field: "modern-java",
-    title: "MJIA 21 — Kết luận và hướng đi tiếp của Java",
+    chapter: 21,
+    part: "Phần 6 — Lập trình hàm và sự tiến hoá của Java",
+    title: "Kết luận và hướng đi tiếp của Java",
     file: "content/modern-java/21-ket-luan-va-huong-di-tiep-cua-java.md",
     icon: "🏁",
     desc: "Điểm lại toàn bộ tính năng Java 8–10 đã học và những hướng ngôn ngữ đang đi tiếp: pattern matching, value type, generic đặc hoá.",

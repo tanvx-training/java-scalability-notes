@@ -1,13 +1,19 @@
 // Tài liệu lĩnh vực "Designing Data-Intensive Applications" — 14 tài liệu.
-// Nguồn markdown: sources/ddia/ — được scripts/build-content.sh sao chép nguyên cây
+// Nguồn markdown: sources/ddia/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/ddia/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
+// `chapter` (số / chữ phụ lục / null) và `part` (Phần trong sách / null): nhãn hiển thị
+// sinh bởi labels.js ("Ch. 5 · Pod"), `title` chỉ còn tên chương (bất biến D1).
+// Phần SUY TỪ MỤC LỤC ẤN BẢN GỐC (bản dịch không ghi): I Nền tảng (1–5), II Dữ liệu phân tán (6–10), III Dữ liệu dẫn xuất (11–14).
 
 export const docs = [
+  // ----- Phần I — Nền tảng của hệ thống dữ liệu -----
   {
     id: "ddia-01",
     field: "ddia",
-    title: "Chương 1 — Những sự đánh đổi trong kiến trúc hệ thống dữ liệu",
+    chapter: 1,
+    part: "Phần I — Nền tảng của hệ thống dữ liệu",
+    title: "Những sự đánh đổi trong kiến trúc hệ thống dữ liệu",
     file: "content/ddia/01-danh-doi-trong-kien-truc-he-thong-du-lieu.md",
     icon: "🧭",
     desc: "Hệ thống vận hành khác hệ thống phân tích ở đâu, khi nào chọn cloud thay vì tự vận hành, và lúc nào mới thực sự cần hệ phân tán.",
@@ -16,7 +22,9 @@ export const docs = [
   {
     id: "ddia-02",
     field: "ddia",
-    title: "Chương 2 — Xác định các yêu cầu phi chức năng",
+    chapter: 2,
+    part: "Phần I — Nền tảng của hệ thống dữ liệu",
+    title: "Xác định các yêu cầu phi chức năng",
     file: "content/ddia/02-xac-dinh-cac-yeu-cau-phi-chuc-nang.md",
     icon: "📐",
     desc: "Cách phát biểu hiệu năng bằng percentile thay vì trung bình, và ba trụ tin cậy — mở rộng — bảo trì, qua case study home timeline.",
@@ -25,7 +33,9 @@ export const docs = [
   {
     id: "ddia-03",
     field: "ddia",
-    title: "Chương 3 — Mô hình dữ liệu và ngôn ngữ truy vấn",
+    chapter: 3,
+    part: "Phần I — Nền tảng của hệ thống dữ liệu",
+    title: "Mô hình dữ liệu và ngôn ngữ truy vấn",
     file: "content/ddia/03-mo-hinh-du-lieu-va-ngon-ngu-truy-van.md",
     icon: "🗂️",
     desc: "Quan hệ, document hay đồ thị — mỗi mô hình hợp với hình dạng dữ liệu nào, cộng Event Sourcing, CQRS và dữ liệu dạng ma trận.",
@@ -34,7 +44,9 @@ export const docs = [
   {
     id: "ddia-04",
     field: "ddia",
-    title: "Chương 4 — Lưu trữ và Truy xuất",
+    chapter: 4,
+    part: "Phần I — Nền tảng của hệ thống dữ liệu",
+    title: "Lưu trữ và Truy xuất",
     file: "content/ddia/04-luu-tru-va-truy-xuat.md",
     icon: "💾",
     desc: "LSM-tree và B-tree khác nhau ra sao ở tầng đĩa, vì sao kho phân tích lưu theo cột, và index đa chiều dùng khi nào.",
@@ -43,16 +55,21 @@ export const docs = [
   {
     id: "ddia-05",
     field: "ddia",
-    title: "Chương 5 — Encoding và Tiến hóa",
+    chapter: 5,
+    part: "Phần I — Nền tảng của hệ thống dữ liệu",
+    title: "Encoding và Tiến hóa",
     file: "content/ddia/05-encoding-va-tien-hoa.md",
     icon: "📦",
     desc: "JSON, Protocol Buffers, Avro và bài toán tương thích xuôi-ngược khi schema đổi mà hệ thống vẫn phải chạy.",
     tags: ["Encoding", "Avro", "Schema evolution"],
   },
+  // ----- Phần II — Dữ liệu phân tán -----
   {
     id: "ddia-06",
     field: "ddia",
-    title: "Chương 6 — Replication",
+    chapter: 6,
+    part: "Phần II — Dữ liệu phân tán",
+    title: "Replication",
     file: "content/ddia/06-replication.md",
     icon: "🔁",
     desc: "Single-leader, multi-leader và leaderless; replication lag sinh ra bug gì và ba bảo đảm nào chữa được.",
@@ -61,7 +78,9 @@ export const docs = [
   {
     id: "ddia-07",
     field: "ddia",
-    title: "Chương 7 — Sharding",
+    chapter: 7,
+    part: "Phần II — Dữ liệu phân tán",
+    title: "Sharding",
     file: "content/ddia/07-sharding.md",
     icon: "🧩",
     desc: "Chia theo khoảng hay theo hash, hot spot sinh ở đâu, rebalancing và secondary index cục bộ so với toàn cục.",
@@ -70,7 +89,9 @@ export const docs = [
   {
     id: "ddia-08",
     field: "ddia",
-    title: "Chương 8 — Transaction",
+    chapter: 8,
+    part: "Phần II — Dữ liệu phân tán",
+    title: "Transaction",
     file: "content/ddia/08-transaction.md",
     icon: "🔐",
     desc: "ACID thật sự bảo đảm gì, các mức cô lập yếu để lọt bug nào, và ba đường tới serializability.",
@@ -79,7 +100,9 @@ export const docs = [
   {
     id: "ddia-09",
     field: "ddia",
-    title: "Chương 9 — Những rắc rối của hệ phân tán",
+    chapter: 9,
+    part: "Phần II — Dữ liệu phân tán",
+    title: "Những rắc rối của hệ phân tán",
     file: "content/ddia/09-nhung-rac-roi-cua-he-phan-tan.md",
     icon: "⚠️",
     desc: "Mạng và đồng hồ đều không đáng tin; timeout đặt bao nhiêu là đúng, và vì sao cần fencing token.",
@@ -88,16 +111,21 @@ export const docs = [
   {
     id: "ddia-10",
     field: "ddia",
-    title: "Chương 10 — Tính nhất quán và Consensus",
+    chapter: 10,
+    part: "Phần II — Dữ liệu phân tán",
+    title: "Tính nhất quán và Consensus",
     file: "content/ddia/10-tinh-nhat-quan-va-consensus.md",
     icon: "🤝",
     desc: "Linearizability đắt ở chỗ nào, đồng hồ logic giải quyết gì, và consensus quy về total order broadcast ra sao.",
     tags: ["Linearizability", "Consensus", "CAP", "Raft"],
   },
+  // ----- Phần III — Dữ liệu dẫn xuất -----
   {
     id: "ddia-11",
     field: "ddia",
-    title: "Chương 11 — Batch Processing",
+    chapter: 11,
+    part: "Phần III — Dữ liệu dẫn xuất",
+    title: "Batch Processing",
     file: "content/ddia/11-batch-processing.md",
     icon: "⚙️",
     desc: "Từ pipeline Unix tới MapReduce và dataflow engine — shuffle, sort-merge join, và chịu lỗi bằng cách tính lại.",
@@ -106,7 +134,9 @@ export const docs = [
   {
     id: "ddia-12",
     field: "ddia",
-    title: "Chương 12 — Stream Processing",
+    chapter: 12,
+    part: "Phần III — Dữ liệu dẫn xuất",
+    title: "Stream Processing",
     file: "content/ddia/12-stream-processing.md",
     icon: "🌊",
     desc: "Message broker so với log-based broker, CDC, cửa sổ thời gian, và exactly-once thực chất nghĩa là gì.",
@@ -115,7 +145,9 @@ export const docs = [
   {
     id: "ddia-13",
     field: "ddia",
-    title: "Chương 13 — Một triết lý về hệ thống streaming",
+    chapter: 13,
+    part: "Phần III — Dữ liệu dẫn xuất",
+    title: "Một triết lý về hệ thống streaming",
     file: "content/ddia/13-mot-triet-ly-ve-he-thong-streaming.md",
     icon: "🧠",
     desc: "Tích hợp dữ liệu quanh một log tổng thứ tự, tách rời database, và lập luận end-to-end về tính đúng đắn.",
@@ -124,7 +156,9 @@ export const docs = [
   {
     id: "ddia-14",
     field: "ddia",
-    title: "Chương 14 — Làm Điều Đúng Đắn",
+    chapter: 14,
+    part: "Phần III — Dữ liệu dẫn xuất",
+    title: "Làm Điều Đúng Đắn",
     file: "content/ddia/14-lam-dieu-dung-dan.md",
     icon: "⚖️",
     desc: "Predictive analytics và quyền riêng tư — trách nhiệm của kỹ sư với dữ liệu của người khác.",

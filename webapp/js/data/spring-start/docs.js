@@ -1,22 +1,31 @@
 // Tài liệu lĩnh vực "Spring Start Here" — 16 tài liệu.
-// Nguồn markdown: sources/spring-start/ — được scripts/build-content.sh sao chép nguyên cây
+// Nguồn markdown: sources/spring-start/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/spring-start/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
+// `chapter` (số / chữ phụ lục / null) và `part` (Phần trong sách / null): nhãn hiển thị
+// sinh bởi labels.js ("Ch. 5 · Pod"), `title` chỉ còn tên chương (bất biến D1).
+// Phần theo §2 của tệp 00-huong-dan-hoc-hieu-qua.md: Nền tảng (ch.1–6), Triển khai (ch.7–15).
 
 export const docs = [
+  // ----- Hướng dẫn học -----
   {
     id: "springstart-00",
     field: "spring-start",
-    title: "Spring Start 00 — Hướng dẫn học hiệu quả",
+    chapter: null,
+    part: "Hướng dẫn học",
+    title: "Hướng dẫn học hiệu quả",
     file: "content/spring-start/00-huong-dan-hoc-hieu-qua.md",
     icon: "🧭",
     desc: "Bản đồ cuốn sách, thứ tự học gợi ý, quy trình sáu bước cho mỗi chương, và danh sách bẫy mà người mới học Spring hay vấp.",
     tags: ["Hướng dẫn", "Lộ trình", "Checklist"],
   },
+  // ----- Phần 1 — Nền tảng -----
   {
     id: "springstart-01",
     field: "spring-start",
-    title: "Spring Start 01 — Spring trong thế giới thực",
+    chapter: 1,
+    part: "Phần 1 — Nền tảng",
+    title: "Spring trong thế giới thực",
     file: "content/spring-start/01-spring-trong-the-gioi-thuc.md",
     icon: "🌍",
     desc: "Framework giải quyết vấn đề gì, hệ sinh thái Spring gồm những mảnh nào, và khi nào thì KHÔNG nên dùng framework.",
@@ -25,7 +34,9 @@ export const docs = [
   {
     id: "springstart-02",
     field: "spring-start",
-    title: "Spring Start 02 — Spring context: Định nghĩa bean",
+    chapter: 2,
+    part: "Phần 1 — Nền tảng",
+    title: "Spring context: Định nghĩa bean",
     file: "content/spring-start/02-spring-context-dinh-nghia-bean.md",
     icon: "🫘",
     desc: "Spring context là gì, và ba cách đưa một đối tượng vào đó: @Bean, stereotype annotation, và đăng ký theo cách lập trình.",
@@ -34,7 +45,9 @@ export const docs = [
   {
     id: "springstart-03",
     field: "spring-start",
-    title: "Spring Start 03 — Spring context: Wiring bean",
+    chapter: 3,
+    part: "Phần 1 — Nền tảng",
+    title: "Spring context: Wiring bean",
     file: "content/spring-start/03-spring-context-wiring-bean.md",
     icon: "🔌",
     desc: "Cách nối các bean phụ thuộc nhau, ba kiểu @Autowired, circular dependency xảy ra khi nào, và cách chọn khi context có nhiều bean cùng kiểu.",
@@ -43,7 +56,9 @@ export const docs = [
   {
     id: "springstart-04",
     field: "spring-start",
-    title: "Spring Start 04 — Spring context: Sử dụng abstraction",
+    chapter: 4,
+    part: "Phần 1 — Nền tảng",
+    title: "Spring context: Sử dụng abstraction",
     file: "content/spring-start/04-spring-context-su-dung-abstraction.md",
     icon: "🧩",
     desc: "Dùng interface làm contract, tiêm phụ thuộc qua abstraction, và các stereotype annotation gán trách nhiệm rõ ràng cho từng đối tượng.",
@@ -52,7 +67,9 @@ export const docs = [
   {
     id: "springstart-05",
     field: "spring-start",
-    title: "Spring Start 05 — Spring context: Bean scope và vòng đời",
+    chapter: 5,
+    part: "Phần 1 — Nền tảng",
+    title: "Spring context: Bean scope và vòng đời",
     file: "content/spring-start/05-spring-context-bean-scope-va-vong-doi.md",
     icon: "♻️",
     desc: "Singleton và prototype khác nhau ở đâu, mỗi loại hợp với tình huống nào, và khởi tạo eager so với lazy đổi lấy được gì.",
@@ -61,16 +78,21 @@ export const docs = [
   {
     id: "springstart-06",
     field: "spring-start",
-    title: "Spring Start 06 — Sử dụng aspect với Spring AOP",
+    chapter: 6,
+    part: "Phần 1 — Nền tảng",
+    title: "Sử dụng aspect với Spring AOP",
     file: "content/spring-start/06-su-dung-aspect-voi-spring-aop.md",
     icon: "🪝",
     desc: "Aspect chặn lời gọi method bằng cách nào, viết một aspect từ đầu, đổi tham số và giá trị trả về, và chuỗi thực thi khi có nhiều aspect.",
     tags: ["AOP", "Aspect", "Proxy"],
   },
+  // ----- Phần 2 — Triển khai -----
   {
     id: "springstart-07",
     field: "spring-start",
-    title: "Spring Start 07 — Tìm hiểu Spring Boot và Spring MVC",
+    chapter: 7,
+    part: "Phần 2 — Triển khai",
+    title: "Tìm hiểu Spring Boot và Spring MVC",
     file: "content/spring-start/07-tim-hieu-spring-boot-va-spring-mvc.md",
     icon: "🚀",
     desc: "Web app hoạt động ra sao, servlet container làm gì, và ba thứ khiến Spring Boot tiện: initializr, dependency starter, autoconfiguration.",
@@ -79,7 +101,9 @@ export const docs = [
   {
     id: "springstart-08",
     field: "spring-start",
-    title: "Spring Start 08 — Triển khai ứng dụng web với Spring Boot và Spring MVC",
+    chapter: 8,
+    part: "Phần 2 — Triển khai",
+    title: "Triển khai ứng dụng web với Spring Boot và Spring MVC",
     file: "content/spring-start/08-trien-khai-ung-dung-web-voi-spring-boot-va-spring-mvc.md",
     icon: "🖥️",
     desc: "Trả về view động, nhận dữ liệu từ client qua request parameter và path variable, và dùng GET với POST cho đúng việc.",
@@ -88,7 +112,9 @@ export const docs = [
   {
     id: "springstart-09",
     field: "spring-start",
-    title: "Spring Start 09 — Sử dụng các web scope của Spring",
+    chapter: 9,
+    part: "Phần 2 — Triển khai",
+    title: "Sử dụng các web scope của Spring",
     file: "content/spring-start/09-su-dung-cac-web-scope-cua-spring.md",
     icon: "🧴",
     desc: "Ba scope chỉ có trong ứng dụng web — request, session, application — sống bao lâu và hợp với dữ liệu nào.",
@@ -97,7 +123,9 @@ export const docs = [
   {
     id: "springstart-10",
     field: "spring-start",
-    title: "Spring Start 10 — Triển khai REST service",
+    chapter: 10,
+    part: "Phần 2 — Triển khai",
+    title: "Triển khai REST service",
     file: "content/spring-start/10-trien-khai-rest-service.md",
     icon: "🛰️",
     desc: "REST dùng để trao đổi dữ liệu giữa các ứng dụng ra sao, viết endpoint đầu tiên, kiểm soát HTTP response, và nhận dữ liệu qua request body.",
@@ -106,7 +134,9 @@ export const docs = [
   {
     id: "springstart-11",
     field: "spring-start",
-    title: "Spring Start 11 — Sử dụng các REST endpoint",
+    chapter: 11,
+    part: "Phần 2 — Triển khai",
+    title: "Sử dụng các REST endpoint",
     file: "content/spring-start/11-su-dung-cac-rest-endpoint.md",
     icon: "📞",
     desc: "Ba cách gọi một REST endpoint từ ứng dụng Spring — OpenFeign, RestTemplate, WebClient — và cái nào hợp với hoàn cảnh nào.",
@@ -115,7 +145,9 @@ export const docs = [
   {
     id: "springstart-12",
     field: "spring-start",
-    title: "Spring Start 12 — Sử dụng data source trong ứng dụng Spring",
+    chapter: 12,
+    part: "Phần 2 — Triển khai",
+    title: "Sử dụng data source trong ứng dụng Spring",
     file: "content/spring-start/12-su-dung-data-source-trong-ung-dung-spring.md",
     icon: "🗃️",
     desc: "Data source là gì và vì sao cần nó, dùng JdbcTemplate để đọc ghi dữ liệu, và tuỳ chỉnh cấu hình connection pool.",
@@ -124,7 +156,9 @@ export const docs = [
   {
     id: "springstart-13",
     field: "spring-start",
-    title: "Spring Start 13 — Sử dụng transaction trong ứng dụng Spring",
+    chapter: 13,
+    part: "Phần 2 — Triển khai",
+    title: "Sử dụng transaction trong ứng dụng Spring",
     file: "content/spring-start/13-su-dung-transaction-trong-ung-dung-spring.md",
     icon: "🔒",
     desc: "Transaction là gì, Spring cài đặt nó bằng cơ chế nào, và dùng @Transactional sao cho nó thật sự có tác dụng.",
@@ -133,7 +167,9 @@ export const docs = [
   {
     id: "springstart-14",
     field: "spring-start",
-    title: "Spring Start 14 — Triển khai lưu trữ dữ liệu với Spring Data",
+    chapter: 14,
+    part: "Phần 2 — Triển khai",
+    title: "Triển khai lưu trữ dữ liệu với Spring Data",
     file: "content/spring-start/14-trien-khai-luu-tru-du-lieu-voi-spring-data.md",
     icon: "💾",
     desc: "Spring Data bỏ bớt phần code lặp lại thế nào, các interface repository hoạt động ra sao, và Spring Data JDBC qua ví dụ.",
@@ -142,7 +178,9 @@ export const docs = [
   {
     id: "springstart-15",
     field: "spring-start",
-    title: "Spring Start 15 — Kiểm thử ứng dụng Spring",
+    chapter: 15,
+    part: "Phần 2 — Triển khai",
+    title: "Kiểm thử ứng dụng Spring",
     file: "content/spring-start/15-kiem-thu-ung-dung-spring.md",
     icon: "🧪",
     desc: "Một test được triển khai đúng cách trông thế nào, và khác biệt thật giữa unit test với integration test trong ứng dụng Spring.",

@@ -8,6 +8,8 @@ export const FIELDS = {
   kubernetes: {
     label: "Kubernetes & Chứng chỉ",
     icon: "☸️",
+    short: "K8s",
+    unit: "Ch.",
     desc: "Luyện thi CKAD, CKA, CKS: giáo trình theo tuần, tra cứu kubectl, flashcards, trắc nghiệm, thi thử và labs mô phỏng đề thật — kèm ba bản dịch Kubernetes in Action, CKA Study Guide và Kubernetes: Up and Running để đọc sâu.",
     certFilter: true,
     modules: ["dashboard", "guide", "certs", "roadmap", "docs", "commands",
@@ -19,6 +21,8 @@ export const FIELDS = {
   sysprog: {
     label: "Lập trình hệ thống",
     icon: "🖥️",
+    short: "SysProg",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt System Programming Coursebook (University of Illinois, CS 241) — B. Venkatesh, L. Angrave et al., CC BY 4.0. C, tiến trình, luồng, đồng bộ hoá, bộ nhớ ảo, IPC, mạng và hệ thống tệp.",
     certFilter: false,
     // Mở dần theo dữ liệu: "docs" thêm ở Task 6, "roadmap" Task 8,
@@ -29,6 +33,8 @@ export const FIELDS = {
   java: {
     label: "Java & Spring Boot Scalability",
     icon: "☕",
+    short: "Java",
+    unit: "Bài",
     desc: "Series 10 bài về khả năng mở rộng của ứng dụng Java/Spring Boot trên Tomcat: TCP/kernel → Tomcat internals → JVM concurrency → capacity planning → transaction.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs"],
@@ -37,6 +43,8 @@ export const FIELDS = {
   "spring-security": {
     label: "Spring Security",
     icon: "🔒",
+    short: "SSIA",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt Spring Security in Action, ấn bản 2 (Laurențiu Spilcă, Manning 2024) — xác thực, phân quyền, CSRF/CORS, OAuth 2 & OIDC, ứng dụng phản ứng và kiểm thử cấu hình bảo mật.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap"],
@@ -45,6 +53,8 @@ export const FIELDS = {
   "senior-java": {
     label: "Lộ trình Senior Java",
     icon: "🧭",
+    short: "Senior",
+    unit: null,
     desc: "Kế hoạch 24 tháng từ Mid-level lên Senior Java + DevOps — 4 giai đoạn, 276 mục tick (mốc Java 17–21) — kèm ma trận năng lực 96 tiêu chí theo 4 cấp độ (mốc Java 25 / Spring Boot 4.1, tự đánh giá độc lập, không ánh xạ 1-1 với lộ trình).",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap", "tracker"],
@@ -54,6 +64,8 @@ export const FIELDS = {
   "modern-concurrency": {
     label: "Modern Concurrency in Java",
     icon: "🧵",
+    short: "MCJ",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt Modern Concurrency in Java (O'Reilly, ISBN 9781098165406) — virtual thread, structured concurrency, scoped values, và chỗ đứng của reactive sau Loom.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap"],
@@ -62,6 +74,8 @@ export const FIELDS = {
   ddia: {
     label: "Designing Data-Intensive Applications",
     icon: "🗄️",
+    short: "DDIA",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt Designing Data-Intensive Applications, ấn bản 2 (Martin Kleppmann, O'Reilly) — mô hình dữ liệu, lưu trữ, replication, sharding, transaction, hệ phân tán, batch và stream processing.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap"],
@@ -70,6 +84,8 @@ export const FIELDS = {
   "modern-java": {
     label: "Modern Java in Action",
     icon: "🌊",
+    short: "MJIA",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt Modern Java in Action (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — lambda, stream, collector, Optional, Date/Time API, module system, CompletableFuture và reactive, tư duy hàm.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap"],
@@ -78,6 +94,8 @@ export const FIELDS = {
   kafka: {
     label: "Kafka: The Definitive Guide",
     icon: "📨",
+    short: "Kafka",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt Kafka: The Definitive Guide, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — chương 2–14: cài đặt, producer, consumer, cơ chế bên trong, truyền tin cậy, exactly-once, data pipeline, mirroring, bảo mật, vận hành, giám sát và stream processing.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap"],
@@ -86,6 +104,8 @@ export const FIELDS = {
   "spring-start": {
     label: "Spring Start Here",
     icon: "🌱",
+    short: "SSH",
+    unit: "Ch.",
     desc: "Bản dịch tiếng Việt Spring Start Here (Laurențiu Spilcă, Manning 2021) — sách nhập môn Spring: context và bean, wiring, abstraction, bean scope, AOP, Spring Boot và MVC, web scope, REST, data source, transaction, Spring Data và kiểm thử.",
     certFilter: false,
     modules: ["dashboard", "guide", "docs", "roadmap"],
