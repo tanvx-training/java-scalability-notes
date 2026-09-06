@@ -27,11 +27,13 @@ const EXPECTED = {
     "questions:sysprog": 110,
     // Nội dung Kubernetes có từ trước — chốt luôn để xoá/thiếu bản ghi không
     // âm thầm lọt qua (vd xoá bớt câu hỏi vẫn qua đủ 23 bất biến trước đây).
-    // 24 gốc + 23 chương CKA Study Guide (Muschko, O'Reilly) + 23 chương
+    // 25 gốc + 23 chương CKA Study Guide (Muschko, O'Reilly) + 23 chương
     // Kubernetes: Up and Running, ấn bản 3 (Burns, Beda, Hightower, Evenson — O'Reilly).
-    "docs:kubernetes": 70,
-    // 184 gốc + 24 nước rút CKA Study Guide + 36 đọc Kubernetes: Up and Running.
-    "roadmap-items:kubernetes": 244,
+    // 25 gốc = 7 tài liệu luyện thi tự biên + 18 chương Kubernetes in Action ấn bản 2.
+    "docs:kubernetes": 71,
+    // 184 gốc + 24 nước rút CKA Study Guide + 36 đọc Kubernetes: Up and Running
+    // (trong 184 gốc, lộ trình đọc Kubernetes in Action là 36 mục = 9 tuần × 4).
+    "roadmap-items:kubernetes": 250,
     "flashcards:kubernetes": 84,
     "questions:kubernetes": 110,
     // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.
