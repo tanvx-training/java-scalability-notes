@@ -130,3 +130,17 @@ Trong mỗi nhóm (sách), tài liệu gom theo **Phần** (heading nhỏ + `x/y
 | 1 · Dữ liệu | `paths.js`, `related.js`, `BOOKS`/`short`/`unit`, script sinh lại 10 `docs.js` với `chapter`/`part`/`title` sạch, hàm nhãn, chip 📖 dùng nhãn mới, #3b + P1 + D1 + R1 | check-data xanh, số lượng không đổi, không còn tiền tố cũ |
 | 2 · Thư viện & đọc | Thư viện theo Phần, breadcrumb/meta, khối "Đọc liền mạch", tìm kiếm dùng nhãn | check-data xanh; mở 3 sách có Phần / không Phần / Java |
 | 3 · Con đường | Bộ chọn hai tầng, sidebar, thẻ Con đường trên dashboard, badge ma trận, dòng vị trí ở Hướng dẫn học, README | smoke test desktop + 375px |
+
+## 7. Kết quả triển khai (cập nhật 2026-09-06)
+
+Ba chặng hoàn thành trên nhánh `claude/learning-paths-7c2e`, ba commit `feat(data)` / `feat(docs)` /
+`feat(paths)`; `check-data.mjs` xanh **49/49** (46 cũ + P1, D1, R1; #3b đã nới theo con đường).
+Số bản ghi không đổi; 184/196 `title` được tách tiền tố thành `chapter`, 12 tài liệu không phải chương
+(7 tự biên Kubernetes, 5 Senior Java) giữ nguyên. Smoke test trình duyệt: bộ chọn hai tầng, thẻ Con
+đường (Java Backend bước 3/5, nền tuỳ chọn), thẻ trục 4 giai đoạn, badge 5/6 module ma trận, vị trí
+trên Hướng dẫn học, thư viện theo Phần (DDIA 3, Java 4 Chủ đề, Kubernetes 4 sách × Phần), khối "Đọc
+liền mạch" (DDIA ch.6 → Kafka ch.6, ch.10), prev/next trong cùng sách, chip 📖 `KIA · Ch. 2 · …`;
+không lỗi console; không tràn ngang.
+
+Lệch so với thiết kế: không. Ghi chú: Phần của DDIA suy từ ấn bản gốc và được ghi rõ trong header
+`ddia/docs.js`; Kubernetes in Action để phẳng vì bản dịch không ghi Phần.
