@@ -21,3 +21,14 @@ export function setCurrentField(id) {
   store.set("field", id);
   return true;
 }
+
+// Chuyển lĩnh vực rồi điều hướng (mặc định về bảng điều khiển). Nếu hash không đổi
+// thì tự phát hashchange để app.js render lại và đồng bộ sidebar.
+export function goToField(id, hash = "#/") {
+  setCurrentField(id);
+  if (location.hash === hash || (hash === "#/" && (location.hash === "" || location.hash === "#"))) {
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  } else {
+    location.hash = hash;
+  }
+}

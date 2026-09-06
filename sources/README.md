@@ -42,7 +42,9 @@ Các bản dịch sách thương mại **không** phải giấy phép mở; ch�
 1. Tạo `sources/<fieldId>/` (hoặc `sources/<fieldId>/<ten-sach>/` nếu lĩnh vực đã có nguồn khác),
    đặt markdown theo `NN-slug.md`, ảnh vào `images/`, PDF (nếu có) vào `pdf/`.
 2. Khai lĩnh vực trong `webapp/js/data/fields.js` (nếu mới) và danh mục tài liệu trong
-   `webapp/js/data/<fieldId>/docs.js` với `file: "content/<fieldId>/…"`.
+   `webapp/js/data/<fieldId>/docs.js` với `file: "content/<fieldId>/…"`, `chapter` (số chương) và `part`
+   (tên Phần nếu sách chia Phần — lấy từ README nguồn, không bịa); `title` chỉ là tên chương, nhãn
+   "Ch. N · …" do app sinh. Xếp lĩnh vực vào một con đường trong `webapp/js/data/paths.js`.
 3. Chạy kiểm:
 
    ```bash

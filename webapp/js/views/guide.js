@@ -8,6 +8,8 @@ import { FIELDS } from "../data/fields.js";
 import { getTracks } from "../data/index.js";
 import { fieldProgress, setManualStep, trackGuide } from "../lib/guides.js";
 import { trackStats } from "../lib/stats.js";
+import { PATHS, SPINE, positionOfField } from "../data/paths.js";
+import { goToField } from "../lib/field.js";
 
 export function render(root) {
   const fieldKey = currentField();
@@ -23,6 +25,7 @@ export function render(root) {
   const g = fp.guide;
 
   page.append(pageHead(`${field.icon} Hướng dẫn học — ${field.label}`, g.tagline, "Hướng dẫn học"));
+  page.append(pathPosition(fieldKey));
 
   // ---- Bối cảnh: cho ai, bao lâu, cần gì trước ----
   page.append(
@@ -120,4 +123,24 @@ export function trackGuideBody(tg) {
     col("Trước khi bắt đầu", tg.before),
     col("Khi làm từng mục", tg.during),
     col("Sau khi hết track", tg.after));
+}
+
+// Dòng "Vị trí trên con đường": con đường nào, bước mấy, trước/sau là gì.
+function pathPosition(fieldKey) {
+  if (fieldKey === SPINE.field) {
+    return h("p", { class: "muted small", style: "margin:-8px 0 18px" },
+      "🧭 ", h("strong", {}, SPINE.label), " — đi qua cả ba con đường theo thời gian: ",
+      SPINE.stages.map((s, i) => [i ? " → " : null,
+        s.path ? h("a", { href: "#/", onclick: (e) => { e.preventDefault(); goToField(PATHS[s.path].fields[0]); } }, `${PATHS[s.path].icon} ${PATHS[s.path].label}`)
+               : h("span", { class: "faint" }, "DevOps")]));
+  }
+  const pos = positionOfField(fieldKey);
+  if (!pos) return null;
+  const p = PATHS[pos.path];
+  const link = (id) => id ? h("a", { href: "#/guide", onclick: (e) => { e.preventDefault(); goToField(id, "#/guide"); } }, `${FIELDS[id].icon} ${FIELDS[id].label}`) : null;
+  return h("p", { class: "muted small", style: "margin:-8px 0 18px" },
+    "Vị trí trên con đường: ", h("strong", {}, `${p.icon} ${p.label}`),
+    pos.isFoundation ? " · nền tuỳ chọn" : ` · bước ${pos.index + 1}/${pos.total}`,
+    pos.prev ? [" · trước: ", link(pos.prev)] : null,
+    pos.next ? [" · sau: ", link(pos.next)] : null);
 }

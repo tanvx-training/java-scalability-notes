@@ -12,6 +12,7 @@ import { store } from "../lib/store.js";
 import { recordActivity } from "../lib/activity.js";
 import { getMatrices } from "../data/index.js";
 import { currentField } from "../lib/field.js";
+import { PATHS, MATRIX_PATHS } from "../data/paths.js";
 
 const LEVELS = [
   { n: 1, label: "Hiểu lý thuyết" },
@@ -139,6 +140,9 @@ function renderMatrix(root, matrix, focusModuleId) {
           h("div", { class: "lab-title" }, mod.title),
           h("div", { class: "muted small" }, mod.summary),
           h("div", { class: "progress", style: "margin-top:7px;height:5px;max-width:220px" }, modBar)),
+        MATRIX_PATHS[mod.id] && PATHS[MATRIX_PATHS[mod.id]]
+          ? h("span", { class: "badge badge-purple", title: "Con đường học tương ứng" }, `${PATHS[MATRIX_PATHS[mod.id]].icon} ${PATHS[MATRIX_PATHS[mod.id]].label}`)
+          : null,
         h("span", { class: "badge" }, `trọng số ${mod.weight}%`),
         modCount),
       body);

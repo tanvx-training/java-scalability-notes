@@ -1494,3 +1494,33 @@ dialog.modal .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; 
 .related-item .txt { flex: 1; min-width: 0; }
 .related-item .txt strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .related-item .txt small { color: var(--text-faint); font-size: 12px; }
+
+/* ---------- Con đường học ---------- */
+
+.picker-section { margin-bottom: 18px; }
+.picker-section + .picker-section { padding-top: 14px; border-top: 1px solid var(--border); }
+.picker-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.picker-head .p-ico { font-size: 22px; }
+.picker-head strong { font-size: 15px; }
+.picker-head .desc { color: var(--text-faint); font-size: 12.5px; display: block; }
+.picker-head .progress { width: 90px; margin-left: auto; flex: none; }
+.picker-flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; }
+.picker-flow .picker-item { flex: 1 1 170px; }
+.picker-flow .arrow { align-self: center; color: var(--text-faint); font-size: 16px; flex: none; }
+.picker-item .p-tag { display: inline-block; font-size: 10.5px; font-weight: 700; color: var(--purple); background: var(--purple-soft); border-radius: 5px; padding: 1px 6px; margin-top: 4px; }
+.field-btn .field-txt small.path-line { color: var(--accent-text); font-weight: 600; }
+
+.path-card .path-flow { justify-content: flex-start; padding: 4px 0 0; }
+.path-card .path-node { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 12px; text-align: left; color: inherit; min-width: 140px; }
+.path-card .path-node small { font-weight: 500; color: var(--text-faint); font-size: 11.5px; }
+.path-card .path-node.hl small { color: var(--accent-text); }
+.path-card .path-node.done { border-color: var(--green); }
+.path-card .path-node.done small { color: var(--green); }
+.path-card .path-node:hover { border-color: var(--accent); text-decoration: none; }
+.path-card .path-node.foundation { border-style: dashed; }
+
+.spine-stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.spine-stage { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.spine-stage .num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-faint); }
+.spine-stage strong { font-size: 14px; }
+.spine-stage .badge { align-self: flex-start; }

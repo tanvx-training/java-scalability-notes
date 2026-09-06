@@ -1,22 +1,20 @@
-// Bảng điều khiển — điểm vào của một lĩnh vực: đang học tới đâu, bước tiếp theo
-// theo Hướng dẫn học, số liệu tiến độ, khu vực học tập, và các lĩnh vực khác.
+// Bảng điều khiển — điểm vào của một lĩnh vực: con đường đang đi, đang học tới đâu,
+// bước tiếp theo theo Hướng dẫn học, số liệu tiến độ, khu vực học tập, lĩnh vực khác.
 
 import { h, sectionTitle, statCard, fmtRelative } from "../lib/ui.js";
 import { FIELDS, FIELD_ORDER, moduleAllowed } from "../data/fields.js";
-import { getDocs, getMatrices } from "../data/index.js";
+import { PATHS, SPINE, positionOfField } from "../data/paths.js";
+import { getDocs, getMatrices, getTracks } from "../data/index.js";
 import { labs } from "../data/kubernetes/labs.js";
-import { currentField, setCurrentField } from "../lib/field.js";
+import { currentField, goToField } from "../lib/field.js";
 import { recentItems, streakInfo } from "../lib/activity.js";
-import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, fieldSummary } from "../lib/stats.js";
+import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, fieldSummary, trackStats } from "../lib/stats.js";
 import { fieldProgress } from "../lib/guides.js";
 
-function goField(id) {
-  setCurrentField(id);
-  if (location.hash === "#/" || location.hash === "" || location.hash === "#") {
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
-  } else {
-    location.hash = "#/";
-  }
+// Tiến độ đại diện: lộ trình nếu có, không thì tài liệu đã đọc.
+function fieldPct(id) {
+  const rm = roadmapStats(id);
+  return rm.total ? rm.pct : docsStats(id).pct;
 }
 
 export function render(root) {
@@ -47,6 +45,9 @@ export function render(root) {
         has("exam") ? h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử") : null,
         has("tracker") ? h("a", { class: "btn", href: "#/tracker" }, "📊 Ma trận năng lực") : null)));
 
+  // ---- Con đường của bạn ----
+  page.append(fieldKey === SPINE.field ? spineCard() : pathCard(fieldKey));
+
   // ---- Tiếp tục + Bước tiếp theo ----
   const recent = recentItems(fieldKey).slice(0, 4);
   const row = h("div", { class: "grid grid-2 mb-4" });
@@ -74,7 +75,7 @@ export function render(root) {
           ]
         : [
             h("h3", {}, "🎉 Bạn đã đi hết lộ trình khuyến nghị"),
-            h("p", { class: "muted small mt0" }, "Xem lại tiêu chí “Coi như xong” trong Hướng dẫn học, hoặc chọn lĩnh vực kế tiếp bên dưới."),
+            h("p", { class: "muted small mt0" }, "Xem lại tiêu chí “Coi như xong” trong Hướng dẫn học, hoặc sang lĩnh vực kế tiếp trên con đường."),
             h("a", { class: "btn btn-sm", href: "#/guide" }, "Mở Hướng dẫn học"),
           ]));
   }
@@ -106,7 +107,7 @@ export function render(root) {
     has("guide") ? area("🧭", "Hướng dẫn học", fp ? `${fp.total} bước theo thứ tự khuyến nghị, cách học hiệu quả, bẫy phương pháp và tiêu chí hoàn thành.` : "Cách học lĩnh vực này.", "#/guide") : null,
     has("certs") ? area("🎓", "Chứng chỉ K8s", "So sánh KCNA, KCSA, CKAD, CKA, CKS: hình thức thi, tỷ trọng domain và lộ trình gợi ý.", "#/certs") : null,
     has("roadmap") ? area("🗺️", "Lộ trình học", `${rm.total} bài học chi tiết trong ${rm.per.length} track — tick đến đâu lưu đến đó.`, "#/roadmap") : null,
-    has("docs") ? area("📚", "Thư viện tài liệu", `${getDocs(fieldKey).length} tài liệu — hướng dẫn đọc, mục lục, sơ đồ mermaid, đánh dấu đã đọc.`, "#/docs") : null,
+    has("docs") ? area("📚", "Thư viện tài liệu", `${getDocs(fieldKey).length} tài liệu theo sách và Phần — hướng dẫn đọc, mục lục, đánh dấu đã đọc, đọc liền mạch sang lĩnh vực khác.`, "#/docs") : null,
     has("tracker") ? area("📊", "Ma trận năng lực", `${mx.total} tiêu chí tự đánh giá theo 4 cấp độ, nhóm theo ${getMatrices(fieldKey)[0]?.modules.length ?? 0} module năng lực.`, "#/tracker") : null,
     has("commands") ? area("⚡", "Thực hành nhanh", "Tra cứu khi làm lab: lệnh, YAML mẫu, quy trình thuộc lòng, thẻ trước giờ thi. Chế độ gọn mở cạnh terminal.", "#/commands") : null,
     has("flashcards") ? area("🃏", "Flashcards", `Ôn ${fl.total} thẻ theo phương pháp lặp lại ngắt quãng (spaced repetition).`, "#/flashcards") : null,
@@ -123,18 +124,80 @@ export function render(root) {
   const grid = h("div", { class: "grid grid-auto-sm" });
   for (const id of others) {
     const f = FIELDS[id];
-    const s = roadmapStats(id);
+    const pct = fieldPct(id);
     const sum = fieldSummary(id);
-    grid.append(h("button", { class: "card card-link field-card", type: "button", onclick: () => goField(id) },
+    grid.append(h("button", { class: "card card-link field-card", type: "button", onclick: () => goToField(id) },
       h("span", { class: "f-ico" }, f.icon),
       h("span", { class: "f-txt" },
         h("strong", {}, f.label),
         h("small", {}, sum.text),
-        s.total ? h("span", { class: "progress thin green" }, h("span", { style: `width:${s.pct}%` })) : null)));
+        h("span", { class: `progress thin${pct >= 100 ? " green" : ""}` }, h("span", { style: `width:${pct}%` })))));
   }
   page.append(grid);
 
   root.append(page);
+}
+
+// Thẻ "Con đường của bạn": dải lĩnh vực theo thứ tự học, lĩnh vực hiện tại nổi bật,
+// mỗi nút có % và bấm được; nút "Kế tiếp" dẫn sang lĩnh vực tiếp theo.
+function pathCard(fieldKey) {
+  const pos = positionOfField(fieldKey);
+  if (!pos) return null;
+  const p = PATHS[pos.path];
+  const node = (id, extraCls = "") => {
+    const f = FIELDS[id];
+    const pct = fieldPct(id);
+    return h("a", {
+      class: `path-node${id === fieldKey ? " hl" : ""}${pct >= 100 ? " done" : ""}${extraCls}`,
+      href: "#/", title: f.desc,
+      onclick: (e) => { e.preventDefault(); goToField(id); },
+    }, `${f.icon} ${f.label}`, h("small", {}, `${pct}%`));
+  };
+  const flow = h("div", { class: "path-flow" });
+  p.fields.forEach((id, i) => {
+    if (i) flow.append(h("span", { class: "path-arrow" }, "→"));
+    flow.append(node(id));
+  });
+  if (p.foundation.length) {
+    flow.append(h("span", { class: "path-arrow", title: "Nền tuỳ chọn" }, "⋯"));
+    for (const id of p.foundation) flow.append(node(id, " foundation"));
+  }
+  const nextId = pos.next;
+  return h("div", { class: "card path-card mb-4" },
+    h("div", { class: "card-head" },
+      h("strong", {}, `${p.icon} Con đường ${p.label}`),
+      h("span", { class: "faint" }, pos.isFoundation ? "nền tuỳ chọn" : `bước ${pos.index + 1}/${pos.total}`)),
+    h("p", { class: "muted small mt0 mb-2" }, p.desc),
+    flow,
+    h("div", { class: "flex flex-wrap mt-3" },
+      nextId ? h("button", { class: "btn btn-sm", type: "button", onclick: () => goToField(nextId) }, `Lĩnh vực kế tiếp: ${FIELDS[nextId].icon} ${FIELDS[nextId].label} →`) : null,
+      pos.prev ? h("button", { class: "btn btn-ghost btn-sm", type: "button", onclick: () => goToField(pos.prev) }, `← ${FIELDS[pos.prev].label}`) : null,
+      h("a", { class: "btn btn-ghost btn-sm", href: "#/guide" }, "Cách học lĩnh vực này")));
+}
+
+// Thẻ cho trục Senior Java: 4 giai đoạn → con đường tương ứng, tiến độ từng giai đoạn.
+function spineCard() {
+  const tracks = getTracks(SPINE.field);
+  const stages = SPINE.stages.map((s, i) => {
+    const t = tracks.find((x) => x.id === s.track);
+    const st = t ? trackStats(t) : null;
+    const p = s.path ? PATHS[s.path] : null;
+    return h("div", { class: "spine-stage" },
+      h("span", { class: "num" }, `Giai đoạn ${i + 1}`),
+      h("strong", {}, t?.name ?? s.track),
+      st ? h("div", { class: `progress thin${st.pct >= 100 ? " green" : ""}` }, h("span", { style: `width:${st.pct}%` })) : null,
+      h("span", { class: "faint" }, st ? `${st.done}/${st.total} mục · ${st.pct}%` : ""),
+      p
+        ? h("button", { class: "badge badge-purple", type: "button", title: "Mở con đường tương ứng", onclick: () => goToField(p.fields[0]) }, `${p.icon} ${p.label} →`)
+        : h("span", { class: "badge", title: s.note ?? "" }, "DevOps · theo tài liệu giai đoạn"),
+      t ? h("a", { class: "btn btn-ghost btn-sm", href: `#/roadmap/${t.id}`, style: "align-self:flex-start" }, "Mở lộ trình") : null);
+  });
+  return h("div", { class: "card path-card mb-4" },
+    h("div", { class: "card-head" },
+      h("strong", {}, `🧭 ${SPINE.label} — 24 tháng qua ba con đường`),
+      h("span", { class: "faint" }, "mỗi giai đoạn mượn một con đường")),
+    h("p", { class: "muted small mt0 mb-3" }, SPINE.desc),
+    h("div", { class: "spine-stages" }, stages));
 }
 
 function streakCard(st) {

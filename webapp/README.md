@@ -14,10 +14,11 @@ Nguồn markdown nằm ở [`../sources/`](../sources/README.md); app đọc b�
 
 | Trang | Nội dung |
 |---|---|
-| 🏠 Bảng điều khiển | Hero theo lĩnh vực; **Tiếp tục** (mục mở gần đây); **Bước tiếp theo** lấy từ Hướng dẫn học; số liệu lộ trình / tài liệu đã đọc / flashcard / trắc nghiệm / thi thử / ma trận; **chuỗi ngày học** 14 ngày; lưới lĩnh vực khác bấm để chuyển |
+| 🧭 Con đường học | Ba con đường bao trên 10 lĩnh vực: ☸️ **Kubernetes & Cloud**, ☕ **Java Backend** (Spring Start → Modern Java → Java Scalability → Modern Concurrency → Spring Security, nền tuỳ chọn: Lập trình hệ thống), 🗄️ **Data & Distributed** (DDIA → Kafka). Lộ trình Senior Java là **trục xuyên suốt** (4 giai đoạn → con đường). Bộ chọn lĩnh vực hai tầng; thẻ *Con đường của bạn* trên bảng điều khiển; badge con đường trên module ma trận |
+| 🏠 Bảng điều khiển | Hero theo lĩnh vực; thẻ **Con đường của bạn** (vị trí, lĩnh vực kế tiếp); **Tiếp tục** (mục mở gần đây); **Bước tiếp theo** lấy từ Hướng dẫn học; số liệu lộ trình / tài liệu đã đọc / flashcard / trắc nghiệm / thi thử / ma trận; **chuỗi ngày học** 14 ngày; lưới lĩnh vực khác bấm để chuyển |
 | 🧭 Hướng dẫn học | Mỗi lĩnh vực: cho ai, bao lâu, cần gì trước; **lộ trình khuyến nghị** cấp module (stepper) với trạng thái tính từ tiến độ thật (track, tài liệu đã đọc, flashcard, trắc nghiệm, thi thử, ma trận, hoặc tự tick); cách học hiệu quả; bẫy phương pháp; “coi như xong khi”; cách học từng track |
 | 🗺️ Lộ trình học | 17 track / 804 mục theo tuần, mỗi mục một bài học markdown; khối **Cách học track này**; badge **Bắt đầu tại đây**; chip 📖 nối tuần chứng chỉ với chương sách; tiến độ lưu riêng từng track |
-| 📚 Thư viện tài liệu | 196 tài liệu, gom theo sách; trang đọc có **hướng dẫn đọc suy từ lộ trình** (mục tiêu, bài học liên quan, bẫy, câu tự kiểm tra), thời gian đọc ước tính, **đánh dấu đã đọc**, thanh tiến độ cuộn, chỉnh cỡ chữ, mục lục nổi (desktop) / gọn (mobile), link `.md` tương đối mở trong app, mermaid, ảnh, copy code |
+| 📚 Thư viện tài liệu | 196 tài liệu, gom theo **sách → Phần** (Phần lấy từ README nguồn / domain đề thi, không bịa); nhãn chương thống nhất `Ch. 5 · Pod` sinh từ `chapter` (không viết tay); khối **Đọc liền mạch trên con đường** (30 cặp liên kết chéo khác lĩnh vực); trang đọc có **hướng dẫn đọc suy từ lộ trình** (mục tiêu, bài học liên quan, bẫy, câu tự kiểm tra), thời gian đọc ước tính, **đánh dấu đã đọc**, thanh tiến độ cuộn, chỉnh cỡ chữ, mục lục nổi (desktop) / gọn (mobile), link `.md` tương đối mở trong app, mermaid, ảnh, copy code |
 | 📊 Ma trận năng lực | 6 module / 34 chủ đề / 96 tiêu chí Senior Java theo 4 cấp độ — chỉ lĩnh vực Lộ trình Senior Java |
 | 🎓 Chứng chỉ K8s · ⚡ Thực hành nhanh · 🧪 Labs · ⏱️ Thi thử | Chỉ lĩnh vực Kubernetes: so sánh 5 chứng chỉ; 130 lệnh, 48 YAML mẫu, 16 quy trình, thẻ trước giờ thi (ghim, lọc, chế độ gọn); 22 lab đề thật; thi thử bấm giờ theo tỷ trọng domain |
 | 🃏 Flashcards · ✅ Trắc nghiệm | 174 thẻ spaced repetition, 220 câu có giải thích — Kubernetes và Lập trình hệ thống |
@@ -43,9 +44,9 @@ sửa script — xem [`sources/README.md`](../sources/README.md).
 ./webapp/scripts/build-content.sh webapp/content && node webapp/scripts/check-data.mjs
 ```
 
-46 bất biến: id trùng, tệp/ảnh tồn tại, `docs[].file` nằm trong `content/<field>/` (#2c), link
+49 bất biến: id trùng, tệp/ảnh tồn tại, `docs[].file` nằm trong `content/<field>/` (#2c), link
 `#/docs` hỏng, link chéo sách, khoá phân loại, hình dạng câu hỏi, module ↔ dữ liệu, hướng dẫn học
-(G1–G4: lĩnh vực ↔ `fieldGuides`, track ↔ `trackGuides`, `steps` hợp lệ, `groupGuides` đúng nhóm) và
+(G1–G4), con đường (P1), chương/Phần và tiền tố cũ (D1), liên kết chéo (R1), link lộ trình cùng đường (#3b) và
 số lượng bản ghi theo bảng kỳ vọng. CI chạy trước khi deploy.
 
 ## Deploy GitHub Pages
@@ -80,8 +81,11 @@ webapp/
 │   ├── fields.js             # 10 lĩnh vực: label, icon, module bật; GLOBAL_MODULES
 │   ├── meta.js · index.js · roadmap.js · docs-index.js · book-crossref.js
 │   ├── guides.js             # fieldGuides / trackGuides / groupGuides
+│   ├── paths.js              # 3 con đường học, trục Senior Java, module ma trận → con đường
+│   ├── related.js            # liên kết chéo khác lĩnh vực (một chiều, code phản chiếu)
+│   ├── books.js · labels.js  # mã sách; docLabel/docLabelWithBook/docBook/relatedOf
 │   └── <lĩnh vực>/           # gương của sources/<lĩnh vực>/:
-│       ├── docs.js           #   danh mục tài liệu (file: content/<lĩnh vực>/…)
+│       ├── docs.js           #   danh mục tài liệu: id, chapter, part, title (tên chương), file…
 │       ├── roadmap-*.js      #   track lộ trình theo tuần
 │       └── …                 #   kubernetes: certs, commands, snippets, playbooks, examday, labs,
 │                             #   flashcards, questions; sysprog: flashcards, questions; senior-java: matrix
@@ -90,5 +94,5 @@ webapp/
 ```
 
 Thêm câu hỏi / flashcard / lab: sửa tệp tương ứng trong `js/data/<lĩnh vực>/` theo schema ở đầu tệp,
-chạy `check-data.mjs` — không cần đụng view. Thêm lĩnh vực: khai trong `fields.js`, tạo
-`js/data/<id>/docs.js`, thêm `fieldGuides[id]` và `trackGuides` cho mỗi track.
+chạy `check-data.mjs` — không cần đụng view. Thêm lĩnh vực: khai trong `fields.js` (kèm `short`/`unit`), xếp vào một con đường trong `paths.js`, tạo
+`js/data/<id>/docs.js` (có `chapter`/`part`), thêm `fieldGuides[id]` và `trackGuides` cho mỗi track.
