@@ -123,7 +123,9 @@ async function renderDoc(root, doc) {
   const guideBox = h("div", {});
   const bottom = h("div", { class: "doc-actions mt-5" });
 
-  const page = h("div", { class: "page page-wide" },
+  // Trang đọc giữ bề rộng `page` chuẩn: cột prose đã bị chặn ở 76ch nên nới rộng
+  // thêm chỉ tạo khoảng trống giữa bài đọc và mục lục.
+  const page = h("div", { class: "page" },
     h("div", { class: "breadcrumb" },
       h("a", { href: "#/docs" }, "Tài liệu"), " / ",
       field ? `${field.icon} ${field.label}` : "",
