@@ -11,6 +11,7 @@ import { FIELDS } from "../data/fields.js";
 import { docs } from "../data/docs-index.js";
 import { tracks } from "../data/roadmap.js";
 import { allFlashcards, fieldOfRecord } from "../data/index.js";
+import { docLabel, docLabelWithBook, docBook } from "../data/labels.js";
 import { TOPICS } from "../data/meta.js";
 import { labs } from "../data/kubernetes/labs.js";
 import { commands } from "../data/kubernetes/commands.js";
@@ -43,9 +44,11 @@ function buildIndex() {
   const add = (it) => items.push({ ...it, norm: normalize(it.text), normTitle: normalize(it.title) });
 
   for (const d of docs) {
-    add({ type: "doc", icon: d.icon, title: d.title, sub: d.group ? `${d.group} · ${d.desc}` : d.desc,
+    const book = docBook(d);
+    add({ type: "doc", icon: d.icon, title: docLabel(d),
+      sub: `${book.label}${d.part ? " · " + d.part : ""} · ${d.desc}`,
       field: fieldOfRecord(d), href: `#/docs/${d.id}`,
-      text: [d.title, d.desc, d.tags.join(" "), d.group ?? ""].join(" ") });
+      text: [docLabelWithBook(d), d.desc, d.tags.join(" "), book.label, d.part ?? ""].join(" ") });
   }
   for (const t of tracks) {
     const field = fieldOfRecord(t);

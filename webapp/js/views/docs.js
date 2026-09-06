@@ -1,12 +1,15 @@
-// Thư viện tài liệu đa lĩnh vực: mục lục nổi (desktop) / gọn (mobile), thanh tiến
-// độ đọc, thời gian đọc ước tính, đánh dấu đã đọc, chỉnh cỡ chữ, khối "Hướng dẫn
-// đọc" suy từ lộ trình, highlight code, copy nhanh, ảnh (resolve theo file
-// markdown), link .md tương đối → tài liệu trong app, mermaid (nạp lười từ CDN).
+// Thư viện tài liệu đa lĩnh vực: gom theo sách rồi theo Phần, nhãn chương thống
+// nhất (labels.js), mục lục nổi (desktop) / gọn (mobile), thanh tiến độ đọc, thời
+// gian đọc ước tính, đánh dấu đã đọc, chỉnh cỡ chữ, khối "Hướng dẫn đọc" suy từ lộ
+// trình, khối "Đọc liền mạch trên con đường" (related.js), highlight code, copy
+// nhanh, ảnh (resolve theo file markdown), link .md tương đối → tài liệu trong
+// app, mermaid (nạp lười từ CDN).
 
 import { h, pageHead, mdInto, toast, readingMinutes, inlineMd, emptyState } from "../lib/ui.js";
 import { docs } from "../data/docs-index.js";
 import { FIELDS } from "../data/fields.js";
 import { getDocs, fieldOfRecord } from "../data/index.js";
+import { docLabel, docBook, chapterLabel, relatedOf } from "../data/labels.js";
 import { currentField } from "../lib/field.js";
 import { docsRead, pushRecent } from "../lib/activity.js";
 import { docGuide } from "../lib/guides.js";
@@ -46,7 +49,7 @@ function renderIndex(root) {
   ));
   page.append(h("p", { class: "muted small", style: "margin:-8px 0 20px" }, field.desc));
 
-  // Gom theo `group`, giữ thứ tự xuất hiện đầu tiên trong mảng docs — thứ tự
+  // Gom theo `group` (sách), giữ thứ tự xuất hiện đầu tiên trong mảng docs — thứ tự
   // mảng đang là thứ tự đọc có chủ ý, không được sắp xếp lại. Tài liệu không
   // khai `group` rơi vào nhóm không tiêu đề đứng trước.
   const groups = new Map();
@@ -63,29 +66,52 @@ function renderIndex(root) {
         label,
         h("span", { class: "count" }, `${items.length} tài liệu · đã đọc ${done}`)));
     }
-    const grid = h("div", { class: "grid mb-5" });
+    // Trong một sách, gom tiếp theo Phần — giữ thứ tự xuất hiện. Sách không chia
+    // Phần (part null cho mọi tài liệu) giữ lưới phẳng như cũ.
+    const parts = new Map();
     for (const d of items) {
-      const read = !!readMap[d.id];
-      grid.append(
-        h("a", { class: `card card-link${read ? " doc-card-read" : ""}`, href: `#/docs/${d.id}` },
-          h("div", { class: "flex flex-start" },
-            h("span", { style: "font-size:24px" }, d.icon),
-            h("div", { class: "grow" },
-              h("div", { class: "lab-title" }, d.title),
-              h("div", { class: "muted small" }, d.desc)),
-            read ? h("span", { class: "read-mark nowrap" }, "✓ Đã đọc") : h("span", { class: "faint nowrap" }, "Đọc →")),
-          h("div", { class: "chip-row mt-3" },
-            d.tags.map((t) => h("span", { class: "badge badge-blue" }, t)))));
+      const key = d.part ?? "";
+      if (!parts.has(key)) parts.set(key, []);
+      parts.get(key).push(d);
     }
-    page.append(grid);
+    const hasParts = [...parts.keys()].some(Boolean);
+    for (const [part, docsInPart] of parts) {
+      if (hasParts && part) {
+        const done = docsInPart.filter((d) => readMap[d.id]).length;
+        page.append(h("h3", { class: "part-title" },
+          part, h("span", { class: "count" }, `${done}/${docsInPart.length} đã đọc`)));
+      }
+      const grid = h("div", { class: "grid mb-5" });
+      for (const d of docsInPart) grid.append(docCard(d, !!readMap[d.id]));
+      page.append(grid);
+    }
   }
   root.append(page);
+}
+
+function docCard(d, read) {
+  const chap = chapterLabel(d);
+  return h("a", { class: `card card-link doc-card${read ? " doc-card-read" : ""}`, href: `#/docs/${d.id}` },
+    h("div", { class: "flex flex-start" },
+      h("span", { style: "font-size:24px" }, d.icon),
+      h("div", { class: "grow" },
+        h("div", { class: "lab-title" }, chap ? [h("span", { class: "chap" }, chap), " ", d.title] : d.title),
+        h("div", { class: "muted small" }, d.desc)),
+      read ? h("span", { class: "read-mark nowrap" }, "✓ Đã đọc") : h("span", { class: "faint nowrap" }, "Đọc →")),
+    h("div", { class: "chip-row mt-3" },
+      d.tags.map((t) => h("span", { class: "badge badge-blue" }, t))));
 }
 
 // ---------------- Trang đọc tài liệu ----------------
 
 async function renderDoc(root, doc) {
   const field = FIELDS[doc.field];
+  const book = docBook(doc);
+  // Cùng sách = cùng lĩnh vực và cùng nhóm (kubernetes có 4 nhóm; lĩnh vực khác một sách).
+  const sameBook = getDocs(fieldOfRecord(doc)).filter((d) => (d.group ?? null) === (doc.group ?? null));
+  const chapters = sameBook.filter((d) => typeof d.chapter === "number");
+  const chapPos = typeof doc.chapter === "number" ? `${chapterLabel(doc)}/${chapters.length}` : chapterLabel(doc);
+
   const prose = h("article", { class: "prose" },
     h("div", { class: "skeleton", style: "width:60%;height:22px" }),
     h("div", { class: "skeleton" }), h("div", { class: "skeleton", style: "width:90%" }), h("div", { class: "skeleton", style: "width:75%" }));
@@ -100,17 +126,21 @@ async function renderDoc(root, doc) {
   const page = h("div", { class: "page page-wide" },
     h("div", { class: "breadcrumb" },
       h("a", { href: "#/docs" }, "Tài liệu"), " / ",
-      field ? `${field.icon} ${field.label}` : "", doc.group ? ` / ${doc.group}` : "", " / ", doc.title),
+      field ? `${field.icon} ${field.label}` : "",
+      doc.group ? ` / ${doc.group}` : "",
+      doc.part ? ` / ${doc.part}` : "",
+      " / ", docLabel(doc)),
     h("div", { class: "doc-layout" },
-      h("div", {}, meta, actions, guideBox, tocMobile, prose, bottom, navRow(doc)),
+      h("div", {}, meta, actions, guideBox, tocMobile, prose, bottom, relatedBlock(doc), navRow(doc, sameBook)),
       tocBox)
   );
   root.append(page);
 
-  pushRecent({ type: "doc", icon: doc.icon, title: doc.title, sub: doc.group ?? field?.label ?? "", field: doc.field, href: `#/docs/${doc.id}` });
+  pushRecent({ type: "doc", icon: doc.icon, title: docLabel(doc), sub: book.label, field: doc.field, href: `#/docs/${doc.id}` });
 
   // ---- Nút đánh dấu đã đọc (xuất hiện hai lần: đầu và cuối bài) ----
   const readBtns = [];
+  const statusEl = h("span", {});
   function syncRead() {
     const on = docsRead.is(doc.id);
     for (const b of readBtns) {
@@ -138,11 +168,14 @@ async function renderDoc(root, doc) {
     h("button", { type: "button", title: "Chữ lớn hơn", onclick: () => setFontScale(currentFontScale() + 0.1) }, "A+"));
 
   const timeEl = h("span", {}, "…");
-  const statusEl = h("span", {});
-  meta.append(
-    doc.group ? h("span", {}, doc.group) : h("span", {}, field?.label ?? ""),
+  // DOM append() không làm phẳng mảng như h() — gom rồi spread.
+  meta.append(...[
+    h("span", {}, book.label),
+    doc.part ? [h("span", { class: "dot" }, "·"), h("span", {}, doc.part)] : null,
+    chapPos ? [h("span", { class: "dot" }, "·"), h("span", { class: "bold" }, chapPos)] : null,
     h("span", { class: "dot" }, "·"), h("span", {}, "⏱️ ", timeEl),
-    h("span", { class: "dot" }, "·"), statusEl);
+    h("span", { class: "dot" }, "·"), statusEl,
+  ].flat(Infinity).filter(Boolean));
   actions.append(makeReadBtn(), fontCtl);
   bottom.append(
     h("span", { class: "muted small grow" }, "Đọc xong? Đánh dấu để bảng điều khiển và hướng dẫn học ghi nhận."),
@@ -287,6 +320,28 @@ function readingGuide(g, alreadyRead) {
   return details;
 }
 
+// "Đọc liền mạch trên con đường": tài liệu KHÁC lĩnh vực nối qua related.js —
+// bấm vào là app tự chuyển lĩnh vực (deep-link #/docs/<id>).
+function relatedBlock(doc) {
+  const ids = relatedOf(doc.id);
+  if (!ids.length) return null;
+  const list = ids.map((id) => docs.find((d) => d.id === id)).filter(Boolean);
+  return h("div", { class: "card card-soft mt-5 related-block" },
+    h("div", { class: "card-head" },
+      h("strong", {}, "🔗 Đọc liền mạch trên con đường"),
+      h("span", { class: "faint" }, "cùng cơ chế, nhìn từ lĩnh vực khác")),
+    h("div", { class: "stack gap-1" },
+      list.map((d) => {
+        const f = FIELDS[d.field];
+        return h("a", { class: "related-item", href: `#/docs/${d.id}` },
+          h("span", { class: "ico" }, d.icon),
+          h("span", { class: "txt" },
+            h("strong", {}, docLabel(d)),
+            h("small", {}, `${f?.icon ?? ""} ${docBook(d).label}`)),
+          h("span", { class: "faint" }, "→"));
+      })));
+}
+
 // Ảnh trong markdown dùng đường dẫn tương đối so với FILE (vd images/x.jpg);
 // trình duyệt lại resolve theo URL trang, nên phải sửa lại theo thư mục chứa file.
 function fixRelativePaths(prose, docFile) {
@@ -365,18 +420,18 @@ async function renderMermaidBlocks(container) {
   }
 }
 
-function navRow(doc) {
-  const sameField = getDocs(fieldOfRecord(doc));
-  const idx = sameField.indexOf(doc);
-  const prev = sameField[idx - 1];
-  const next = sameField[idx + 1];
+// Trước / sau trong CÙNG SÁCH (không nhảy sang sách khác của lĩnh vực Kubernetes).
+function navRow(doc, sameBook) {
+  const idx = sameBook.indexOf(doc);
+  const prev = sameBook[idx - 1];
+  const next = sameBook[idx + 1];
   const short = (t) => (t.length > 34 ? t.slice(0, 32) + "…" : t);
   return h("div", { class: "flex spread mt-4", style: "gap:10px" },
     prev
-      ? h("a", { class: "btn", href: `#/docs/${prev.id}`, title: prev.title }, `← ${short(prev.title)}`)
+      ? h("a", { class: "btn", href: `#/docs/${prev.id}`, title: docLabel(prev) }, `← ${short(docLabel(prev))}`)
       : h("span", {}),
     next
-      ? h("a", { class: "btn", href: `#/docs/${next.id}`, title: next.title }, `${short(next.title)} →`)
+      ? h("a", { class: "btn", href: `#/docs/${next.id}`, title: docLabel(next) }, `${short(docLabel(next))} →`)
       : h("a", { class: "btn", href: "#/docs" }, "Về thư viện →")
   );
 }
