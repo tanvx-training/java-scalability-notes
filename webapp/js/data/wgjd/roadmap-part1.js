@@ -242,4 +242,121 @@ export const wgjdWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "wg-w5",
+    week: "Tuần 5",
+    title: "Hiệu năng: đo trước, chỉnh sau",
+    goal: "Đo được hiệu năng bằng số liệu thay vì trực giác, và biết GC cùng JIT đang làm gì sau lưng mình.",
+    practice:
+      "Viết một benchmark JMH so hai cách hiện thực cùng một hàm — ví dụ nối chuỗi bằng `+` trong vòng lặp so với `StringBuilder`. Chạy đủ số vòng warmup, đọc kết quả, rồi bật JDK Flight Recorder cho một lần chạy và mở bản ghi ra xem. Kết luận chỉ được dựa trên số đo.",
+    resources: [
+      { label: "WGJD 07 — Hiểu về hiệu năng Java", href: "#/docs/wgjd-07" },
+      { label: "openjdk.org — JMH", href: "https://openjdk.org/projects/code-tools/jmh/" },
+    ],
+    items: [
+      {
+        id: "wg-w5-1",
+        text: "Thuật ngữ hiệu năng, và một cách tiếp cận thực dụng",
+        lesson: `**Mục tiêu.** Định nghĩa đúng và phân biệt được bảy thuật ngữ nền tảng của kỹ sư hiệu năng (latency, throughput, utilization, efficiency, capacity, scalability, degradation), và áp dụng được sáu điều "biết" sách yêu cầu trước khi bắt tay vào bất kỳ công việc tinh chỉnh nào.
+
+**Đọc.** [7.1 Thuật ngữ hiệu năng: Một số định nghĩa cơ bản](#/docs/wgjd-07) đọc chậm cả bảy mục con (7.1.1–7.1.7) — đặc biệt phân biệt *efficiency* (throughput chia cho tài nguyên đã dùng) với *scalability* (throughput hoặc latency thay đổi ra sao khi thêm tài nguyên), và ghi nhớ khái niệm *performance elbow* ở 7.1.1. [7.2 Một cách tiếp cận thực dụng với phân tích hiệu năng](#/docs/wgjd-07) đọc kỹ toàn bộ 7.2.1 tới 7.2.6, dừng lâu nhất ở 7.2.6 Biết những nguy hiểm của tối ưu quá sớm — đọc đầy đủ câu trích của Knuth, không chỉ nửa sau vẫn thường được truyền miệng.
+
+**Bẫy.** Tin rằng thêm gấp đôi tài nguyên (server, lõi CPU) sẽ luôn cho gấp đôi throughput. Sách nói thẳng mở rộng tuyến tính hoàn hảo "là rất, rất khó đạt được trong hầu hết hoàn cảnh" — và nhắc lại định luật Amdahl đã gặp ở chương 5 như lời giải thích. Bẫy thứ hai: dùng nửa sau câu trích "tối ưu quá sớm là gốc rễ của mọi tội lỗi" của Knuth như một cái cớ để bỏ qua tối ưu style tốt. Sách chỉ ra phần đầu câu trích (thường bị quên) đang ngầm nhắc nhu cầu đo lường, và Knuth nói về việc tối ưu tạo thành "một nỗ lực có ý thức, tập trung" — không phải lý do để bỏ những việc nhỏ như không cấp phát đối tượng thừa hay xóa một dòng log debug vô dụng.
+
+**Tự kiểm tra.** Nếu hệ thống A chỉ tăng throughput 1,5 lần khi số server tăng gấp đôi, đại lượng nào trong bảy thuật ngữ mô tả đúng hiện tượng này, và nó có đạt "mở rộng tuyến tính hoàn hảo" theo định nghĩa của sách không? Và theo đúng câu trích đầy đủ của Knuth, điều gì phải có trước khi bạn được phép kết luận một phần chương trình là "không quan trọng" và bỏ qua nó?`,
+      },
+      {
+        id: "wg-w5-2",
+        text: "Điều gì đã sai, và vì sao tinh chỉnh hiệu năng Java lại khó",
+        lesson: `**Mục tiêu.** Giải thích được vì sao định luật Moore (về số transistor) không đồng nghĩa với "máy nhanh hơn" theo cảm nhận của lập trình viên, kể đúng thứ tự bốn cấp trong hệ phân cấp độ trễ bộ nhớ, và tự tái hiện được thí nghiệm cache miss của sách để thấy thời gian chuyển dữ liệu chi phối hiệu năng ra sao.
+
+**Đọc.** [7.3 Điều gì đã sai? Vì sao chúng ta phải quan tâm?](#/docs/wgjd-07) đọc kỹ 7.3.1 Định luật Moore — chú ý định luật này phát biểu về *số transistor*, không phải tốc độ xung nhịp hay hiệu năng, đây là điểm sách nhấn mạnh là "cơ bản phải được hiểu". Rồi đọc kỹ 7.3.2 Hiểu hệ phân cấp độ trễ bộ nhớ, ghi nhớ bốn cấp (thanh ghi, bộ nhớ chính ~50ns, SSD ~0,1ms, ổ cứng ~5ms) và lý do cache L1/L2 (SRAM) được chèn vào giữa thanh ghi và bộ nhớ chính. [7.4 Vì sao tinh chỉnh hiệu năng Java lại khó?](#/docs/wgjd-07) đọc kỹ 7.4.1 Vai trò của thời gian trong tinh chỉnh hiệu năng (phân biệt precision với accuracy, và khái niệm granularity), rồi tự gõ và chạy Listing 7.1 trong 7.4.2 Hiểu về cache miss — so kết quả đo của bạn với bảng số liệu mẫu trong sách trước khi đọc phần giải thích.
+
+**Bẫy.** Nghĩ tốc độ xung nhịp cao hơn luôn đồng nghĩa hiệu năng tốt hơn. Sách gọi thẳng ý tưởng này là "một sự đơn giản hóa thô thiển", và nhấn mạnh định luật Moore chỉ nói về số transistor — hai đại lượng này không đi cùng số mũ tăng trưởng. Bẫy thứ hai: đoán \`touchEveryItem()\` (chạm mọi phần tử, gấp 16 lần công việc ghi so với \`touchEveryLine()\`) sẽ mất gấp 16 lần thời gian chạy. Kết quả đo thật trong Listing 7.1 cho thấy hai hàm mất thời gian gần như nhau, vì cả hai chạm cùng số cache line, và chính thời gian chuyển dữ liệu từ bộ nhớ chính vào cache CPU — chứ không phải số phép ghi — mới chi phối hồ sơ hiệu năng.
+
+**Tự kiểm tra.** Vì sao một CPU có nhiều transistor hơn hẳn theo đúng định luật Moore không tự động đảm bảo mã của bạn chạy nhanh hơn tương ứng? Và trong Listing 7.1, vì sao \`touchEveryItem()\` không mất gấp 16 lần thời gian so với \`touchEveryLine()\` dù nó thực hiện gấp 16 lần số lần ghi?`,
+      },
+      {
+        id: "wg-w5-3",
+        text: "Thu gom rác",
+        lesson: `**Mục tiêu.** Vẽ lại được vòng đời một đối tượng qua Eden → Survivor → Tenured, phân biệt đúng young collection với full collection, giải thích được vì sao G1 khu vực hóa heap và dùng pause goal, và đọc đúng ý nghĩa của các switch GC cơ bản trong bảng 7.1 và 7.2.
+
+**Đọc.** [7.5 Thu gom rác (Garbage collection)](#/docs/wgjd-07) là mục dài nhất tuần — đọc theo đúng thứ tự mục con. 7.5.1 Cơ bản và 7.5.2 Mark and sweep đọc kỹ để nắm thuật toán gốc (dừng mọi luồng, đánh dấu từ tập đối tượng sống, sweep phần còn lại) và đọc khung "Còn về việc tạm dừng phi tất định?" để thấy vì sao nỗi sợ Stop-the-World với Java hiện đại "thường bị thổi phồng". 7.5.3 Các vùng bộ nhớ, 7.5.4 Young collection và 7.5.5 Full collection đọc liền mạch, bám theo giả thuyết thế hệ. 7.5.6 Safepoint đọc lướt, chỉ cần nắm ví dụ "giữa các lệnh bytecode". 7.5.7 G1: Bộ thu gom mặc định của Java đọc chậm toàn bộ — đây là phần nặng nhất, đặc biệt các khái niệm pause goal, IHOP (mặc định 45%), concurrent mark, mixed collection và humongous region. 7.5.8 Bộ thu gom Parallel đọc kỹ để phân biệt đúng hai trục độc lập concurrent (đối lập với STW) và parallel (đối lập với đơn luồng). 7.5.9 Tham số cấu hình GC đọc kỹ bảng 7.1 và 7.2, cùng đoạn giải thích hành vi JVM trong container.
+
+**Bẫy.** Nghĩ nếu thiếu survivor space thì chỉ mất một chút hiệu quả chứ không sao. Sách chỉ rõ hậu quả nghiêm trọng hơn nhiều: những đối tượng vừa tạo (đời ngắn) sẽ bị pha đánh dấu coi là "sống" và thăng cấp nhầm vào Tenured, rồi chết ngay sau đó nhưng vẫn chiếm chỗ tới tận lần Tenured được thu gom tiếp theo — và lần thu gom đó cũng sẽ "xảy ra sớm hơn cần thiết" vì chính việc thăng cấp sai này. Bẫy thứ hai: đặt \`-Xms\` bằng \`-Xmx\` để "kiểm soát" kích thước heap. Sách gọi thẳng đây là một antipattern — nó chỉ cho lập trình viên "ảo giác về sự kiểm soát", trong khi các GC hiện đại có thuật toán định cỡ động tốt và ràng buộc nhân tạo "hầu như luôn gây hại nhiều hơn lợi"; thực hành tốt nhất năm 2022 là chỉ đặt \`Xmx\` và không đặt \`Xms\`.
+
+**Tự kiểm tra.** Nếu survivor space không tồn tại, một đối tượng vừa tạo ngay trước một lần young collection nhưng lẽ ra chỉ sống rất ngắn sẽ đi đâu, và điều đó kéo theo hệ quả gì cho tần suất thu gom ở Tenured? Và theo sách, đặt \`-Xms\` bằng \`-Xmx\` đem lại "ảo giác" gì cho lập trình viên, và vì sao thực hành tốt nhất lại khuyên ngược lại?`,
+      },
+      {
+        id: "wg-w5-4",
+        text: "Biên dịch JIT với HotSpot, và JDK Flight Recorder",
+        lesson: `**Mục tiêu.** Phân biệt được C1 và C2 theo ngưỡng biên dịch và mức độ táo bạo của tối ưu, giải thích được inlining và monomorphic dispatch bằng đúng ví dụ sách dùng, đọc được các ký hiệu trong log của \`-XX:+PrintCompilation\`, và bật lên xem được một bản ghi JDK Flight Recorder bằng Mission Control.
+
+**Đọc.** [7.6 Biên dịch JIT với HotSpot](#/docs/wgjd-07) đọc chậm. 7.6.1 Vì sao lại có biên dịch động? và 7.6.2 Giới thiệu về HotSpot đọc kỹ, phân biệt rõ C1 (ngưỡng 1.500 lần gọi, bảo thủ, dùng sớm) với C2 (ngưỡng 10.000 lần gọi, táo bạo, có guard condition để rút lại tối ưu sai) và khái niệm tiered compilation dùng cả hai. 7.6.3 Inline phương thức đọc kỹ, đặc biệt khung "Còn về các phương thức accessor?". 7.6.4 Biên dịch động và monomorphic call đọc kỹ ví dụ \`obj.callMyMethod()\`. 7.6.5 Đọc log biên dịch — chạy \`-XX:+PrintCompilation\` trên chương trình của bạn và tự nhận diện ba ký hiệu \`s\`, \`!\`, \`%\` sách liệt kê, cùng khung "Coi chừng zombie". 7.6.6 Deoptimization đọc lướt. [7.7 JDK Flight Recorder](#/docs/wgjd-07) đọc kỹ 7.7.1 Flight Recorder — hai cách khởi động (\`-XX:StartFlightRecording\` lúc start, hoặc \`jcmd <pid> JFR.start\` khi tiến trình đã chạy) và hai tệp cấu hình \`default.jfc\`/\`profile.jfc\`. 7.7.2 Mission Control đọc để biết \`jmc\` mở được những màn hình nào (GC, JIT compilation, code cache, method profiling) — tự bật JFR cho phần thực hành tuần này rồi mở tệp \`.jfr\` bằng \`jmc\`.
+
+**Bẫy.** Tin rằng một phương thức getter public truy cập field private không thể được HotSpot inline vì field đó bị cấm truy cập từ bên ngoài class. Sách nói thẳng điều này sai: HotSpot có thể và sẽ bỏ qua kiểm soát truy cập khi biên dịch thành mã máy, thay getter bằng truy cập trực tiếp field — và điều này không phá mô hình bảo mật vì kiểm soát truy cập đã được kiểm tra xong khi class được nạp hoặc link. Bẫy thứ hai: coi một tối ưu monomorphic đã áp dụng là vĩnh viễn. Sách chỉ rõ nếu kỳ vọng "chỉ một loại đối tượng tại call site" từng bị vi phạm, runtime rút lại tối ưu "mà chương trình không hề nhận ra hoặc từng làm gì sai" — và đây là tối ưu chỉ server compiler (C2) làm, client compiler không làm.
+
+**Tự kiểm tra.** Với một phương thức getter public đơn giản truy cập field private, vì sao HotSpot vẫn có thể inline nó thành truy cập trực tiếp field mà không vi phạm mô hình bảo mật của Java? Và nếu một call site \`obj.callMyMethod()\` chỉ thấy đúng một loại đối tượng suốt quá trình warmup rồi đột nhiên gặp một subclass khác, điều gì xảy ra với tối ưu monomorphic mà C2 đã áp dụng trước đó?`,
+      },
+    ],
+  },
+  {
+    id: "wg-w6",
+    week: "Tuần 6",
+    title: "Ngôn ngữ JVM khác, và tự bổ túc Kotlin/Clojure",
+    goal: "Đọc hiểu được mã Kotlin và Clojure ở mức theo được lập luận của sách từ chương 14 trở đi — không phải viết được hai ngôn ngữ đó.",
+    practice:
+      "Chọn một class Java nhỏ trong dự án của bạn và viết lại bằng Kotlin, rồi viết lại một hàm thuần tuý bằng Clojure trong REPL. Mục tiêu duy nhất: quen mắt với cú pháp, đủ để không khựng khi gặp đoạn mã tương tự ở tuần 9–11.",
+    resources: [
+      { label: "WGJD 08 — Các ngôn ngữ JVM thay thế", href: "#/docs/wgjd-08" },
+      { label: "kotlinlang.org — Basic syntax", href: "https://kotlinlang.org/docs/basic-syntax.html" },
+      { label: "clojure.org — Learn Clojure", href: "https://clojure.org/guides/learn/syntax" },
+    ],
+    items: [
+      {
+        id: "wg-w6-1",
+        text: "Phân loại ngôn ngữ, và lập trình đa ngôn ngữ trên JVM",
+        lesson: `**Mục tiêu.** Phân loại được một ngôn ngữ JVM theo bốn trục sách đưa ra (thông dịch/biên dịch, động/tĩnh, mệnh lệnh/hàm, hiện thực lại/bản gốc), và giải thích được kim tự tháp lập trình đa ngôn ngữ ba tầng cùng lý do chính những phẩm chất làm Java tốt ở tầng ổn định lại trở thành gánh nặng ở hai tầng trên.
+
+**Đọc.** [8.1 Phân loại ngôn ngữ](#/docs/wgjd-08) đọc chậm cả bốn mục con. [8.1.1 Ngôn ngữ thông dịch vs. biên dịch](#/docs/wgjd-08) — chú ý tiêu chí riêng sách dùng cho ngôn ngữ JVM: có tạo ra class file rồi thực thi cái đó hay không, chứ không phải định nghĩa chung chung. [8.1.2 Định kiểu động vs. tĩnh](#/docs/wgjd-08) — tự gõ lại đúng ví dụ \`var answer = 40\` trong JShell như sách làm, để tận mắt thấy dòng thứ ba ném lỗi biên dịch. [8.1.3 Ngôn ngữ mệnh lệnh vs. hàm](#/docs/wgjd-08) — phân biệt hai kiểu con của mệnh lệnh (thủ tục và OO), và khái niệm first-class function. [8.1.4 Hiện thực lại vs. bản gốc](#/docs/wgjd-08) — đọc ba ví dụ JRuby, Jython, Rhino/Nashorn. [8.2 Lập trình đa ngôn ngữ trên JVM](#/docs/wgjd-08) đọc kỹ phần mở đầu về kim tự tháp ba tầng (bảng 8.1: domain-specific, dynamic, stable) và [8.2.1 Vì sao dùng ngôn ngữ không phải Java?](#/docs/wgjd-08) — bốn lý do Java gặp khó ở tầng trên. [8.2.2 Các ngôn ngữ đang lên](#/docs/wgjd-08) đọc kỹ hai đoạn giới thiệu Kotlin và Clojure — đây là hai ngôn ngữ bạn sẽ tự bổ túc cú pháp ở hai mục cuối tuần này. [8.2.3 Những ngôn ngữ chúng tôi có thể chọn nhưng đã không chọn](#/docs/wgjd-08) đọc lướt (Groovy, Scala, GraalVM) chỉ để biết chúng tồn tại.
+
+**Bẫy.** Nghĩ "thông dịch so với biên dịch" là một ranh giới tuyệt đối và rõ ràng như đầu những năm 1990. Sách nói thẳng "sự phân biệt này đã trở nên ít rõ ràng hơn gần đây" — chính Java có đặc điểm của cả hai, và bytecode "chắc chắn không phải con người đọc được, nhưng nó cũng không phải mã máy", càng làm ranh giới mờ thêm. Bẫy thứ hai: nghĩ ngôn ngữ tầng ổn định (như Java) luôn là lựa chọn tốt nhất cho mọi phần hệ thống vì an toàn kiểu và hiệu năng. Sách chỉ ra chính những phẩm chất đó (biên dịch, định kiểu tĩnh, triển khai nặng nề, cú pháp cứng nhắc) "trở thành gánh nặng" ở tầng động và tầng đặc thù miền — thời gian biên dịch lại 90 giây tới hai phút đủ để "phá vỡ nghiêm trọng dòng chảy của lập trình viên".
+
+**Tự kiểm tra.** Theo tiêu chí riêng sách dùng cho ngôn ngữ JVM (không phải định nghĩa thông dịch/biên dịch chung chung), một ngôn ngữ được xem là "biên dịch" hay "thông dịch" dựa vào việc gì? Và kim tự tháp lập trình đa ngôn ngữ ba tầng nói mã sống càng lâu thì nên nằm gần tầng nào, và vì sao?`,
+      },
+      {
+        id: "wg-w6-2",
+        text: "Chọn ngôn ngữ không phải Java, và cách JVM hỗ trợ chúng",
+        lesson: `**Mục tiêu.** Áp dụng được năm tiêu chí của sách (rủi ro của mảng dự án, khả năng tương tác với Java, công cụ/hỗ trợ test, độ khó học, nguồn lập trình viên để tuyển) để đánh giá một mảng dự án cụ thể có phù hợp để thử ngôn ngữ JVM thay thế hay không, và giải thích được compiler fiction bằng đúng hai ví dụ sách dùng.
+
+**Đọc.** [8.3 Cách chọn một ngôn ngữ không phải Java cho dự án của bạn](#/docs/wgjd-08) đọc chậm cả năm mục con 8.3.1–8.3.5, bám theo đúng cặp ví dụ đối lập của sách: engine xử lý thanh toán bảy năm tuổi, thiếu test (rủi ro cao, không nên đụng vào) và web console quản trị dữ liệu tĩnh không quan trọng (rủi ro thấp, Spring Boot với Kotlin là "lựa chọn hiển nhiên"). [8.4 Cách JVM hỗ trợ các ngôn ngữ thay thế](#/docs/wgjd-08) đọc kỹ 8.4.1 Hiệu năng — đây là chỗ chương 7 quay lại: đừng tin tuyên bố ngôn ngữ X "có hiệu năng tốt hơn" Y mà không kèm dữ liệu đo được. 8.4.2 Môi trường runtime cho ngôn ngữ không phải Java đọc kỹ ví dụ "open classes" của Ruby và vai trò của \`invokedynamic\`. 8.4.3 Compiler fiction đọc kỹ, đối chiếu ví dụ inner class Java (hậu tố \`$\` trong tên class khi chạy \`jar tvf\`) với việc data class của Kotlin cũng là một compiler fiction, có thể một ngày được xây lại trên record của Java 17.
+
+**Bẫy.** Tin rằng câu hỏi "ngôn ngữ X có hiệu năng tốt hơn Y không?" là một câu hỏi hợp lý, có câu trả lời đơn giản. Sách nói thẳng câu hỏi này "không đơn giản để trả lời và thực ra không thực sự có nhiều ý nghĩa", vì đo lường phải thực hiện trên một chương trình cụ thể, không phải trên khái niệm trừu tượng về một ngôn ngữ. Bẫy thứ hai: đưa một ngôn ngữ mới thẳng vào lõi mã nghiệp vụ cốt lõi đang chạy tốt chỉ vì tiện. Ví dụ engine xử lý thanh toán của sách — bảy năm tuổi, thiếu test, nhiều góc tối — bị gọi thẳng là "rõ ràng là một mảng rủi ro cao", và sách khuyên tập trung dự án thí điểm đầu tiên vào mảng rủi ro thấp, có đường lui.
+
+**Tự kiểm tra.** Với ví dụ engine xử lý thanh toán bảy năm tuổi, thiếu test trong sách, tiêu chí nào trong năm tiêu chí chọn ngôn ngữ khiến nó bị loại làm nơi thử nghiệm đầu tiên, và sách gợi ý mảng nào của cùng hệ thống nên dùng thay vào đó? Và data class của Kotlin và inner class của Java giống nhau ở điểm nào khi cả hai đều được sách gọi là compiler fiction?`,
+      },
+      {
+        id: "wg-w6-3",
+        text: "Tự bổ túc Kotlin — bù chương 9 vắng mặt",
+        lesson: `**Mục tiêu.** Bản dịch tiếng Việt cuốn sách này không có chương 9 (giới thiệu Kotlin) và cũng không có chương 10 (giới thiệu Clojure, xem mục sau) — hai chương này không thuộc phạm vi dịch và không có PDF gốc trong repo. Mục này **không** thay thế chương 9; nó chỉ trang bị đủ cú pháp Kotlin tối thiểu để bạn không khựng lại khi sách dùng Kotlin xen kẽ Java từ chương 14 (kiểm thử), chương 15 (lập trình hàm nâng cao) và chương 16 (concurrency với coroutine) trở đi.
+
+**Đọc.** [kotlinlang.org — Basic syntax](https://kotlinlang.org/docs/basic-syntax.html), phần "Variables" — phân biệt \`val\` (gán một lần) với \`var\` (gán lại được). [kotlinlang.org — Functions](https://kotlinlang.org/docs/functions.html) đọc tới hết phần "Single-expression functions" — chỉ cần cú pháp khai báo hàm cơ bản, không cần varargs hay tail recursion. [kotlinlang.org — Lambdas](https://kotlinlang.org/docs/lambdas.html), đọc kỹ đúng hai phần "Higher-order functions" và "it: implicit name of a single parameter" — đây là cặp cú pháp bạn sẽ gặp lại nhiều nhất. [kotlinlang.org — Null safety](https://kotlinlang.org/docs/null-safety.html), đọc kỹ "Safe call operator" (\`?.\`) và "Elvis operator" (\`?:\`). [kotlinlang.org — Data classes](https://kotlinlang.org/docs/data-classes.html) đọc phần mở đầu và "Copying" — chỉ cần biết \`data class\` tự sinh \`equals()\`/\`hashCode()\`/\`copy()\`. [kotlinlang.org — Collections overview](https://kotlinlang.org/docs/collections-overview.html) đọc lướt để thấy \`listOf(...)\` và \`mapOf(...)\` tạo collection bất biến ra sao.
+
+**Bẫy.** Sa đà học trọn vẹn Kotlin — generic, sealed class, delegation, coroutine chi tiết — vì tài liệu chính thức viết rất dễ đọc tiếp và không có ranh giới chương nào bắt bạn dừng lại. Mục này có phạm vi cố định (sáu chủ đề cú pháp ở trên); vượt ra ngoài đó là lấn sang việc tự học một ngôn ngữ mới, không phải bổ túc để đọc tiếp sách. Bẫy đối lập: bỏ qua hẳn mục này vì nghĩ "gặp đâu tra đó". Chương 14–16 dùng Kotlin xen trong ví dụ mà không dừng lại giải thích cú pháp cơ bản — nếu bạn chưa quen mắt \`val\`/\`var\`, lambda rút gọn với \`it\`, và \`?.\`/\`?:\`, bạn sẽ phải dừng đọc liên tục để tra cứu, đúng lúc sách đang triển khai một lập luận cần bạn theo mạch liên tục.
+
+**Tự kiểm tra.** Viết một hàm Kotlin bậc cao nhận vào \`List<Int>\` và một lambda kiểu \`(Int) -> Boolean\`, rồi gọi nó để lọc ra các số dương bằng cú pháp \`it\` rút gọn — bạn viết lời gọi đó thế nào? Và với \`val ten: String? = null\`, vì sao \`ten.length\` không biên dịch được trong khi \`ten?.length\` thì được, và \`ten?.length ?: 0\` trả về giá trị gì?`,
+      },
+      {
+        id: "wg-w6-4",
+        text: "Tự bổ túc Clojure — bù chương 10 vắng mặt",
+        lesson: `**Mục tiêu.** Bản dịch tiếng Việt cuốn sách này cũng không có chương 10 (giới thiệu Clojure) — cùng lý do như chương 9 (mục trước): chương này không thuộc phạm vi dịch và không có PDF gốc trong repo. Mục này **không** thay thế chương 10; nó chỉ trang bị đủ cú pháp Clojure tối thiểu để bạn đọc hiểu được các ví dụ Clojure xuất hiện dày đặc từ chương 14 (chạy test qua REPL), chương 15 (lập trình hàm) và chương 16 (mô hình actor) trở đi.
+
+**Đọc.** [clojure.org — Learn Clojure: Syntax](https://clojure.org/guides/learn/syntax), đọc kỹ phần "Evaluation" — nắm ý một biểu thức trong ngoặc đơn như \`(f a b)\` được đọc là "gọi hàm \`f\` với tham số \`a\`, \`b\`", không phải một danh sách dữ liệu; và đọc phần "REPL" để biết cách gõ biểu thức và xem kết quả ngay lập tức. [clojure.org — Learn Clojure: Functions](https://clojure.org/guides/learn/functions), đọc phần "Creating Functions" (\`defn\`, và \`defn\` thực chất là viết tắt của \`def\` cộng \`fn\`) và phần "Locals and Closures" cho \`let\`. [clojure.org — Sequences](https://clojure.org/reference/sequences), đọc mục "Seq in, Seq out" để thấy \`map\`, \`filter\`, \`reduce\` đều nhận một seq và trả về một seq (hoặc một giá trị, với \`reduce\`) chứ không sửa seq gốc. [clojure.org — Data Structures](https://clojure.org/reference/data_structures) đọc phần mở đầu nói mọi cấu trúc dữ liệu của Clojure đều bất biến (immutable) và persistent — đây là nền tảng để hiểu vì sao \`map\`/\`filter\`/\`reduce\` luôn trả về giá trị mới thay vì sửa tại chỗ.
+
+**Bẫy.** Sa đà học trọn vẹn Clojure — macro, protocol, multimethod, agent — vì cú pháp Lisp một khi đã quen mắt rất cuốn để đọc tiếp. Mục này chỉ cần bốn chủ đề cú pháp ở trên; học sâu hơn là việc của một cuốn sách Clojure riêng, không phải điều kiện để đọc tiếp chương 14–16. Bẫy đối lập: bỏ qua hẳn vì nghĩ "toàn dấu ngoặc, đọc lướt cũng hiểu". Chương 14 sẽ nói nó chạy test qua REPL Clojure đúng như đã làm xuyên suốt chương 10 — nếu bạn chưa từng thấy \`def\`/\`defn\`/\`let\` hay biết \`(map f coll)\` nghĩa là gì, câu dẫn đó vô nghĩa với bạn và bạn sẽ khựng lại ngay từ ví dụ đầu tiên.
+
+**Tự kiểm tra.** Với \`(defn square [x] (* x x))\`, form nào là tên hàm, form nào là danh sách tham số, và biểu thức con \`(* x x)\` được đánh giá theo quy tắc nào của Clojure (phần tử đầu tiên trong ngoặc đóng vai trò gì)? Và nếu bạn gọi \`(filter even? [1 2 3 4 5])\`, kết quả trả về là gì, và vì sao collection gốc \`[1 2 3 4 5]\` vẫn giữ nguyên sau lời gọi đó?`,
+      },
+    ],
+  },
 ];
