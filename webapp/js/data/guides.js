@@ -370,6 +370,42 @@ export const fieldGuides = {
     ],
   },
 
+  jcip: {
+    tagline: "Đọc Java Concurrency in Practice — nền tảng concurrency của Java: thread safety, visibility, lock, AQS và Java Memory Model.",
+    audience: "Lập trình viên Java đã viết code đa luồng và muốn hiểu vì sao nó đúng — hoặc vì sao nó thỉnh thoảng sai. **Không phải sách nhập môn**, và cũng không phải sách dạy API mới nhất: nó dạy các quy tắc mà mọi API concurrency về sau vẫn phải tuân theo.",
+    hoursPerWeek: "6–8 giờ/tuần · 10 tuần",
+    prereqs: [
+      "Viết được Java đa luồng ở mức cơ bản: biết `Thread`, `synchronized` và `ExecutorService` là gì, dù chưa hiểu sâu.",
+      "JDK 17 trở lên để chạy ví dụ — mã trong sách viết cho Java 5/6 nhưng chạy nguyên trên JDK hiện đại.",
+      "Đọc được stack trace và thread dump; tuần 7 dùng `jstack` để bắt deadlock thật.",
+      "Chấp nhận rằng chương 1, chương 9 (GUI) và chương 12 (kiểm thử) không có trong bản dịch — phần kiểm thử được bù bằng jcstress ở tuần 10.",
+    ],
+    steps: [
+      { id: "jc-1", title: "Dựng chỗ để gõ thử", desc: "Một dự án Java trống với JDK 17+, chạy được từ dòng lệnh. Tự đánh dấu khi `java -version` chạy và bạn biên dịch được một class có hai thread.", done: { kind: "manual" } },
+      { id: "jc-2", title: "Chương 2–5: nền tảng — thread safety, visibility, composition, building block", desc: "Phần I của sách. Đây là phần không được đọc lướt: mọi chương sau đều xây trên bốn chương này. Đọc xong bạn nên nhìn một class bất kỳ và nói được nó thread-safe hay không, và vì sao.", done: { kind: "manual" } },
+      { id: "jc-3", title: "Chương 6–11: cấu trúc ứng dụng concurrent và cái giá của nó", desc: "Thực thi task, huỷ và shutdown, thread pool, deadlock, hiệu năng và khả năng mở rộng. Bắt một deadlock thật bằng `jstack`, rồi đo tranh chấp lock và đối chiếu với định luật Amdahl.", done: { kind: "manual" } },
+      { id: "jc-4", title: "Chương 13–16: explicit lock, AQS, CAS, Java Memory Model", desc: "ReentrantLock và read-write lock, tự xây synchronizer trên AQS, thuật toán nonblocking, rồi Java Memory Model đóng lại toàn bộ khung lý thuyết. Kết bằng một test jcstress chứng minh một race.", done: { kind: "manual" } },
+      { id: "jc-5", title: "Đọc lại một class thật trong dự án của bạn", desc: "Chọn một class có state chia sẻ trong codebase bạn đang làm, viết ra synchronization policy của nó bằng ngôn ngữ chương 4.5, và đánh dấu bằng `@GuardedBy`. Nếu không viết ra được policy, đó chính là phát hiện.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Đọc chậm và gõ lại", desc: "Sách này dày đặc listing code, và gần như mỗi listing đều có một phiên bản sai đứng ngay trước phiên bản đúng — giá trị nằm ở chỗ hiểu vì sao bản sai lại sai." },
+      { title: "Tự kiểm trước khi xem lại sách", desc: "Mỗi tuần có một câu hỏi tự kiểm tra ở cuối từng mục: trả lời bằng lời trước khi xem lại sách." },
+    ],
+    pitfalls: [
+      "**Đọc lướt Phần I để nhảy tới phần nâng cao.** Chương 13–16 giả định bạn đã thuộc lòng khái niệm của chương 2–5. Nhảy cóc sẽ khiến chương 14 (AQS) thành vô nghĩa.",
+      "**Tưởng sách lỗi thời vì xuất bản năm 2006.** `java.util.concurrent` không đổi ngữ nghĩa từ đó tới nay, và Java Memory Model chương 16 mô tả vẫn là JMM hiện hành. Cái đã đổi là **bối cảnh**: virtual thread làm nhiều lời khuyên về sizing pool ở chương 8 không còn là ràng buộc như trước. Chặng Modern Concurrency in Java ở sau trên con đường sẽ nói cái gì đổi — đừng tự suy diễn.",
+      "**Chỉ đọc mà không chạy.** Nhiều bug concurrency chỉ hiện ra khi bạn thật sự chạy code sai trên máy nhiều nhân. Bảy trong mười tuần có bài thực hành gõ tay; bỏ chúng là bỏ nửa cuốn sách.",
+      "**Nhớ kết luận mà quên điều kiện.** Ví dụ: \"volatile đủ cho biến cờ\" đúng, nhưng \"volatile đủ cho bộ đếm\" sai — cùng một từ khoá, khác điều kiện. Sách rất cẩn thận về ranh giới này; người đọc thường không.",
+    ],
+    doneWhen: [
+      "Nhìn một class có state chia sẻ và nói được nó thread-safe hay không, kèm lý do dựa trên bất biến chứ không dựa trên cảm giác.",
+      "Viết được synchronization policy cho một class bằng ngôn ngữ của chương 4.5, và đánh dấu bằng `@GuardedBy`.",
+      "Bắt được một deadlock từ thread dump và chỉ ra thứ tự lock gây ra nó.",
+      "Giải thích được vì sao double-checked locking là phản mẫu, bằng từ vựng happens-before của chương 16.",
+      "Viết được một test jcstress chứng minh một race, và chứng minh bản đã sửa qua được.",
+    ],
+  },
+
   "spring-start": {
     tagline: "Spring Start Here 8 tuần — điểm bắt đầu Spring cho người mới, và bước đệm trước Spring Security.",
     audience: "Người viết được Java cơ bản (class, interface, annotation) và dựng được dự án Maven; **không cần biết trước gì về Spring**. Học xong lĩnh vực này rồi mới sang Spring Security.",
