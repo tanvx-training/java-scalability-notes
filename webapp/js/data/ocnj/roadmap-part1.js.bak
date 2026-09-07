@@ -248,7 +248,7 @@ export const ocnjWeeksPart1 = [
     title: "Thực thi mã: từ thông dịch tới JIT và AOT",
     goal: "Giải thích được vì sao một method chậm ở lần chạy đầu rồi nhanh dần, và đọc được log biên dịch để biết method nào đã được biên dịch, bị deoptimize hay không bao giờ nóng lên.",
     practice:
-      "Chạy ứng dụng với `-XX:+PrintCompilation`, tìm một method bị deoptimize rồi recompile, và giải thích vì sao dựa vào profile-guided optimization của chương. Rồi đo cùng một benchmark với `-XX:ReservedCodeCacheSize` mặc định và với giá trị đã tăng, so sánh tập method được biên dịch theo hai câu hỏi kiểm chứng ở mục Tinh chỉnh JIT đơn giản, và ghi lại chênh lệch.",
+      "Chạy ứng dụng với `-XX:+PrintCompilation`, tìm một method bị deoptimize rồi recompile, và giải thích vì sao dựa vào profile-guided optimization của chương. Rồi đo cùng một benchmark với ngưỡng inline mặc định và với ngưỡng đã đổi, ghi lại chênh lệch.",
     resources: [
       { label: "OCNJ 06 — Thực thi mã trên JVM", href: "#/docs/ocnj-06" },
     ],

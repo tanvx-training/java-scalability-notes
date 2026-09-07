@@ -377,7 +377,7 @@ chương (xem bảng mục lục §5.2). `practice` ở mức tuần, làm trên
 | W2 | `javap -c` một class để đọc bytecode của một vòng lặp đơn giản; bật `-Xlog:class+load` đếm số class nạp lúc khởi động; dùng `jcmd` xem trạng thái JVM đang chạy |
 | W3 | Bật `-Xlog:gc*` trên ứng dụng thật, chạy tải, đọc log: allocation rate, tỉ lệ promotion sang old gen, thời gian pause — và chỉ ra chỗ weak generational hypothesis đúng hay sai với workload đó |
 | W4 | Chạy cùng workload với G1 rồi với ZGC (hoặc Shenandoah), so phân bố pause và throughput; giải thích chênh lệch bằng lý thuyết GC đồng thời của chương |
-| W5 | `-XX:+PrintCompilation` tìm một method bị deoptimize rồi recompile; đo tác động của `-XX:-Inline` hoặc thay đổi ngưỡng inline lên cùng benchmark |
+| W5 | `-XX:+PrintCompilation` tìm một method bị deoptimize rồi recompile; đo `-XX:ReservedCodeCacheSize` mặc định và tăng, so tập method được biên dịch |
 | W6 | Viết một benchmark JMH cho false sharing: hai thread ghi hai biến cạnh nhau, rồi tách chúng ra khỏi cùng cache line; đo chênh lệch và giải thích bằng MESI |
 | W7 | Đóng gói ứng dụng thành container, đặt giới hạn bộ nhớ, rồi xem GC ergonomics chọn heap khác đi thế nào; dựng bằng Docker Compose theo ví dụ Fighting Animals |
 | W9 | Cắm Micrometer + Prometheus vào một service, rồi thêm OpenTelemetry tracing xuyên **hai** service để thấy một trace có nhiều span |
