@@ -235,4 +235,59 @@ export const jcipWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "jc-w5",
+    week: "Tuần 5",
+    title: "Thực thi task: từ thread thủ công tới framework Executor",
+    goal: "Tách được việc gửi task khỏi việc chạy task, và nói được execution policy gồm những gì.",
+    practice:
+      "Tuần này không có bài gõ tay riêng — chương 6 đọc để đổi cách nghĩ, và tuần 6 sẽ có bài nặng về huỷ task. Nếu còn thời gian, chạy lại ví dụ page renderer của mục 6.3 qua ba phiên bản (tuần tự, Future, CompletionService) và so thời gian.",
+    resources: [{ label: "JCiP 06 — Task Execution", href: "#/docs/jcip-06" }],
+    items: [
+      {
+        id: "jc-w5-1",
+        text: "Ba cách chạy task, và vì sao tạo thread không giới hạn thì sụp",
+        lesson: `**Mục tiêu.** Phân biệt được ba cách chạy task trong thread — tuần tự và tạo thread tường minh cho từng task — và giải thích được chính xác vì sao tạo thread không giới hạn theo tốc độ request đến thì sớm muộn cũng sụp trong production.
+
+**Đọc.** [6.1. Thực thi Task trong Thread](#/docs/jcip-06) mở đầu bằng lập luận chọn ranh giới task: task nên độc lập và đại diện một phần nhỏ năng lực xử lý, và với ứng dụng server, ranh giới tự nhiên là từng request của client. [6.1.1. Thực thi Task tuần tự](#/docs/jcip-06) — đọc kỹ \`SingleThreadWebServer\` (Listing 6.1) xử lý request tuần tự trong một thread duy nhất — đúng về lý thuyết nhưng chỉ xử lý được một request tại một thời điểm, nên một request block I/O lâu sẽ ngăn hoàn toàn các request khác. [6.1.2. Tạo Thread tường minh cho từng Task](#/docs/jcip-06) — đọc kỹ \`ThreadPerTaskWebServer\` (Listing 6.2) tạo một thread mới cho mỗi request, và ba hệ quả sách liệt kê: việc xử lý task chuyển khỏi thread chính, task có thể chạy song song, và code xử lý task phải thread-safe. [6.1.3. Nhược điểm của việc tạo Thread không giới hạn](#/docs/jcip-06) — đọc kỹ ba nhược điểm: chi phí vòng đời thread, tiêu thụ tài nguyên (đặc biệt bộ nhớ của các thread nằm không), và tính ổn định khi chạm giới hạn số thread mà nền tảng cho phép, dẫn tới \`OutOfMemoryError\`.
+
+**Bẫy.** Nghĩ rằng \`SingleThreadWebServer\` "đúng về lý thuyết" thì dùng được cho production — sách nói thẳng nó "sẽ chạy rất tệ trong production" vì trong khi server đang xử lý một request, mọi kết nối mới phải chờ cho đến khi request hiện tại xong, và nếu một request block bất thường lâu, người dùng có thể nghĩ server không khả dụng. Bẫy thứ hai: nghĩ thread-per-task luôn là cải tiến an toàn vì nó phản hồi tốt hơn dưới tải nhẹ — sách chỉ rõ cách tiếp cận này "không có gì đặt giới hạn lên số thread được tạo ngoài tốc độ mà người dùng ở xa có thể ném HTTP request vào nó", nên một người dùng độc hại hoặc đủ nhiều người dùng bình thường có thể làm server crash khi chạm giới hạn thread của nền tảng.
+
+**Tự kiểm tra.** Trong \`SingleThreadWebServer\`, vì sao mức sử dụng CPU lại kém trong khi thread duy nhất đang chờ I/O của một request? Theo 6.1.3, vì sao "không có gì đặt giới hạn lên số thread được tạo" lại là một khiếm khuyết nghiêm trọng đối với một ứng dụng server cần suy giảm êm ái dưới tải?`,
+      },
+      {
+        id: "jc-w5-2",
+        text: "Framework Executor: execution policy, thread pool, vòng đời",
+        lesson: `**Mục tiêu.** Giải thích được vì sao \`Executor\` decouple việc gửi task khỏi việc thực thi task, liệt kê được các thành phần của một execution policy, phân biệt được ba loại thread pool chuẩn và ba trạng thái vòng đời của \`ExecutorService\`, và biết vì sao \`ScheduledThreadPoolExecutor\` nên thay thế \`Timer\`.
+
+**Đọc.** [6.2. Framework Executor](#/docs/jcip-06) — đọc kỹ vì sao "sự trừu tượng hóa chính cho việc thực thi task... không phải \`Thread\`, mà là \`Executor\`", dựa trên pattern producer-consumer. [6.2.1. Ví dụ: Web Server dùng Executor](#/docs/jcip-06) — đọc kỹ \`TaskExecutionWebServer\` (Listing 6.4) dùng một thread pool cỡ cố định 100 thread, và cách đổi hành vi chỉ bằng cách đổi hiện thực \`Executor\` (\`ThreadPerTaskExecutor\` ở Listing 6.5, \`WithinThreadExecutor\` ở Listing 6.6). [6.2.2. Execution Policy](#/docs/jcip-06) — đọc kỹ danh sách câu hỏi một execution policy phải trả lời: thread nào, thứ tự nào, bao nhiêu task đồng thời, bao nhiêu task xếp hàng, task nào bị từ chối khi quá tải. [6.2.3. Thread Pool](#/docs/jcip-06) — đọc kỹ bốn factory của \`Executors\`: \`newFixedThreadPool\`, \`newCachedThreadPool\` (không đặt giới hạn kích thước pool), \`newSingleThreadExecutor\`, \`newScheduledThreadPool\`. [6.2.4. Vòng đời của Executor](#/docs/jcip-06) — đọc kỹ ba trạng thái running/shutting down/terminated, và khác biệt giữa \`shutdown\` (graceful) và \`shutdownNow\` (abrupt). [6.2.5. Task có trì hoãn và định kỳ](#/docs/jcip-06) — đọc kỹ vì sao \`Timer\` chỉ dùng một thread duy nhất khiến một task chạy lâu làm lệch giờ các \`TimerTask\` khác, và vì sao một unchecked exception ném từ một \`TimerTask\` giết chết toàn bộ \`Timer\` (minh hoạ bằng \`OutOfTime\` ở Listing 6.9), trong khi \`ScheduledThreadPoolExecutor\` xử lý đúng cách những task hư hỏng.
+
+**Bẫy.** Quên gọi \`shutdown\` trên một \`ExecutorService\` khi ứng dụng không cần nó nữa — sách cảnh báo "JVM không thể thoát cho đến khi tất cả thread (không phải daemon) đã kết thúc, nên việc không tắt một \`Executor\` có thể khiến JVM không thoát được". Bẫy thứ hai: dùng \`Timer\` cho task định kỳ mà không biết nó chỉ chạy trên một thread duy nhất — sách chỉ ra nếu một \`TimerTask\` ném một unchecked exception, thread của \`Timer\` không bắt exception đó và kết thúc luôn, còn \`Timer\` thì "nhầm lẫn giả định rằng toàn bộ \`Timer\` đã bị hủy": mọi \`TimerTask\` đã lập lịch nhưng chưa chạy sẽ không bao giờ chạy nữa, và caller tiếp theo cố gửi một \`TimerTask\` sẽ nhận một \`IllegalStateException\`.
+
+**Tự kiểm tra.** Vì sao quên gọi \`shutdown\` trên một \`ExecutorService\` có thể khiến JVM không thoát được? Theo 6.2.5, điều gì xảy ra với các \`TimerTask\` còn lại nếu một \`TimerTask\` ném một unchecked exception, và \`ScheduledThreadPoolExecutor\` khắc phục vấn đề này bằng cách nào?`,
+      },
+      {
+        id: "jc-w5-3",
+        text: "Tìm parallelism khai thác được: Callable, Future, và giới hạn của nó",
+        lesson: `**Mục tiêu.** Giải thích được vì sao \`Callable\`/\`Future\` là trừu tượng hoá tốt hơn \`Runnable\` cho các phép tính bị trì hoãn, theo dõi được cách \`FutureRenderer\` tách page rendering thành hai task chạy song song, và nêu được giới hạn của việc song song hoá các task không đồng nhất.
+
+**Đọc.** [6.3. Tìm kiếm Parallelism có thể khai thác](#/docs/jcip-06) giới thiệu component mẫu xuyên suốt mục này: page renderer nhận HTML và render vào image buffer. [6.3.1. Ví dụ: Page Renderer tuần tự](#/docs/jcip-06) — đọc kỹ \`SingleThreadRenderer\` (Listing 6.10): render text trước, để lại ô giữ chỗ cho ảnh, rồi tải và vẽ ảnh sau — cách này dùng CPU dưới mức vì tải ảnh chủ yếu là chờ I/O. [6.3.2. Task có mang kết quả: Callable và Future](#/docs/jcip-06) — đọc kỹ vì sao \`run()\` của \`Runnable\` không thể trả về giá trị hay ném checked exception trong khi \`call()\` của \`Callable\` thì có; bốn giai đoạn vòng đời của task (created/submitted/started/completed); và hành vi của \`Future.get\` — trả về ngay hoặc block, ném lại exception bọc trong \`ExecutionException\` nếu task lỗi, ném \`CancellationException\` nếu task bị hủy. [6.3.3. Ví dụ: Page Renderer dùng Future](#/docs/jcip-06) — đọc kỹ \`FutureRenderer\` (Listing 6.13) tách thành một task tải ảnh (submit tới \`ExecutorService\`, nhận về một \`Future\`) và một task render text chạy trong thread chính. [6.3.4. Hạn chế của việc song song hóa các Task không đồng nhất](#/docs/jcip-06) — đọc kỹ ví dụ "hai người rửa bát" không mở rộng tốt khi thêm người, và ví dụ số liệu: nếu task A mất gấp mười lần thời gian so với task B khi chia cho hai worker, toàn bộ quá trình chỉ nhanh hơn 9%.
+
+**Bẫy.** Dùng \`Runnable\` cho một phép tính bị trì hoãn như truy vấn database hay tính một hàm phức tạp — sách chỉ rõ \`run()\` "không thể trả về giá trị hay ném checked exception", nên \`Callable\` mới là trừu tượng hoá phù hợp cho loại task này. Bẫy thứ hai: mong đợi \`FutureRenderer\` luôn tăng tốc đáng kể vì đã chia thành hai task chạy song song — sách cảnh báo nếu việc render văn bản nhanh hơn nhiều so với tải ảnh, "performance kết quả không khác mấy so với phiên bản tuần tự, nhưng code lại phức tạp hơn nhiều", và với hai thread, mức tăng tốc tối đa có thể đạt được chỉ là gấp đôi.
+
+**Tự kiểm tra.** Theo 6.3.2, \`Future.get\` ném gì nếu task kết thúc bằng một exception, và ném gì nếu task bị hủy? Theo 6.3.4, nếu task A mất gấp mười lần thời gian so với task B khi chia đôi công việc cho hai worker, mức tăng tốc đạt được là bao nhiêu?`,
+      },
+      {
+        id: "jc-w5-4",
+        text: "CompletionService, và đặt hạn thời gian cho task",
+        lesson: `**Mục tiêu.** Giải thích được \`CompletionService\` kết hợp \`Executor\` và \`BlockingQueue\` ra sao để lấy kết quả ngay khi sẵn sàng, và biết dùng \`Future.get\` có timeout cùng \`invokeAll\` có timeout để đặt một ngân sách thời gian cho một task hay một lô task.
+
+**Đọc.** [6.3.5. CompletionService: Khi Executor gặp BlockingQueue](#/docs/jcip-06) — đọc kỹ vì sao lặp poll \`Future.get\` với timeout bằng không cho từng task là "khả thi, nhưng tẻ nhạt", và cách \`ExecutorCompletionService\` giải quyết việc này bằng \`QueueingFuture\` (Listing 6.14) — một \`FutureTask\` override \`done\` để đặt kết quả lên một \`BlockingQueue\` nội bộ, còn \`take\`/\`poll\` ủy quyền cho queue đó. [6.3.6. Ví dụ: Page Renderer dùng CompletionService](#/docs/jcip-06) — đọc kỹ \`Renderer\` (Listing 6.15): mỗi ảnh là một task riêng chạy trong thread pool, và ảnh được render ngay khi nó sẵn sàng thay vì chờ tất cả — chú ý đoạn sách nói nhiều \`ExecutorCompletionService\` có thể dùng chung một \`Executor\`. [6.3.7. Đặt giới hạn thời gian cho Task](#/docs/jcip-06) — đọc kỹ ví dụ ad server hai giây (Listing 6.16): \`get\` có timeout ném \`TimeoutException\` nếu chưa sẵn sàng, và sau đó task nên bị hủy qua \`Future.cancel\` để không lãng phí tài nguyên tính toán một kết quả sẽ không dùng. [6.3.8. Ví dụ: Cổng đặt chỗ du lịch](#/docs/jcip-06) — đọc kỹ phiên bản có timeout của \`invokeAll\` (Listing 6.17): nhận một collection task, trả về một collection \`Future\` cùng cấu trúc thứ tự, và trả về khi tất cả task hoàn tất, thread gọi bị interrupt, hoặc timeout hết hạn — task nào chưa hoàn tất khi đó bị hủy.
+
+**Bẫy.** Tự chế một vòng lặp gọi \`get\` với timeout bằng không cho từng \`Future\` để "poll" xem task nào đã xong — sách gọi thẳng cách này là "tẻ nhạt" và khuyên dùng \`CompletionService\` để lấy kết quả theo đúng thứ tự hoàn tất thay vì thứ tự gửi. Bẫy thứ hai: khi \`Future.get\` có timeout ném \`TimeoutException\`, chỉ dùng giá trị mặc định mà quên hủy task qua \`Future.cancel\` — sách nhấn mạnh cần dừng những task đã hết ngân sách thời gian để chúng "không lãng phí tài nguyên tính toán bằng cách tiếp tục tính một kết quả sẽ không được dùng".
+
+**Tự kiểm tra.** Theo 6.3.5, \`CompletionService\` kết hợp chức năng của hai thứ nào, và \`QueueingFuture\` override method nào của \`FutureTask\` để đặt kết quả lên \`BlockingQueue\`? Theo 6.3.8, \`invokeAll\` có timeout trả về khi nào, và chuyện gì xảy ra với những task chưa hoàn tất lúc đó?`,
+      },
+    ],
+  },
 ];
