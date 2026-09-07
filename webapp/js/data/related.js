@@ -57,4 +57,18 @@ export const related = {
   "wgjd-16": ["modconc-02", "modconc-04", "java-05"],     // coroutine ↔ virtual thread, structured concurrency
   "wgjd-17": ["modconc-03"],                              // invokedynamic, nội tại ↔ cơ chế concurrency hiện đại
   "wgjd-18": ["modconc-02", "java-05"],                   // Loom ↔ virtual thread
+
+  // ---- Java Concurrency in Practice ↔ phần còn lại của con đường Java Backend ----
+  "jcip-02": ["wgjd-05"],                                 // thread safety, atomicity ↔ nền tảng concurrency và JMM
+  "jcip-03": ["wgjd-05", "java-04"],                      // visibility, safe publication ↔ JMM; bí ẩn RUNNABLE
+  "jcip-05": ["wgjd-06", "mjia-15"],                      // building block ↔ thư viện concurrency JDK; CompletableFuture
+  "jcip-06": ["java-06", "modconc-01"],                   // Executor ↔ TaskQueue Tomcat; hành trình concurrency của Java
+  "jcip-07": ["modconc-04", "java-05"],                   // huỷ task ↔ structured concurrency giải lại bài này; virtual thread
+  "jcip-08": ["java-07", "java-06"],                      // NGUỒN GỐC công thức sizing ↔ bài dùng lại công thức Goetz; TaskQueue
+  "jcip-10": ["java-04", "java-10"],                      // deadlock ↔ đọc thread dump; bẫy deadlock REQUIRES_NEW
+  "jcip-11": ["java-07", "wgjd-07", "mjia-07"],           // Amdahl, chi phí thread ↔ capacity planning; đo hiệu năng; parallel stream
+  "jcip-13": ["java-04", "modconc-03"],                   // ReentrantLock ↔ ReentrantLock=WAITING; cơ chế concurrency hiện đại
+  "jcip-14": ["modconc-04", "wgjd-16"],                   // AQS, synchronizer ↔ structured concurrency; concurrency nâng cao
+  "jcip-15": ["wgjd-17", "modconc-03"],                   // CAS, nonblocking ↔ nội tại JVM; cơ chế hiện đại
+  "jcip-16": ["wgjd-05", "java-03"],                      // JMM ↔ JMM ở WGJD; sync≠blocking
 };
