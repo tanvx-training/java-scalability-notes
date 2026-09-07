@@ -85,7 +85,7 @@ Thư mục [`sources/java/images/`](./sources/java/images/) — 21 hình đượ
 │   ├── README.md       # quy ước đặt tên, cách thêm nguồn mới
 │   ├── kubernetes/     # certs/ · kubernetes-in-action/ · cka-study-guide/ · kubernetes-up-and-running/
 │   ├── java/           # 10 bài Java & Spring Boot Scalability + images/
-│   ├── sysprog/ · modern-java/ · wgjd/ · jcip/ · ddia/ · kafka/ · modern-concurrency/
+│   ├── sysprog/ · modern-java/ · wgjd/ · jcip/ · ocnj/ · ddia/ · kafka/ · modern-concurrency/
 │   └── spring-start/ · spring-security/ · senior-java/
 ├── inbox/              # nguồn thô CHƯA tích hợp (không vào app)
 ├── webapp/             # DevPrep — vanilla JS, không build
@@ -100,7 +100,7 @@ PDF sách gốc nằm trong `pdf/` của từng thư mục nguồn và **không*
 
 ## 📚 DevPrep — nền tảng học đa lĩnh vực
 
-Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action**, bản dịch **CKA Study Guide**, bản dịch **Kubernetes: Up and Running**, bản dịch **Modern Java in Action**, bản dịch **The Well-Grounded Java Developer**, bản dịch **Java Concurrency in Practice**, bản dịch **Designing Data-Intensive Applications**, bản dịch **Kafka: The Definitive Guide**, bản dịch **Modern Concurrency in Java**, bản dịch **Spring Start Here**, bản dịch **Spring Security in Action**, **Lộ trình Senior Java** (chương trình tự học 24 tháng) và web app **DevPrep** để học/ôn tập/thi thử cả mười hai lĩnh vực:
+Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS**, bản dịch **System Programming Coursebook**, bản dịch **Kubernetes in Action**, bản dịch **CKA Study Guide**, bản dịch **Kubernetes: Up and Running**, bản dịch **Modern Java in Action**, bản dịch **The Well-Grounded Java Developer**, bản dịch **Java Concurrency in Practice**, bản dịch **Optimizing Cloud Native Java**, bản dịch **Designing Data-Intensive Applications**, bản dịch **Kafka: The Definitive Guide**, bản dịch **Modern Concurrency in Java**, bản dịch **Spring Start Here**, bản dịch **Spring Security in Action**, **Lộ trình Senior Java** (chương trình tự học 24 tháng) và web app **DevPrep** để học/ôn tập/thi thử cả mười ba lĩnh vực:
 
 | Thành phần | Mô tả |
 |---|---|
@@ -120,8 +120,9 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 | [`sources/kafka/`](./sources/kafka/) | Bản dịch tiếng Việt *Kafka: The Definitive Guide*, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 13 chương (2–14), 47 hình. Đọc trong app ở lĩnh vực Kafka: The Definitive Guide, kèm lộ trình đọc 11 tuần. |
 | [`sources/wgjd/`](./sources/wgjd/) | Bản dịch tiếng Việt *The Well-Grounded Java Developer*, ấn bản 2 (Benjamin J. Evans, Jason Clark, Martijn Verburg — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 16 chương (1–8, 11–18), 93 hình; chương 9 (Kotlin) và 10 (Clojure) không thuộc phạm vi bản dịch. Đọc trong app ở lĩnh vực The Well-Grounded Java Developer, kèm lộ trình đọc 12 tuần. |
 | [`sources/jcip/`](./sources/jcip/) | Bản dịch tiếng Việt *Java Concurrency in Practice* (Brian Goetz với Tim Peierls, Joshua Bloch, Joseph Bowbeer, David Holmes, Doug Lea — Addison-Wesley 2006) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 13 chương (2–8, 10, 11, 13–16) + 1 phụ lục, 204 hình. Chương 1, 9 (GUI) và 12 (kiểm thử) không có trong bản dịch. Đọc trong app ở lĩnh vực Java Concurrency in Practice, kèm lộ trình đọc 10 tuần. |
+| [`sources/ocnj/`](./sources/ocnj/) | Bản dịch tiếng Việt *Optimizing Cloud Native Java*, ấn bản 2 (Benjamin J. Evans, James Gough, Chris Newland — O'Reilly) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. Đủ 15 chương, 116 hình. Phụ lục A (microbenchmarking) và B (danh mục antipattern) không có trong bộ nguồn. Đọc trong app ở lĩnh vực Optimizing Cloud Native Java, kèm lộ trình đọc 12 tuần. |
 | [`sources/modern-java/`](./sources/modern-java/) | Bản dịch tiếng Việt *Modern Java in Action* (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 21 chương, 100 hình. Đọc trong app ở lĩnh vực Modern Java in Action, kèm lộ trình đọc 12 tuần. |
-| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (12 lĩnh vực): **ba con đường học** (Kubernetes & Cloud · Java Backend · Data & Distributed) bao trên 12 lĩnh vực, **Hướng dẫn học** cho từng lĩnh vực / track / tài liệu, thư viện theo sách → Phần, lộ trình tương tác (19 giáo trình, 898 mục), thư viện tài liệu (227 tài liệu, đánh dấu đã đọc), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs, tra cứu kubectl, tìm kiếm toàn cục không dấu, xuất/nhập tiến độ. Không cần build, không dependency. Chi tiết: [`webapp/README.md`](./webapp/README.md). |
+| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (13 lĩnh vực): **ba con đường học** (Kubernetes & Cloud · Java Backend · Data & Distributed) bao trên 13 lĩnh vực, **Hướng dẫn học** cho từng lĩnh vực / track / tài liệu, thư viện theo sách → Phần, lộ trình tương tác (20 giáo trình, 946 mục), thư viện tài liệu (242 tài liệu, đánh dấu đã đọc), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs, tra cứu kubectl, tìm kiếm toàn cục không dấu, xuất/nhập tiến độ. Không cần build, không dependency. Chi tiết: [`webapp/README.md`](./webapp/README.md). |
 
 ### Chạy local
 

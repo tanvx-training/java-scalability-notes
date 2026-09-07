@@ -71,4 +71,22 @@ export const related = {
   "jcip-14": ["modconc-04", "wgjd-16"],                   // AQS, synchronizer ↔ structured concurrency; concurrency nâng cao
   "jcip-15": ["wgjd-17", "modconc-03"],                   // CAS, nonblocking ↔ nội tại JVM; cơ chế hiện đại
   "jcip-16": ["wgjd-05", "java-03"],                      // JMM ↔ JMM ở WGJD; sync≠blocking
+
+  // ---- Optimizing Cloud Native Java ↔ WGJD (nội tại JVM), sysprog (kernel),
+  //      java (ứng dụng), jcip & modern-concurrency (concurrency), ddia & kafka (phân tán) ----
+  "ocnj-01": ["wgjd-07", "java-07"],              // bảy đại lượng ↔ hiệu năng Java; ↔ capacity planning dùng chính chúng
+  "ocnj-02": ["wgjd-07", "wgjd-13"],              // phương pháp luận đo ↔ đo hiệu năng; ↔ nền tảng kiểm thử
+  "ocnj-03": ["wgjd-04", "wgjd-17"],              // classloading, bytecode, JIT ↔ class file; ↔ nội tại JVM hiện đại
+  "ocnj-04": ["wgjd-17", "sysprog-05"],           // TLAB, allocation ↔ nội tại JVM; ↔ bộ cấp phát bộ nhớ tầng C
+  "ocnj-05": ["wgjd-12"],                         // GC ergonomics ↔ chạy Java trong container
+  "ocnj-06": ["wgjd-04", "wgjd-17"],              // JIT, code cache, AOT ↔ bytecode; ↔ nội tại JVM hiện đại
+  "ocnj-07": ["sysprog-06", "sysprog-10"],        // cache, context switch ↔ luồng và lập lịch kernel
+  "ocnj-08": ["wgjd-12"],                         // image, container, mạng ↔ chạy Java trong container
+  "ocnj-09": ["wgjd-12", "java-01"],              // triển khai, canary ↔ container; ↔ hành trình một request
+  "ocnj-10": ["java-02"],                         // chẩn đoán hệ phân tán ↔ giải phẫu các timeout
+  "ocnj-11": ["java-02", "java-06"],              // Micrometer, OTel ↔ đặt ngưỡng timeout bằng số thật; ↔ TaskQueue sinh ra metric pool
+  "ocnj-12": ["java-04", "wgjd-07"],              // JFR, safepointing bias ↔ đọc thread dump; ↔ đo hiệu năng
+  "ocnj-13": ["jcip-11", "modconc-02", "java-05"],// Amdahl, CAS, virtual thread ↔ ba tầng khác của cùng câu hỏi
+  "ocnj-14": ["ddia-10", "kafka-06"],             // CAP, Paxos, Raft ↔ nhất quán và consensus; ↔ nội tại Kafka
+  "ocnj-15": ["modconc-04", "modconc-05", "wgjd-18"], // structured concurrency, scoped values ↔ hai chương chuyên đề; ↔ Java trong tương lai
 };
