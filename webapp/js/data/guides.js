@@ -603,7 +603,8 @@ export const trackGuides = {
     ],
     after: [
       "Viết synchronization policy cho một class thật trong dự án của bạn, đánh dấu bằng `@GuardedBy`.",
-      "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend, nơi công thức sizing pool của chương 8 được dùng lại vào bài toán Tomcat thật.",
+      "Sang lĩnh vực Optimizing Cloud Native Java — chặng tiếp theo trên con đường Java Backend, nơi những gì bạn vừa học về lock và thread pool được đem ra đo bằng GC log, JFR và flame graph.",
+      "Rồi tới Java & Spring Boot Scalability, nơi công thức sizing pool của chương 8 được dùng lại vào bài toán Tomcat thật.",
       "Đọc Modern Concurrency in Java để thấy virtual thread đổi những giả định nào của cuốn này, và giữ nguyên những gì.",
     ],
   },

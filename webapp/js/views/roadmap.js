@@ -1,4 +1,4 @@
-// Lộ trình học đa track — nay là 19 track thuộc 11 lĩnh vực: CKAD, CKA, CKS, đọc
+// Lộ trình học đa track — nay là 20 track thuộc 12 lĩnh vực: CKAD, CKA, CKS, đọc
 // Kubernetes in Action, đọc CKA Study Guide và đọc Kubernetes: Up and Running
 // (Kubernetes), đọc System Programming Coursebook (Lập trình hệ thống), đọc
 // Spring Start Here (Spring Start Here), đọc Spring Security in Action (Spring
@@ -6,7 +6,8 @@
 // Data-Intensive Applications (DDIA), đọc Kafka: The Definitive Guide (Kafka),
 // đọc Modern Java in Action (Modern Java in Action), đọc Well-Grounded Java (The
 // Well-Grounded Java Developer), đọc Java Concurrency in Practice (Java
-// Concurrency in Practice), và 4 giai đoạn của Lộ trình Senior Java (Senior
+// Concurrency in Practice), đọc Optimizing Cloud Native Java (Optimizing Cloud
+// Native Java), và 4 giai đoạn của Lộ trình Senior Java (Senior
 // Java) — giáo trình tương tác theo tuần: mỗi mục là một bài học chi tiết
 // (mở/đóng được), tiến độ lưu localStorage.
 

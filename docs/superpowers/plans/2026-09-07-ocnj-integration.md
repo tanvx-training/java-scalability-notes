@@ -1460,7 +1460,7 @@ Mở app, chọn lĩnh vực **Optimizing Cloud Native Java**, xác nhận:
 git add -A
 git commit -m "feat(ocnj): liên kết chéo và cập nhật tài liệu repo
 
-15 khoá / 29 liên kết một chiều từ ocnj sang wgjd, sysprog, java, jcip,
+15 khoá / 28 liên kết một chiều từ ocnj sang wgjd, sysprog, java, jcip,
 modern-concurrency, ddia và kafka. Mắt xích đáng giá nhất: ocnj-13 → jcip-11,
 cùng câu hỏi 'vì sao thêm thread không cho thêm throughput' nhìn từ hai cuốn
 cách nhau gần hai thập kỷ.
