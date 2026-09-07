@@ -45,4 +45,16 @@ export const related = {
   "sj-01": ["java-01", "mjia-01", "springstart-01"],
   "sj-03": ["study-guide", "cka-study-guide"],
   "sj-04": ["ddia-01", "kafka-02"],
+
+  // ---- The Well-Grounded Java Developer ↔ phần còn lại của con đường Java Backend ----
+  "wgjd-02": ["mjia-14"],                                 // module system nhìn từ hai cuốn
+  "wgjd-05": ["java-04", "modconc-01"],                   // JMM ↔ thread lifecycle, hành trình concurrency
+  "wgjd-06": ["java-06", "java-07", "modconc-03"],        // thư viện pool ↔ TaskQueue Tomcat, sizing, ForkJoinPool
+  "wgjd-07": ["java-07", "mjia-07"],                      // đo hiệu năng ↔ capacity planning, parallel stream
+  "wgjd-12": ["java-07"],                                 // JVM trong container ↔ cgroup/CFS throttling
+  "wgjd-14": ["springstart-15"],                          // kiểm thử ngoài JUnit ↔ kiểm thử ứng dụng Spring
+  "wgjd-15": ["mjia-18", "mjia-19"],                      // FP nâng cao ↔ tư duy hàm, kỹ thuật lập trình hàm
+  "wgjd-16": ["modconc-02", "modconc-04", "java-05"],     // coroutine ↔ virtual thread, structured concurrency
+  "wgjd-17": ["modconc-03"],                              // invokedynamic, nội tại ↔ cơ chế concurrency hiện đại
+  "wgjd-18": ["modconc-02", "java-05"],                   // Loom ↔ virtual thread
 };
