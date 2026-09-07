@@ -3,7 +3,8 @@
 // trình hệ thống, đọc sách Spring Security in Action, đọc sách Modern
 // Concurrency in Java, đọc sách Designing Data-Intensive Applications, đọc
 // sách Modern Java in Action, đọc sách Kafka: The Definitive Guide, đọc
-// sách Spring Start Here, đọc sách Java Concurrency in Practice, và 4 giai
+// sách Spring Start Here, đọc sách Java Concurrency in Practice, đọc sách
+// Optimizing Cloud Native Java, và 4 giai
 // đoạn của Lộ trình Senior Java) — mỗi
 // track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
 // (markdown), mỗi tuần kèm tài nguyên liên quan.
@@ -24,12 +25,13 @@
 //   spring-start/roadmap-part{1,2}.js       (Tuần 1–4 / 5–8)        — 32 mục
 //   wgjd/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
 //   jcip/roadmap-part{1,2}.js               (Tuần 1–5 / 6–10)       — 40 mục
+//   ocnj/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
 //   senior-java/roadmap-gd{1,2,3,4}.js      (Tuần 1–26 mỗi giai đoạn) — 81 / 66 / 64 / 65 mục
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, oc-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, oc-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./kubernetes/roadmap-ckad-part1.js";
@@ -63,6 +65,8 @@ import { wgjdWeeksPart1 } from "./wgjd/roadmap-part1.js";
 import { wgjdWeeksPart2 } from "./wgjd/roadmap-part2.js";
 import { jcipWeeksPart1 } from "./jcip/roadmap-part1.js";
 import { jcipWeeksPart2 } from "./jcip/roadmap-part2.js";
+import { ocnjWeeksPart1 } from "./ocnj/roadmap-part1.js";
+import { ocnjWeeksPart2 } from "./ocnj/roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java/roadmap-gd1.js";
 import { seniorJavaGd2 } from "./senior-java/roadmap-gd2.js";
 import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
@@ -293,6 +297,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 10 tuần bám theo bản dịch 13 chương và phụ lục A: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; bảy tuần có bài thực hành gõ tay — làm hỏng một servlet rồi sửa, tái hiện lỗi visibility, dựng result cache có khả năng mở rộng, bắt deadlock bằng jstack, đo tranh chấp lock đối chiếu định luật Amdahl, và chứng minh một race bằng jcstress.",
     prereq: "Yêu cầu: viết được Java đa luồng ở mức cơ bản và đọc được stack trace — đây không phải sách nhập môn, và nó dạy nền tảng chứ không dạy API mới nhất. Bản dịch không có chương 1 (giới thiệu), chương 9 (ứng dụng GUI) và chương 12 (kiểm thử chương trình concurrent); phần kiểm thử được bù bằng jcstress ở tuần 10. Sách xuất bản 2006: java.util.concurrent vẫn đúng nguyên, nhưng bối cảnh sizing thread pool đã đổi sau virtual thread — chặng Modern Concurrency in Java ở sau sẽ nói cái gì đổi.",
     weeks: [...jcipWeeksPart1, ...jcipWeeksPart2],
+  },
+  {
+    id: "ocnj",
+    field: "ocnj",
+    label: "Optimizing Java",
+    icon: "📈",
+    name: "Đọc Optimizing Cloud Native Java (ấn bản 2)",
+    durationWeeks: 12,
+    desc: "Kế hoạch đọc 12 tuần bám theo bản dịch 15 chương và năm Phần của sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; mười một tuần có bài thực hành gõ tay — đo phân vị bằng HdrHistogram, đọc `-Xlog:gc*`, đổi collector so pause, bắt deopt bằng `PrintCompilation`, dựng benchmark false sharing bằng JMH, chạy Fighting Animals trong container, cắm Micrometer/Prometheus/OpenTelemetry, lấy flame graph bằng JFR và Async Profiler, và so Fork/Join với virtual thread.",
+    prereq: "Yêu cầu: viết và chạy được một ứng dụng Java/Spring Boot thật để có cái mà đo — đây là sách về đo và tối ưu, không phải sách dạy Java. JDK 17 trở lên (tốt nhất JDK 21+ cho chương 13 và 15), Docker chạy được cho chương 8, 9 và 11, và đọc được stack trace. Bộ nguồn không có Phụ lục A (microbenchmarking) và Phụ lục B (danh mục antipattern); phần microbenchmarking được bù bằng JMH ở tuần 1. Sách bám các mốc JDK cụ thể: đọc để hiểu cơ chế, còn cờ JVM và giá trị mặc định thì tra lại theo JDK bạn đang chạy.",
+    weeks: [...ocnjWeeksPart1, ...ocnjWeeksPart2],
   },
 ];
 

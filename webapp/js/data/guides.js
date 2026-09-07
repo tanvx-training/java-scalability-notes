@@ -419,10 +419,10 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "oc-1", title: "Chọn ứng dụng để đo và dựng chỗ chạy tải", desc: "Một ứng dụng Java thật của bạn, cộng một cách sinh tải lặp lại được (script curl, k6, JMeter — cái nào cũng được). Tự đánh dấu khi bạn chạy được cùng một kịch bản tải hai lần và ra kết quả tương đương.", done: { kind: "manual" } },
-      { id: "oc-2", title: "Đọc Phần I trước khi chỉnh bất cứ thứ gì", desc: "Chương 1–2 dạy bảy đại lượng và cách đo chúng cho đúng. Đây là hai chương duy nhất bảo vệ bạn khỏi việc chỉnh cờ JVM theo cảm giác. Tự đánh dấu khi bạn báo cáo được p99 thay vì trung bình.", done: { kind: "manual" } },
-      { id: "oc-3", title: "Đọc Phần II — xuống dưới nắp JVM", desc: "Chương 3–7: JVM, hai chương garbage collection, thực thi mã và JIT, rồi phần cứng cùng hệ điều hành. Đây là phần dày nhất và cũng là phần trả lời nhiều câu hỏi hiệu năng nhất. Tự đánh dấu khi bạn đọc được một tệp GC log mà không tra cứu.", done: { kind: "manual" } },
-      { id: "oc-4", title: "Đọc Phần III và IV — chạy trên cloud rồi quan sát nó", desc: "Chương 8–9 đóng gói và triển khai; chương 10–12 dựng observability và profiling. Tự đánh dấu khi ứng dụng của bạn chạy trong container có giới hạn bộ nhớ và bạn xem được metric của nó trên Prometheus.", done: { kind: "manual" } },
-      { id: "oc-5", title: "Đọc Phần V và quay lại đo ứng dụng của bạn", desc: "Chương 13–15: concurrency, hệ phân tán, và hướng đi tương lai của JVM. Rồi lặp lại phép đo ở bước 1 và so với con số ban đầu — nếu không có chênh lệch nào giải thích được, đó chính là phát hiện.", done: { kind: "manual" } },
+      { id: "oc-2", title: "Tuần 1: Phần I — đo cho đúng trước khi chỉnh bất cứ thứ gì", desc: "Bảy đại lượng quan sát được, cách đọc đồ thị, bảy loại kiểm thử, thống kê phi chuẩn và bốn thiên kiến nhận thức. Đây là tuần duy nhất bảo vệ bạn khỏi việc chỉnh cờ JVM theo cảm giác — xong tuần này bạn báo cáo p99 thay vì trung bình.", href: "#/roadmap/ocnj", done: { kind: "track", id: "ocnj", pct: 8 } },
+      { id: "oc-3", title: "Tuần 2–6: Phần II — xuống dưới nắp JVM", desc: "Tổng quan JVM, hai chương garbage collection, thực thi mã và JIT, rồi phần cứng cùng hệ điều hành. Phần dày nhất của sách và cũng là phần trả lời nhiều câu hỏi hiệu năng nhất. Kết thúc tuần 6 bạn đọc được một tệp GC log mà không cần tra cứu.", href: "#/roadmap/ocnj", done: { kind: "track", id: "ocnj", pct: 50 } },
+      { id: "oc-4", title: "Tuần 7–10: Phần III và IV — chạy trên cloud rồi quan sát nó", desc: "Đóng gói và triển khai (Compose, Kubernetes, canary, container với GC), rồi dựng observability và profiling. Kết thúc tuần 10 ứng dụng của bạn chạy trong container có giới hạn bộ nhớ, xuất metric ra Prometheus, và bạn lấy được flame graph của nó.", href: "#/roadmap/ocnj", done: { kind: "track", id: "ocnj", pct: 83 } },
+      { id: "oc-5", title: "Tuần 11–12: Phần V — concurrency, hệ phân tán và tương lai JVM", desc: "Amdahl, java.util.concurrent, Fork/Join và virtual thread; rồi CAP, Paxos/Raft, và ba dự án Panama/Leyden/Valhalla. Tuần 12 khép lại ví dụ Fighting Animals mở từ tuần 7.", href: "#/roadmap/ocnj", done: { kind: "track", id: "ocnj", pct: 100 } },
     ],
     method: [
       { title: "Đo trước, đọc sau, chỉnh cuối cùng", desc: "Mỗi tuần bắt đầu bằng một phép đo trên ứng dụng thật của bạn, rồi mới đọc chương giải thích con số đó. Đọc trước khi đo sẽ biến kiến thức thành định kiến — đúng thứ chương 2 cảnh báo." },
@@ -605,6 +605,29 @@ export const trackGuides = {
       "Viết synchronization policy cho một class thật trong dự án của bạn, đánh dấu bằng `@GuardedBy`.",
       "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend, nơi công thức sizing pool của chương 8 được dùng lại vào bài toán Tomcat thật.",
       "Đọc Modern Concurrency in Java để thấy virtual thread đổi những giả định nào của cuốn này, và giữ nguyên những gì.",
+    ],
+  },
+
+  ocnj: {
+    rhythm: "12 tuần, 4 mục mỗi tuần bám 15 chương theo năm Phần của sách; mười một trong mười hai tuần có bài đo trên máy thật. Đo trước (30 phút) → đọc chương giải thích con số vừa đo (45–60 phút) → làm bài thực hành của tuần → trả lời tự kiểm tra → tick.",
+    before: [
+      "Một ứng dụng Java hoặc Spring Boot thật đang chạy — mọi tuần đều đo trên nó.",
+      "Một cách sinh tải lặp lại được (script curl, k6, JMeter): tuần 1 dựng nó, mười một tuần sau dùng lại.",
+      "JDK 17 trở lên; JDK 21+ cho chương 13 và 15 (virtual thread, structured concurrency, scoped values).",
+      "Docker chạy được: tuần 7 đóng gói container, tuần 9 dựng Prometheus và OpenTelemetry Collector.",
+      "Biết trước rằng Phụ lục A (microbenchmarking) và Phụ lục B (danh mục antipattern) không có trong bộ nguồn; phần microbenchmarking được bù bằng JMH ở tuần 1.",
+    ],
+    during: [
+      "Tuần 1 là trọn Phần I và là tuần quan trọng nhất: nó dạy đo cho đúng trước khi bạn kịp chỉnh bất cứ thứ gì.",
+      "Giữ lại mọi kết quả đo. GC log tuần 3 được giải thích bằng lý thuyết tuần 4; flame graph tuần 10 chỉ có nghĩa khi đặt cạnh số liệu tuần 1.",
+      "Tuần 8 không có bài gõ tay — đó là tuần thiết kế observability trên giấy, và kế hoạch viết ra ở đó chính là bài thực hành của tuần 9.",
+      "Ví dụ Fighting Animals mở ở tuần 7 và khép lại ở tuần 12: đừng bỏ nó giữa chừng.",
+      "Cờ JVM và giá trị mặc định trong sách gắn với một mốc JDK cụ thể. Đọc để hiểu cơ chế, rồi tra lại theo JDK của bạn — HotSpot GC Tuning Guide ở chân thanh bên.",
+    ],
+    after: [
+      "Chạy lại phép đo của tuần 1 trên chính ứng dụng đó và so với con số ban đầu; giải thích mọi chênh lệch bằng từ vựng của sách.",
+      "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend, nơi kỷ luật đo lường này được áp vào bài toán Tomcat và pool sizing thật.",
+      "Đọc Modern Concurrency in Java để đi sâu phần virtual thread mà chương 13 và 15 chỉ mở đầu.",
     ],
   },
 };

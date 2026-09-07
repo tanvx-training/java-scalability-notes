@@ -73,6 +73,7 @@ const EXPECTED = {
     "roadmap-items:jcip": 40,
     // Lĩnh vực Optimizing Cloud Native Java — 15 chương (1–15), bản dịch đủ chương.
     "docs:ocnj": 15,
+    "roadmap-items:ocnj": 48,
   },
 };
 
