@@ -287,7 +287,7 @@ export const tracks = [
     id: "jcip",
     field: "jcip",
     label: "Java Concurrency",
-    icon: "🔐",
+    icon: "🧷",
     name: "Đọc Java Concurrency in Practice",
     durationWeeks: 10,
     desc: "Kế hoạch đọc 10 tuần bám theo bản dịch 13 chương và phụ lục A: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; bảy tuần có bài thực hành gõ tay — làm hỏng một servlet rồi sửa, tái hiện lỗi visibility, dựng result cache có khả năng mở rộng, bắt deadlock bằng jstack, đo tranh chấp lock đối chiếu định luật Amdahl, và chứng minh một race bằng jcstress.",

@@ -547,7 +547,7 @@ export const trackGuides = {
     rhythm: "12 tuần, 4 mục mỗi tuần bám 16 chương; mỗi tuần một bài gõ tay trên máy thật. Đọc (40–60 phút) → gõ lại ví dụ → làm bài thực hành của tuần → trả lời tự kiểm tra → tick.",
     before: ["JDK 17 trở lên, gọi được `javac`, `java` và `javap` từ dòng lệnh.", "Một dự án Java thật để áp dụng chương build và chương container.", "Docker chạy được — tuần 8 và phần Testcontainers tuần 9 cần nó.", "Biết trước rằng chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch; tuần 6 dành để bù."],
     during: ["Mỗi chương có thứ để chạy — chương nào không gõ thì chương đó chưa đọc.", "Tuần 2 và tuần 11 dùng chung một công cụ: `javap -c`. Giữ lại output tuần 2 để đối chiếu ở tuần 11.", "Tuần 9–11 đọc mã Kotlin và Clojure liên tục: mở lại phần bổ túc tuần 6 thay vì bỏ chương."],
-    after: ["Một ghi chú cho đội: ba chỗ trong codebase hiện tại sẽ được lợi từ Loom, Valhalla, Amber hoặc Panama.", "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend.", "Đọc Modern Concurrency in Java để đi tiếp phần virtual thread mà chương 18 mới chỉ giới thiệu."],
+    after: ["Một ghi chú cho đội: ba chỗ trong codebase hiện tại sẽ được lợi từ Loom, Valhalla, Amber hoặc Panama.", "Sang lĩnh vực Java Concurrency in Practice — chặng tiếp theo trên con đường Java Backend, nơi nền tảng thread safety và JMM mà chương 5–6 mới chạm tới được đào sâu.", "Đọc Modern Concurrency in Java để đi tiếp phần virtual thread mà chương 18 mới chỉ giới thiệu."],
   },
 
   jcip: {
