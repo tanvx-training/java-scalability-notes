@@ -25,33 +25,33 @@ khỏi phần thân — ch.2 nói rõ điều đó. Lộ trình đọc bù phầ
 
 ### Phần I — Nền tảng hiệu năng
 
-1. [Định nghĩa về Tối ưu hóa và Hiệu năng](01-Dinh-nghia-Toi-uu-hoa-va-Hieu-nang.md) — throughput, latency, capacity, utilization, efficiency, scalability, degradation; đọc đồ thị hiệu năng; hiệu năng trong hệ thống cloud.
-2. [Phương pháp luận Kiểm thử Hiệu năng](02-Phuong-phap-luan-Kiem-thu-Hieu-nang.md) — các loại test hiệu năng, best practice, antipattern, thống kê phi chuẩn, HdrHistogram, thiên kiến nhận thức.
+1. [Định nghĩa về Tối ưu hóa và Hiệu năng](01-dinh-nghia-toi-uu-hoa-va-hieu-nang.md) — throughput, latency, capacity, utilization, efficiency, scalability, degradation; đọc đồ thị hiệu năng; hiệu năng trong hệ thống cloud.
+2. [Phương pháp luận Kiểm thử Hiệu năng](02-phuong-phap-luan-kiem-thu-hieu-nang.md) — các loại test hiệu năng, best practice, antipattern, thống kê phi chuẩn, HdrHistogram, thiên kiến nhận thức.
 
 ### Phần II — Nội tại JVM
 
-3. [Tổng quan về JVM](03-Tong-quan-ve-JVM.md) — classloading, bytecode, HotSpot, JIT, quản lý bộ nhớ, JMM, công cụ giám sát, các bản phân phối Java.
-4. [Tìm hiểu về Garbage Collection](04-Tim-hieu-Garbage-Collection.md) — mark and sweep, oop, weak generational hypothesis, TLAB, parallel collector, vai trò của allocation.
-5. [Garbage Collection nâng cao](05-Garbage-Collection-Nang-cao.md) — safepoint, tri-color marking, G1, Shenandoah, ZGC, Balanced (OpenJ9), CMS, Epsilon.
-6. [Thực thi mã trên JVM](06-Thuc-thi-Ma-tren-JVM.md) — thông dịch bytecode, biên dịch JIT, code cache, tinh chỉnh JIT, AOT, Quarkus, GraalVM.
-7. [Phần cứng và Hệ điều hành](07-Phan-cung-va-He-dieu-hanh.md) — cache bộ nhớ, MESI, branch prediction, mô hình bộ nhớ phần cứng, scheduler, context switch, mechanical sympathy.
+3. [Tổng quan về JVM](03-tong-quan-ve-jvm.md) — classloading, bytecode, HotSpot, JIT, quản lý bộ nhớ, JMM, công cụ giám sát, các bản phân phối Java.
+4. [Tìm hiểu về Garbage Collection](04-tim-hieu-garbage-collection.md) — mark and sweep, oop, weak generational hypothesis, TLAB, parallel collector, vai trò của allocation.
+5. [Garbage Collection nâng cao](05-garbage-collection-nang-cao.md) — safepoint, tri-color marking, G1, Shenandoah, ZGC, Balanced (OpenJ9), CMS, Epsilon.
+6. [Thực thi mã trên JVM](06-thuc-thi-ma-tren-jvm.md) — thông dịch bytecode, biên dịch JIT, code cache, tinh chỉnh JIT, AOT, Quarkus, GraalVM.
+7. [Phần cứng và Hệ điều hành](07-phan-cung-va-he-dieu-hanh.md) — cache bộ nhớ, MESI, branch prediction, mô hình bộ nhớ phần cứng, scheduler, context switch, mechanical sympathy.
 
 ### Phần III — Cloud Native
 
-8. [Các thành phần của Cloud Stack](08-Thanh-phan-cua-Cloud-Stack.md) — MicroProfile, CNCF, ảo hóa, image và container, mạng; giới thiệu ví dụ Fighting Animals.
-9. [Triển khai Java trên Cloud](09-Trien-khai-Java-tren-Cloud.md) — Docker Compose, Tilt, Kubernetes, blue/green, canary, feature flag, container và GC.
+8. [Các thành phần của Cloud Stack](08-thanh-phan-cua-cloud-stack.md) — MicroProfile, CNCF, ảo hóa, image và container, mạng; giới thiệu ví dụ Fighting Animals.
+9. [Triển khai Java trên Cloud](09-trien-khai-java-tren-cloud.md) — Docker Compose, Tilt, Kubernetes, blue/green, canary, feature flag, container và GC.
 
 ### Phần IV — Observability và Profiling
 
-10. [Giới thiệu về Observability](10-Gioi-thieu-ve-Observability.md) — ba trụ cột (metrics, logs, traces), mẫu hình và antipattern, chẩn đoán sự cố hệ phân tán.
-11. [Triển khai Observability trong Java](11-Trien-khai-Observability-trong-Java.md) — Micrometer, Prometheus, OpenTelemetry (tracing, metrics, logs), OTel Collector.
-12. [Profiling](12-Profiling.md) — VisualVM, JMC, safepointing bias, perf, Async Profiler, JFR, Cryostat, memory profiling, heap dump.
+10. [Giới thiệu về Observability](10-gioi-thieu-ve-observability.md) — ba trụ cột (metrics, logs, traces), mẫu hình và antipattern, chẩn đoán sự cố hệ phân tán.
+11. [Triển khai Observability trong Java](11-trien-khai-observability-trong-java.md) — Micrometer, Prometheus, OpenTelemetry (tracing, metrics, logs), OTel Collector.
+12. [Profiling](12-profiling.md) — VisualVM, JMC, safepointing bias, perf, Async Profiler, JFR, Cryostat, memory profiling, heap dump.
 
 ### Phần V — Đồng thời và Phân tán
 
-13. [Kỹ thuật hiệu năng đồng thời](13-Ky-thuat-Hieu-nang-Dong-thoi.md) — định luật Amdahl, JMM, method/var handle, atomic và CAS, `java.util.concurrent`, Fork/Join, actor, virtual thread.
-14. [Kỹ thuật và Mẫu hình cho Hệ phân tán](14-Ky-thuat-va-Mau-hinh-He-phan-tan.md) — WAL, two-phase commit, partitioning, định lý CAP, Paxos, Raft, Cassandra, Infinispan, Kafka.
-15. [Hiệu năng hiện đại và Tương lai](15-Hieu-nang-Hien-dai-va-Tuong-lai.md) — structured concurrency, scoped values, Project Panama, Leyden, Valhalla.
+13. [Kỹ thuật hiệu năng đồng thời](13-ky-thuat-hieu-nang-dong-thoi.md) — định luật Amdahl, JMM, method/var handle, atomic và CAS, `java.util.concurrent`, Fork/Join, actor, virtual thread.
+14. [Kỹ thuật và Mẫu hình cho Hệ phân tán](14-ky-thuat-va-mau-hinh-he-phan-tan.md) — WAL, two-phase commit, partitioning, định lý CAP, Paxos, Raft, Cassandra, Infinispan, Kafka.
+15. [Hiệu năng hiện đại và Tương lai](15-hieu-nang-hien-dai-va-tuong-lai.md) — structured concurrency, scoped values, Project Panama, Leyden, Valhalla.
 
 ## Ghi chú về bản dịch
 
