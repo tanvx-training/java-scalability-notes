@@ -70,6 +70,7 @@ const EXPECTED = {
     // Lĩnh vực Java Concurrency in Practice — 13 chương (2–8, 10, 11, 13–16)
     // + phụ lục A; chương 1, 9 (GUI) và 12 (kiểm thử) không có trong bản dịch.
     "docs:jcip": 14,
+    "roadmap-items:jcip": 40,
   },
 };
 

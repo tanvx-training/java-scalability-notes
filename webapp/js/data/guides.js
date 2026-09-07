@@ -382,9 +382,9 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "jc-1", title: "Dựng chỗ để gõ thử", desc: "Một dự án Java trống với JDK 17+, chạy được từ dòng lệnh. Tự đánh dấu khi `java -version` chạy và bạn biên dịch được một class có hai thread.", done: { kind: "manual" } },
-      { id: "jc-2", title: "Chương 2–5: nền tảng — thread safety, visibility, composition, building block", desc: "Phần I của sách. Đây là phần không được đọc lướt: mọi chương sau đều xây trên bốn chương này. Đọc xong bạn nên nhìn một class bất kỳ và nói được nó thread-safe hay không, và vì sao.", done: { kind: "manual" } },
-      { id: "jc-3", title: "Chương 6–11: cấu trúc ứng dụng concurrent và cái giá của nó", desc: "Thực thi task, huỷ và shutdown, thread pool, deadlock, hiệu năng và khả năng mở rộng. Bắt một deadlock thật bằng `jstack`, rồi đo tranh chấp lock và đối chiếu với định luật Amdahl.", done: { kind: "manual" } },
-      { id: "jc-4", title: "Chương 13–16: explicit lock, AQS, CAS, Java Memory Model", desc: "ReentrantLock và read-write lock, tự xây synchronizer trên AQS, thuật toán nonblocking, rồi Java Memory Model đóng lại toàn bộ khung lý thuyết. Kết bằng một test jcstress chứng minh một race.", done: { kind: "manual" } },
+      { id: "jc-2", title: "Tuần 1–4: nền tảng — thread safety, visibility, composition, building block", desc: "Phần I của sách. Đây là phần không được đọc lướt: mọi chương sau đều xây trên bốn chương này. Kết thúc tuần 4 bạn nên đọc được một class bất kỳ và nói được nó thread-safe hay không, và vì sao.", href: "#/roadmap/jcip", done: { kind: "track", id: "jcip", pct: 40 } },
+      { id: "jc-3", title: "Tuần 5–8: cấu trúc ứng dụng concurrent và cái giá của nó", desc: "Thực thi task, huỷ và shutdown, thread pool, deadlock, hiệu năng và khả năng mở rộng. Tuần 7 bắt một deadlock thật bằng `jstack`; tuần 8 đo tranh chấp lock và đối chiếu với định luật Amdahl.", href: "#/roadmap/jcip", done: { kind: "track", id: "jcip", pct: 80 } },
+      { id: "jc-4", title: "Tuần 9–10: chủ đề nâng cao — explicit lock, AQS, CAS, JMM", desc: "ReentrantLock và read-write lock, tự xây synchronizer trên AQS, thuật toán nonblocking, rồi Java Memory Model đóng lại toàn bộ khung lý thuyết. Tuần 10 viết một test jcstress chứng minh một race.", href: "#/roadmap/jcip", done: { kind: "track", id: "jcip", pct: 100 } },
       { id: "jc-5", title: "Đọc lại một class thật trong dự án của bạn", desc: "Chọn một class có state chia sẻ trong codebase bạn đang làm, viết ra synchronization policy của nó bằng ngôn ngữ chương 4.5, và đánh dấu bằng `@GuardedBy`. Nếu không viết ra được policy, đó chính là phát hiện.", done: { kind: "manual" } },
     ],
     method: [
@@ -548,6 +548,27 @@ export const trackGuides = {
     before: ["JDK 17 trở lên, gọi được `javac`, `java` và `javap` từ dòng lệnh.", "Một dự án Java thật để áp dụng chương build và chương container.", "Docker chạy được — tuần 8 và phần Testcontainers tuần 9 cần nó.", "Biết trước rằng chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch; tuần 6 dành để bù."],
     during: ["Mỗi chương có thứ để chạy — chương nào không gõ thì chương đó chưa đọc.", "Tuần 2 và tuần 11 dùng chung một công cụ: `javap -c`. Giữ lại output tuần 2 để đối chiếu ở tuần 11.", "Tuần 9–11 đọc mã Kotlin và Clojure liên tục: mở lại phần bổ túc tuần 6 thay vì bỏ chương."],
     after: ["Một ghi chú cho đội: ba chỗ trong codebase hiện tại sẽ được lợi từ Loom, Valhalla, Amber hoặc Panama.", "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend.", "Đọc Modern Concurrency in Java để đi tiếp phần virtual thread mà chương 18 mới chỉ giới thiệu."],
+  },
+
+  jcip: {
+    rhythm: "10 tuần, 4 mục mỗi tuần bám 13 chương và phụ lục A; bảy trong mười tuần có bài gõ tay trên máy thật. Đọc (45–60 phút) → gõ lại listing sai rồi listing đúng → làm bài thực hành của tuần → trả lời tự kiểm tra → tick.",
+    before: [
+      "JDK 17 trở lên, biên dịch và chạy được từ dòng lệnh.",
+      "Một máy nhiều nhân — nhiều bài thực hành chỉ lộ bug khi thật sự chạy song song.",
+      "`jstack` gọi được (đi kèm JDK): tuần 7 dùng nó để bắt deadlock.",
+      "Biết trước rằng chương 1, 9 (GUI) và 12 (kiểm thử) không có trong bản dịch; phần kiểm thử được bù bằng jcstress ở tuần 10.",
+    ],
+    during: [
+      "Tuần 1–4 là Phần I của sách và là phần không được đọc lướt — mọi chương sau đều xây trên nó.",
+      "Mỗi listing sai trong sách đứng ngay trước listing đúng. Gõ cả hai; giá trị nằm ở chỗ hiểu vì sao bản sai lại sai.",
+      "Tuần 3, 5 và 9 không có bài gõ tay riêng — đó là ba tuần nặng về đọc thiết kế, dùng thời gian đó để đọc chậm chứ không phải để đi nhanh hơn.",
+      "Giữ lại kết quả đo của tuần 8 (ConcurrentHashMap so với synchronizedMap): tuần 10 sẽ hiểu vì sao chênh lệch đó tồn tại.",
+    ],
+    after: [
+      "Viết synchronization policy cho một class thật trong dự án của bạn, đánh dấu bằng `@GuardedBy`.",
+      "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend, nơi công thức sizing pool của chương 8 được dùng lại vào bài toán Tomcat thật.",
+      "Đọc Modern Concurrency in Java để thấy virtual thread đổi những giả định nào của cuốn này, và giữ nguyên những gì.",
+    ],
   },
 };
 

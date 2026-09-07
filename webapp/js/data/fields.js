@@ -128,9 +128,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Java Concurrency in Practice (Brian Goetz với Tim Peierls, Joshua Bloch, Joseph Bowbeer, David Holmes, Doug Lea — Addison-Wesley) — chương 2–8, 10, 11, 13–16 và phụ lục A: thread safety, visibility và safe publication, thiết kế class thread-safe, building block của java.util.concurrent, thực thi và huỷ task, thread pool, deadlock, hiệu năng và khả năng mở rộng, explicit lock, AQS, biến atomic và Java Memory Model. Chương 1, 9 (GUI) và 12 (kiểm thử) không nằm trong bản dịch.",
     certFilter: false,
-    // Module "roadmap" mở ở Task 8, khi jcip/roadmap-part{1,2}.js đã có dữ liệu.
-    // Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard", "guide", "docs"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "jcip.net — errata & annotations", href: "https://jcip.net/" },
   },
 };
