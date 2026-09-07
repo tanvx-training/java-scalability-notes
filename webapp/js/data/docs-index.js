@@ -15,6 +15,7 @@ import { docs as kafka } from "./kafka/docs.js";
 import { docs as springStart } from "./spring-start/docs.js";
 import { docs as wgjd } from "./wgjd/docs.js";
 import { docs as jcip } from "./jcip/docs.js";
+import { docs as ocnj } from "./ocnj/docs.js";
 
 export const docs = [
   ...kubernetes,
@@ -29,4 +30,5 @@ export const docs = [
   ...springStart,
   ...wgjd,
   ...jcip,
+  ...ocnj,
 ];

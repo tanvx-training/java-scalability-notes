@@ -406,6 +406,43 @@ export const fieldGuides = {
     ],
   },
 
+  ocnj: {
+    tagline: "Đọc Optimizing Cloud Native Java — đo trước, tối ưu sau: hệ phân loại hiệu năng, GC, JIT, phần cứng, observability, profiling và hệ phân tán.",
+    audience: "Lập trình viên Java đã có một ứng dụng thật đang chạy và muốn biết vì sao nó nhanh hay chậm — bằng số đo, không bằng linh cảm. **Không phải sách dạy Java**: nó giả định bạn viết được ứng dụng rồi, và dạy cách quan sát nó.",
+    hoursPerWeek: "6–8 giờ/tuần · 12 tuần",
+    prereqs: [
+      "Một ứng dụng Java hoặc Spring Boot thật chạy được — bạn cần cái gì đó để đo, mọi tuần đều đo trên nó.",
+      "JDK 17 trở lên; tốt nhất JDK 21+ vì chương 13 và 15 dùng virtual thread, structured concurrency và scoped values.",
+      "Docker chạy được: chương 8, 9 và 11 dựng container, Docker Compose và ngăn xếp Prometheus/OpenTelemetry.",
+      "Đọc được stack trace và biết `jcmd`, `jstack` nằm ở đâu trong JDK.",
+      "Chấp nhận rằng Phụ lục A (microbenchmarking) và Phụ lục B (danh mục antipattern) không có trong bộ nguồn; phần microbenchmarking được bù bằng JMH ở tuần 1.",
+    ],
+    steps: [
+      { id: "oc-1", title: "Chọn ứng dụng để đo và dựng chỗ chạy tải", desc: "Một ứng dụng Java thật của bạn, cộng một cách sinh tải lặp lại được (script curl, k6, JMeter — cái nào cũng được). Tự đánh dấu khi bạn chạy được cùng một kịch bản tải hai lần và ra kết quả tương đương.", done: { kind: "manual" } },
+      { id: "oc-2", title: "Đọc Phần I trước khi chỉnh bất cứ thứ gì", desc: "Chương 1–2 dạy bảy đại lượng và cách đo chúng cho đúng. Đây là hai chương duy nhất bảo vệ bạn khỏi việc chỉnh cờ JVM theo cảm giác. Tự đánh dấu khi bạn báo cáo được p99 thay vì trung bình.", done: { kind: "manual" } },
+      { id: "oc-3", title: "Đọc Phần II — xuống dưới nắp JVM", desc: "Chương 3–7: JVM, hai chương garbage collection, thực thi mã và JIT, rồi phần cứng cùng hệ điều hành. Đây là phần dày nhất và cũng là phần trả lời nhiều câu hỏi hiệu năng nhất. Tự đánh dấu khi bạn đọc được một tệp GC log mà không tra cứu.", done: { kind: "manual" } },
+      { id: "oc-4", title: "Đọc Phần III và IV — chạy trên cloud rồi quan sát nó", desc: "Chương 8–9 đóng gói và triển khai; chương 10–12 dựng observability và profiling. Tự đánh dấu khi ứng dụng của bạn chạy trong container có giới hạn bộ nhớ và bạn xem được metric của nó trên Prometheus.", done: { kind: "manual" } },
+      { id: "oc-5", title: "Đọc Phần V và quay lại đo ứng dụng của bạn", desc: "Chương 13–15: concurrency, hệ phân tán, và hướng đi tương lai của JVM. Rồi lặp lại phép đo ở bước 1 và so với con số ban đầu — nếu không có chênh lệch nào giải thích được, đó chính là phát hiện.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Đo trước, đọc sau, chỉnh cuối cùng", desc: "Mỗi tuần bắt đầu bằng một phép đo trên ứng dụng thật của bạn, rồi mới đọc chương giải thích con số đó. Đọc trước khi đo sẽ biến kiến thức thành định kiến — đúng thứ chương 2 cảnh báo." },
+      { title: "Giữ lại mọi kết quả đo", desc: "Các tuần sau liên tục tham chiếu ngược: GC log tuần 3 giải thích được bằng lý thuyết tuần 4, flame graph tuần 10 chỉ có nghĩa khi đặt cạnh số liệu tuần 1." },
+    ],
+    pitfalls: [
+      "**Chỉnh cờ JVM trước khi đo.** Đây là cái bẫy trung tâm mà cả cuốn sách viết ra để chống lại — chương 1 mở đầu bằng mục \"Hiệu năng Java theo cách sai lầm\" và chương 2 dành nguyên một mục cho thiên kiến nhận thức. Danh sách cờ đọc được ở chương 5 và 6 là để **hiểu cơ chế**, không phải để dán vào production.",
+      "**Tưởng số liệu và cờ trong sách là hằng số.** Các collector, cờ mặc định ở chương 5, con số phần cứng ở chương 7 và API ở chương 13/15 đều gắn với một mốc JDK cụ thể. Đọc để hiểu cơ chế, còn giá trị mặc định thì tra lại theo JDK bạn đang chạy — HotSpot GC Tuning Guide ở chân thanh bên là chỗ tra.",
+      "**Báo cáo trung bình.** Chương 2 dạy rất kỹ vì sao phân phối latency là phi chuẩn và trung bình che mất đúng phần bạn cần thấy. Nếu sau tuần 1 bạn vẫn báo cáo trung bình, tuần 1 chưa xong.",
+      "**Bỏ qua chương 7 vì \"không phải việc của dev\".** Cache miss, context switch và false sharing là nguyên nhân của rất nhiều kết quả đo khó hiểu ở các chương sau. Chương này ngắn và trả lời nhiều câu hỏi hơn vẻ ngoài của nó.",
+    ],
+    doneWhen: [
+      "Báo cáo hiệu năng bằng phân vị và nói được vì sao trung bình không đủ.",
+      "Đọc được một tệp GC log và chỉ ra allocation rate, tỉ lệ promotion và nguyên nhân một đợt pause dài.",
+      "Chọn được collector cho một workload cụ thể và nêu lý do bằng đánh đổi, không bằng danh tiếng.",
+      "Dựng được metric và trace cho một service, rồi dùng chúng để chẩn đoán một sự cố thật.",
+      "Lấy được flame graph bằng hai công cụ khác nhau và giải thích được vì sao chúng khác nhau.",
+    ],
+  },
+
   "spring-start": {
     tagline: "Spring Start Here 8 tuần — điểm bắt đầu Spring cho người mới, và bước đệm trước Spring Security.",
     audience: "Người viết được Java cơ bản (class, interface, annotation) và dựng được dự án Maven; **không cần biết trước gì về Spring**. Học xong lĩnh vực này rồi mới sang Spring Security.",
