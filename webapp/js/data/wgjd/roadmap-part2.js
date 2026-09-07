@@ -1,0 +1,130 @@
+// Lộ trình đọc The Well-Grounded Java Developer — Phần 2 (Tuần 7–12).
+//
+// Nguồn: bản dịch tiếng Việt "The Well-Grounded Java Developer", ấn bản 2
+// (Benjamin J. Evans, Jason Clark, Martijn Verburg — Manning).
+// Thư mục nguồn: sources/wgjd/ — bản dịch gồm chương 1–8 và 11–18; chương 9
+// (Kotlin) và 10 (Clojure) không thuộc phạm vi và không có PDF gốc.
+// Sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0.
+//
+// Mỗi mục là KẾ HOẠCH ĐỌC trỏ vào sách, không chép lại nội dung sách.
+// Phần thực hành nằm ở `practice` mức tuần, gõ trên máy thật.
+// GIỮ NGUYÊN id (wg-w<N> / wg-w<N>-<M>) — tiến độ localStorage lưu theo id này.
+
+export const wgjdWeeksPart2 = [
+  {
+    id: "wg-w7",
+    week: "Tuần 7",
+    title: "Build với Maven và Gradle",
+    goal: "Dựng được cùng một dự án bằng cả hai công cụ, và nói được mỗi công cụ mạnh ở đâu thay vì chọn theo thói quen.",
+    practice:
+      "Lấy một dự án nhỏ và viết cho nó cả `pom.xml` lẫn `build.gradle`. Cả hai phải build ra cùng một JAR chạy được, có ít nhất một thư viện phụ thuộc bên ngoài và một plugin chạy test. Ghi lại: mỗi công cụ mất bao nhiêu dòng cấu hình, và chỗ nào bạn phải tra tài liệu.",
+    resources: [
+      { label: "WGJD 11 — Build với Gradle và Maven", href: "#/docs/wgjd-11" },
+      { label: "maven.apache.org — Build Lifecycle", href: "https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html" },
+      { label: "docs.gradle.org — User Manual", href: "https://docs.gradle.org/current/userguide/userguide.html" },
+    ],
+    items: [
+      {
+        id: "wg-w7-1",
+        text: "Vì sao công cụ build quan trọng với lập trình viên vững nền tảng",
+        lesson: `**Mục tiêu.** Giải thích được ba lý do sách đưa ra để công cụ build là chuẩn mực (tự động hóa, quản lý phụ thuộc, nhất quán giữa lập trình viên), và với một cây phụ thuộc bắc cầu xung đột cụ thể, chỉ ra được loại thay đổi API (trong bốn loại a–d) có khả năng gây lỗi runtime.
+
+**Đọc.** [11.1 Vì sao công cụ build quan trọng với lập trình viên vững nền tảng](#/docs/wgjd-11) đọc lướt đoạn mở đầu liệt kê ba lý do (tự động hóa, quản lý phụ thuộc, nhất quán). [11.1.1 Tự động hóa các thao tác tẻ nhạt](#/docs/wgjd-11) đọc kỹ bố cục quy ước \`src/main/java\`/\`src/test/java\` mà Maven phổ biến hóa và Gradle dùng mặc định — đây là bố cục bạn sẽ dùng lại suốt cả tuần. [11.1.2 Quản lý phụ thuộc](#/docs/wgjd-11) đọc chậm — bám theo đúng bốn loại thay đổi API (a: chỉ đổi hành vi, b: thêm API, c: đổi chữ ký, d: bỏ API) và hệ quả runtime tương ứng (\`NoSuchMethodError\`, \`NoClassDefFoundError\`, \`ClassCastException\`), rồi ba con số MAJOR.MINOR.PATCH của semantic versioning. [11.1.3 Đảm bảo tính nhất quán giữa các lập trình viên](#/docs/wgjd-11) đọc kỹ, đặc biệt hai ví dụ công cụ (code coverage, phân tích tĩnh với ví dụ \`equals\`/\`hashCode\`).
+
+**Bẫy.** Tin rằng vì Java có một thư viện runtime (JRE) phong phú luôn hiện diện, hệ sinh thái phụ thuộc của nó miễn nhiễm với các sự cố kiểu "left-pad" từng xảy ra với JavaScript. Sách chỉ nói tình hình "phần nào tốt hơn", không phải miễn nhiễm — một ứng dụng production thực sự vẫn "hầu như luôn có quá nhiều tầng phụ thuộc để quản lý thủ công một cách thoải mái", nên vẫn cần tự động hóa. Bẫy thứ hai: nghĩ mã biên dịch được và test chạy qua là đủ để yên tâm. Sách chỉ ra phân tích tĩnh — như phát hiện việc ghi đè \`equals\` mà quên \`hashCode\` — tồn tại chính vì nó "cho phép máy tính kiểm chứng các khía cạnh của mã hợp lệ nhưng sẽ cắn bạn ở production".
+
+**Tự kiểm tra.** Với bốn loại thay đổi API mà sách liệt kê (API ổn định, API được thêm, API thay đổi chữ ký, API bị loại bỏ), loại nào có khả năng gây \`NoSuchMethodError\` khi hai phụ thuộc bắc cầu yêu cầu phiên bản khác nhau của cùng thư viện, và vì sao? Và theo mục 11.1.3, vì sao "test chạy qua hết" không đủ để kết luận toàn bộ mã của bạn đã được kiểm thử?`,
+      },
+      {
+        id: "wg-w7-2",
+        text: "Maven: vòng đời build và POM",
+        lesson: `**Mục tiêu.** Viết được một \`pom.xml\` tối thiểu với đúng tọa độ GAV, chạy đúng phase trong lifecycle mặc định của Maven (\`compile\`, \`test-compile\`, \`package\`), và biết chính xác vì sao chỉ đến \`mvn package\` thì JAR vẫn chưa chạy được, cho tới khi cấu hình \`maven-jar-plugin\`.
+
+**Đọc.** [11.2 Maven](#/docs/wgjd-11) đọc lướt đoạn mở đầu so Ant với Maven — Maven giải quyết khoảng trống của Ant bằng build lifecycle chuẩn hóa và cách tiếp cận nhất quán cho phụ thuộc. [11.2.1 Build lifecycle](#/docs/wgjd-11) đọc kỹ bảy phase chính (validate, compile, test, package, verify, install, deploy), khái niệm goal do plugin gắn vào phase, và hai lifecycle phụ clean/site. [11.2.2 Giới thiệu lệnh/POM](#/docs/wgjd-11) đọc kỹ ví dụ \`pom.xml\` tối thiểu, ba trường tạo tọa độ GAV (\`groupId\`, \`artifactId\`, \`version\`), và bố cục thư mục chuẩn. [11.2.3 Build](#/docs/wgjd-11) chạy thật \`mvn compile\` rồi xem \`target/classes\` chỉ chứa mã dưới \`main\`, sau đó \`mvn package\` để có JAR, và tự thử \`java -jar target/example-1.0-SNAPSHOT.jar\` để tận mắt thấy lỗi thiếu main class. [11.2.4 Kiểm soát manifest](#/docs/wgjd-11) đọc kỹ cấu hình \`maven-jar-plugin\` — \`mainClass\` và \`Automatic-Module-Name\` — rồi lặp lại bước chạy JAR ở trên để thấy nó giờ chạy được.
+
+**Bẫy.** Nghĩ rằng \`mvn compile\` cũng biên dịch luôn mã test, vì cả hai đều nằm trong cùng bố cục quy ước \`src/main\`/\`src/test\`. Sách chỉ rõ ngược lại: "Xem xét kỹ sẽ tiết lộ chúng ta chỉ build mã dưới thư mục main", muốn biên dịch test phải gọi riêng phase \`test-compile\`. Bẫy thứ hai: kỳ vọng \`mvn package\` tự sinh ra một JAR chạy được bằng \`java -jar\`. Chính sách minh chứng ngược lại — chạy \`java -jar target/example-1.0-SNAPSHOT.jar\` ngay sau \`mvn package\` cho lỗi vì JAR mặc định thiếu manifest khai main class; phải cấu hình \`maven-jar-plugin\` ở mục 11.2.4 mới đủ.
+
+**Tự kiểm tra.** Sau khi chạy đúng \`mvn compile\` trên dự án ví dụ trong sách, \`target/classes\` chứa class dịch từ đâu và không chứa class nào, và bạn cần chạy phase nào để có cả class test? Và ba trường nào trong \`pom.xml\` tạo thành tọa độ GAV, còn \`Automatic-Module-Name\` được thêm vào cấu hình \`maven-jar-plugin\` để phục vụ mục đích gì cho một JAR chưa modular?`,
+      },
+      {
+        id: "wg-w7-3",
+        text: "Maven: phụ thuộc, plugin và dự án đa module",
+        lesson: `**Mục tiêu.** Giải quyết được một xung đột phụ thuộc bắc cầu bằng \`exclusions\` hoặc bằng ép phiên bản trực tiếp, viết được một Mojo tối thiểu cho một plugin Maven riêng, và đóng gói được một thư viện modular cùng ứng dụng modular tiêu thụ nó theo đúng quy tắc JPMS qua Maven.
+
+**Đọc.** [11.2.5 Thêm một ngôn ngữ khác](#/docs/wgjd-11) đọc lướt — chỉ cần nắm ý tưởng \`kotlin-maven-plugin\` phải được gắn trước \`maven-compiler-plugin\` khi trộn Kotlin và Java, nếu không mã Java sẽ không thấy được các class Kotlin. [11.2.6 Kiểm thử](#/docs/wgjd-11) đọc kỹ hai phase \`test\`/\`integration-test\` và vai trò riêng của \`maven-surefire-plugin\` (unit test) so với \`maven-failsafe-plugin\` (integration test, theo các mẫu tên \`IT*.java\`/\`*IT.java\`/\`*ITCase.java\`). [11.2.7 Quản lý phụ thuộc](#/docs/wgjd-11) là trọng tâm mục này — đọc chậm toàn bộ, bám theo đúng thuật toán "gần-gốc-nhất-thắng" của Maven, hai hình minh họa xung đột (yêu cầu phiên bản mới hơn/cũ hơn phiên bản bắc cầu), rồi hai kỹ thuật giải quyết theo đúng thứ tự sách đưa ra: \`exclusions\` trước, ép phiên bản trực tiếp chỉ khi không còn cách nào khác. [11.2.8 Rà soát](#/docs/wgjd-11) đọc lướt cấu hình JaCoCo. [11.2.9 Vượt qua Java 8](#/docs/wgjd-11) và [11.2.10 Multirelease JAR trong Maven](#/docs/wgjd-11) đọc lướt, chỉ cần nắm ý tưởng: mục trước thêm lại các module Java EE bị gỡ khỏi JDK 11, mục sau dùng hai bước \`<execution>\` của \`maven-compiler-plugin\` để biên dịch cùng lúc cho hai target JDK vào \`META-INF/versions\`. [11.2.11 Maven và module](#/docs/wgjd-11) đọc chậm — dựng lại đúng cặp ví dụ sách làm: một thư viện modular với \`module-info.java\` chỉ \`exports\` một package, rồi một ứng dụng modular \`requires\` nó; thử thêm \`import\` vào package không được export để tận mắt thấy lỗi biên dịch "is not visible", và đọc đoạn cuối về việc ứng dụng không tự khai \`module-info.java\` thì thư viện bị kéo vào qua classpath thế nào. [11.2.12 Viết plugin Maven](#/docs/wgjd-11) đọc kỹ ví dụ \`pom.xml\` với \`<packaging>maven-plugin</packaging>\` và hai phụ thuộc API (\`maven-plugin-api\`, \`maven-plugin-annotations\`) — đây là mảnh ghép cuối để hiểu vì sao mọi plugin bạn dùng suốt tuần này, kể cả các plugin mặc định, chỉ là một JAR như bao thư viện khác.
+
+**Bẫy.** Nghĩ rằng chỉ cần thêm \`junit-jupiter-api\`/\`junit-jupiter-engine\` vào \`pom.xml\` là đủ để chạy test trên bất kỳ phiên bản Maven nào. Sách minh chứng ngược lại bằng chính một lần chạy thật: "Vì lý do tương thích, plugin maven-surefire-plugin được cài đặt mặc định, ngay cả ở Maven 3.8.4 gần đây, không biết về JUnit 5" — kết quả là \`mvn test\` báo "Tests run: 0" thay vì chạy test hay báo lỗi rõ ràng, và bạn phải tự nâng version \`maven-surefire-plugin\` lên bản sau 2.12. Bẫy thứ hai: tin rằng các hạn chế truy cập (\`exports\`) của một thư viện modular luôn được JVM tôn trọng bất kể ứng dụng tiêu thụ nó có modular hay không. Sách chỉ rõ nếu ứng dụng không tự có \`module-info.java\`, thư viện — dù bản thân nó modular — vẫn bị đưa vào qua classpath vào unnamed module, và "mọi hạn chế truy cập chúng ta định nghĩa trong thư viện thực sự bị bỏ qua".
+
+**Tự kiểm tra.** Bạn thêm đúng hai phụ thuộc \`junit-jupiter-api\` và \`junit-jupiter-engine\` rồi chạy \`mvn test\`, nhưng thấy "Tests run: 0, Failures: 0" dù bạn chắc chắn có một \`MainTest\` với ít nhất một \`@Test\`. Nguyên nhân theo sách là gì, và bạn sửa bằng cách nào? Và nếu ứng dụng của bạn dùng một thư viện modular nhưng bản thân ứng dụng không có \`module-info.java\`, package \`hidden\` mà thư viện không \`exports\` có còn bị chặn truy cập không, và vì sao?`,
+      },
+      {
+        id: "wg-w7-4",
+        text: "Gradle: DSL, task và build script",
+        lesson: `**Mục tiêu.** Viết được một \`build.gradle.kts\` tối thiểu để build và chạy một ứng dụng Java qua Gradle, phân biệt đúng task với goal của Maven (task không bị buộc vào một phase cố định), và giải thích được vì sao buildscript Gradle có thể viết bằng Kotlin — cùng cú pháp cơ bản bạn đã tự bổ túc ở tuần 6.
+
+**Đọc.** [11.3 Gradle](#/docs/wgjd-11) đọc lướt đoạn mở đầu — Gradle tương thích hạ tầng phụ thuộc Maven nhưng thay XML bằng một DSL trên nền ngôn ngữ lập trình thật, và có tính năng tránh công việc thừa mà Maven không có. [11.3.1 Cài đặt Gradle](#/docs/wgjd-11) đọc kỹ khái niệm *wrapper* (\`./gradlew\`) và lý do commit các tệp wrapper vào quản lý mã nguồn. [11.3.2 Task](#/docs/wgjd-11) đọc chậm — đây là khái niệm nền tảng nhất của Gradle: so sánh trực tiếp với goal của Maven (goal phải gắn vào một phase cố định, task thì không) và chạy thử \`./gradlew tasks\`. [11.3.3 Có gì trong một script?](#/docs/wgjd-11) đọc chậm toàn mục, đặc biệt phần "Groovy vs. Kotlin" — sách chọn dùng Kotlin cho mọi ví dụ trong chương vì nó "giống Java hơn Groovy", và buildscript Kotlin dùng đuôi \`.gradle.kts\`. Đây đúng là chỗ phần tự bổ túc Kotlin ở tuần 6 (mục "Tự bổ túc Kotlin — bù chương 9 vắng mặt", wg-w6-3) trả về giá trị: cú pháp \`val\`, lambda rút gọn, và cách gọi hàm không cần dấu ngoặc khi đối số cuối là một lambda đều xuất hiện ngay trong các ví dụ \`build.gradle.kts\` của chương này. [11.3.4 Dùng plugin](#/docs/wgjd-11) đọc kỹ ví dụ plugin \`base\`, rồi [11.3.5 Build](#/docs/wgjd-11) đọc chậm toàn mục — dựng lại đúng ví dụ thư viện Java thuần với plugin \`java-library\`, rồi ứng dụng chạy được với plugin \`application\`; đặc biệt đọc kỹ khung NOTE cảnh báo về việc quên cấu hình \`tasks.jar\`. [11.3.6 Tránh công việc](#/docs/wgjd-11) đọc lướt để nắm ý tưởng incremental build và Build Cache. [11.3.7 Phụ thuộc trong Gradle](#/docs/wgjd-11) đọc kỹ phần đầu về configuration (\`implementation\`, \`api\`, \`runtimeOnly\`) và đoạn so sánh thuật toán phân giải "chọn phiên bản cao nhất" của Gradle với "gần-gốc-nhất-thắng" của Maven đã gặp ở mục trước; phần \`constraints\`/\`strictly\`/\`exclude\` đọc lướt vì bạn đã thấy đúng bài toán này ở phía Maven. [11.3.8 Thêm Kotlin](#/docs/wgjd-11) tới [11.3.13 Tùy chỉnh](#/docs/wgjd-11) đọc lướt cả sáu mục — chỉ cần nắm mỗi mục làm gì (thêm ngôn ngữ, test, SpotBugs, tương thích Java 8, module JDK, tùy chỉnh task) mà không cần thuộc chi tiết cấu hình.
+
+**Bẫy.** Đặt \`mainClass\` cho plugin \`application\` rồi coi như xong, quên cấu hình lại \`tasks.jar { manifest { ... } }\`. Sách cảnh báo thẳng trong một khung NOTE: làm vậy cho ra "một JAR mà ./gradlew run biết cách khởi động nhưng java -jar thì không. Chắc chắn không khuyến nghị!" — hai cách chạy tưởng tương đương lại không tương đương. Bẫy thứ hai: mang nguyên thuật toán phân giải phụ thuộc "gần-gốc-nhất-thắng" đã học ở Maven sang áp dụng cho Gradle. Sách nói rõ "thuật toán mặc định của Gradle để xử lý xung đột phiên bản khác với cách tiếp cận gần-gốc-nhất-thắng của Maven" — Gradle duyệt toàn bộ cây rồi mặc định chọn phiên bản cao nhất được yêu cầu, bất kể độ sâu.
+
+**Tự kiểm tra.** Bạn cấu hình plugin \`application\` với \`mainClass.set(...)\` nhưng không thêm khối \`tasks.jar { manifest { ... } }\`. \`./gradlew run\` chạy tốt — vậy \`java -jar build/libs/ten.jar\` có chạy được không, và vì sao? Và nếu \`lib-a\` được yêu cầu tường minh ở 2.0 còn một phụ thuộc bắc cầu khác yêu cầu 1.0, Gradle mặc định chọn phiên bản nào, và điều đó khác quy tắc "gần-gốc-nhất-thắng" của Maven ở điểm nào?`,
+      },
+    ],
+  },
+  {
+    id: "wg-w8",
+    week: "Tuần 8",
+    title: "Java trong container",
+    goal: "Đóng gói ứng dụng Java vào image mà JVM nhận đúng giới hạn CPU và bộ nhớ của container — và chứng minh được điều đó.",
+    practice:
+      "Đóng gói ứng dụng của bạn vào một image Docker, chạy nó với `--cpus=2 --memory=512m`, rồi in ra `Runtime.getRuntime().availableProcessors()` và `maxMemory()` từ bên trong container. Đối chiếu hai con số đó với giới hạn bạn đặt.",
+    resources: [
+      { label: "WGJD 12 — Chạy Java trong container", href: "#/docs/wgjd-12" },
+    ],
+    items: [
+      {
+        id: "wg-w8-1",
+        text: "Vì sao container quan trọng, và nền tảng Docker",
+        lesson: `**Mục tiêu.** Vẽ đúng chồng các tầng trừu tượng từ bare metal tới container, giải thích được vì sao "tài nguyên vô hạn" chỉ là ảo giác, và tự build cùng chạy được một Docker image tối thiểu từ \`Dockerfile\`, kể cả gắn tag và truyền biến môi trường qua \`-e\`.
+
+**Đọc.** [12.1 Vì sao container quan trọng với lập trình viên vững nền tảng](#/docs/wgjd-12) đọc lướt phần liệt kê ba chủ đề mở đầu. [12.1.1 Hệ điều hành host vs. máy ảo vs. container](#/docs/wgjd-12) đọc chậm toàn mục, bám đúng thứ tự các tầng sách trình bày (bare metal → hệ điều hành host hoặc hypervisor Type 1 → hypervisor Type 2 → máy ảo → container engine → container) và dừng ở khung NOTE về tài nguyên hữu hạn — đối chiếu với hình 12.1 và 12.2. [12.1.2 Lợi ích của container](#/docs/wgjd-12) và [12.1.3 Nhược điểm của container](#/docs/wgjd-12) đọc kỹ cả hai liền mạch — chú ý sách quay lại đúng một đặc điểm (sự cô lập) ở cả hai mục để lập luận nó vừa là lợi ích chính vừa là khó khăn chính. [12.2 Nền tảng Docker](#/docs/wgjd-12) đọc lướt câu mở đầu. [12.2.1 Build Docker image](#/docs/wgjd-12) chạy thật ví dụ \`Dockerfile\` hai dòng (\`FROM eclipse-temurin:11\`, \`RUN java -version\`), rồi thêm \`COPY HelloDocker.java .\` và \`CMD ["java", "HelloDocker.java"]\` như sách làm; chạy \`docker build\` hai lần liên tiếp không đổi gì để tận mắt thấy các layer báo \`CACHED\`, rồi gắn tag bằng \`docker build -t hello .\`. [12.2.2 Chạy container Docker](#/docs/wgjd-12) đọc kỹ, chạy \`docker run hello\`, rồi \`docker run hello pwd\` để thấy lệnh thay thế ghi đè \`CMD\` mặc định thế nào, và thử \`-e MY_VAR=here\` để truyền biến môi trường vào container.
+
+**Bẫy.** Tin rằng chuyển sang container cho ứng dụng của bạn tài nguyên gần như vô hạn. Sách cảnh báo thẳng trong một khung NOTE ngay đầu mục 12.1.1: "Quá thường xuyên, lập trình viên bị lừa nghĩ rằng container bằng cách nào đó cho họ tài nguyên vô hạn kỳ diệu!" — bên dưới mọi tầng trừu tượng luôn là một mảnh bare metal với tài nguyên hữu hạn. Bẫy thứ hai: coi sự cô lập của container thuần túy là một lợi ích, không có mặt trái. Sách chỉ ra chính đặc điểm này — giữ thế giới bên trong container tách khỏi bên ngoài — "lại thực sự là một trong những khó khăn khi dùng chúng", bởi nhiều công cụ và kỹ thuật bạn quen dùng ngoài container cần xử lý đặc biệt khi chuyển vào, nhất là khi đưa container vào quy trình phát triển cục bộ.
+
+**Tự kiểm tra.** Bên dưới mọi tầng trừu tượng — hệ điều hành host, hypervisor, container engine, container — điều gì theo khung NOTE của sách ở mục 12.1.1 luôn đúng về tài nguyên mà JVM của bạn cuối cùng nhận được? Và nếu bạn có \`Dockerfile\` với \`FROM\`, \`RUN\`, \`COPY\`, \`CMD\`, rồi chỉ sửa tệp được \`COPY\` vào và build lại, layer nào Docker coi là đã thay đổi và phải chạy lại, layer nào tiếp tục dùng cache?`,
+      },
+      {
+        id: "wg-w8-2",
+        text: "Phát triển ứng dụng Java với Docker",
+        lesson: `**Mục tiêu.** Build được một image Docker triển khai (không lẫn JDK build-time) qua multistage build từ một dự án Gradle, phơi bày đúng port ra ngoài container, và biết ít nhất ba cách khác nhau để nhìn vào bên trong một container Java đang chạy (shell, JFR, remote debug).
+
+**Đọc.** [12.3.1 Chọn base image](#/docs/wgjd-12) đọc kỹ ba câu hỏi sách đặt ra (nhà cung cấp, hệ điều hành trong container, kiến trúc CPU) và khung NOTE cảnh báo riêng về Alpine Linux. [12.3.2 Build một image với Gradle](#/docs/wgjd-12) chạy thật \`./gradlew installDist\` và xem cây kết quả dưới \`build/install\`, rồi dựng \`Dockerfile\` \`COPY\` cây đó vào image và chạy bằng script khởi động Gradle sinh ra. [12.3.3 Chạy build trong Docker](#/docs/wgjd-12) là trọng tâm mục này — đọc chậm toàn bộ multistage build hai \`FROM\` (\`AS build\` rồi \`COPY --from=build\`), và hai kỹ thuật tối ưu cache liền sau: tệp \`.dockerignore\` để \`COPY . .\` không bị vô hiệu bởi các tệp không liên quan, và tách một \`RUN ./gradlew\` trần trước khi \`COPY . .\` để cache riêng bước tải bản phân phối Gradle. [12.3.4 Port và host](#/docs/wgjd-12) đọc kỹ cú pháp \`-p host:container\` của \`docker run\`, rồi \`EXPOSE\` trong \`Dockerfile\` cùng cờ \`-P\` để gán port ephemeral, và cách tìm port đó qua \`docker ps\`. [12.3.5 Phát triển cục bộ với Docker Compose](#/docs/wgjd-12) đọc lướt — chỉ cần nắm ý tưởng một \`docker-compose.yml\` khai báo nhiều service (ví dụ thêm Redis) và mỗi tên service trở thành hostname dùng được giữa các container. [12.3.6 Debug trong Docker](#/docs/wgjd-12) đọc kỹ — đặt tên cố định cho container bằng \`--name\`, dùng \`docker exec -it ... bash\` để vào shell đang chạy, và đây chính là chỗ kỹ năng JFR học ở chương 7 quay lại: \`jcmd <pid> JFR.start\` rồi \`JFR.dump\` ngay trong container, sau đó \`docker cp\` bản ghi ra ngoài để mở bằng Mission Control. [12.3.7 Logging với Docker](#/docs/wgjd-12) đọc lướt, chỉ cần nắm khuyến nghị cuối cùng: ghi log ra STDOUT/STDERR thay vì tệp, để Docker tự nắm bắt và bạn cấu hình chuyển tiếp log một lần trên host.
+
+**Bẫy.** Thêm \`EXPOSE 8080\` vào \`Dockerfile\` rồi nghĩ thế là đủ để gọi được ứng dụng từ host. Sách nói thẳng "bạn có thể ngạc nhiên khi thấy Docker không mặc định làm các port EXPOSE khả dụng" — \`EXPOSE\` chỉ là tài liệu hóa, bạn vẫn phải tự thêm \`-p\` (port cố định) hoặc \`-P\` (port ephemeral, tra bằng \`docker ps\`) khi \`docker run\`. Bẫy thứ hai: nghĩ multistage build tự động tránh việc tải lại Gradle wrapper ở mỗi lần build vì nó "chỉ chạy trong container". Sách chỉ rõ ngược lại — vì container build khởi động không có bất kỳ cache Gradle cục bộ nào, việc tải bản phân phối "lặp lại mỗi lần ta chạy" trừ khi bạn tách một bước \`RUN ./gradlew\` trần thành layer riêng trước khi \`COPY . .\` toàn bộ dự án.
+
+**Tự kiểm tra.** Bạn thêm \`EXPOSE 8080\` vào \`Dockerfile\`, build lại, rồi \`docker run hello\` (không có \`-p\` hay \`-P\`) — bạn có \`curl http://localhost:8080\` được không, và vì sao? Và trong một Dockerfile multistage cho Gradle, vì sao tách \`COPY ./gradle ./gradle\` cùng \`RUN ./gradlew\` thành các bước riêng, đặt trước dòng \`COPY . .\`, lại tránh được việc tải lại bản phân phối Gradle mỗi lần bạn sửa mã nguồn?`,
+      },
+      {
+        id: "wg-w8-3",
+        text: "Kubernetes ở mức lập trình viên Java cần",
+        lesson: `**Mục tiêu.** Kể đúng năm loại đối tượng nền tảng của Kubernetes (cluster, node, pod, deployment, service) và quan hệ giữa chúng qua vòng lặp controller, và tự chạy được một pod cục bộ bằng minikube, scale nó lên nhiều replica, rồi expose và port-forward để gọi được từ máy host.
+
+**Đọc.** [12.4 Kubernetes](#/docs/wgjd-12) là mục dài nhất tuần — đọc chậm theo đúng trình tự thực hành sách làm. Đọc kỹ đoạn định nghĩa năm loại đối tượng nền tảng (cluster, node, pod, deployment, service) và cơ chế controller: "theo dõi trạng thái thực tế của hệ thống và áp dụng thay đổi... để trạng thái mong muốn và thực tế của hệ thống khớp nhau" — đây là ý tưởng cốt lõi của toàn bộ mục. Cài \`minikube\` và chạy \`minikube start\`, rồi \`kubectl describe node\` để thấy chính Kubernetes cũng chạy trong pod trên node của nó. Chạy \`kubectl create deployment echoes --image=k8s.gcr.io/echoserver:1.4\` rồi \`kubectl get deployments\`/\`kubectl get pods\` để thấy trạng thái mong muốn được cluster hiện thực hóa. Đọc kỹ ví dụ \`kubectl edit deployment echoes\` và YAML đầy đủ đi kèm — đối chiếu \`spec.replicas\` với \`status.replicas\`, rồi tự đổi \`replicas: 1\` thành \`3\` để tận mắt thấy controller tạo thêm pod. Đọc kỹ đoạn cuối về \`kubectl expose --type=NodePort\` và \`kubectl port-forward\` — đây là hai bước bắt buộc để gọi được vào pod từ ngoài cluster.
+
+**Bẫy.** Nghĩ rằng ngay khi \`kubectl get pods\` báo trạng thái \`Running\`, bạn đã gọi được vào ứng dụng từ máy host. Sách nói thẳng "theo mặc định chúng ta hoàn toàn không thể nói chuyện với các pod trong cluster" — cần tạo thêm một đối tượng Service (ví dụ kiểu \`NodePort\` qua \`kubectl expose\`) rồi \`kubectl port-forward\` mới thực sự gọi được từ ngoài. Bẫy thứ hai: coi việc sửa tay YAML bằng \`kubectl edit deployment\` là cách làm việc bình thường. Sách nói rõ "trên thực tế, bạn có lẽ sẽ không sửa tay tệp YAML trên một cluster Kubernetes production" — mọi công cụ thực tế (hệ thống CI/CD, manifest quản lý mã nguồn) chỉ là những trợ thủ sinh ra đúng YAML và lời gọi API thay bạn; \`kubectl edit\` ở đây chỉ để học cách một Deployment thực sự trông ra sao.
+
+**Tự kiểm tra.** Sau khi \`kubectl create deployment echoes --image=k8s.gcr.io/echoserver:1.4\` báo pod ở trạng thái \`Running\`, bạn thử \`curl\` thẳng vào nó từ máy host và thất bại — theo sách, bạn còn thiếu đối tượng Kubernetes nào, và câu lệnh nào tạo ra nó? Và nếu bạn đổi \`spec.replicas\` từ 1 thành 3 trong YAML của một Deployment, cơ chế nào trong Kubernetes phát hiện chênh lệch với \`status.replicas\` và tự tạo thêm pod?`,
+      },
+      {
+        id: "wg-w8-4",
+        text: "Observability và hiệu năng trong container",
+        lesson: `**Mục tiêu.** Giải thích ba trụ cột dữ liệu observability (distributed trace, metric, log) và vì sao mục tiêu của nó vượt xa một dashboard monitoring, và nêu đúng tiêu chí sách dùng để định nghĩa "server class machine" — tiêu chí quyết định JVM tự chọn G1 hay Serial GC khi không có collector nào được chỉ định tường minh.
+
+**Đọc.** [12.5.1 Observability](#/docs/wgjd-12) đọc kỹ ba bước quy trình (instrument hệ thống, gửi dữ liệu tới nơi lưu trữ/truy vấn được, trực quan hóa) và ba trụ cột dữ liệu (distributed trace, metric, log); đọc kỹ câu mô tả observability là khả năng "Có câu trả lời cho những câu hỏi mà bạn không biết là mình sẽ cần hỏi". Phần OpenTelemetry đọc lướt — chỉ cần biết nó là chuẩn mở CNCF hợp nhất từ OpenTracing và OpenCensus, không cần nhớ trạng thái v1.0/GA của từng dự án con. [12.5.2 Hiệu năng trong container](#/docs/wgjd-12) đọc chậm toàn mục — đây là phần trực tiếp phục vụ bài thực hành tuần này. Đọc kỹ ba thuộc tính JVM tự dò từ máy lúc khởi động (JVM Intrinsics, định cỡ threadpool nội bộ, số luồng GC), rồi định nghĩa "server class machine" (>= hai CPU vật lý và >= 2 GB bộ nhớ) quyết định JVM ergonomic chọn G1 hay Serial GC khi không chỉ định collector tường minh, và khung TIP cuối mục.
+
+**Bẫy.** Cố tình chọn container nhỏ nhất có thể để tiết kiệm chi phí cloud, không ngờ điều đó âm thầm đổi cả GC. Sách chỉ rõ nếu không chỉ định collector tường minh, JVM tự quyết định theo kiểu "ergonomic": máy được coi là "server class" (>= hai CPU vật lý và >= 2 GB bộ nhớ) sẽ được cấp G1, còn dưới ngưỡng đó JVM chuyển sang Serial — "đây thường không phải điều các đội muốn". Bẫy thứ hai: coi observability chỉ là một cái tên mới cho logging/monitoring truyền thống. Sách nói rõ mục tiêu của nó là thay thế "những góc nhìn manh mún chỉ dựa trên một hoặc hai mảnh của hệ thống tổng thể" bằng khả năng trả lời cả những câu hỏi chưa biết trước mình sẽ cần hỏi — nghĩa là thu đủ dữ liệu để truy vấn về sau, không phải chỉ xem vài chỉ số đã định sẵn trên dashboard.
+
+**Tự kiểm tra.** Nếu bạn chạy ứng dụng Java trong một container giới hạn 1 CPU và 1 GB bộ nhớ mà không chỉ định collector tường minh, JVM sẽ chọn GC nào theo logic ergonomic của sách, và ngưỡng nào (CPU, bộ nhớ) quyết định điều đó? Và ba trụ cột dữ liệu mà observability dùng để mô hình hóa trạng thái hệ thống là gì?`,
+      },
+    ],
+  },
+];
