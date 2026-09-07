@@ -956,7 +956,7 @@ Như "Ghi chú chung", đổi tiêu đề thành `Phần 2 (Tuần 7–12)` và 
 |---|---|---|
 | `wg-w7-1` | Vì sao công cụ build quan trọng với lập trình viên vững nền tảng | ch.11 — 11.1 Vì sao công cụ build quan trọng với lập trình viên vững nền tảng |
 | `wg-w7-2` | Maven: vòng đời build và POM | ch.11 — 11.2 Maven, nửa đầu (khái niệm, vòng đời, cấu trúc POM) |
-| `wg-w7-3` | Maven: phụ thuộc, plugin và dự án đa module | ch.11 — 11.2 Maven, nửa sau (phụ thuộc, plugin, đa module) |
+| `wg-w7-3` | Maven: phụ thuộc, plugin và module JPMS | ch.11 — 11.2 Maven, nửa sau (phụ thuộc, plugin, module JPMS ở 11.2.11) |
 | `wg-w7-4` | Gradle: DSL, task và build script | ch.11 — 11.3 Gradle |
 
 Mục `wg-w7-4` chạm vào chỗ sách nói build script Gradle viết được bằng Kotlin — nối ngược về phần bổ túc Kotlin ở `wg-w6-3`. Nhắc trong khối **Đọc**.
