@@ -427,9 +427,9 @@ lĩnh vực (bất biến R1).
 | Từ | Tới | Lý do đọc-liền-mạch |
 |---|---|---|
 | `ocnj-01` | `wgjd-07`, `java-07` | hệ phân loại hiệu năng ↔ hiểu về hiệu năng Java; ↔ capacity planning dùng chính các đại lượng này |
-| `ocnj-02` | `wgjd-07`, `wgjd-13` | phương pháp luận đo và thống kê ↔ đo hiệu năng ở WGJD; ↔ nền tảng kiểm thử |
+| `ocnj-02` | `wgjd-07` | phương pháp luận đo và thống kê ↔ đo hiệu năng ở WGJD |
 | `ocnj-03` | `wgjd-04`, `wgjd-17` | classloading, bytecode, JIT ↔ class file và bytecode; ↔ nội tại JVM hiện đại |
-| `ocnj-04` | `wgjd-17`, `sysprog-05` | mark-and-sweep, TLAB, allocation ↔ nội tại JVM; ↔ bộ cấp phát bộ nhớ ở tầng C |
+| `ocnj-04` | `wgjd-07`, `sysprog-05` | GC, TLAB, allocation ↔ GC và JIT làm gì sau lưng bạn; ↔ bộ cấp phát bộ nhớ ở tầng C |
 | `ocnj-05` | `wgjd-12` | GC nâng cao và ergonomics ↔ chạy Java trong container, nơi giới hạn bộ nhớ đổi lựa chọn collector |
 | `ocnj-06` | `wgjd-04`, `wgjd-17` | thông dịch, JIT, code cache, AOT ↔ bytecode; ↔ nội tại JVM hiện đại |
 | `ocnj-07` | `sysprog-06`, `sysprog-10` | cache, MESI, context switch ↔ luồng và lập lịch nhìn từ kernel |
@@ -442,7 +442,7 @@ lĩnh vực (bất biến R1).
 | `ocnj-14` | `ddia-10`, `kafka-06` | WAL, CAP, Paxos, Raft, Kafka ↔ tính nhất quán và consensus; ↔ internals Kafka |
 | `ocnj-15` | `modconc-04`, `modconc-05`, `wgjd-18` | structured concurrency, scoped values, Panama/Leyden/Valhalla ↔ hai chương chuyên đề; ↔ Java trong tương lai |
 
-15 khoá, 29 liên kết. Mắt xích đáng giá nhất là `ocnj-13` → `jcip-11`: cùng một câu hỏi "vì sao
+15 khoá, 28 liên kết. Mắt xích đáng giá nhất là `ocnj-13` → `jcip-11`: cùng một câu hỏi "vì sao
 thêm thread không cho thêm throughput" nhìn từ hai cuốn cách nhau gần hai thập kỷ.
 
 Hai khoá cuối của `ocnj-14` là **xuyên con đường** (sang `data`). Đã có tiền lệ: `java-02` →

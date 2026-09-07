@@ -75,9 +75,9 @@ export const related = {
   // ---- Optimizing Cloud Native Java ↔ WGJD (nội tại JVM), sysprog (kernel),
   //      java (ứng dụng), jcip & modern-concurrency (concurrency), ddia & kafka (phân tán) ----
   "ocnj-01": ["wgjd-07", "java-07"],              // bảy đại lượng ↔ hiệu năng Java; ↔ capacity planning dùng chính chúng
-  "ocnj-02": ["wgjd-07", "wgjd-13"],              // phương pháp luận đo ↔ đo hiệu năng; ↔ nền tảng kiểm thử
+  "ocnj-02": ["wgjd-07"],                         // phương pháp luận đo ↔ đo hiệu năng
   "ocnj-03": ["wgjd-04", "wgjd-17"],              // classloading, bytecode, JIT ↔ class file; ↔ nội tại JVM hiện đại
-  "ocnj-04": ["wgjd-17", "sysprog-05"],           // TLAB, allocation ↔ nội tại JVM; ↔ bộ cấp phát bộ nhớ tầng C
+  "ocnj-04": ["wgjd-07", "sysprog-05"],           // GC, TLAB, allocation ↔ GC và JIT làm gì sau lưng bạn; ↔ bộ cấp phát bộ nhớ tầng C
   "ocnj-05": ["wgjd-12"],                         // GC ergonomics ↔ chạy Java trong container
   "ocnj-06": ["wgjd-04", "wgjd-17"],              // JIT, code cache, AOT ↔ bytecode; ↔ nội tại JVM hiện đại
   "ocnj-07": ["sysprog-06", "sysprog-10"],        // cache, context switch ↔ luồng và lập lịch kernel
