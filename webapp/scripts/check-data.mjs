@@ -66,6 +66,7 @@ const EXPECTED = {
     // Lĩnh vực The Well-Grounded Java Developer — 16 chương (1–8, 11–18);
     // chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch.
     "docs:wgjd": 16,
+    "roadmap-items:wgjd": 48,
   },
 };
 

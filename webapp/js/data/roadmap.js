@@ -21,12 +21,13 @@
 //   modern-java/roadmap-part{1,2}.js        (Tuần 1–6 / 7–12)       — 48 mục
 //   kafka/roadmap-part{1,2}.js              (Tuần 1–6 / 7–11)       — 44 mục
 //   spring-start/roadmap-part{1,2}.js       (Tuần 1–4 / 5–8)        — 32 mục
+//   wgjd/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
 //   senior-java/roadmap-gd{1,2,3,4}.js      (Tuần 1–26 mỗi giai đoạn) — 81 / 66 / 64 / 65 mục
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, wg-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./kubernetes/roadmap-ckad-part1.js";
@@ -56,6 +57,8 @@ import { kafkaWeeksPart1 } from "./kafka/roadmap-part1.js";
 import { kafkaWeeksPart2 } from "./kafka/roadmap-part2.js";
 import { springStartWeeksPart1 } from "./spring-start/roadmap-part1.js";
 import { springStartWeeksPart2 } from "./spring-start/roadmap-part2.js";
+import { wgjdWeeksPart1 } from "./wgjd/roadmap-part1.js";
+import { wgjdWeeksPart2 } from "./wgjd/roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java/roadmap-gd1.js";
 import { seniorJavaGd2 } from "./senior-java/roadmap-gd2.js";
 import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
@@ -264,6 +267,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 8 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy người mới hay vấp và câu tự kiểm tra; mỗi tuần một bài code.",
     prereq: "Yêu cầu: viết được Java cơ bản (class, interface, annotation) và dựng được một dự án Maven. Không cần biết trước gì về Spring — đây là điểm bắt đầu, và là bước đi trước lĩnh vực Spring Security.",
     weeks: [...springStartWeeksPart1, ...springStartWeeksPart2],
+  },
+  {
+    id: "wgjd",
+    field: "wgjd",
+    label: "Well-Grounded Java",
+    icon: "🧱",
+    name: "Đọc The Well-Grounded Java Developer (ấn bản 2)",
+    durationWeeks: 12,
+    desc: "Kế hoạch đọc 12 tuần bám theo bản dịch 16 chương: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; mỗi tuần một bài thực hành gõ tay — đọc bytecode bằng javap, đo bằng JMH, dựng build Maven và Gradle, đóng gói image nhận đúng cgroup limit.",
+    prereq: "Yêu cầu: viết được Java ở mức thành thạo và có một dự án Maven hoặc Gradle thật để áp dụng — đây không phải sách nhập môn. Bản dịch không có chương 9 (Kotlin) và chương 10 (Clojure); các tuần 9–11 đọc mã hai ngôn ngữ đó, nên tuần 6 có phần tự bổ túc cú pháp cơ bản trước khi tới đó.",
+    weeks: [...wgjdWeeksPart1, ...wgjdWeeksPart2],
   },
 ];
 

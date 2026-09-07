@@ -118,9 +118,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt The Well-Grounded Java Developer, ấn bản 2 (Benjamin J. Evans, Jason Clark, Martijn Verburg — Manning) — chương 1–8 và 11–18: Java hiện đại, module, class file và bytecode, JMM, thư viện concurrency, hiệu năng, Gradle/Maven, container, kiểm thử, lập trình hàm và concurrency nâng cao, nội tại JVM. Chương 9 (Kotlin) và 10 (Clojure) không nằm trong bản dịch.",
     certFilter: false,
-    // Module "roadmap" mở ở Task 9, khi roadmap-part{1,2}.js đã có dữ liệu.
-    // Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard", "guide", "docs"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "docs.oracle.com — JVM Specification", href: "https://docs.oracle.com/javase/specs/" },
   },
 };
