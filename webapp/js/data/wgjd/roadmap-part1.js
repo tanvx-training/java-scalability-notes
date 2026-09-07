@@ -128,4 +128,118 @@ export const wgjdWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "wg-w3",
+    week: "Tuần 3",
+    title: "Nền tảng concurrency và Java Memory Model",
+    goal: "Giải thích được vì sao một đoạn code đồng thời sai bằng ngôn ngữ của Java Memory Model, chứ không bằng cảm giác \"chắc do race condition\".",
+    practice:
+      "Viết một class có biến đếm được hai thread cùng tăng, chạy đủ lâu để thấy kết quả sai. Rồi sửa đúng ba lần — một lần bằng `synchronized`, một lần bằng `volatile` (và quan sát vì sao `volatile` **không** đủ cho phép cộng), một lần bằng lớp Atomic. Ghi lại lý do từng cách đúng hay sai theo happens-before.",
+    resources: [
+      { label: "WGJD 05 — Nền tảng lập trình đồng thời trong Java", href: "#/docs/wgjd-05" },
+    ],
+    items: [
+      {
+        id: "wg-w3-1",
+        text: "Lý thuyết concurrency và các khái niệm thiết kế",
+        lesson: `**Mục tiêu.** Diễn giải được định luật Amdahl bằng công thức của sách để tính giới hạn tăng tốc tối đa, và nêu tên bốn design force (safety, liveness, performance, reusability) cùng lý do chúng thường xung đột với nhau.
+
+**Đọc.** [5.1 Nhập môn lý thuyết concurrency](#/docs/wgjd-05) đọc lướt 5.1.1 và 5.1.2, nhưng dừng lại đọc kỹ [5.1.3 Định luật Amdahl](#/docs/wgjd-05) — tự tính \`T(N) = s + (1/N) * (T1 - s)\` với vài giá trị \`s\` (ví dụ 0,05 và 0,02) và N tăng dần, để tự thấy đường cong hội tụ về \`1/s\` mà không cần nhìn hình 5.1. [5.2 Các khái niệm thiết kế](#/docs/wgjd-05) đọc chậm: [5.2.1 Safety và concurrent type safety](#/docs/wgjd-05) với ví dụ \`StringStack\` — tự tìm điểm context switch có thể xảy ra trong \`push()\` gây trạng thái không nhất quán; [5.2.2 Liveness](#/docs/wgjd-05) phân biệt thất bại tạm thời với thất bại vĩnh viễn; 5.2.3 và 5.2.4 đọc lướt; [5.2.5 Các lực xung đột như thế nào và vì sao?](#/docs/wgjd-05) đọc kỹ bốn kỹ thuật được xếp theo mức độ hữu dụng.
+
+**Bẫy.** Tin rằng đã quen thuộc với \`Thread\` và \`Runnable\` là đủ để viết mã đồng thời đúng đắn. Sách gọi thẳng đây là "một trong những sai lầm phổ biến nhất (và tiềm ẩn chết người nhất)" — biết cú pháp luồng không phải là biết lập trình đồng thời. Bẫy thứ hai: nghĩ rằng thêm bộ xử lý luôn tăng tốc gần như tuyến tính. Định luật Amdahl cho thấy ngược lại — nếu phần tuần tự \`s\` chỉ chiếm 2%, tăng tốc tối đa dù ném bao nhiêu bộ xử lý vào cũng không vượt quá 50 lần.
+
+**Tự kiểm tra.** Nếu một tác vụ có phần tuần tự \`s\` bằng 0,1 (10%), tăng tốc tối đa lý thuyết bạn có thể đạt được, dù có bao nhiêu lõi, là bao nhiêu? Và với \`StringStack\` trong sách, tại điểm context switch nào trong \`push()\` đối tượng bị bỏ lại ở trạng thái không nhất quán, và phần nào của trạng thái đã cập nhật còn phần nào thì chưa?`,
+      },
+      {
+        id: "wg-w3-2",
+        text: "Block-structured concurrency trước Java 5",
+        lesson: `**Mục tiêu.** Giải thích được sự khác nhau giữa khóa nội tại "thô" (5.3.1) và mẫu fully synchronized object (5.3.3), nêu đúng lý do một field \`volatile\` không đủ để tăng biến đếm, và biết vì sao không bao giờ được gọi \`Thread.stop()\`.
+
+**Đọc.** [5.3 Block-structured concurrency (trước Java 5)](#/docs/wgjd-05) là mục dài nhất chương, đọc theo từng mục con. [5.3.1 Synchronization và khóa](#/docs/wgjd-05) đọc kỹ chín sự thật cơ bản về khóa Java, đặc biệt tính reentrant. [5.3.2 Mô hình trạng thái của một luồng](#/docs/wgjd-05) đọc lướt, chỉ cần nắm sáu trạng thái của \`Thread.State\`. [5.3.3 Fully synchronized object](#/docs/wgjd-05) đọc kỹ ví dụ \`FSOAccount\` và bảy điều kiện của một class fully synchronized. [5.3.4 Deadlock](#/docs/wgjd-05) đọc kỹ ví dụ \`FSOMain\` với hai luồng chuyển tiền qua lại — chạy thử vài lần nếu có thể để tự thấy chương trình treo. [5.3.5 Vì sao lại là \`synchronized\`?](#/docs/wgjd-05) đọc kỹ, đây là câu trả lời cho câu đố sách đặt ra ở 5.3.1. [5.3.6 Từ khóa \`volatile\`](#/docs/wgjd-05) đọc chậm hai quy tắc chi phối field volatile. [5.3.7 Trạng thái và phương thức của luồng](#/docs/wgjd-05) đọc kỹ phần ngắt luồng (\`interrupt()\`) và phần các phương thức đã deprecated; phần API đọc/set metadata thì đọc lướt. [5.3.8 Tính bất biến (Immutability)](#/docs/wgjd-05) đọc kỹ ví dụ \`Deposit\` với factory method và builder.
+
+**Bẫy.** Dùng toán tử \`++\`/\`--\` trên một field \`volatile\` và tin nó an toàn. Sách chỉ rõ các toán tử này tương đương \`v = v + 1\`, một cập nhật phụ thuộc vào trạng thái hiện tại — điều \`volatile\` không bảo vệ được, vì nó chỉ đảm bảo đúng một lần đọc hoặc một lần ghi, không phải cả hai cùng lúc. Bẫy thứ hai: bị cám dỗ dùng \`Thread.stop()\` hoặc \`Thread.suspend()\` để buộc dừng một luồng khác. Sách giải thích \`stop()\` tiêm một \`ThreadDeath\` vào luồng tại một điểm không thể biết trước, có thể giữa một khối \`finally\` đang dở dang, để lại đối tượng ở trạng thái hỏng; còn \`suspend()\` không nhả bất kỳ monitor nào, nên bất kỳ luồng nào khác cố vào một đoạn \`synchronized\` bị khóa bởi luồng đã bị đình chỉ sẽ chặn vĩnh viễn.
+
+**Tự kiểm tra.** Vì sao \`balance++\` không an toàn ngay cả khi \`balance\` được khai báo \`volatile\`, và quy tắc nào của \`volatile\` giải thích chính xác điều đó? Và theo nguyên tắc fully synchronized object, thứ tự lấy khóa nào giữa hai luồng gây ra deadlock trong ví dụ \`FSOMain\`, và sách đề xuất kỹ thuật gì để tránh nó?`,
+      },
+      {
+        id: "wg-w3-3",
+        text: "Java Memory Model",
+        lesson: `**Mục tiêu.** Phát biểu đúng hai quan hệ Happens-Before và Synchronizes-With cùng các quy tắc JMM liệt kê chúng, đủ để giải thích một đoạn code đồng thời sai bằng ngôn ngữ hình thức thay vì nói "chắc do race condition".
+
+**Đọc.** [5.4 Java Memory Model (JMM)](#/docs/wgjd-05) là mục ngắn nhưng đọc chậm toàn bộ — đây là mục nền tảng nhất chương. Dừng lại ở từng quy tắc trong bốn quy tắc chính và bốn quy tắc bổ sung, và với mỗi quy tắc tự vẽ lại một ví dụ tương tự hình 5.8 (ghi volatile Synchronizes-With đọc sau đó) bằng đối tượng của riêng bạn.
+
+**Bẫy.** Coi các quy tắc JMM là mô tả đầy đủ cách JVM thực sự hành xử. Sách cảnh báo rõ đây chỉ là những đảm bảo *tối thiểu* — một JVM cụ thể có thể hành xử "tốt" hơn nhiều so với yêu cầu, và điều đó dễ tạo cảm giác an toàn giả tạo cho mã chỉ đúng "tình cờ" trên đúng JVM đó. Bẫy thứ hai: coi Happens-Before/Synchronizes-With như một cặp khái niệm có quan hệ kỹ thuật giống Has-A/Is-A trong OO. Sách dùng phép so sánh này để dễ hình dung nhưng nhấn mạnh không có mối liên hệ kỹ thuật trực tiếp nào giữa hai tập khái niệm — đừng suy diễn thêm gì từ phép so sánh ngoài việc chúng đều là khối xây dựng khái niệm nền tảng.
+
+**Tự kiểm tra.** Theo đúng bốn quy tắc chính của JMM, nếu luồng A ghi vào một biến \`volatile\` rồi luồng B đọc biến đó sau, quan hệ Happens-Before nào được thiết lập, và nó dựa trên quy tắc Synchronizes-With nào? Và vì sao một đoạn mã "chạy đúng nhiều lần liên tiếp trên máy của bạn" không phải bằng chứng nó tuân thủ JMM?`,
+      },
+      {
+        id: "wg-w3-4",
+        text: "Nhìn concurrency qua bytecode",
+        lesson: `**Mục tiêu.** Đây là chỗ kỹ năng \`javap\` học ở tuần 2 (mục "Đọc bytecode bằng javap, và reflection") trả về giá trị: chạy \`javap -c\` trên các phương thức rút/gửi tiền của chương này để thấy đúng những gì \`synchronized\` sinh ra ở tầng bytecode — khối thì có \`monitorenter\`/\`monitorexit\`, phương thức thì chỉ đổi một cờ trong metadata — và giải thích được antipattern Lost Update bằng đúng dãy lệnh \`getfield\`/\`putfield\` đan xen giữa hai luồng.
+
+**Đọc.** [5.5 Hiểu concurrency thông qua bytecode](#/docs/wgjd-05) mở đầu bằng class \`Account\` với ba cặp phương thức rút/gửi/xem-số-dư, mỗi cặp có một bản raw và một bản safe — chạy \`javap -c\` trên class này trước khi đọc tiếp. [5.5.1 Lost Update](#/docs/wgjd-05) đọc kỹ, bám theo đúng dãy \`getfield\`/\`dadd\`/\`putfield\` bị đan xen giữa hai luồng. [5.5.2 Synchronization trong bytecode](#/docs/wgjd-05) đọc kỹ 40 byte bytecode của \`safeWithdraw()\` dạng khối — đối chiếu từng offset với chú thích trong sách. [5.5.3 Phương thức \`synchronized\`](#/docs/wgjd-05) đọc chậm, đây là chỗ bất ngờ nhất mục này. [5.5.4 Đọc không đồng bộ (unsynchronized reads)](#/docs/wgjd-05) đọc kỹ ví dụ thêm phí ATM. [5.5.5 Xem lại deadlock](#/docs/wgjd-05) và [5.5.6 Xem lại việc giải quyết deadlock](#/docs/wgjd-05) đọc lướt — nguyên lý đã gặp ở 5.3.4, ở đây chỉ là cùng ý tưởng nhìn qua lệnh \`monitorenter\`. [5.5.7 Truy cập volatile](#/docs/wgjd-05) đọc kỹ, đối chiếu với 5.3.6 đã đọc ở mục trước.
+
+**Bẫy.** Đoán rằng một phương thức khai báo \`synchronized\` sẽ sinh ra cùng cặp lệnh \`monitorenter\`/\`monitorexit\` như một khối \`synchronized\`. Sách nói thẳng "chúng ta có thể đoán... nhưng thực ra không phải vậy" — modifier \`synchronized\` trên phương thức chỉ hiện diện trong flag \`ACC_SYNCHRONIZED\`, và chính trình thông dịch bytecode kiểm tra flag đó ở lệnh \`invoke\` để quyết định có lấy khóa hay không. Bẫy thứ hai: tin rằng "chỉ phương thức ghi mới cần synchronized, đọc thì an toàn". Sách gọi điều này "hoàn toàn không đúng" và chứng minh bằng ví dụ phí ATM — một lần đọc \`getRawBalance()\` không đồng bộ có thể chen giữa hai lần \`putfield\` của một \`safeWithdraw()\` đang xử lý dở, trả về một giá trị chưa từng thực sự tồn tại trong hệ thống (nonrepeatable read).
+
+**Tự kiểm tra.** Với hai bản \`safeWithdraw()\` — một viết bằng khối \`synchronized (this) { ... }\`, một viết bằng modifier \`synchronized\` trên chữ ký phương thức — khác biệt nằm ở đâu trong bytecode sinh ra, và ai (compiler hay trình thông dịch) chịu trách nhiệm lấy khóa trong từng trường hợp? Và trong ví dụ phí ATM, đan xen bytecode nào giữa \`getRawBalance()\` và \`safeWithdraw(amount, true)\` dẫn tới một lần đọc không tương ứng với bất kỳ trạng thái thực nào của tài khoản?`,
+      },
+    ],
+  },
+  {
+    id: "wg-w4",
+    week: "Tuần 4",
+    title: "Thư viện concurrency của JDK",
+    goal: "Chọn đúng công cụ đồng bộ cho từng bài toán thay vì mặc định dùng `synchronized` cho mọi thứ.",
+    practice:
+      "Lấy đoạn code đếm ở tuần 3, viết lại bằng `ExecutorService` với một pool cố định, nộp tác vụ qua `Future`, và thay biến đếm bằng `AtomicLong`. Rồi đo thời gian chạy với pool 1, 4 và 16 thread trên máy bạn — và giải thích con số thu được.",
+    resources: [
+      { label: "WGJD 06 — Thư viện concurrency của JDK", href: "#/docs/wgjd-06" },
+    ],
+    items: [
+      {
+        id: "wg-w4-1",
+        text: "Khối xây dựng của ứng dụng đồng thời hiện đại, và các class Atomic",
+        lesson: `**Mục tiêu.** Biết khi nào nên thay \`synchronized\`/\`volatile\` cổ điển bằng một class Atomic, và dùng đúng các thao tác như \`getAndIncrement()\` cho các cập nhật phụ thuộc trạng thái mà một field \`volatile\` đơn thuần không làm được an toàn.
+
+**Đọc.** [6.1 Các khối xây dựng cho ứng dụng đồng thời hiện đại](#/docs/wgjd-06) ngắn, đọc lướt để nắm bối cảnh: \`java.util.concurrent\` ra đời từ Java 5 và là lựa chọn nên ưu tiên hơn concurrency cổ điển của chương 5. [6.2 Các class Atomic](#/docs/wgjd-06) đọc chậm toàn mục — đối chiếu ví dụ \`AtomicInteger\` sinh \`accountId\` với cách chương 5 làm cùng việc bằng \`synchronized\`, rồi đối chiếu ví dụ \`TaskManager\` dùng \`AtomicBoolean\` với mẫu Volatile Shutdown ở mục 5.5.7 bạn vừa đọc tuần trước.
+
+**Bẫy.** Coi \`AtomicInteger\` như một \`Integer\` thay thế được hay \`AtomicBoolean\` như một \`Boolean\` thay thế được. Sách cảnh báo bằng một khung WARNING: các class atomic không kế thừa từ những class có tên tương tự — \`AtomicBoolean\` không dùng thay cho \`Boolean\`, và một \`AtomicInteger\` không phải một \`Integer\` (dù nó có kế thừa \`Number\`). Bẫy thứ hai: nghĩ atomic chỉ là một field \`volatile\` được bọc lại nên không mang thêm gì mới. Sách chỉ rõ điểm khác biệt cốt lõi: atomic cung cấp các thao tác atomic cho cập nhật phụ thuộc trạng thái (như \`getAndIncrement()\`), điều không thể làm với \`volatile\` nếu không dùng khóa — đúng hạn chế của \`volatile\` bạn vừa gặp ở tuần 3.
+
+**Tự kiểm tra.** Vì sao \`AtomicInteger nextAccountId\` an toàn để dùng làm bộ sinh số thứ tự giữa nhiều luồng, trong khi một \`volatile int nextAccountId\` cùng với \`nextAccountId++\` thì không? Và nếu bạn cần lưu một giá trị \`boolean\` dùng chung giữa các luồng, lý do gì khiến \`AtomicBoolean\` không thể dùng ở bất cứ đâu code hiện có đang khai báo kiểu \`Boolean\`?`,
+      },
+      {
+        id: "wg-w4-2",
+        text: "Class Lock và CountDownLatch",
+        lesson: `**Mục tiêu.** Viết lại một đoạn tránh deadlock bằng \`ReentrantLock\` tường minh thay vì \`synchronized\`, đúng theo mẫu \`lock()\`/\`try\`/\`finally\`/\`unlock()\`, và dùng \`CountDownLatch\` để chặn một luồng tới khi một nhóm luồng khác hoàn tất.
+
+**Đọc.** [6.3 Các class Lock](#/docs/wgjd-06) đọc kỹ — trước tiên là các thiếu sót của cách tiếp cận khóa block-structured được liệt kê ở đầu mục, rồi Listing 6.1 viết lại ví dụ tránh deadlock của chương 5 bằng \`ReentrantLock\`, đối chiếu từng dòng với \`safeTransferTo()\` bạn đã đọc ở mục 5.5.6. [6.3.1 Đối tượng Condition](#/docs/wgjd-06) đọc lướt, chỉ cần nắm một \`Lock\` có thể có nhiều \`Condition\` trong khi một monitor nội tại chỉ có một. [6.4 CountDownLatch](#/docs/wgjd-06) đọc kỹ Listing 6.2 và đoạn mã điều khiển đi kèm — chạy thử với vài luồng \`Counter\` và quan sát \`latch.await()\` chặn ra sao tới khi count về 0.
+
+**Bẫy.** Quên rằng, khác với một khối \`synchronized\`, một \`Lock\` không tự nhả khi có exception ném ra bên trong — nếu không bọc \`unlock()\` trong \`finally\` như Listing 6.1 làm, một exception giữa chừng sẽ khiến khóa bị giữ vĩnh viễn. Bẫy thứ hai: tưởng có thể "nạp lại" một \`CountDownLatch\` đã về 0 để dùng cho một vòng chờ thứ hai. Sách nói rõ \`await()\` không làm gì nếu count đã bằng 0 hoặc nhỏ hơn — một khi count chạm 0, latch mở vĩnh viễn và mọi lời gọi \`await()\` sau đó trả về ngay lập tức, nó không phải một rào cản có thể tái sử dụng.
+
+**Tự kiểm tra.** Trong Listing 6.1, mẫu \`firstLock\`/\`secondLock\` dựa trên tiêu chí nào để quyết định khóa nào được lấy trước, và vì sao chính tiêu chí đó (chứ không phải thứ tự lời gọi \`transferTo()\`) mới là thứ ngăn deadlock? Và nếu một hệ thống cần đợi hai lượt nạp cache tách biệt hoàn tất tuần tự, vì sao một \`CountDownLatch\` duy nhất không thể phục vụ cho cả hai lượt?`,
+      },
+      {
+        id: "wg-w4-3",
+        text: "Collection đồng thời: ConcurrentHashMap, CopyOnWriteArrayList, blocking queue",
+        lesson: `**Mục tiêu.** Chọn đúng cấu trúc dữ liệu concurrent theo tỉ lệ đọc/ghi của bài toán — \`ConcurrentHashMap\` cho map dùng chung, \`CopyOnWriteArrayList\` khi đọc áp đảo ghi, \`BlockingQueue\` khi cần điều phối luồng qua hàng đợi — thay vì mặc định đồng bộ hóa toàn bộ cấu trúc.
+
+**Đọc.** [6.5 ConcurrentHashMap](#/docs/wgjd-06) đọc lướt 6.5.1–6.5.3 (chỉ cần nắm ý tưởng hash chain và bucket của \`Dictionary\` đồ chơi trong sách), rồi đọc kỹ [6.5.4 Dùng ConcurrentHashMap](#/docs/wgjd-06) — đặc biệt đoạn mô tả một luồng có thể kẹt trong vòng lặp vô hạn thực sự khi hai luồng cùng ghi vào một \`HashMap\` thường, và kỹ thuật lock striping ở hình 6.3. [6.6 CopyOnWriteArrayList](#/docs/wgjd-06) đọc kỹ, bám theo Listing 6.3 và tự chạy nó để thấy vì sao \`it\` (iterator tạo trước \`add(4)\`) không bao giờ thấy phần tử thứ tư. [6.7 Blocking queue](#/docs/wgjd-06) đọc kỹ hai tính chất \`put()\`/\`take()\`, rồi phần so sánh \`LinkedBlockingQueue\` với \`ArrayBlockingQueue\` về back pressure. [6.7.1 Dùng API của BlockingQueue](#/docs/wgjd-06) đọc kỹ ba chiến lược (chặn, giá trị đặc biệt, exception) và lý do sách khuyến nghị tránh \`add()\`/\`remove()\`. [6.7.2 Dùng WorkUnit](#/docs/wgjd-06) đọc lướt.
+
+**Bẫy.** Nghĩ rằng dùng \`HashMap\` thường cho nhiều luồng ghi cùng lúc chỉ gây ra kết quả hơi sai (kiểu Lost Update như đã gặp ở chương 5). Sách chỉ rõ tình huống thực tế còn tệ hơn nhiều: một trong các luồng có thể bị kẹt trong một vòng lặp vô hạn thật sự, khiến \`HashMap\` "hoàn toàn không an toàn để dùng trong ứng dụng đa luồng" chứ không chỉ là kém chính xác. Bẫy thứ hai: tin rằng vì tên gọi là \`BlockingQueue\` nên \`put()\` trên một \`LinkedBlockingQueue\` luôn tạo áp lực ngược khi hàng đầy. Sách chỉ ra \`LinkedBlockingQueue\` thường được tạo không giới hạn (kích thước mặc định là \`Integer.MAX_VALUE\`), nên trên thực tế \`put()\` gần như không bao giờ chặn — chỉ \`ArrayBlockingQueue\`, có kích thước cố định thật sự, mới cho back pressure đúng nghĩa.
+
+**Tự kiểm tra.** Vì sao lock striping trong hình 6.3 cho phép hai luồng thao tác trên \`ConcurrentHashMap\` đồng thời mà không cần đợi nhau, trong khi vẫn phải chặn nếu cả hai cùng chạm một hash chain? Và giữa \`LinkedBlockingQueue\` không giới hạn và \`ArrayBlockingQueue\` có giới hạn, cấu trúc nào thực sự buộc một luồng producer phải chậm lại khi luồng consumer không theo kịp — và vì sao?`,
+      },
+      {
+        id: "wg-w4-4",
+        text: "Future, tác vụ và thực thi",
+        lesson: `**Mục tiêu.** Chọn đúng loại Executor (single-thread, fixed, cached, scheduled) theo đặc điểm workload, và dùng \`Future\`/\`CompletableFuture\` đúng cách, kể cả xử lý timeout và biết giới hạn thật của \`cancel()\`.
+
+**Đọc.** [6.8 Future](#/docs/wgjd-06) đọc kỹ ba phương thức chính (\`get()\`, \`isDone()\`, \`cancel()\`) và Listing 6.5 — chú ý sách tự thừa nhận mã ví dụ "không cung cấp cơ chế nào để hủy yêu cầu". [6.8.1 CompletableFuture](#/docs/wgjd-06) đọc kỹ, đặc biệt đoạn \`complete()\` chỉ có hiệu lực một lần và mọi lời gọi \`complete()\` sau đó bị bỏ qua; so sánh hai cách viết \`getNthPrime()\` (tạo \`Thread\` tường minh so với \`supplyAsync()\`). [6.9 Tác vụ và thực thi](#/docs/wgjd-06) đọc kỹ [6.9.1 Mô hình hóa tác vụ](#/docs/wgjd-06) (\`Callable\` và \`FutureTask\`) và nguyên tắc "mọi tác vụ phải kết thúc trong thời gian hữu hạn". [6.9.2 Executor](#/docs/wgjd-06) đọc lướt định nghĩa interface. Đọc kỹ lần lượt [6.9.3 Single-threaded executor](#/docs/wgjd-06), [6.9.4 Fixed-thread pool](#/docs/wgjd-06), [6.9.5 Cached thread pool](#/docs/wgjd-06) và [6.9.6 ScheduledThreadPoolExecutor](#/docs/wgjd-06) — với mỗi loại, tự hỏi workload nào nó phù hợp nhất, đúng như bạn sẽ cần chọn cho phần thực hành đo thời gian tuần này.
+
+**Bẫy.** Tin rằng một fixed-thread pool sẽ luôn duy trì đúng số luồng đã cấu hình. Sách cảnh báo nếu một luồng executor trong pool chết (ví dụ do tác vụ ném runtime exception chưa bắt), nó không được thay thế — với đủ tác vụ lỗi, pool dần cạn luồng và cuối cùng không còn luồng nào xử lý việc mới. Bẫy thứ hai: nghĩ rằng gọi \`fut.cancel(true)\` khi hết timeout sẽ dừng hẳn phép tính đang chạy. Chính ví dụ \`getNthPrime()\` của sách cho thấy điều ngược lại — mã như đã viết "không cung cấp cơ chế nào để hủy yêu cầu", nên \`cancel()\` chỉ thực sự dừng tác vụ nếu mã bên trong tác vụ chủ động hợp tác (ví dụ kiểm tra trạng thái interrupt).
+
+**Tự kiểm tra.** Nếu một tác vụ được submit vào một \`newFixedThreadPool(2)\` rơi vào vòng lặp vô hạn và làm luồng thực thi nó chết vì lỗi không bắt được, điều gì xảy ra với dung lượng xử lý của pool đó về sau, và vì sao? Và để \`getNthPrime()\` trong Listing 6.5 thực sự hủy được khi hết timeout, phép tính \`findPrime()\` bên trong cần thay đổi gì để hợp tác với \`cancel(true)\`?`,
+      },
+    ],
+  },
 ];
