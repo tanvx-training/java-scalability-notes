@@ -13,6 +13,7 @@ import { docs as ddia } from "./ddia/docs.js";
 import { docs as modernJava } from "./modern-java/docs.js";
 import { docs as kafka } from "./kafka/docs.js";
 import { docs as springStart } from "./spring-start/docs.js";
+import { docs as wgjd } from "./wgjd/docs.js";
 
 export const docs = [
   ...kubernetes,
@@ -25,4 +26,5 @@ export const docs = [
   ...modernJava,
   ...kafka,
   ...springStart,
+  ...wgjd,
 ];

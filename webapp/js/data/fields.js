@@ -111,9 +111,21 @@ export const FIELDS = {
     modules: ["dashboard", "guide", "docs", "roadmap"],
     externalRef: { label: "spring.io — Spring Framework", href: "https://spring.io/projects/spring-framework" },
   },
+  wgjd: {
+    label: "The Well-Grounded Java Developer",
+    icon: "🧱",
+    short: "WGJD",
+    unit: "Ch.",
+    desc: "Bản dịch tiếng Việt The Well-Grounded Java Developer, ấn bản 2 (Benjamin J. Evans, Jason Clark, Martijn Verburg — Manning) — chương 1–8 và 11–18: Java hiện đại, module, class file và bytecode, JMM, thư viện concurrency, hiệu năng, Gradle/Maven, container, kiểm thử, lập trình hàm và concurrency nâng cao, nội tại JVM. Chương 9 (Kotlin) và 10 (Clojure) không nằm trong bản dịch.",
+    certFilter: false,
+    // Module "roadmap" mở ở Task 9, khi roadmap-part{1,2}.js đã có dữ liệu.
+    // Khai sớm là bất biến #7 báo đỏ.
+    modules: ["dashboard", "guide", "docs"],
+    externalRef: { label: "docs.oracle.com — JVM Specification", href: "https://docs.oracle.com/javase/specs/" },
+  },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "ddia", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "wgjd", "ddia", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.
