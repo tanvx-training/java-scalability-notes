@@ -33,6 +33,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | `modern-concurrency` | `modern-concurrency/` | Bản dịch *Modern Concurrency in Java* (O'Reilly) — 8 chương, 19 ảnh, PDF |
 | `spring-start` | `spring-start/` | Bản dịch *Spring Start Here* (Spilcă, Manning 2021) — 15 chương + hướng dẫn học, 179 ảnh, PDF |
 | `spring-security` | `spring-security/` | Bản dịch *Spring Security in Action* 2e (Spilcă, Manning 2024) — 21 tệp |
+| `wgjd` | `wgjd/` | Bản dịch *The Well-Grounded Java Developer* 2e (Evans, Clark, Verburg — Manning) — 16 chương (1–8, 11–18), 93 ảnh, PDF |
 | `senior-java` | `senior-java/` | Lộ trình Senior Java 24 tháng — 5 tài liệu |
 
 Các bản dịch sách thương mại **không** phải giấy phép mở; chỉ *System Programming Coursebook* là CC BY 4.0.

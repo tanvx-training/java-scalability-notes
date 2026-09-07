@@ -334,6 +334,42 @@ export const fieldGuides = {
     ],
   },
 
+  wgjd: {
+    tagline: "Đọc The Well-Grounded Java Developer ấn bản 2 — xuống dưới nắp JVM: bytecode, JMM, hiệu năng, build, container, kiểm thử.",
+    audience: "Lập trình viên Java đã viết được ứng dụng thật và muốn hiểu tầng bên dưới thứ mình gõ hằng ngày. **Không phải sách nhập môn**: sách giả định bạn đọc được stack trace, biết Maven hoặc Gradle ở mức dùng được, và có một dự án thật để thử.",
+    hoursPerWeek: "6–8 giờ/tuần · 12 tuần",
+    prereqs: [
+      "JDK 17 trở lên, và biết `javac`/`java` chạy từ dòng lệnh — nhiều chương yêu cầu gõ tay, không qua IDE.",
+      "Một dự án Maven hoặc Gradle thật để áp dụng chương 11 và 12.",
+      "Docker chạy được trên máy: chương 12 và phần Testcontainers của chương 14 cần nó.",
+      "Chấp nhận rằng chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch — tuần 6 dành để tự bổ túc cú pháp cơ bản hai ngôn ngữ.",
+    ],
+    steps: [
+      { id: "wg-1", title: "Dựng chỗ để gõ thử", desc: "Một dự án trống với JDK 17+, build được bằng cả Maven và Gradle, và Docker chạy được. Tự đánh dấu khi `javac -version` và `docker run hello-world` đều chạy.", done: { kind: "manual" } },
+      { id: "wg-2", title: "Tuần 1–6: ngôn ngữ, JVM, concurrency, hiệu năng", desc: "Nửa đầu sách là phần mọi lập trình viên Java cần: module, Java 17, bytecode, JMM, thư viện concurrency, hiệu năng. Tuần 6 nhẹ, dành để bù cú pháp Kotlin và Clojure.", href: "#/roadmap/wgjd", done: { kind: "track", id: "wgjd", pct: 50 } },
+      { id: "wg-3", title: "Tuần 7–12: build, container, kiểm thử, nâng cao", desc: "Nửa sau là phần công cụ và chuyên sâu. Tuần 11 nặng nhất — đọc là chính, thực hành cố ý nhẹ.", href: "#/roadmap/wgjd", done: { kind: "track", id: "wgjd" } },
+      { id: "wg-4", title: "Đọc được bytecode của chính mình", desc: "Lấy một class trong dự án của bạn, chạy `javap -c`, và giải thích được vì sao trình biên dịch sinh ra đúng những lệnh đó. Tự đánh dấu khi làm được mà không tra cứu.", done: { kind: "manual" } },
+      { id: "wg-5", title: "Một phép đo hiệu năng có số liệu", desc: "Viết một benchmark JMH so hai cách hiện thực cùng một hàm, và kết luận chỉ dựa trên số đo — không dựa trên trực giác. Tự đánh dấu khi có kết quả trước/sau.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Gõ, đừng chỉ đọc", desc: "Sách này khác sách khái niệm: mỗi chương có thứ để chạy — `javap`, JMH, `module-info`, Dockerfile. Chương nào không gõ thì chương đó chưa đọc." },
+      { title: "Nối xuống tầng dưới, nối lên tầng trên", desc: "Chương 5–7 là nền của series Java Scalability trong app; chương 16 và 18 là nền của Modern Concurrency in Java. Đọc chip liên kết chéo ở cuối mỗi tài liệu." },
+      { title: "Chấp nhận đọc mã ngôn ngữ khác", desc: "Từ chương 14 trở đi sách đọc Kotlin và Clojure liên tục. Mục tiêu không phải viết được hai ngôn ngữ đó, mà là đọc hiểu đủ để theo lập luận của sách." },
+    ],
+    pitfalls: [
+      "Bỏ chương 4 (bytecode) vì tưởng chỉ dành cho người viết compiler — đó là chương làm chương 5, 16 và 17 đọc được.",
+      "Đọc chương 7 (hiệu năng) rồi đi tinh chỉnh cờ JVM ngay — sách dành cả chương để nói vì sao đo trước, chỉnh sau.",
+      "Gặp mã Kotlin ở chương 14–16 rồi bỏ chương, vì tưởng mình thiếu kiến thức. Chương 9 và 10 không có trong bản dịch — đó là lỗ hổng của nguồn, không phải của bạn; tuần 6 của lộ trình có phần bổ túc.",
+      "Đọc chương 11 mà không dựng thử cả Maven lẫn Gradle — hai công cụ này chỉ khác nhau ở chỗ bạn phải tự tay chạm vào.",
+    ],
+    doneWhen: [
+      "Đọc `javap -c` của một method và nói được nó tương ứng với dòng Java nào.",
+      "Giải thích được vì sao một đoạn code đồng thời sai, bằng ngôn ngữ của Java Memory Model chứ không bằng cảm giác.",
+      "Dựng được cùng một dự án bằng cả Maven và Gradle, và nói được mỗi công cụ mạnh ở đâu.",
+      "Đóng gói ứng dụng Java vào container mà JVM nhận đúng giới hạn CPU và bộ nhớ.",
+    ],
+  },
+
   "spring-start": {
     tagline: "Spring Start Here 8 tuần — điểm bắt đầu Spring cho người mới, và bước đệm trước Spring Security.",
     audience: "Người viết được Java cơ bản (class, interface, annotation) và dựng được dự án Maven; **không cần biết trước gì về Spring**. Học xong lĩnh vực này rồi mới sang Spring Security.",
@@ -470,6 +506,12 @@ export const trackGuides = {
     before: ["Đọc tệp 00 (hướng dẫn học hiệu quả) của sách.", "Dự án Maven trống với Spring Boot starter.", "Java: class, interface, annotation ở mức đọc hiểu."],
     during: ["Mọi ví dụ đưa vào một dự án duy nhất, để nó lớn theo chương.", "Với mỗi annotation, thử bỏ đi để xem Spring báo gì.", "Tuần 8 (test) không bỏ — test là thứ cho bạn dám refactor."],
     after: ["Một dự án REST + DB + transaction + test tự làm.", "Sang lĩnh vực Spring Security.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: tick tuần 15–18 ở đó."],
+  },
+  wgjd: {
+    rhythm: "12 tuần, 4 mục mỗi tuần bám 16 chương; mỗi tuần một bài gõ tay trên máy thật. Đọc (40–60 phút) → gõ lại ví dụ → làm bài thực hành của tuần → trả lời tự kiểm tra → tick.",
+    before: ["JDK 17 trở lên, gọi được `javac`, `java` và `javap` từ dòng lệnh.", "Một dự án Java thật để áp dụng chương build và chương container.", "Docker chạy được — tuần 8 và phần Testcontainers tuần 9 cần nó.", "Biết trước rằng chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch; tuần 6 dành để bù."],
+    during: ["Mỗi chương có thứ để chạy — chương nào không gõ thì chương đó chưa đọc.", "Tuần 2 và tuần 11 dùng chung một công cụ: `javap -c`. Giữ lại output tuần 2 để đối chiếu ở tuần 11.", "Tuần 9–11 đọc mã Kotlin và Clojure liên tục: mở lại phần bổ túc tuần 6 thay vì bỏ chương."],
+    after: ["Một ghi chú cho đội: ba chỗ trong codebase hiện tại sẽ được lợi từ Loom, Valhalla, Amber hoặc Panama.", "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend.", "Đọc Modern Concurrency in Java để đi tiếp phần virtual thread mà chương 18 mới chỉ giới thiệu."],
   },
 };
 
