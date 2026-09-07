@@ -195,7 +195,7 @@ Chạy từ **gốc repo**:
 webapp/scripts/build-content.sh webapp/content && node webapp/scripts/check-data.mjs | tail -3
 ```
 
-Kỳ vọng: `49/49 bất biến đạt` và `Dữ liệu hợp lệ.` Số markdown trong dòng `✓ content:` tăng từ 238 lên **253**, số ảnh từ 1088 lên **1204**.
+Kỳ vọng: `49/49 bất biến đạt` và `Dữ liệu hợp lệ.` Số markdown trong dòng `✓ content:` tăng từ 238 lên **254** (15 chương + `sources/ocnj/README.md` — `build-content.sh` sao chép nguyên cây `sources/` trừ `*.pdf`, README nguồn cũng vào `content/`), số ảnh từ 1088 lên **1204**.
 
 - [ ] **Bước 10: Commit**
 
@@ -1487,5 +1487,5 @@ Kỳ vọng: `49/49 bất biến đạt` và `Dữ liệu hợp lệ.`
 | Tài liệu | 227 | **242** |
 | Track lộ trình | 19 | **20** |
 | Mục lộ trình | 898 | **946** |
-| Markdown trong `content/` | 238 | **253** |
+| Markdown trong `content/` | 238 | **254** |
 | Ảnh trong `content/` | 1088 | **1204** |
