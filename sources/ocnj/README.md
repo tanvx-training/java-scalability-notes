@@ -1,6 +1,25 @@
 # Tối ưu hóa Java Cloud Native (Ấn bản 2)
 
-Bản dịch tiếng Việt của *Optimizing Cloud Native Java, 2nd Edition* — Benjamin J. Evans, James Gough, Chris Newland (O'Reilly).
+Bản dịch tiếng Việt của *Optimizing Cloud Native Java, 2nd Edition* — Benjamin J. Evans,
+James Gough, Chris Newland (O'Reilly).
+
+> **Bản quyền.** Đây là sách thương mại có bản quyền, **không** phải giấy phép mở như
+> CC BY 4.0 (khác `sources/sysprog/`). Bản dịch nằm trong repo để học cá nhân.
+
+| Chỉ số | Giá trị |
+|---|---|
+| Chương | 15 (1–15, đủ, không thiếu chương nào) |
+| Hình | 116, trong `images/chN/` (một chữ số, không đệm 0) |
+| PDF gốc | 15, trong `pdf/` — `build-content.sh` không sao chép `*.pdf` vào bản deploy |
+| Trong app | Lĩnh vực **Optimizing Cloud Native Java**, kèm lộ trình đọc 12 tuần / 48 mục |
+
+**Hai phụ lục không có trong bộ nguồn.** Phụ lục A (microbenchmarking và JMH) và Phụ lục B
+(danh mục antipattern) không nằm trong bộ PDF gốc, nên không có bản dịch. Các tham chiếu chéo
+tới chúng trong 15 chương được giữ nguyên. Lỗ hổng này đã được đo là **nhẹ**: tổng cộng 7 lần
+nhắc (2 lần tới Phụ lục A ở ch.2 và ch.13, 5 lần tới Phụ lục B ở ch.2, ch.4 và ch.12), và
+không chương nào phụ thuộc vào chúng để đọc hiểu được. Sách **cố ý** đẩy microbenchmarking ra
+khỏi phần thân — ch.2 nói rõ điều đó. Lộ trình đọc bù phần này bằng
+[JMH](https://github.com/openjdk/jmh) ở tuần 1.
 
 ## Mục lục
 
