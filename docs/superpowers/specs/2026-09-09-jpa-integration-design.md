@@ -208,7 +208,7 @@ Cătălin Tudose và Carmen Odubășteanu. Nhà xuất bản xác nhận qua pac
 | Trường | Giá trị |
 |---|---|
 | `label` | `Java Persistence with Spring Data and Hibernate` |
-| `icon` | `🗃️` |
+| `icon` | `🪢` |
 | `short` | `JPA` |
 | `unit` | `Ch.` |
 | `certFilter` | `false` |
@@ -231,8 +231,10 @@ cho mọi annotation ánh xạ, chiến lược fetch và ngữ nghĩa locking s
 44.011 từ, 25%). Dùng trang landing `hibernate.org/orm/documentation/` thay vì URL user guide gắn
 phiên bản để link không mục theo mỗi bản Hibernate.
 
-`icon` `🗃️` chưa lĩnh vực, track hay con đường nào dùng (đã kiểm toàn bộ icon trong `fields.js`,
-`paths.js` và `roadmap.js`).
+`icon` `🪢` chưa lĩnh vực, track hay con đường nào dùng (đã kiểm toàn bộ icon trong `fields.js`,
+`paths.js` và `roadmap.js`). Icon ban đầu là `🗃️`, đổi lại sau review toàn nhánh: kiểm trùng ở trên
+chỉ bắt trùng **chính xác**, nên bỏ lọt việc `🗃️` gần trùng thị giác với `🗄️` của `ddia` ở cỡ nhỏ
+trong bộ chọn lĩnh vực.
 
 `FIELD_ORDER` chèn `"jpa"` ngay sau `"ocnj"`.
 
@@ -399,7 +401,7 @@ chương (xem bảng mục lục §5.1). `practice` ở mức tuần, làm trên
 | `id` | `jpa` |
 | `field` | `jpa` |
 | `label` | `Java Persistence` |
-| `icon` | `🗃️` |
+| `icon` | `🪢` |
 | `name` | `Đọc Java Persistence with Spring Data and Hibernate` |
 | `durationWeeks` | `13` |
 | `weeks` | `[...jpaWeeksPart1, ...jpaWeeksPart2]` |
@@ -455,7 +457,14 @@ Mỗi chặng kết thúc bằng `build-content.sh` rồi `check-data.mjs` **xan
 | 3 | Hướng dẫn học (mở module `guide`) | `fields.js`, `guides.js` |
 | 4 | Lộ trình 13 tuần (mở module `roadmap`) | `jpa/roadmap-part1.js`, `jpa/roadmap-part2.js`, `roadmap.js`, `guides.js`, `fields.js`, `check-data.mjs` |
 | 5 | Liên kết chéo | `related.js` |
-| 6 | Tài liệu repo, cập nhật số liệu | `README.md`, `sources/README.md` |
+| 6 | Tài liệu repo, cập nhật số liệu | `README.md`, `sources/README.md`, `webapp/README.md` |
+
+`webapp/README.md` là tệp hay bị bỏ sót nhất ở chặng cuối — đã lặp ở ba đợt tích hợp liên tiếp
+(nhánh `ocnj`, `jcip`, và bản thân `jpa` trước khi có bản sửa này). Tệp này mang số liệu riêng của
+nó (số lĩnh vực, số track/mục lộ trình, số tài liệu, **số cặp liên kết chéo**, chuỗi con đường Java
+Backend, và chú thích số lĩnh vực trong cây thư mục ở cuối tệp), và `README.md` gốc trỏ người đọc
+sang `webapp/README.md` — nên khi hai tệp lệch số liệu, đó là một mâu thuẫn thấy được ngay, không
+phải lỗi ẩn.
 
 Chặng 3 và 4 phải mở module đúng lúc: bất biến G1 bắt khai `guide` thì phải có `fieldGuides`, và
 mọi track phải có `trackGuides` — nên `trackGuides.jpa` đi cùng chặng 4, không phải chặng 3.

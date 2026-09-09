@@ -1,9 +1,9 @@
 # 📚 DevPrep — Học · Ôn tập · Luyện thi
 
 Web app tĩnh (vanilla JS, **không cần build, không dependency**) cho một nền tảng học đa lĩnh vực.
-Mười ba lĩnh vực — **Kubernetes & chứng chỉ** (CKAD, CKA, CKS + ba bản dịch sách), **Lập trình hệ thống**
+Mười bốn lĩnh vực — **Kubernetes & chứng chỉ** (CKAD, CKA, CKS + ba bản dịch sách), **Lập trình hệ thống**
 (UIUC CS 241), **Java & Spring Boot Scalability**, **Modern Java in Action**, **The Well-Grounded Java
-Developer**, **Java Concurrency in Practice**, **Optimizing Cloud Native Java**, **Designing Data-Intensive Applications**, **Kafka: The Definitive Guide**, **Modern
+Developer**, **Java Concurrency in Practice**, **Optimizing Cloud Native Java**, **Java Persistence with Spring Data and Hibernate**, **Designing Data-Intensive Applications**, **Kafka: The Definitive Guide**, **Modern
 Concurrency in Java**, **Spring Start Here**, **Spring Security** và **Lộ trình Senior Java** — dùng
 chung một bộ view; bộ chọn lĩnh vực ở sidebar đổi toàn bộ nội dung.
 
@@ -14,11 +14,11 @@ Nguồn markdown nằm ở [`../sources/`](../sources/README.md); app đọc b�
 
 | Trang | Nội dung |
 |---|---|
-| 🧭 Con đường học | Ba con đường bao trên 13 lĩnh vực: ☸️ **Kubernetes & Cloud**, ☕ **Java Backend** (Spring Start → Modern Java → The Well-Grounded Java Developer → Java Concurrency in Practice → Optimizing Cloud Native Java → Java Scalability → Modern Concurrency → Spring Security, nền tuỳ chọn: Lập trình hệ thống), 🗄️ **Data & Distributed** (DDIA → Kafka). Lộ trình Senior Java là **trục xuyên suốt** (4 giai đoạn → con đường). Bộ chọn lĩnh vực hai tầng; thẻ *Con đường của bạn* trên bảng điều khiển; badge con đường trên module ma trận |
+| 🧭 Con đường học | Ba con đường bao trên 14 lĩnh vực: ☸️ **Kubernetes & Cloud**, ☕ **Java Backend** (Spring Start → Modern Java → The Well-Grounded Java Developer → Java Concurrency in Practice → Optimizing Cloud Native Java → Java Persistence → Java Scalability → Modern Concurrency → Spring Security, nền tuỳ chọn: Lập trình hệ thống), 🗄️ **Data & Distributed** (DDIA → Kafka). Lộ trình Senior Java là **trục xuyên suốt** (4 giai đoạn → con đường). Bộ chọn lĩnh vực hai tầng; thẻ *Con đường của bạn* trên bảng điều khiển; badge con đường trên module ma trận |
 | 🏠 Bảng điều khiển | Hero theo lĩnh vực; thẻ **Con đường của bạn** (vị trí, lĩnh vực kế tiếp); **Tiếp tục** (mục mở gần đây); **Bước tiếp theo** lấy từ Hướng dẫn học; số liệu lộ trình / tài liệu đã đọc / flashcard / trắc nghiệm / thi thử / ma trận; **chuỗi ngày học** 14 ngày; lưới lĩnh vực khác bấm để chuyển |
 | 🧭 Hướng dẫn học | Mỗi lĩnh vực: cho ai, bao lâu, cần gì trước; **lộ trình khuyến nghị** cấp module (stepper) với trạng thái tính từ tiến độ thật (track, tài liệu đã đọc, flashcard, trắc nghiệm, thi thử, ma trận, hoặc tự tick); cách học hiệu quả; bẫy phương pháp; “coi như xong khi”; cách học từng track |
-| 🗺️ Lộ trình học | 20 track / 946 mục theo tuần, mỗi mục một bài học markdown; khối **Cách học track này**; badge **Bắt đầu tại đây**; chip 📖 nối tuần chứng chỉ với chương sách; tiến độ lưu riêng từng track |
-| 📚 Thư viện tài liệu | 242 tài liệu, gom theo **sách → Phần** (Phần lấy từ README nguồn / domain đề thi, không bịa); nhãn chương thống nhất `Ch. 5 · Pod` sinh từ `chapter` (không viết tay); khối **Đọc liền mạch trên con đường** (111 cặp liên kết chéo khác lĩnh vực); trang đọc có **hướng dẫn đọc suy từ lộ trình** (mục tiêu, bài học liên quan, bẫy, câu tự kiểm tra), thời gian đọc ước tính, **đánh dấu đã đọc**, thanh tiến độ cuộn, chỉnh cỡ chữ, mục lục nổi (desktop) / gọn (mobile), link `.md` tương đối mở trong app, mermaid, ảnh, copy code |
+| 🗺️ Lộ trình học | 21 track / 998 mục theo tuần, mỗi mục một bài học markdown; khối **Cách học track này**; badge **Bắt đầu tại đây**; chip 📖 nối tuần chứng chỉ với chương sách; tiến độ lưu riêng từng track |
+| 📚 Thư viện tài liệu | 262 tài liệu, gom theo **sách → Phần** (Phần lấy từ README nguồn / domain đề thi, không bịa); nhãn chương thống nhất `Ch. 5 · Pod` sinh từ `chapter` (không viết tay); khối **Đọc liền mạch trên con đường** (125 cặp liên kết chéo khác lĩnh vực); trang đọc có **hướng dẫn đọc suy từ lộ trình** (mục tiêu, bài học liên quan, bẫy, câu tự kiểm tra), thời gian đọc ước tính, **đánh dấu đã đọc**, thanh tiến độ cuộn, chỉnh cỡ chữ, mục lục nổi (desktop) / gọn (mobile), link `.md` tương đối mở trong app, mermaid, ảnh, copy code |
 | 📊 Ma trận năng lực | 6 module / 34 chủ đề / 96 tiêu chí Senior Java theo 4 cấp độ — chỉ lĩnh vực Lộ trình Senior Java |
 | 🎓 Chứng chỉ K8s · ⚡ Thực hành nhanh · 🧪 Labs · ⏱️ Thi thử | Chỉ lĩnh vực Kubernetes: so sánh 5 chứng chỉ; 130 lệnh, 48 YAML mẫu, 16 quy trình, thẻ trước giờ thi (ghim, lọc, chế độ gọn); 22 lab đề thật; thi thử bấm giờ theo tỷ trọng domain |
 | 🃏 Flashcards · ✅ Trắc nghiệm | 174 thẻ spaced repetition, 220 câu có giải thích — Kubernetes và Lập trình hệ thống |
@@ -78,7 +78,7 @@ webapp/
 │   ├── stats.js              # số liệu tiến độ theo lĩnh vực (dùng chung)
 │   └── guides.js             # đảo chỉ mục bài học → tài liệu; trạng thái bước hướng dẫn
 ├── js/data/
-│   ├── fields.js             # 13 lĩnh vực: label, icon, module bật; GLOBAL_MODULES
+│   ├── fields.js             # 14 lĩnh vực: label, icon, module bật; GLOBAL_MODULES
 │   ├── meta.js · index.js · roadmap.js · docs-index.js · book-crossref.js
 │   ├── guides.js             # fieldGuides / trackGuides / groupGuides
 │   ├── paths.js              # 3 con đường học, trục Senior Java, module ma trận → con đường

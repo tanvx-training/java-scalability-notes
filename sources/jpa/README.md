@@ -12,7 +12,7 @@ Bản dịch tiếng Việt của *Java Persistence with Spring Data and Hiberna
 | Số từ | 178.653 |
 | Hình | 127, trong `images/chNN/` (hai chữ số, đệm 0) |
 | PDF gốc | 20, trong `pdf/` — `build-content.sh` không sao chép `*.pdf` vào bản deploy hay image Docker |
-| Trong app | Chưa có — task chuẩn hoá nguồn này là bước đầu tiên, chưa lĩnh vực nào trỏ tới `content/jpa/` |
+| Trong app | Lĩnh vực **Java Persistence with Spring Data and Hibernate**, kèm lộ trình đọc 13 tuần / 52 mục |
 
 ## Mục lục
 

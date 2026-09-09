@@ -473,7 +473,7 @@ export const fieldGuides = {
     doneWhen: [
       "Nhìn một domain model là nói được cái gì nên là entity, cái gì nên là value type, và vì sao.",
       "Chọn được một trong bốn chiến lược inheritance cho một cây thừa kế cụ thể và nêu lý do bằng đánh đổi.",
-      "Giải thích được vì sao một vòng lặp trên collection sinh ra N+1 câu SQL, và chữa được bằng ít nhất hai cách khác nhau.",
+      "Giải thích được vì sao một vòng lặp trên collection sinh ra n+1 câu SQL, và chữa được bằng ít nhất hai cách khác nhau.",
       "Nói được một entity đang ở trạng thái nào trong vòng đời persistence, và thao tác nào chuyển nó sang trạng thái nào.",
       "Chặn được lost update bằng optimistic locking, và nói được khi nào phải dùng pessimistic thay thế.",
       "Viết được test cho tầng persistence chạy trên database thật mà không rò rỉ trạng thái giữa các test.",

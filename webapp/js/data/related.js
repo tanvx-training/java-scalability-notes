@@ -97,7 +97,7 @@ export const related = {
   "jpa-10": ["java-09"],                                      // persistence context ↔ Connection trong ThreadLocal, cùng một ranh giới transaction
   "jpa-11": ["ddia-08", "java-10", "springstart-13", "jcip-02"], // transaction ↔ isolation lý thuyết; bẫy production; nhập môn; lost update ↔ check-then-act
   "jpa-12": ["java-08"],                                      // n+1 và fetch strategy ↔ giữ connection quá lâu khi sizing pool
-  "jpa-14": ["springstart-06", "springstart-12"],             // mẫu DAO ↔ Spring AOP; ↔ data source
+  "jpa-14": ["springstart-03", "springstart-12"],             // mẫu DAO, DI ↔ wiring bean; ↔ data source
   "jpa-16": ["springstart-10", "springsec-11"],               // Spring Data REST ↔ REST service viết tay; ↔ phân quyền cấp phương thức
   "jpa-17": ["ddia-03"],                                      // tham chiếu document ↔ mô hình document so với quan hệ
   "jpa-20": ["springstart-15"],                               // kiểm thử persistence ↔ kiểm thử ứng dụng Spring

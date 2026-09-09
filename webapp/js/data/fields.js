@@ -143,7 +143,7 @@ export const FIELDS = {
   },
   jpa: {
     label: "Java Persistence with Spring Data and Hibernate",
-    icon: "🗃️",
+    icon: "🪢",
     short: "JPA",
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Java Persistence with Spring Data and Hibernate (Cătălin Tudose — Manning) — đủ 20 chương: object/relational paradigm mismatch và vai trò của ORM, dựng dự án với JPA thuần, Hibernate native và Spring Data JPA, domain model và metadata, query method và projection, ánh xạ persistent class, value type, inheritance, collection và entity association, vòng đời persistence và EntityManager, transaction và điều khiển đồng thời, fetch plan và fetch profile, cascade, Envers và data filter, tích hợp với Spring theo mẫu DAO, Spring Data JDBC, Spring Data REST, Spring Data MongoDB, Hibernate OGM, Querydsl, và kiểm thử tầng persistence bằng Spring TestContext.",

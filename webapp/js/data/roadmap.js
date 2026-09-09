@@ -317,7 +317,7 @@ export const tracks = [
     id: "jpa",
     field: "jpa",
     label: "Java Persistence",
-    icon: "🗃️",
+    icon: "🪢",
     name: "Đọc Java Persistence with Spring Data and Hibernate",
     durationWeeks: 13,
     desc: "Kế hoạch đọc 13 tuần bám theo bản dịch đủ 20 chương: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; cả mười ba tuần đều có bài thực hành gõ tay — dựng cùng một Hello World bằng ba cách, đọc DDL Hibernate sinh ra, so ba chiến lược sinh id, viết converter, hiện thực một cây thừa kế bằng cả bốn chiến lược, đếm câu lệnh khi đổi interface collection, tái hiện LazyInitializationException, chặn lost update bằng optimistic rồi pessimistic lock, đếm query trước và sau khi chữa n+1, chuyển một repository sang Spring Data JDBC, thử ETag, và viết test persistence chạy trên database thật trong container.",
