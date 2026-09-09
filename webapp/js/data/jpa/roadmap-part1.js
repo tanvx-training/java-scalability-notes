@@ -236,4 +236,172 @@ export const jpaWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "jp-w5",
+    week: "Tuần 5",
+    title: "Bốn chiến lược ánh xạ inheritance",
+    goal: "Cho một cây thừa kế cụ thể, chọn được một trong bốn chiến lược và bảo vệ lựa chọn đó bằng đánh đổi về schema, về truy vấn đa hình và về ràng buộc `NOT NULL`.",
+    practice: "Hiện thực cùng một cây thừa kế bằng cả bốn chiến lược chương 7 trình bày. Sinh schema cho từng cách và đặt bốn schema cạnh nhau. Rồi chạy cùng một truy vấn đa hình trên cả bốn và so SQL sinh ra — số bảng, số join, và ràng buộc nào phải hy sinh.",
+    resources: [
+      { label: "JPA 07 — Ánh xạ inheritance", href: "#/docs/jpa-07" },
+    ],
+    items: [
+      {
+        id: "jp-w5-1",
+        text: "Table per concrete class: đa hình ngầm định và union",
+        lesson: `**Mục tiêu.** Ánh xạ được cùng một cây thừa kế bằng cả hai biến thể table-per-concrete-class, và giải thích được vì sao biến thể ngầm định không hỗ trợ polymorphic association trong khi biến thể union thì có.
+
+**Đọc.** [Table per concrete class với đa hình ngầm định](#/docs/jpa-07) đọc kỹ toàn mục, gõ lại listing \`BillingDetails\` với \`@MappedSuperclass\` và hai subclass \`CreditCard\`/\`BankAccount\` với \`@Entity\`, chú ý vì sao \`BillingDetailsRepository\` phải đánh dấu \`@NoRepositoryBean\`. [Table per concrete class với union](#/docs/jpa-07) đọc kỹ, gõ lại \`BillingDetails\` với \`@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)\`, và đọc chậm câu lệnh SQL \`UNION ALL\` sinh ra cho \`select bd from BillingDetails bd\`.
+
+**Bẫy.** Nghĩ rằng một association hay một truy vấn đa hình tới \`BillingDetails\` khả thi khi mỗi subclass nằm ở một table riêng theo đa hình ngầm định. Mục Table per concrete class với đa hình ngầm định nói thẳng: "Vấn đề chính của ánh xạ inheritance ngầm định là nó không hỗ trợ tốt các polymorphic association" — không thể có một entity khác tham chiếu foreign key tới \`BILLINGDETAILS\` vì không có table như vậy. Bẫy thứ hai: coi \`TABLE_PER_CLASS\` là chiến lược mọi JPA provider đều hỗ trợ. Ngay đầu mục Table per concrete class với union, sách cảnh báo trong khung CHÚ Ý: "Chuẩn JPA quy định \`TABLE_PER_CLASS\` là tùy chọn, nên không phải mọi hiện thực JPA đều hỗ trợ nó."
+
+**Tự kiểm tra.** Vì sao chiến lược đa hình ngầm định (mục 7.1) không thể biểu diễn một association từ \`User\` tới \`BillingDetails\` bằng một foreign key đơn giản? Câu lệnh SQL mà \`TABLE_PER_CLASS\` sinh ra cho một truy vấn đa hình dùng toán tử gì để kết hợp các table concrete class, và vì sao các cột không tồn tại ở một subclass phải được điền \`NULL\`?`,
+      },
+      {
+        id: "jp-w5-2",
+        text: "Table per class hierarchy và table per subclass với join",
+        lesson: `**Mục tiêu.** Ánh xạ được cùng cây thừa kế bằng \`SINGLE_TABLE\` và bằng \`JOINED\`, và nói được đánh đổi giữa tính toàn vẹn dữ liệu và việc chuẩn hóa schema giữa hai chiến lược.
+
+**Đọc.** [Table per class hierarchy](#/docs/jpa-07) đọc kỹ, gõ lại listing \`BillingDetails\` với \`@Inheritance(strategy = InheritanceType.SINGLE_TABLE)\` và \`@DiscriminatorColumn(name = "BD_TYPE")\`, cùng \`@DiscriminatorValue\` trên \`CreditCard\`. [Table per subclass với join](#/docs/jpa-07) đọc kỹ, gõ lại \`BillingDetails\` với \`InheritanceType.JOINED\`, chú ý đoạn giải thích Hibernate không cần cột discriminator cho chiến lược này, và đọc kỹ câu lệnh \`SELECT\` với \`left outer join\` cùng mệnh đề \`CASE ... WHEN\` mà Hibernate sinh ra.
+
+**Bẫy.** Nghĩ rằng gắn \`@NotNull\` của Bean Validation trên một property do subclass khai báo là đủ để cột đó cho phép \`NOT NULL\` trong schema \`SINGLE_TABLE\`. Mục Table per class hierarchy nói rõ: "Một điểm kỳ quặc trong hiện thực của Hibernate đòi hỏi chúng ta khai báo tính cho phép null bằng \`@Column\`, vì Hibernate bỏ qua \`@NotNull\` của Bean Validation khi sinh schema cơ sở dữ liệu" — mọi cột do subclass khai báo đều buộc phải cho phép null trong DDL sinh ra, dù \`@NotNull\` vẫn được tôn trọng lúc chạy trước khi chèn dòng. Bẫy thứ hai: nghĩ chiến lược \`JOINED\` bắt buộc phải có một cột discriminator. Khung "Inheritance với join và discriminator" nói ngược lại: "Hibernate không cần một cột discriminator đặc biệt trong cơ sở dữ liệu để hiện thực chiến lược \`InheritanceType.JOINED\`" — nó dùng mệnh đề \`CASE . . . WHEN\` để phân biệt kiểu entity của mỗi dòng; nếu bạn khai \`@DiscriminatorColumn\` dù không cần, Hibernate vẫn dùng nó, trừ khi bạn bật \`hibernate.discriminator.ignore_explicit_for_joined\`.
+
+**Tự kiểm tra.** Vì sao mọi cột do subclass khai báo trong chiến lược \`SINGLE_TABLE\` đều phải cho phép \`NULL\` trong schema, và Hibernate vẫn thực thi ràng buộc \`@NotNull\` ở đâu nếu không phải trong DDL? Chiến lược \`JOINED\` dùng cơ chế SQL nào (thay vì cột discriminator) để xác định concrete subclass của mỗi dòng khi thực thi một truy vấn đa hình?`,
+      },
+      {
+        id: "jp-w5-3",
+        text: "Trộn chiến lược, inheritance của embeddable, và cách chọn",
+        lesson: `**Mục tiêu.** Tách được một subclass cụ thể ra secondary table trong một cây \`SINGLE_TABLE\`, cho một class embeddable kế thừa property từ superclass đúng cách, và áp dụng được ba quy tắc kinh nghiệm của chương 7 để chọn chiến lược inheritance.
+
+**Đọc.** [Trộn các chiến lược inheritance](#/docs/jpa-07) đọc kỹ, gõ lại listing \`CreditCard\` dùng \`@SecondaryTable\` và \`@Column(table = "CREDITCARD", ...)\` để tách nó khỏi table \`BILLINGDETAILS\` chung. [Inheritance của các class embeddable](#/docs/jpa-07) đọc kỹ, gõ lại \`Measurement\` là \`@MappedSuperclass\` và hai subclass embeddable \`Dimensions\`/\`Weight\` ghi đè cột bằng \`@AttributeOverride\`. [Chọn chiến lược](#/docs/jpa-07) đọc chậm toàn bộ ba quy tắc kinh nghiệm và đoạn bàn về việc không thể đặt annotation inheritance trên interface.
+
+**Bẫy.** Nhúng một property có kiểu là abstract superclass embeddable (như \`Measurement\`) trực tiếp vào một entity, mong nó tự chọn đúng subclass \`Dimensions\` hay \`Weight\` lúc nạp. Mục Inheritance của các class embeddable nói thẳng: "Điều này không bao giờ hoạt động; JPA provider không biết cách lưu và nạp instance \`Measurement\` một cách đa hình" — không có discriminator nào cho embeddable, nên property nhúng luôn phải nêu tên một concrete class. Bẫy thứ hai: chọn \`InheritanceType.SINGLE_TABLE\` làm mặc định cho mọi cây phân cấp, kể cả cây phức tạp. Mục Chọn chiến lược nói rõ: "Theo mặc định, chỉ chọn \`InheritanceType.SINGLE_TABLE\` cho những bài toán đơn giản" — với trường hợp phức tạp, hoặc khi DBA nhấn mạnh ràng buộc \`NOT NULL\` và chuẩn hóa, sách khuyên cân nhắc \`InheritanceType.JOINED\` thay vào đó.
+
+**Tự kiểm tra.** Annotation nào cho phép tách property của một subclass cụ thể khỏi table \`SINGLE_TABLE\` chung sang một table riêng, và cột primary key của table đó liên kết với table cha bằng gì? Ba quy tắc kinh nghiệm chương 7 dùng để chọn chiến lược inheritance dựa trên những tiêu chí gì (polymorphic association/truy vấn, và số property subclass khai báo)?`,
+      },
+      {
+        id: "jp-w5-4",
+        text: "Polymorphic association: many-to-one và collection",
+        lesson: `**Mục tiêu.** Ánh xạ được một association nhiều-một và một association một-nhiều tới một superclass trừu tượng mà không cần cấu hình gì thêm ngoài \`@Entity\`/\`@Inheritance\` trên class đích.
+
+**Đọc.** [Polymorphic association](#/docs/jpa-07) mở mục bằng nhận xét rằng tính đa hình "dễ dùng đến mức trong Hibernate chúng ta không cần bỏ nhiều công sức để giải thích nó" — đọc lướt phần mở đầu để nắm bối cảnh. [Polymorphic many-to-one association](#/docs/jpa-07) đọc kỹ, gõ lại property \`User#defaultBilling\` kiểu \`@ManyToOne\` trỏ tới abstract class \`BillingDetails\`. [Polymorphic collection](#/docs/jpa-07) đọc kỹ, gõ lại collection \`User#billingDetails\` kiểu \`@OneToMany(mappedBy = "user")\` và chú ý hạn chế duy nhất được nêu ở cuối mục.
+
+**Bẫy.** Nghĩ rằng cần cấu hình đặc biệt gì đó để bật polymorphic association cho \`User#defaultBilling\`. Mục Polymorphic many-to-one association nói rõ: "Chúng ta không phải làm gì đặc biệt để bật polymorphic association trong Hibernate. Nếu class đích của một association được ánh xạ bằng \`@Entity\` và \`@Inheritance\`, association đó tự nhiên là đa hình." Bẫy thứ hai: ánh xạ \`BillingDetails\` bằng \`@MappedSuperclass\` (như ở chiến lược 7.1) rồi thử thêm một collection \`User#billingDetails\` kiểu \`@OneToMany\` trỏ tới nó. Mục Polymorphic collection nói thẳng hạn chế này: "class \`BillingDetails\` không thể là \`@MappedSuperclass\`... Nó phải được ánh xạ bằng \`@Entity\` và \`@Inheritance\`" — polymorphic collection chỉ hoạt động khi superclass đích thực sự là một cây inheritance được ánh xạ, không phải một \`@MappedSuperclass\` bị làm phẳng vào từng subclass.
+
+**Tự kiểm tra.** Bạn cần thêm annotation hay cấu hình gì trên \`User#defaultBilling\` (ngoài \`@ManyToOne\`) để bật polymorphic many-to-one association? Vì sao \`BillingDetails\` không thể là \`@MappedSuperclass\` nếu bạn muốn ánh xạ một polymorphic collection \`User#billingDetails\` tới nó?`,
+      },
+    ],
+  },
+  {
+    id: "jp-w6",
+    week: "Tuần 6",
+    title: "Collection: value type, component và association đầu tiên",
+    goal: "Chọn được đúng interface collection cho một quan hệ cụ thể, và đoán trước được số câu SQL mà việc thêm hoặc xoá một phần tử sẽ sinh ra.",
+    practice: "Ánh xạ cùng một collection bằng `Set`, rồi `List`, rồi `Map`. Với mỗi cách, bật SQL log và đếm số câu lệnh khi thêm một phần tử và khi xoá một phần tử ở giữa. Giải thích chênh lệch bằng đúng mục trong chương 8 nói về việc chọn interface collection.",
+    resources: [
+      { label: "JPA 08 — Ánh xạ collection và entity association", href: "#/docs/jpa-08" },
+    ],
+    items: [
+      {
+        id: "jp-w6-1",
+        text: "Schema, chọn interface collection, và ánh xạ một set",
+        lesson: `**Mục tiêu.** Quyết định được khi nào một persistent collection đáng để ánh xạ, khai báo đúng thành ngữ interface/hiện thực cho một property collection, và ánh xạ được một \`Set<String>\` các tên file ảnh.
+
+**Đọc.** [Schema cơ sở dữ liệu](#/docs/jpa-08) đọc kỹ, nắm rằng table \`IMAGE\` chỉ có cột \`FILENAME\` và foreign key \`ITEM_ID\` — schema hoàn toàn không biết gì về collection hay composition. [Tạo và ánh xạ một property collection](#/docs/jpa-08) đọc kỹ toàn mục, đặc biệt ba lợi ích của việc ánh xạ collection \`Item#images\` (truy vấn tự động, cascading persistence, vòng đời phụ thuộc) và đoạn cảnh báo về độ phức tạp tăng thêm. [Chọn interface collection](#/docs/jpa-08) đọc kỹ, ghi lại thành ngữ khai báo bằng interface rồi khởi tạo ngay, và bảy lựa chọn interface/hiện thực Hibernate hỗ trợ sẵn (\`Set\`/\`HashSet\`, \`SortedSet\`/\`TreeSet\`, \`List\`/\`ArrayList\`, \`Collection\`/\`ArrayList\`, \`Map\`/\`HashMap\`, \`SortedMap\`/\`TreeMap\`, và mảng persistent bị khuyến cáo tránh). [Ánh xạ một set](#/docs/jpa-08) đọc kỹ, gõ lại listing \`@ElementCollection\` cùng \`@CollectionTable\`/\`@Column\`, và chú ý composite primary key của table \`IMAGE\`.
+
+**Bẫy.** Nghĩ rằng phải ánh xạ collection \`Item#images\` mới truy cập được ảnh của một item — mục Tạo và ánh xạ một property collection nói thẳng "Persistent collection luôn là tùy chọn": bạn luôn có thể viết truy vấn \`select img from Image img where img.item = :itemParameter\` mà không cần ánh xạ collection nào cả; sách còn dẫn lại câu trả lời điển hình của người mới học JPA khi bị hỏi "Tại sao bạn làm vậy?": "Tôi tưởng collection này là bắt buộc." Bẫy thứ hai: khởi tạo collection muộn, bên trong constructor hay setter, thay vì ngay tại khai báo field. Mục Chọn interface collection nói rõ: "Chúng tôi không khuyến nghị khởi tạo collection muộn trong constructor hay phương thức setter" — hãy khởi tạo ngay lập tức để tránh collection chưa khởi tạo.
+
+**Tự kiểm tra.** Theo mục Tạo và ánh xạ một property collection, một persistent collection có bắt buộc hay không, và bạn có lựa chọn nào khác nếu không ánh xạ nó? Bảy interface/hiện thực collection nào Hibernate hỗ trợ sẵn không cần mở rộng gì thêm, và vì sao mảng persistent bị khuyến cáo tránh dùng?`,
+      },
+      {
+        id: "jp-w6-2",
+        text: "Identifier bag, list, map, và collection sắp xếp hay có thứ tự",
+        lesson: `**Mục tiêu.** Ánh xạ được một identifier bag khi cần cho phép trùng lặp, một persistent \`List\` khi cần bảo toàn thứ tự, một \`Map\` cho cặp tên file/tên hiển thị, và phân biệt được sorted collection với ordered collection.
+
+**Đọc.** Vẫn trong [Set, bag, list và map của value type](#/docs/jpa-08), tiếp tục với [Ánh xạ một identifier bag](#/docs/jpa-08) đọc kỹ, gõ lại listing dùng \`Collection<String>\`/\`ArrayList\` cùng \`@org.hibernate.annotations.CollectionId\` và \`@GenericGenerator\` để thêm cột surrogate primary key \`IMAGE_ID\`. [Ánh xạ một list](#/docs/jpa-08) đọc kỹ, gõ lại \`@OrderColumn\` trên một \`List<String>\`, và đọc chậm đoạn giải thích Hibernate xử lý thế nào khi xóa hoặc chèn một phần tử ở giữa list. [Ánh xạ một map](#/docs/jpa-08) đọc kỹ, gõ lại \`@MapKeyColumn\`/\`@Column\` trên \`Map<String, String>\`. [Collection được sắp xếp và có thứ tự](#/docs/jpa-08) đọc kỹ, phân biệt sort trong bộ nhớ (\`@SortComparator\`, \`@SortNatural\` trên \`SortedSet\`/\`SortedMap\`) với order lúc nạp từ cơ sở dữ liệu (\`@org.hibernate.annotations.OrderBy\` trên \`LinkedHashSet\`/\`LinkedHashMap\`), và đọc khung so sánh \`@OrderBy\` của Hibernate với \`@OrderBy\` của JPA.
+
+**Bẫy.** Nghĩ rằng xóa hay chèn một phần tử ở giữa một persistent \`List\` là một thao tác SQL rẻ. Mục Ánh xạ một list minh họa cụ thể: xóa phần tử A khỏi list \`[A, B, C]\` khiến Hibernate thực thi một \`DELETE\` cho A rồi hai \`UPDATE\` riêng biệt để dịch chỉ số của B và C sang trái — "Nếu chúng ta tự viết SQL cho việc này, chúng ta có thể làm bằng một lệnh \`UPDATE\` duy nhất." Sách kết luận thẳng: "Hibernate không thông minh như bạn tưởng." Bẫy thứ hai: tưởng một ordered collection (\`LinkedHashSet\`/\`LinkedHashMap\` với \`@OrderBy\`) luôn giữ đúng thứ tự đã khai trong suốt vòng đời của nó. Mục Collection được sắp xếp và có thứ tự cảnh báo: "các phần tử của ordered collection chỉ ở đúng thứ tự mong muốn khi chúng được nạp. Ngay khi chúng ta thêm hoặc xóa phần tử, thứ tự duyệt của collection có thể khác với 'theo tên file'" — chúng hành xử như set hay map thông thường ngay khi bị sửa đổi.
+
+**Tự kiểm tra.** Khi xóa một phần tử ở giữa một persistent \`List\` gồm ba phần tử, Hibernate thực thi bao nhiêu và những loại câu lệnh SQL nào? Một ordered collection (\`LinkedHashSet\` với \`@org.hibernate.annotations.OrderBy\`) còn giữ đúng thứ tự đã khai sau khi bạn thêm một phần tử mới vào nó hay không, và vì sao?`,
+      },
+      {
+        id: "jp-w6-3",
+        text: "Collection của component và equality của instance component",
+        lesson: `**Mục tiêu.** Ghi đè đúng \`equals()\`/\`hashCode()\` cho một class \`@Embeddable\` dùng trong collection, và ánh xạ được set, bag, và map các component với primary key phù hợp cho từng trường hợp.
+
+**Đọc.** [Collection của component](#/docs/jpa-08) mở mục bằng ví dụ class embeddable \`Image\` đóng gói \`filename\`/\`width\`/\`height\` — đọc lướt để nắm bối cảnh. [Equality của instance component](#/docs/jpa-08) đọc chậm, gõ lại ví dụ bốn ảnh thêm vào một \`HashSet\` (hai ảnh giống hệt giá trị) và ghi đè \`equals()\`/\`hashCode()\` cho \`Image\`. [Set các component](#/docs/jpa-08) đọc kỹ, chú ý composite primary key của collection table gồm foreign key và mọi cột không-null của component. [Bag các component](#/docs/jpa-08) đọc kỹ, gõ lại việc dùng lại \`@org.hibernate.annotations.CollectionId\` để cho phép property \`title\` tùy chọn. [Map các giá trị component](#/docs/jpa-08) đọc kỹ, gõ lại \`@MapKeyColumn(name = "TITLE")\` với \`Image\` làm giá trị. [Component làm khóa của map](#/docs/jpa-08) đọc kỹ, chú ý vì sao \`@MapKeyColumn\`/\`@AttributeOverrides\` không dùng được khi khóa của map là một \`@Embeddable\`. [Collection trong một embeddable component](#/docs/jpa-08) đọc kỹ, gõ lại \`Set<String> contacts\` bên trong \`Address\`.
+
+**Bẫy.** Dựa vào \`equals()\`/\`hashCode()\` mặc định của Java khi đưa nhiều instance \`Image\` vào một \`HashSet\`. Mục Equality của instance component đi qua đúng tình huống này: thêm bốn \`Image\`, trong đó hai cái có cùng \`filename\`/\`width\`/\`height\`, rồi mong \`someItem.getImages().size()\` là 3 — nhưng "phép kiểm tra equality thông thường của Java dựa vào identity", nên kết quả thực tế là 4 cho tới khi bạn tự ghi đè \`equals()\`/\`hashCode()\` để so sánh theo giá trị. Bẫy thứ hai: gắn \`@NotNull\` của Bean Validation thay vì \`@Column(nullable = false)\` trên một property của \`@Embeddable\` mà bạn định dùng trong collection. Khung CHÚ Ý ngay sau mục Equality của instance component cảnh báo: nếu dùng \`@NotNull\`, "Hibernate sẽ không sinh constraint \`NOT NULL\` cho cột của collection table" dù Bean Validation vẫn hoạt động đúng lúc chạy — schema cơ sở dữ liệu vì vậy thiếu quy tắc toàn vẹn mà bạn tưởng đã có.
+
+**Tự kiểm tra.** Với ví dụ bốn \`Image\` được thêm vào một \`HashSet\` (hai cái giống hệt giá trị), kích thước của set là bao nhiêu nếu bạn không ghi đè \`equals()\`/\`hashCode()\`, và vì sao? Với một class \`@Embeddable\` dùng trong một collection, annotation nào — \`@NotNull\` hay \`@Column(nullable = false)\` — mới sinh đúng ràng buộc \`NOT NULL\` trong schema của collection table?`,
+      },
+      {
+        id: "jp-w6-4",
+        text: "Entity association: đơn giản nhất, hai chiều, và cascade trạng thái",
+        lesson: `**Mục tiêu.** Ánh xạ được association nhiều-một đơn giản nhất từ \`Bid\` tới \`Item\`, làm nó hai chiều bằng \`mappedBy\`, và bật đúng loại cascade cho việc lưu và xóa mà không phá vỡ tham chiếu ở collection khác.
+
+**Đọc.** [Ánh xạ entity association](#/docs/jpa-08) mở mục bằng việc phân biệt quan hệ cha/con thuộc entity với quan hệ cha/con thuộc value type — đọc lướt để nắm bối cảnh. [Association đơn giản nhất có thể](#/docs/jpa-08) đọc kỹ, gõ lại \`Bid#item\` với \`@ManyToOne(fetch = FetchType.LAZY)\` và \`@JoinColumn(name = "ITEM_ID", nullable = false)\`. [Làm cho nó hai chiều](#/docs/jpa-08) đọc kỹ, gõ lại collection \`Item#bids\` với \`@OneToMany(mappedBy = "item", fetch = FetchType.LAZY)\`, và cân nhắc danh sách lợi ích so với chi phí mà mục này liệt kê. [Cascade trạng thái](#/docs/jpa-08) đọc kỹ toàn bộ, đặc biệt các khung "Bật transitive persistence", "Cascade việc xóa" và "Bật orphan removal", cùng ví dụ thất bại ở listing 8.26 khi \`Bid\` đồng thời nằm trong hai collection.
+
+**Bẫy.** Cho rằng \`@ManyToOne\` cũng lazy mặc định giống collection. Listing Association đơn giản nhất có thể ghi chú rõ: "Tham số \`fetch\` của nó mặc định là \`EAGER\`, nghĩa là \`Item\` liên quan sẽ được nạp mỗi khi \`Bid\` được nạp. Chúng ta thường ưa lazy loading làm chiến lược mặc định" — phải tự ghi \`FetchType.LAZY\`, khác với \`@OneToMany\` vốn mặc định \`LAZY\` sẵn. Bẫy thứ hai: bật \`orphanRemoval = true\` (hay \`CascadeType.REMOVE\`) trên \`Item#bids\` khi cùng một \`Bid\` còn được tham chiếu từ một collection khác, chẳng hạn \`User#bids\`. Mục Cascade trạng thái minh họa đúng tình huống này bằng một test thất bại: xóa một \`Bid\` khỏi \`Item#bids\` khiến Hibernate xóa hẳn dòng đó khỏi cơ sở dữ liệu, nhưng "chúng ta vẫn giữ tham chiếu tới nó trong collection kia, \`User#bids\`" — dữ liệu trong bộ nhớ trở nên không nhất quán dù transaction commit thành công; sách khuyên "hãy luôn cân nhắc một ánh xạ đơn giản hơn", chẳng hạn ánh xạ \`Bid\` thành \`@ElementCollection\` nếu không table nào khác tham chiếu foreign key tới nó.
+
+**Tự kiểm tra.** Giá trị mặc định của tham số \`fetch\` trên \`@ManyToOne\` là gì, và vì sao chương 8 khuyên luôn ghi đè nó bằng \`FetchType.LAZY\`? Điều gì xảy ra với tham chiếu trong bộ nhớ ở một collection thứ hai (\`User#bids\`) khi bạn xóa cùng entity đó khỏi một collection có \`orphanRemoval = true\` (\`Item#bids\`)?`,
+      },
+    ],
+  },
+  {
+    id: "jp-w7",
+    week: "Tuần 7",
+    title: "Mọi hình dạng của entity association",
+    goal: "Ánh xạ được một-một, một-nhiều, nhiều-nhiều và quan hệ bậc ba, và nói được bên nào sở hữu association cùng hệ quả của việc chọn sai bên.",
+    practice: "Dựng một association một-nhiều hai chiều, cố tình **quên** khai bên sở hữu rồi sửa lại cho đúng. So hai lần: số bảng schema sinh ra, và số câu UPDATE khi thêm một phần tử vào collection. Đây là lỗi hay gặp nhất trong mã Spring Data thật.",
+    resources: [
+      { label: "JPA 09 — Ánh xạ entity association nâng cao", href: "#/docs/jpa-09" },
+    ],
+    items: [
+      {
+        id: "jp-w7-1",
+        text: "Bốn cách ánh xạ association một-một",
+        lesson: `**Mục tiêu.** Chọn được đúng một trong bốn chiến lược ánh xạ association một-một — dùng chung primary key, foreign primary key generator, cột foreign key join, hoặc join table — dựa trên việc association có tùy chọn hay không và bên nào được lưu trước.
+
+**Đọc.** [Association một-một](#/docs/jpa-09) mở mục bằng lập luận vì sao quan hệ \`User\`/\`Address\` thường nên là embeddable, rồi đặt câu hỏi khi nào \`Address\` cần trở thành entity độc lập có thể tham chiếu dùng chung — đọc lướt để nắm bối cảnh. [Dùng chung primary key](#/docs/jpa-09) đọc kỹ, gõ lại \`Address\` là entity độc lập và \`User#shippingAddress\` với \`@OneToOne(fetch = LAZY, optional = false, cascade = ALL)\` cùng \`@PrimaryKeyJoinColumn\`, và đọc chậm ba vấn đề sách liệt kê ở cuối mục. [Foreign primary key generator](#/docs/jpa-09) đọc kỹ, gõ lại \`@GenericGenerator(strategy = "foreign")\` trên \`Address#id\` lấy giá trị định danh từ property \`user\`. [Sử dụng cột foreign key join](#/docs/jpa-09) đọc kỹ, gõ lại \`@JoinColumn(unique = true)\` trên \`User#shippingAddress\` thay cho \`@PrimaryKeyJoinColumn\`. [Sử dụng join table](#/docs/jpa-09) đọc kỹ, gõ lại \`@JoinTable\` trên \`Shipment#auction\` với \`inverseJoinColumns\` mang \`unique = true\`, và đoạn kết luận cuối mục 9.1 tóm tắt khi nào dùng chiến lược nào.
+
+**Bẫy.** Mong lazy loading (proxy) hoạt động trên một association \`@OneToOne\` tùy chọn. Mục Dùng chung primary key nói thẳng: "Lazy loading với proxy chỉ hoạt động nếu association là không tùy chọn... Một association \`@OneToOne(optional=true)\` không hỗ trợ lazy loading với proxy" — mặc định \`fetch\` của \`@OneToOne\` cũng là \`EAGER\`, khác \`@OneToMany\`. Bẫy thứ hai: quên rằng chiến lược dùng chung primary key đòi hỏi lưu entity nguồn (\`Address\`) trước rồi mới đọc được giá trị định danh sinh ra để gán thủ công cho entity kia (\`User\`). Mục Dùng chung primary key cảnh báo: "Chúng ta phải nhớ rằng \`Address\` phải được lưu trước rồi mới lấy giá trị định danh của nó... Nếu không, \`someAddress.getId()\` trả về \`null\`" — điều này chỉ khả thi với một identifier generator sinh giá trị trước lệnh \`INSERT\`.
+
+**Tự kiểm tra.** Vì sao một association \`@OneToOne(optional = true)\` không thể dùng lazy loading với proxy, và mặc định \`fetch\` của \`@OneToOne\` là gì nếu không ghi đè? Chiến lược dùng chung primary key đòi hỏi bạn phải làm gì theo đúng thứ tự trước khi gán giá trị định danh của \`User\` bằng giá trị định danh của \`Address\`?`,
+      },
+      {
+        id: "jp-w7-2",
+        text: "Một-nhiều: bag, list, join table và trong embeddable",
+        lesson: `**Mục tiêu.** Chọn được bag khi cần hiệu năng thêm phần tử tốt nhất, ánh xạ được một \`List\` một chiều rồi làm nó hai chiều đúng cách, và ánh xạ được một association một-nhiều tùy chọn hoặc nằm trong một class embeddable.
+
+**Đọc.** [Association một-nhiều](#/docs/jpa-09) mở mục bằng nhấn mạnh rằng đây là association số nhiều quan trọng nhất, và khuyên tránh các kiểu phức tạp hơn khi một quan hệ nhiều-một/một-nhiều hai chiều đơn giản đã đủ — đọc lướt để nắm bối cảnh. [Cân nhắc bag một-nhiều](#/docs/jpa-09) đọc kỹ, gõ lại \`Item#bids\` đổi từ \`Set\` sang \`Collection<Bid>\`/\`ArrayList\`, và chú ý lý do bag không kích hoạt việc nạp collection khi thêm phần tử mới. [Ánh xạ list một chiều và hai chiều](#/docs/jpa-09) đọc kỹ, gõ lại ánh xạ \`List<Bid>\` một chiều với \`@OrderColumn\`, rồi làm nó hai chiều bằng \`@ManyToOne\` với \`@JoinColumn(updatable = false, insertable = false)\` ở phía \`Bid\`. [Một-nhiều tùy chọn với join table](#/docs/jpa-09) đọc kỹ, gõ lại \`Item#buyer\` với \`@ManyToOne\` và \`@JoinTable\`, so với việc dùng cột foreign key cho phép null. [Association một-nhiều trong class embeddable](#/docs/jpa-09) đọc kỹ, gõ lại \`Address#deliveries\` — trước với \`@JoinColumn\`, sau với \`@JoinTable\` — và chú ý vì sao điều hướng hai chiều là không thể ở đây.
+
+**Bẫy.** Ánh xạ hai collection kiểu bag một-nhiều trên cùng một entity (chẳng hạn \`bids\` và \`images\` của \`Item\`) rồi nạp cả hai eager cùng lúc. Mục Cân nhắc bag một-nhiều nói rõ: "chúng ta không thể eager-fetch hai collection kiểu bag đồng thời, vì các truy vấn \`SELECT\` được sinh ra không liên quan với nhau và cần được giữ riêng." Bẫy thứ hai: viết \`@ManyToOne(mappedBy = "bids")\` ở phía \`Bid\` khi làm ánh xạ \`List\` hai chiều, tưởng \`@ManyToOne\` cũng có \`mappedBy\` như \`@OneToMany\`. Mục Ánh xạ list một chiều và hai chiều nói thẳng: "\`@ManyToOne\` không có thuộc tính \`mappedBy\`: nó luôn là phía 'sở hữu' của quan hệ" — phía \`@OneToMany\` mới phải mang \`mappedBy\`, còn phía \`@ManyToOne\` cần \`@JoinColumn\` với \`updatable=false, insertable=false\` để tránh ghi đè chỉ số list; và vì "bộ sinh schema của Hibernate luôn dựa vào \`@JoinColumn\` của phía \`@ManyToOne\`", ràng buộc \`nullable=false\` cũng phải đặt ở phía đó.
+
+**Tự kiểm tra.** Vì sao bạn không thể eager-fetch hai collection kiểu bag một-nhiều cùng lúc trên một entity? Trong một association \`List\` một-nhiều hai chiều, phía nào — \`@OneToMany\` hay \`@ManyToOne\` — mang \`mappedBy\`, và phía nào quyết định \`@JoinColumn\`/ràng buộc \`nullable\` khi Hibernate sinh schema?`,
+      },
+      {
+        id: "jp-w7-3",
+        text: "Nhiều-nhiều, entity trung gian và association bậc ba",
+        lesson: `**Mục tiêu.** Ánh xạ được một association nhiều-nhiều hai chiều bằng \`@ManyToMany\`/\`@JoinTable\`, biết khi nào nên thay nó bằng một entity trung gian có khóa hợp thành, và ánh xạ được một association bậc ba bằng embeddable component.
+
+**Đọc.** [Association nhiều-nhiều và bậc ba](#/docs/jpa-09) mở mục bằng nhận xét rằng một link table trong thực tế gần như luôn cần thêm cột thông tin về liên kết — đọc lướt để nắm bối cảnh. [Association nhiều-nhiều một chiều và hai chiều](#/docs/jpa-09) đọc kỹ, gõ lại \`Category#items\` với \`@ManyToMany\`/\`@JoinTable\` và phía \`mappedBy\` ở \`Item#categories\`, và tự trả lời câu hỏi cuối mục vì sao \`CascadeType.ALL\`/\`REMOVE\`/orphan removal không có ý nghĩa với nhiều-nhiều. [Nhiều-nhiều với một entity trung gian](#/docs/jpa-09) đọc kỹ toàn bộ listing \`CategorizedItem\`, chú ý \`@EmbeddedId\` cho khóa hợp thành và vì sao hai property \`@ManyToOne\` phải mang \`insertable = false, updatable = false\`. [Association bậc ba với component](#/docs/jpa-09) đọc kỹ, gõ lại \`CategorizedItem\` là \`@Embeddable\` với \`@ManyToOne\` bên trong, và đọc kỹ đoạn giải thích vì sao \`@NotNull\` trên \`addedBy\`/\`addedOn\` không đưa chúng vào composite primary key.
+
+**Bẫy.** Bật \`CascadeType.ALL\`, \`CascadeType.REMOVE\`, hay orphan removal trên một \`@ManyToMany\`. Mục Association nhiều-nhiều một chiều và hai chiều nói thẳng các tùy chọn cascade này "không có ý nghĩa với association nhiều-nhiều" và để lại như một câu hỏi tự kiểm — gợi ý là hãy nghĩ điều gì xảy ra nếu xóa một bản ghi tự động xóa luôn một bản ghi liên quan mà một entity khác vẫn đang tham chiếu. Bẫy thứ hai: gắn \`@NotNull\` của Bean Validation (thay vì \`@Column(nullable = false)\`) trên \`addedBy\`/\`addedOn\` trong \`CategorizedItem\` (mục 9.3.3) rồi mong chúng không lọt vào composite primary key và vẫn có ràng buộc \`NOT NULL\` trong schema. Mục Association bậc ba với component giải thích: khi ánh xạ một \`@ElementCollection\` kiểu embeddable, "mọi property của kiểu đích có \`nullable=false\` đều trở thành một phần của primary key (hợp thành)" — dùng \`@NotNull\` là mẹo để loại chúng khỏi primary key, nhưng cái giá là "schema được sinh ra sẽ không có các constraint \`NOT NULL\` phù hợp trên cột \`USER_ID\` và \`ADDEDON\`, mà chúng ta nên sửa thủ công."
+
+**Tự kiểm tra.** Vì sao \`CascadeType.REMOVE\` và orphan removal không có ý nghĩa khi áp dụng cho một association \`@ManyToMany\`? Trong \`CategorizedItem\` ánh xạ bằng \`@ElementCollection\` (mục Association bậc ba với component), dùng \`@NotNull\` thay vì \`@Column(nullable = false)\` trên \`addedBy\`/\`addedOn\` có tác dụng gì với composite primary key, và cái giá phải trả cho schema sinh ra là gì?`,
+      },
+      {
+        id: "jp-w7-4",
+        text: "Entity association dùng map làm cấu trúc",
+        lesson: `**Mục tiêu.** Ánh xạ được một property entity làm khóa của map trong một association một-nhiều, và ánh xạ được một association bậc ba bằng \`Map<Item, User>\` thay vì một entity trung gian — cùng biết trước giới hạn của cách làm này.
+
+**Đọc.** [Entity association với map](#/docs/jpa-09) mở mục bằng việc đặt vấn đề: khóa và giá trị của một map có thể là tham chiếu tới entity khác, thêm một chiến lược để ánh xạ quan hệ nhiều-nhiều/bậc ba — đọc lướt để nắm bối cảnh. [Một-nhiều với khóa là property](#/docs/jpa-09) đọc kỹ, gõ lại \`Item#bids\` kiểu \`Map<Long, Bid>\` với \`@MapKey(name = "id")\` cùng \`@OneToMany(mappedBy = "item")\`. [Quan hệ bậc ba kiểu khóa/giá trị](#/docs/jpa-09) đọc kỹ, gõ lại \`Category#itemAddedBy\` kiểu \`Map<Item, User>\` với \`@ManyToMany\`, \`@MapKeyJoinColumn\` và \`@JoinTable\`, rồi so sánh cách này với \`CategorizedItem\` đã ánh xạ ở mục 9.3.2/9.3.3.
+
+**Bẫy.** Chọn một property tùy ý của entity đích làm \`@MapKey\` rồi tin rằng JPA hay Hibernate tự kiểm tra tính duy nhất của nó. Mục Một-nhiều với khóa là property nói rõ: "Việc bảo đảm property được chọn có giá trị duy nhất là tùy thuộc vào chúng ta — Hibernate hoặc Spring Data JPA dùng Hibernate sẽ không kiểm tra" — chỉ property định danh (mặc định nếu bỏ qua \`name\`) mới chắc chắn duy nhất; property khác của \`Bid\` thì nhiều khả năng không. Bẫy thứ hai: chọn ánh xạ \`Map<Item, User>\` ở mục Quan hệ bậc ba kiểu khóa/giá trị chỉ vì nó ít mã hơn \`CategorizedItem\`, mà không tính tới việc join table sẽ cần thêm cột. Sách nói thẳng cái giá: "Trước đây, chúng ta có một cột \`ADDEDON\` với timestamp khi liên kết được tạo, nhưng chúng ta phải bỏ nó với ánh xạ này" — một \`Map\` hai khóa/giá trị không có chỗ cho cột thứ ba.
+
+**Tự kiểm tra.** Ai chịu trách nhiệm bảo đảm property bạn chọn làm \`@MapKey\` có giá trị duy nhất trong một map, và Hibernate hay Spring Data JPA có tự kiểm tra điều đó không? Ánh xạ \`Map<Item, User>\` cho association bậc ba giữa \`Category\` và \`Item\` mất khả năng gì so với ánh xạ bằng entity trung gian \`CategorizedItem\`?`,
+      },
+    ],
+  },
 ];
