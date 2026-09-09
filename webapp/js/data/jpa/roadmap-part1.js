@@ -184,8 +184,8 @@ export const jpaWeeksPart1 = [
     id: "jp-w4",
     week: "Tuần 4",
     title: "Value type: property, embeddable và converter",
-    goal: "Ánh xạ được mọi thứ không phải entity — từ một cột boolean tới một component lồng nhau tới một kiểu tự định nghĩa — và biết cột SQL sinh ra sẽ trông thế nào trước khi chạy.",
-    practice: "Ánh xạ một @Embeddable vào một entity, rồi viết một converter cho một kiểu Java tự định nghĩa theo đúng cách chương 6 chỉ. Sinh schema và kiểm từng cột SQL thật sinh ra khớp với điều bạn nghĩ — chỗ nào lệch, tìm mục trong chương giải thích vì sao.",
+    goal: "Ánh xạ được mọi thứ không phải entity — từ một cột `boolean` tới một component lồng nhau tới một kiểu tự định nghĩa — và biết cột SQL sinh ra sẽ trông thế nào trước khi chạy.",
+    practice: "Ánh xạ một `@Embeddable` vào một entity, rồi viết một converter cho một kiểu Java tự định nghĩa theo đúng cách chương 6 chỉ. Sinh schema và kiểm từng cột SQL thật sinh ra khớp với điều bạn nghĩ — chỗ nào lệch, tìm mục trong chương giải thích vì sao.",
     resources: [
       { label: "JPA 06 — Ánh xạ value type", href: "#/docs/jpa-06" },
     ],
