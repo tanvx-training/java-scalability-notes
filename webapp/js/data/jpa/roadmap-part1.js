@@ -124,4 +124,116 @@ export const jpaWeeksPart1 = [
       },
     ],
   },
+  {
+    id: "jp-w3",
+    week: "Tuần 3",
+    title: "Entity, value type và identity",
+    goal: "Nhìn một khái niệm trong domain model là quyết định được nó nên là entity hay value type, và chọn được chiến lược sinh định danh phù hợp với cách ứng dụng ghi dữ liệu.",
+    practice: "Ánh xạ một entity với ba chiến lược sinh id khác nhau (IDENTITY, SEQUENCE, TABLE — dùng đúng tên chương 5 gọi). Insert 100 bản ghi bằng mỗi kiểu, bật SQL log và đếm số round-trip tới database; giải thích chênh lệch bằng cơ chế chương mô tả.",
+    resources: [
+      { label: "JPA 05 — Ánh xạ các persistent class", href: "#/docs/jpa-05" },
+    ],
+    items: [
+      {
+        id: "jp-w3-1",
+        text: "Domain model mịn, và ranh giới entity với value type",
+        lesson: `**Mục tiêu.** Nhìn một class trong domain model là quyết định được nó nên là entity hay value type, dựa trên ba câu hỏi mà chương 5 đặt ra: shared reference, vòng đời và identity.
+
+**Đọc.** [Hiểu về entity và value type](#/docs/jpa-05) mở mục bằng câu hỏi vì sao một số class trong domain model "quan trọng" hơn số khác — đọc lướt để nắm bối cảnh. [Domain model mịn](#/docs/jpa-05) đọc kỹ, đây là khái niệm nền: mịn (fine-grained) nghĩa là có nhiều class hơn số table, và ví dụ \`Address\` tách khỏi ba cột chuỗi trên \`User\` minh họa rõ điều đó. [Định nghĩa các khái niệm của ứng dụng](#/docs/jpa-05) đọc chậm ví dụ John và Jane dùng chung một \`Address\`, đây là phép thử cốt lõi: nếu một instance cần hỗ trợ tham chiếu dùng chung lúc chạy thì nó là entity, nếu không thì là value type. [Phân biệt entity và value type](#/docs/jpa-05) đọc kỹ toàn bộ, đặc biệt ví dụ \`Bid\` — class này minh họa trực tiếp quy tắc chọn mặc định.
+
+**Bẫy.** Thấy composition trong sơ đồ UML (hình thoi đặc) giữa \`Item\` và \`Bid\` rồi kết luận ngay \`Bid\` phải là entity. Mục Phân biệt entity và value type đi qua đúng tình huống này và kết luận ngược lại: "\`Bid\` là một value type vì identity của nó được định nghĩa bởi \`Item\` và \`User\`" — composition chỉ gợi ý phụ thuộc vòng đời, không tự động đòi hỏi identity riêng. Sách nói thẳng nguyên tắc chung: "phản ứng đầu tiên của bạn nên là biến mọi thứ thành class kiểu value type và chỉ nâng cấp nó thành entity khi thực sự cần thiết" — \`Bid\` chỉ cần trở thành entity nếu một mở rộng tương lai đòi một association hai chiều \`User#bids\`. Bẫy thứ hai: viết POJO cho một value type mà không khóa quyền tham chiếu dùng chung. Chương liệt kê ba điều phải làm khi hiện thực POJO — tránh shared reference (chỉ một \`User\` được tham chiếu tới một \`Address\`, bằng cách làm \`Address\` bất biến và không có setter \`setUser()\` public), phụ thuộc vòng đời (cascade khi entity sở hữu bị xóa), và identity (value type không cần property định danh).
+
+**Tự kiểm tra.** Phép thử nào chương 5 dùng để phân biệt một class nên là entity hay value type — dựa trên hình 5.2 và 5.3 với \`User\`/\`Address\`? Vì sao \`Bid\` được sách xếp là value type dù nó tham gia một quan hệ composition trong sơ đồ UML, và điều gì sẽ khiến nó phải trở thành entity?`,
+      },
+      {
+        id: "jp-w3-2",
+        text: "Identity, equality và ánh xạ entity đầu tiên",
+        lesson: `**Mục tiêu.** Phân biệt được ba khái niệm object identity, object equality và database identity, và viết được một entity class tối thiểu với \`@Id\`/\`@GeneratedValue\` đúng quy ước.
+
+**Đọc.** [Ánh xạ entity với identity](#/docs/jpa-05) đọc lướt phần mở đầu để nắm lộ trình mục 5.2. [Hiểu về identity và equality trong Java](#/docs/jpa-05) đọc chậm, ghi lại đúng ba khái niệm: object identity (\`==\`), object equality (\`equals()\`), database identity (so sánh table và giá trị primary key). [Entity class và ánh xạ đầu tiên](#/docs/jpa-05) đọc kỹ và gõ lại listing \`Item\` với \`@Entity\`/\`@Id\`/\`@GeneratedValue\`, chú ý đoạn giải thích vì sao Hibernate hay Spring Data JPA dùng Hibernate truy cập field thay vì getter/setter khi \`@Id\` nằm trên field.
+
+**Bẫy.** Phơi bày một setter public cho property định danh vì nghĩ điều đó vô hại như mọi property khác. Mục Entity class và ánh xạ đầu tiên nói rõ: giá trị primary key không bao giờ thay đổi, Hibernate và Spring Data JPA dùng Hibernate làm provider sẽ không cập nhật cột primary key, "bạn không nên phơi bày phương thức setter public cho định danh trên một entity". Bẫy thứ hai: coi \`equals()\` hoặc \`==\` là đủ để biết hai object có "cùng một dòng dữ liệu" hay không. Mục Hiểu về identity và equality trong Java nhắc lại: hai instance không đồng nhất (\`a != b\`) vẫn có thể biểu diễn cùng một dòng trong cơ sở dữ liệu — database identity là một khái niệm thứ ba, tách biệt với cả \`==\` lẫn \`equals()\`.
+
+**Tự kiểm tra.** Ba khái niệm object identity, object equality và database identity khác nhau ở đâu, và mỗi khái niệm được kiểm tra bằng cách nào trong mã Java? Vì sao một entity class không nên có setter public cho property \`id\`?`,
+      },
+      {
+        id: "jp-w3-3",
+        text: "Chọn primary key và cấu hình key generator",
+        lesson: `**Mục tiêu.** Chọn được surrogate key thay vì natural key cho một table mới, và cấu hình đúng một named identifier generator bằng ba chiến lược \`IDENTITY\`, \`SEQUENCE\`, \`TABLE\`.
+
+**Đọc.** [Chọn primary key](#/docs/jpa-05) đọc kỹ, đặc biệt ba yêu cầu của một candidate key (không null, duy nhất, bất biến) và lý do chương khuyến nghị mạnh surrogate key thay vì natural key hay composite natural key. [Cấu hình key generator](#/docs/jpa-05) đọc kỹ và gõ lại listing \`@GeneratedValue\` cùng bốn giá trị \`GenerationType\` (\`AUTO\`, \`SEQUENCE\`, \`IDENTITY\`, \`TABLE\`), rồi đọc phần dùng \`@GenericGenerator\` với \`enhanced-sequence\` — đây là cấu hình sách khuyến nghị. [Các chiến lược sinh định danh](#/docs/jpa-05) đọc chậm toàn bộ danh sách chiến lược của Hibernate (\`native\`, \`sequence\`, \`enhanced-sequence\`, \`enhanced-table\`, \`identity\`, \`increment\`, \`select\`, \`uuid2\`, \`guid\`) và hộp giải thích khác biệt sinh định danh trước-insert với sau-insert.
+
+**Bẫy.** Chọn một natural key (như Social Security Number) làm primary key vì nó có sẵn trong dữ liệu nghiệp vụ. Mục Chọn primary key cảnh báo natural primary key "thường gây rắc rối về sau" — ít thuộc tính thỏa đồng thời ba yêu cầu duy nhất/bất biến/không null, và natural key hợp thành (composite) làm việc bảo trì, truy vấn tùy ứng và tiến hóa schema khó hơn nhiều; sách "mạnh mẽ khuyến nghị" thêm synthetic/surrogate key thay vào đó. Bẫy thứ hai: gọi \`someItem.getId()\` ngay sau khi \`persist()\` và mong luôn có giá trị. Hộp "Sinh định danh trước hay sau INSERT" giải thích: với các chiến lược sinh sau-insert (như cột auto-increment), lời gọi \`persist()\` chỉ xếp hàng thao tác chèn, và \`getId()\` gọi ngay sau đó có thể trả về \`null\` — sách vì vậy ưa các chiến lược sinh trước-insert như \`enhanced-sequence\`.
+
+**Tự kiểm tra.** Ba yêu cầu của một candidate key là gì, và vì sao chương 5 khuyến nghị dùng surrogate key thay vì natural key? Khác biệt giữa chiến lược sinh định danh trước-insert và sau-insert là gì, và vì sao nó ảnh hưởng tới việc gọi \`getId()\` ngay sau \`persist()\`?`,
+      },
+      {
+        id: "jp-w3-4",
+        text: "Điều khiển tên, SQL động, entity bất biến và subselect",
+        lesson: `**Mục tiêu.** Ghi đè được tên table/property truy vấn khi cần, bật insert/update động cho một entity nhiều cột, đánh dấu một entity bất biến, và ánh xạ một view chỉ-đọc bằng subselect.
+
+**Đọc.** [Điều khiển tên](#/docs/jpa-05) đọc kỹ, chú ý \`@Table(name = ...)\` cho trường hợp \`User\` xung đột với từ khóa dành riêng \`USER\`, và phần đặt tên entity cho truy vấn (\`@Entity(name = "AuctionItem")\`) khi có hai class \`Item\` trùng tên ở hai package. [Sinh SQL động](#/docs/jpa-05) đọc kỹ, nắm vì sao Hibernate mặc định sinh sẵn câu lệnh CRUD lúc khởi động persistence unit, và khi nào nên chuyển sang \`@DynamicInsert\`/\`@DynamicUpdate\`. [Làm cho một entity bất biến](#/docs/jpa-05) đọc kỹ, gõ lại ví dụ \`@org.hibernate.annotations.Immutable\` trên \`Bid\`. [Ánh xạ một entity tới subselect](#/docs/jpa-05) đọc kỹ toàn bộ listing \`ItemBidSummary\`, đặc biệt vai trò của \`@Subselect\` và \`@Synchronize\`.
+
+**Bẫy.** Nghĩ rằng câu lệnh \`UPDATE\` mặc định của Hibernate chỉ chứa những cột thực sự thay đổi. Mục Sinh SQL động giải thích ngược lại: vì câu lệnh được sinh lúc khởi động khi chưa biết cột nào sẽ đổi, \`UPDATE\` mặc định cập nhật tất cả cột — cột không đổi chỉ đơn giản được đặt lại giá trị cũ; chỉ khi bật \`@DynamicUpdate\` thì Hibernate mới sinh SQL lúc chạy và chỉ liệt kê cột có giá trị thay đổi. Bẫy thứ hai: ánh xạ một entity chỉ-đọc bằng \`@Subselect\` mà quên khai \`@Synchronize\`. Mục Ánh xạ một entity tới subselect nói rõ: vì \`ItemBidSummary\` không có \`@Table\`, framework "không biết khi nào phải auto-flush trước khi thực thi truy vấn" — thiếu \`@Synchronize({"ITEM", "BID"})\`, một truy vấn trên \`ItemBidSummary\` có thể đọc phải dữ liệu cũ (stale) nếu có thay đổi \`Item\`/\`Bid\` chưa được flush.
+
+**Tự kiểm tra.** Vì sao câu lệnh \`UPDATE\` mặc định của Hibernate cập nhật mọi cột thay vì chỉ cột thay đổi, và annotation nào đổi hành vi đó? Annotation \`@Synchronize\` trên một entity ánh xạ tới subselect dùng để làm gì, và điều gì xảy ra nếu bạn quên nó?`,
+      },
+    ],
+  },
+  {
+    id: "jp-w4",
+    week: "Tuần 4",
+    title: "Value type: property, embeddable và converter",
+    goal: "Ánh xạ được mọi thứ không phải entity — từ một cột boolean tới một component lồng nhau tới một kiểu tự định nghĩa — và biết cột SQL sinh ra sẽ trông thế nào trước khi chạy.",
+    practice: "Ánh xạ một @Embeddable vào một entity, rồi viết một converter cho một kiểu Java tự định nghĩa theo đúng cách chương 6 chỉ. Sinh schema và kiểm từng cột SQL thật sinh ra khớp với điều bạn nghĩ — chỗ nào lệch, tìm mục trong chương giải thích vì sao.",
+    resources: [
+      { label: "JPA 06 — Ánh xạ value type", href: "#/docs/jpa-06" },
+    ],
+    items: [
+      {
+        id: "jp-w4-1",
+        text: "Ghi đè mặc định, cách truy cập, derived property và biến đổi cột",
+        lesson: `**Mục tiêu.** Loại một property khỏi persistence bằng \`@Transient\`/\`transient\`, chọn access type field hay property cho từng property riêng lẻ, và ánh xạ được một derived property hoặc một cột cần biến đổi giá trị hai chiều.
+
+**Đọc.** [Ánh xạ basic property](#/docs/jpa-06) đọc kỹ đoạn mở đầu liệt kê bốn quy tắc mặc định JPA áp cho property của một persistent class — đây là configuration by exception, nền cho toàn mục 6.1. [Ghi đè giá trị mặc định của basic property](#/docs/jpa-06) đọc kỹ, chú ý khác biệt giữa \`transient\` của Java (loại khỏi cả serialization lẫn persistence) và \`@Transient\` của JPA (chỉ loại khỏi persistence), cùng ba cách khai một property bắt buộc (\`@Basic(optional = false)\`, \`@Column(nullable = false)\`, \`@NotNull\` của Bean Validation). [Tùy chỉnh cách truy cập property](#/docs/jpa-06) đọc kỹ, gõ lại listing \`Item\` với \`@Access(AccessType.PROPERTY)\` trên field \`name\`. [Sử dụng derived property](#/docs/jpa-06) đọc kỹ hai ví dụ \`@Formula\`. [Biến đổi giá trị cột](#/docs/jpa-06) đọc kỹ ví dụ \`@ColumnTransformer\` chuyển \`IMPERIALWEIGHT\` sang \`metricWeight\`, kể cả đoạn về SQL sinh ra cho một ràng buộc \`WHERE\`.
+
+**Bẫy.** Nghĩ rằng một derived property khai bằng \`@Formula\` có thể tham gia câu lệnh \`INSERT\`/\`UPDATE\` như property thường. Mục Sử dụng derived property nói rõ: các property này "không bao giờ xuất hiện trong câu lệnh SQL \`INSERT\` hay \`UPDATE\`, chỉ trong \`SELECT\`" — giá trị được tính lại mỗi lần entity được truy xuất, nên có thể trở nên lỗi thời nếu các property khác vừa bị sửa mà chưa flush. Bẫy thứ hai: dùng \`@ColumnTransformer\` trong một ràng buộc \`WHERE\` rồi kỳ vọng cơ sở dữ liệu vẫn dùng được index. Mục Biến đổi giá trị cột chỉ ra SQL sinh ra sẽ nhúng biểu thức (ví dụ \`i.IMPERIALWEIGHT / 2.20462=?\`) ngay trong \`WHERE\`, và cảnh báo "cơ sở dữ liệu có lẽ sẽ không thể dựa vào chỉ mục cho ràng buộc này; một lần quét toàn bảng sẽ được thực hiện".
+
+**Tự kiểm tra.** Khác biệt giữa từ khóa \`transient\` của Java và annotation \`@Transient\` của JPA khi loại một property khỏi persistence là gì? Vì sao một property ánh xạ bằng \`@Formula\` không bao giờ xuất hiện trong câu lệnh \`INSERT\` hay \`UPDATE\`?`,
+      },
+      {
+        id: "jp-w4-2",
+        text: "Giá trị được sinh ra, @Temporal và ánh xạ enum",
+        lesson: `**Mục tiêu.** Đánh dấu đúng một property do cơ sở dữ liệu sinh giá trị bằng \`@Generated\`/\`@CreationTimestamp\`/\`@UpdateTimestamp\`, và chọn chiến lược ánh xạ enum an toàn khi domain model có thể mở rộng.
+
+**Đọc.** [Giá trị property được sinh ra và giá trị mặc định](#/docs/jpa-06) đọc kỹ toàn mục, gõ lại listing với \`@CreationTimestamp\`, \`@UpdateTimestamp\`, và \`@Generated(GenerationTime.INSERT)\` kèm \`@ColumnDefault\`, chú ý khác biệt \`GenerationTime.ALWAYS\` với \`GenerationTime.INSERT\`. [Annotation @Temporal](#/docs/jpa-06) đọc lướt, chỉ cần nhớ ba giá trị \`TemporalType\` (\`DATE\`, \`TIME\`, \`TIMESTAMP\`) và rằng annotation này không còn cần thiết với các kiểu \`java.time\` của Java 8. [Ánh xạ enum](#/docs/jpa-06) đọc kỹ, gõ lại ví dụ \`@Enumerated(EnumType.STRING)\` trên \`AuctionType\`.
+
+**Bẫy.** Đánh dấu một property là "được sinh ra" rồi nghĩ Hibernate tự biết cần đọc lại giá trị đó mà không cần khai báo gì thêm. Mục Giá trị property được sinh ra và giá trị mặc định nói rõ: nếu không đánh dấu property bằng \`@Generated\` (hay \`@CreationTimestamp\`/\`@UpdateTimestamp\`), ứng dụng "sẽ phải thực hiện thêm một vòng gọi tới cơ sở dữ liệu để đọc giá trị sau khi chèn hoặc cập nhật" — chỉ khi khai đúng annotation, Hibernate mới tự phát thêm một \`SELECT\` ngay sau \`INSERT\`/\`UPDATE\` để làm mới instance. Bẫy thứ hai: bỏ qua \`@Enumerated(EnumType.STRING)\` vì nghĩ mặc định cũng đủ dùng. Mục Ánh xạ enum cảnh báo: không có \`@Enumerated\`, Hibernate lưu vị trí \`ORDINAL\` của giá trị enum (1, 2, 3...) — "một mặc định mong manh"; chỉ cần thêm một hằng số enum mới ở giữa, các giá trị đã lưu có thể không còn khớp đúng vị trí và làm hỏng ứng dụng.
+
+**Tự kiểm tra.** Khác biệt giữa \`GenerationTime.ALWAYS\` và \`GenerationTime.INSERT\` là gì, xét về thời điểm Hibernate làm mới instance? Vì sao ánh xạ enum theo \`ORDINAL\` mặc định được sách gọi là "một mặc định mong manh", và \`EnumType.STRING\` giải quyết vấn đề đó thế nào?`,
+      },
+      {
+        id: "jp-w4-3",
+        text: "Embeddable component, ghi đè thuộc tính và component lồng nhau",
+        lesson: `**Mục tiêu.** Ánh xạ được một class value type tùy chỉnh thành \`@Embeddable\`, ghi đè cột cho hai property cùng kiểu embeddable trên một entity, và lồng một embeddable component vào bên trong một embeddable component khác.
+
+**Đọc.** [Schema cơ sở dữ liệu](#/docs/jpa-06) đọc kỹ, nắm hình ảnh cột của component được nhúng thẳng vào table của entity sở hữu — không có table riêng cho \`Address\`. [Làm cho class trở nên embeddable](#/docs/jpa-06) đọc kỹ toàn bộ listing \`Address\`, chú ý hộp cảnh báo về lỗi Hibernate Validator (mã HVAL-3). [Ghi đè các thuộc tính được nhúng](#/docs/jpa-06) đọc kỹ, gõ lại listing \`User\` dùng \`@AttributeOverride\` lặp lại ba lần cho \`billingAddress\`. [Ánh xạ embedded component lồng nhau](#/docs/jpa-06) đọc kỹ, gõ lại class \`City\` được nhúng vào trong \`Address\`, và chú ý ký pháp dấu chấm \`city.name\` khi ghi đè property lồng nhau từ entity gốc.
+
+**Bẫy.** Gắn \`@NotNull\` của Bean Validation lên property của một class \`@Embeddable\` rồi tin rằng nó đủ để sinh constraint \`NOT NULL\` trong schema. Mục Làm cho class trở nên embeddable cảnh báo đây là một lỗi chưa khắc phục của Hibernate Validator (HVAL-3): "Hibernate sẽ chỉ dùng \`@NotNull\` trên property của component lúc chạy cho Bean Validation" — bạn phải tự thêm \`@Column(nullable = false)\` tường minh để có constraint trong DDL. Bẫy thứ hai: dùng \`@AttributeOverride\` cho \`billingAddress\` và nghĩ nó chỉ đổi tên cột, giữ lại các ràng buộc khác của \`Address\`. Mục Ghi đè các thuộc tính được nhúng nói rõ mỗi \`@AttributeOverride\` là "trọn vẹn" — mọi annotation JPA hay Hibernate trên property bị ghi đè đều bị bỏ qua, nên nếu không tự khai lại \`nullable = false\`, "tất cả cột \`BILLING_*\` đều cho phép \`NULL\`" dù \`Address\` gốc đã ràng buộc \`NOT NULL\`.
+
+**Tự kiểm tra.** Vì sao chỉ gắn \`@NotNull\` của Bean Validation trên một property của class \`@Embeddable\` không đủ để sinh constraint \`NOT NULL\` trong schema, theo cảnh báo HVAL-3? Khi dùng \`@AttributeOverride\` để ghi đè cột của \`billingAddress\`, điều gì xảy ra với các annotation khác (như ràng buộc \`nullable\`) đã khai trên property gốc của \`Address\`?`,
+      },
+      {
+        id: "jp-w4-4",
+        text: "Converter: kiểu dựng sẵn, JPA converter và Hibernate UserType",
+        lesson: `**Mục tiêu.** Biết Hibernate ánh xạ kiểu JDK nào tới kiểu SQL nào theo mặc định, viết được một \`AttributeConverter\` cho một class value type tùy chỉnh, và biết khi nào converter chuẩn JPA không đủ và cần \`UserType\` native của Hibernate.
+
+**Đọc.** [Các kiểu dựng sẵn](#/docs/jpa-06) đọc kỹ các đoạn văn xung quanh bảng kiểu số/ký tự/ngày giờ/nhị phân (không cần thuộc bảng), đặc biệt đoạn giải thích Hibernate trả về \`java.sql.Date\`/\`Time\`/\`Timestamp\` chứ không phải \`java.util.Date\` sau khi nạp, và khuyến nghị dùng các kiểu \`java.time\` của Java 8 để tránh vấn đề này. [Tạo JPA converter tùy chỉnh](#/docs/jpa-06) đọc kỹ toàn bộ listing \`MonetaryAmountConverter\` hiện thực \`AttributeConverter\`, gõ lại cả hai phương thức \`convertToDatabaseColumn\`/\`convertToEntityAttribute\`. [Mở rộng Hibernate bằng UserType](#/docs/jpa-06) đọc kỹ đoạn mở đầu giải thích hai hạn chế của JPA converter chuẩn (không chuyển đổi từ/tới nhiều cột, không tích hợp engine truy vấn) trước khi đọc lướt qua listing \`MonetaryAmountUserType\` — không cần nhớ từng phương thức của \`CompositeUserType\`.
+
+**Bẫy.** So sánh hai giá trị \`java.util.Date\` bằng \`equals()\` sau khi nạp lại từ cơ sở dữ liệu và ngạc nhiên vì kết quả sai. Mục Các kiểu dựng sẵn giải thích: Hibernate luôn trả về subclass JDBC (\`java.sql.Date\`, \`Time\` hay \`Timestamp\`) chứ không phải \`java.util.Date\` gốc, vì cơ sở dữ liệu có độ chính xác cao hơn; \`equals()\` giữa hai kiểu này "không đối xứng", nên sách khuyến nghị luôn so sánh bằng \`getTime()\` thay vì \`equals()\`. Bẫy thứ hai: nghĩ một \`AttributeConverter\` chuẩn JPA giải quyết được mọi bài toán chuyển đổi kiểu. Mục Mở rộng Hibernate bằng UserType nêu rõ hai hạn chế: "các JPA converter chuẩn hóa không hỗ trợ việc biến đổi giá trị từ hoặc tới nhiều cột", và không tích hợp với engine truy vấn — bạn không thể viết \`select i from Item i where i.buyNowPrice.amount > 100\` dù đã có converter, vì Hibernate không biết \`MonetaryAmount\` có thuộc tính \`amount\`; chỉ \`CompositeUserType\` mới cho phép ký pháp dấu chấm đó trong truy vấn.
+
+**Tự kiểm tra.** Sau khi nạp lại một property \`java.util.Date\` từ cơ sở dữ liệu, Hibernate trả về đúng kiểu \`java.util.Date\` hay một kiểu khác, và bạn nên so sánh hai giá trị đó bằng phương thức nào thay vì \`equals()\`? Hai hạn chế nào của \`AttributeConverter\` chuẩn JPA khiến bạn phải chuyển sang \`UserType\` native của Hibernate?`,
+      },
+    ],
+  },
 ];
