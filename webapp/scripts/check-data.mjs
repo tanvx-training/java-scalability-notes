@@ -76,6 +76,7 @@ const EXPECTED = {
     "roadmap-items:ocnj": 48,
     // Lĩnh vực JPA — 20 chương Java Persistence with Spring Data and Hibernate.
     "docs:jpa": 20,
+    "roadmap-items:jpa": 52,
   },
 };
 

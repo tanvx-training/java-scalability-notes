@@ -455,10 +455,10 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "jp-1", title: "Dựng chỗ chạy và bật SQL log", desc: "Một dự án Spring Boot trống nối tới một SQL database thật, với `spring.jpa.show-sql` đã bật. Bạn sẽ đọc SQL sinh ra ở gần như mọi tuần — không bật nó thì nửa giá trị cuốn sách biến mất.", done: { kind: "manual" } },
-      { id: "jp-2", title: "Tuần 1–2: vì sao cần ORM, và repository đầu tiên", desc: "Paradigm mismatch qua năm mặt của nó, ba cách viết \"Hello World\", domain model CaveatEmptor và metadata, rồi toàn bộ cách lấy dữ liệu bằng Spring Data JPA.", done: { kind: "manual" } },
-      { id: "jp-3", title: "Tuần 3–7: ánh xạ", desc: "Entity với value type và identity, ánh xạ property và embeddable và converter, bốn chiến lược inheritance, collection, rồi mọi hình dạng association. Phần dày nhất sách và là nơi quyết định schema bạn sẽ sống chung nhiều năm.", done: { kind: "manual" } },
-      { id: "jp-4", title: "Tuần 8–10: cơ chế lúc chạy", desc: "Persistence context và vòng đời entity, transaction và điều khiển đồng thời, rồi fetch plan cùng các cơ chế cascade, Envers và filter. Kết thúc tuần 10 bạn giải thích được vì sao một đoạn mã sinh ra một nghìn câu SQL.", done: { kind: "manual" } },
-      { id: "jp-5", title: "Tuần 11–13: ráp vào Spring và kiểm thử", desc: "Mẫu DAO viết tay, Spring Data JDBC, Spring Data REST, MongoDB, Hibernate OGM, Querydsl, và kiểm thử tầng persistence bằng Spring TestContext.", done: { kind: "manual" } },
+      { id: "jp-2", title: "Tuần 1–2: vì sao cần ORM, và repository đầu tiên", desc: "Paradigm mismatch qua năm mặt của nó, ba cách viết \"Hello World\", domain model CaveatEmptor và metadata, rồi toàn bộ cách lấy dữ liệu bằng Spring Data JPA.", href: "#/roadmap/jpa", done: { kind: "track", id: "jpa", pct: 15 } },
+      { id: "jp-3", title: "Tuần 3–7: ánh xạ", desc: "Entity với value type và identity, ánh xạ property và embeddable và converter, bốn chiến lược inheritance, collection, rồi mọi hình dạng association. Phần dày nhất sách và là nơi quyết định schema bạn sẽ sống chung nhiều năm.", href: "#/roadmap/jpa", done: { kind: "track", id: "jpa", pct: 54 } },
+      { id: "jp-4", title: "Tuần 8–10: cơ chế lúc chạy", desc: "Persistence context và vòng đời entity, transaction và điều khiển đồng thời, rồi fetch plan cùng các cơ chế cascade, Envers và filter. Kết thúc tuần 10 bạn giải thích được vì sao một đoạn mã sinh ra một nghìn câu SQL.", href: "#/roadmap/jpa", done: { kind: "track", id: "jpa", pct: 77 } },
+      { id: "jp-5", title: "Tuần 11–13: ráp vào Spring và kiểm thử", desc: "Mẫu DAO viết tay, Spring Data JDBC, Spring Data REST, MongoDB, Hibernate OGM, Querydsl, và kiểm thử tầng persistence bằng Spring TestContext.", href: "#/roadmap/jpa", done: { kind: "track", id: "jpa", pct: 100 } },
     ],
     method: [
       { title: "Bật SQL log trước khi đọc", desc: "Mỗi chương ánh xạ kết thúc bằng một câu hỏi kiểm được: schema sinh ra trông thế nào, và một thao tác sinh ra mấy câu lệnh. Đọc mà không nhìn SQL là học thuộc annotation." },
@@ -666,6 +666,28 @@ export const trackGuides = {
       "Chạy lại phép đo của tuần 1 trên chính ứng dụng đó và so với con số ban đầu; giải thích mọi chênh lệch bằng từ vựng của sách.",
       "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend, nơi kỷ luật đo lường này được áp vào bài toán Tomcat và pool sizing thật.",
       "Đọc Modern Concurrency in Java để đi sâu phần virtual thread mà chương 13 và 15 chỉ mở đầu.",
+    ],
+  },
+
+  jpa: {
+    rhythm: "13 tuần, 4 mục mỗi tuần bám đủ 20 chương theo thứ tự sách; cả mười ba tuần đều có bài gõ tay. Đọc mục được chỉ (45–60 phút) → gõ ví dụ vào dự án xuyên suốt của bạn → bật SQL log và đối chiếu với điều chương vừa nói → trả lời tự kiểm tra → tick.",
+    before: [
+      "Đọc và viết được SQL ở mức join và index — chương 1 nói thẳng đây là điều kiện tiên quyết của cả cuốn sách.",
+      "Một dự án Spring Boot trống để giữ xuyên suốt 13 tuần; đừng dựng dự án mới mỗi chương.",
+      "Một SQL database chạy được cục bộ hoặc qua Docker, và `spring.jpa.show-sql` đã bật từ tuần 1.",
+      "Docker cho tuần 12 và 13 — chương 17 cần MongoDB, chương 18 cần cả MongoDB lẫn Neo4j.",
+    ],
+    during: [
+      "Bật SQL log rồi mới đọc. Gần như mọi chương ánh xạ kết thúc bằng một câu hỏi kiểm được: schema sinh ra trông thế nào, và một thao tác sinh ra mấy câu lệnh.",
+      "Tuần 8 (chương 10) là bản lề: persistence context là cơ chế mà chương 11 về transaction và chương 12 về lazy loading đều đứng lên trên. Đọc lướt tuần này là ba tuần sau không hiểu gì.",
+      "Giữ lại schema và SQL log của từng tuần. Tuần 10 về n+1 chỉ có nghĩa khi đặt cạnh các ánh xạ association bạn viết ở tuần 6 và 7.",
+      "Tuần 5 hiện thực cùng một cây thừa kế bằng cả bốn chiến lược. Nghe thừa nhưng đó là cách duy nhất để mục \"Chọn chiến lược\" của chương 7 trở thành hiểu biết thay vì một bảng thuộc lòng.",
+      "Tên package và giá trị mặc định trong sách gắn với một phiên bản cụ thể. Đọc để hiểu cơ chế, rồi tra lại theo phiên bản của bạn — Hibernate ORM documentation ở chân thanh bên.",
+    ],
+    after: [
+      "Mở lại một dự án Spring Data JPA cũ của bạn, bật SQL log, và tìm ít nhất một chỗ đang sinh n+1 hoặc đang giữ transaction dài hơn cần thiết.",
+      "Sang lĩnh vực Java & Spring Boot Scalability — chặng tiếp theo trên con đường Java Backend, nơi bẫy @Transactional và việc sizing connection pool được nhìn từ phía vận hành.",
+      "Đọc lại chương 11 khi bạn gặp một sự cố đồng thời thật; nó đọc khác hẳn khi đã có một lost update trong log.",
     ],
   },
 };

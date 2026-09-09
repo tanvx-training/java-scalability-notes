@@ -4,7 +4,8 @@
 // Concurrency in Java, đọc sách Designing Data-Intensive Applications, đọc
 // sách Modern Java in Action, đọc sách Kafka: The Definitive Guide, đọc
 // sách Spring Start Here, đọc sách Java Concurrency in Practice, đọc sách
-// Optimizing Cloud Native Java, và 4 giai
+// Optimizing Cloud Native Java, đọc sách Java Persistence with Spring Data
+// and Hibernate, và 4 giai
 // đoạn của Lộ trình Senior Java) — mỗi
 // track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
 // (markdown), mỗi tuần kèm tài nguyên liên quan.
@@ -26,6 +27,7 @@
 //   wgjd/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
 //   jcip/roadmap-part{1,2}.js               (Tuần 1–5 / 6–10)       — 40 mục
 //   ocnj/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
+//   jpa/roadmap-part{1,2}.js                (Tuần 1–7 / 8–13)       — 52 mục
 //   senior-java/roadmap-gd{1,2,3,4}.js      (Tuần 1–26 mỗi giai đoạn) — 81 / 66 / 64 / 65 mục
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
@@ -67,6 +69,8 @@ import { jcipWeeksPart1 } from "./jcip/roadmap-part1.js";
 import { jcipWeeksPart2 } from "./jcip/roadmap-part2.js";
 import { ocnjWeeksPart1 } from "./ocnj/roadmap-part1.js";
 import { ocnjWeeksPart2 } from "./ocnj/roadmap-part2.js";
+import { jpaWeeksPart1 } from "./jpa/roadmap-part1.js";
+import { jpaWeeksPart2 } from "./jpa/roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java/roadmap-gd1.js";
 import { seniorJavaGd2 } from "./senior-java/roadmap-gd2.js";
 import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
@@ -308,6 +312,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 12 tuần bám theo bản dịch 15 chương và năm Phần của sách: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; mười một tuần có bài thực hành gõ tay — đo phân vị bằng HdrHistogram, đọc `-Xlog:gc*`, đổi collector so pause, bắt deopt bằng `PrintCompilation`, dựng benchmark false sharing bằng JMH, chạy Fighting Animals trong container, cắm Micrometer/Prometheus/OpenTelemetry, lấy flame graph bằng JFR và Async Profiler, và so Fork/Join với virtual thread.",
     prereq: "Yêu cầu: viết và chạy được một ứng dụng Java/Spring Boot thật để có cái mà đo — đây là sách về đo và tối ưu, không phải sách dạy Java. JDK 17 trở lên (tốt nhất JDK 21+ cho chương 13 và 15), Docker chạy được cho chương 8, 9 và 11, và đọc được stack trace. Bộ nguồn không có Phụ lục A (microbenchmarking) và Phụ lục B (danh mục antipattern); phần microbenchmarking được bù bằng JMH ở tuần 1. Sách bám các mốc JDK cụ thể: đọc để hiểu cơ chế, còn cờ JVM và giá trị mặc định thì tra lại theo JDK bạn đang chạy.",
     weeks: [...ocnjWeeksPart1, ...ocnjWeeksPart2],
+  },
+  {
+    id: "jpa",
+    field: "jpa",
+    label: "Java Persistence",
+    icon: "🗃️",
+    name: "Đọc Java Persistence with Spring Data and Hibernate",
+    durationWeeks: 13,
+    desc: "Kế hoạch đọc 13 tuần bám theo bản dịch đủ 20 chương: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; cả mười ba tuần đều có bài thực hành gõ tay — dựng cùng một Hello World bằng ba cách, đọc DDL Hibernate sinh ra, so ba chiến lược sinh id, viết converter, hiện thực một cây thừa kế bằng cả bốn chiến lược, đếm câu lệnh khi đổi interface collection, tái hiện LazyInitializationException, chặn lost update bằng optimistic rồi pessimistic lock, đếm query trước và sau khi chữa n+1, chuyển một repository sang Spring Data JDBC, thử ETag, và viết test persistence chạy trên database thật trong container.",
+    prereq: "Yêu cầu: đọc và viết được SQL ở mức join và index — sách nói thẳng ở chương 1 rằng nắm vững mô hình quan hệ và SQL là điều kiện tiên quyết. Chạy được một ứng dụng Spring Boot thật để gõ theo từng chương, và có một SQL database chạy được cục bộ hoặc qua Docker vì gần như mọi tuần đều đọc SQL do Hibernate sinh ra. Docker cho chương 17 và 18 (MongoDB và Neo4j). Tên package và giá trị mặc định của Hibernate cùng Spring Data đổi theo phiên bản: đọc để hiểu cơ chế, còn cấu hình thì tra lại theo phiên bản bạn đang chạy.",
+    weeks: [...jpaWeeksPart1, ...jpaWeeksPart2],
   },
 ];
 
