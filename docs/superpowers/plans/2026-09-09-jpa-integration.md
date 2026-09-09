@@ -1585,8 +1585,11 @@ Kỳ vọng: `49/49 bất biến đạt` và `Dữ liệu hợp lệ.`
 | Tài liệu | 242 | **262** |
 | Track lộ trình | 20 | **21** |
 | Mục lộ trình | 946 | **998** |
-| Markdown trong `content/` | 254 | **274** |
+| Markdown trong `content/` | 254 | **275** |
 | Ảnh trong `content/` | 1204 | **1331** |
+
+Markdown tăng **21** chứ không phải 20: ngoài 20 chương còn có `sources/jpa/README.md` do Task 1
+viết, và `build-content.sh` sao chép README của mọi nguồn (`content/` có 12 README).
 
 Hai dòng cuối kiểm bằng:
 
