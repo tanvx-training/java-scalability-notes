@@ -406,43 +406,6 @@ export const fieldGuides = {
     ],
   },
 
-  jpa: {
-    tagline: "Đọc Java Persistence with Spring Data and Hibernate — từ paradigm mismatch tới persistence context, transaction, fetch plan và kiểm thử.",
-    audience: "Lập trình viên Java đã dùng Spring Data JPA nhưng chưa biết Hibernate làm gì sau lưng mình — người đã từng gặp LazyInitializationException hoặc N+1 mà chỉ chữa được bằng cách thử.",
-    hoursPerWeek: "6–8 giờ/tuần · 13 tuần",
-    prereqs: [
-      "Đọc và viết được SQL ở mức join và index — sách nói thẳng ở chương 1 rằng nắm vững mô hình quan hệ và SQL là điều kiện tiên quyết.",
-      "Chạy được một ứng dụng Spring Boot thật để gõ theo từng chương.",
-      "Một SQL database chạy được cục bộ hoặc qua Docker; mọi tuần đều đọc SQL do Hibernate sinh ra.",
-      "Docker cho chương 17 và 18 — hai chương đó cần MongoDB và Neo4j.",
-    ],
-    steps: [
-      { id: "jp-1", title: "Dựng chỗ chạy và bật SQL log", desc: "Một dự án Spring Boot trống nối tới một SQL database thật, với `spring.jpa.show-sql` đã bật. Bạn sẽ đọc SQL sinh ra ở gần như mọi tuần — không bật nó thì nửa giá trị cuốn sách biến mất.", done: { kind: "manual" } },
-      { id: "jp-2", title: "Tuần 1–2: vì sao cần ORM, và repository đầu tiên", desc: "Paradigm mismatch qua năm mặt của nó, ba cách viết \"Hello World\", domain model CaveatEmptor và metadata, rồi toàn bộ cách lấy dữ liệu bằng Spring Data JPA.", done: { kind: "manual" } },
-      { id: "jp-3", title: "Tuần 3–7: ánh xạ", desc: "Entity với value type và identity, ánh xạ property và embeddable và converter, bốn chiến lược inheritance, collection, rồi mọi hình dạng association. Phần dày nhất sách và là nơi quyết định schema bạn sẽ sống chung nhiều năm.", done: { kind: "manual" } },
-      { id: "jp-4", title: "Tuần 8–10: cơ chế lúc chạy", desc: "Persistence context và vòng đời entity, transaction và điều khiển đồng thời, rồi fetch plan cùng các cơ chế cascade, Envers và filter. Kết thúc tuần 10 bạn giải thích được vì sao một đoạn mã sinh ra một nghìn câu SQL.", done: { kind: "manual" } },
-      { id: "jp-5", title: "Tuần 11–13: ráp vào Spring và kiểm thử", desc: "Mẫu DAO viết tay, Spring Data JDBC, Spring Data REST, MongoDB, Hibernate OGM, Querydsl, và kiểm thử tầng persistence bằng Spring TestContext.", done: { kind: "manual" } },
-    ],
-    method: [
-      { title: "Bật SQL log trước khi đọc", desc: "Mỗi chương ánh xạ kết thúc bằng một câu hỏi kiểm được: schema sinh ra trông thế nào, và một thao tác sinh ra mấy câu lệnh. Đọc mà không nhìn SQL là học thuộc annotation." },
-      { title: "Giữ lại một dự án xuyên suốt", desc: "Sách dùng CaveatEmptor từ chương 3 tới hết. Giữ một dự án của riêng bạn theo cùng cách: mỗi tuần thêm vào nó, đừng dựng dự án mới mỗi chương." },
-    ],
-    pitfalls: [
-      "**Đọc sách như một danh mục annotation.** Giá trị nằm ở đánh đổi giữa các chiến lược — chương 7 dành hẳn một mục \"Chọn chiến lược\" cho bốn cách ánh xạ inheritance. Học thuộc annotation mà không bật SQL log để nhìn schema và câu lệnh thật là bỏ đúng phần đó.",
-      "**Chương 18 dạy công nghệ đã ngưng phát triển.** Hibernate OGM không còn được phát triển tích cực và không theo kịp Jakarta EE. Đọc để hiểu ý tưởng mở rộng khả chuyển của JPA sang NoSQL, đừng dựng hệ thống mới trên nó. Đây là ghi chú thời sự, không phải chê nguồn.",
-      "**Tưởng tên package và giá trị mặc định là hằng số.** Ranh giới `javax.persistence` và `jakarta.persistence`, mặc định của Hibernate, API của Spring Data — tất cả đổi theo phiên bản. Đọc để hiểu cơ chế, còn cấu hình thì tra lại theo phiên bản đang chạy; Hibernate ORM documentation ở chân thanh bên là chỗ tra.",
-      "**Bỏ qua chương 10 vì tên nó nghe hiền.** \"Quản lý dữ liệu\" là chương persistence context — cơ chế mà chương 12 về lazy loading và chương 11 về transaction đều đứng lên trên. Đọc lướt chương này là ba tuần sau không hiểu gì.",
-    ],
-    doneWhen: [
-      "Nhìn một domain model là nói được cái gì nên là entity, cái gì nên là value type, và vì sao.",
-      "Chọn được một trong bốn chiến lược inheritance cho một cây thừa kế cụ thể và nêu lý do bằng đánh đổi.",
-      "Giải thích được vì sao một vòng lặp trên collection sinh ra N+1 câu SQL, và chữa được bằng ít nhất hai cách khác nhau.",
-      "Nói được một entity đang ở trạng thái nào trong vòng đời persistence, và thao tác nào chuyển nó sang trạng thái nào.",
-      "Chặn được lost update bằng optimistic locking, và nói được khi nào phải dùng pessimistic thay thế.",
-      "Viết được test cho tầng persistence chạy trên database thật mà không rò rỉ trạng thái giữa các test.",
-    ],
-  },
-
   ocnj: {
     tagline: "Đọc Optimizing Cloud Native Java — đo trước, tối ưu sau: hệ phân loại hiệu năng, GC, JIT, phần cứng, observability, profiling và hệ phân tán.",
     audience: "Lập trình viên Java đã có một ứng dụng thật đang chạy và muốn biết vì sao nó nhanh hay chậm — bằng số đo, không bằng linh cảm. **Không phải sách dạy Java**: nó giả định bạn viết được ứng dụng rồi, và dạy cách quan sát nó.",
@@ -477,6 +440,43 @@ export const fieldGuides = {
       "Chọn được collector cho một workload cụ thể và nêu lý do bằng đánh đổi, không bằng danh tiếng.",
       "Dựng được metric và trace cho một service, rồi dùng chúng để chẩn đoán một sự cố thật.",
       "Lấy được flame graph bằng hai công cụ khác nhau và giải thích được vì sao chúng khác nhau.",
+    ],
+  },
+
+  jpa: {
+    tagline: "Đọc Java Persistence with Spring Data and Hibernate — từ paradigm mismatch tới persistence context, transaction, fetch plan và kiểm thử.",
+    audience: "Lập trình viên Java đã dùng Spring Data JPA nhưng chưa biết Hibernate làm gì sau lưng mình — người đã từng gặp LazyInitializationException hoặc N+1 mà chỉ chữa được bằng cách thử.",
+    hoursPerWeek: "6–8 giờ/tuần · 13 tuần",
+    prereqs: [
+      "Đọc và viết được SQL ở mức join và index — sách nói thẳng ở chương 1 rằng nắm vững mô hình quan hệ và SQL là điều kiện tiên quyết.",
+      "Chạy được một ứng dụng Spring Boot thật để gõ theo từng chương.",
+      "Một SQL database chạy được cục bộ hoặc qua Docker; mọi tuần đều đọc SQL do Hibernate sinh ra.",
+      "Docker cho chương 17 và 18 — hai chương đó cần MongoDB và Neo4j.",
+    ],
+    steps: [
+      { id: "jp-1", title: "Dựng chỗ chạy và bật SQL log", desc: "Một dự án Spring Boot trống nối tới một SQL database thật, với `spring.jpa.show-sql` đã bật. Bạn sẽ đọc SQL sinh ra ở gần như mọi tuần — không bật nó thì nửa giá trị cuốn sách biến mất.", done: { kind: "manual" } },
+      { id: "jp-2", title: "Tuần 1–2: vì sao cần ORM, và repository đầu tiên", desc: "Paradigm mismatch qua năm mặt của nó, ba cách viết \"Hello World\", domain model CaveatEmptor và metadata, rồi toàn bộ cách lấy dữ liệu bằng Spring Data JPA.", done: { kind: "manual" } },
+      { id: "jp-3", title: "Tuần 3–7: ánh xạ", desc: "Entity với value type và identity, ánh xạ property và embeddable và converter, bốn chiến lược inheritance, collection, rồi mọi hình dạng association. Phần dày nhất sách và là nơi quyết định schema bạn sẽ sống chung nhiều năm.", done: { kind: "manual" } },
+      { id: "jp-4", title: "Tuần 8–10: cơ chế lúc chạy", desc: "Persistence context và vòng đời entity, transaction và điều khiển đồng thời, rồi fetch plan cùng các cơ chế cascade, Envers và filter. Kết thúc tuần 10 bạn giải thích được vì sao một đoạn mã sinh ra một nghìn câu SQL.", done: { kind: "manual" } },
+      { id: "jp-5", title: "Tuần 11–13: ráp vào Spring và kiểm thử", desc: "Mẫu DAO viết tay, Spring Data JDBC, Spring Data REST, MongoDB, Hibernate OGM, Querydsl, và kiểm thử tầng persistence bằng Spring TestContext.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Bật SQL log trước khi đọc", desc: "Mỗi chương ánh xạ kết thúc bằng một câu hỏi kiểm được: schema sinh ra trông thế nào, và một thao tác sinh ra mấy câu lệnh. Đọc mà không nhìn SQL là học thuộc annotation." },
+      { title: "Giữ lại một dự án xuyên suốt", desc: "Sách dùng CaveatEmptor từ chương 3 tới hết. Giữ một dự án của riêng bạn theo cùng cách: mỗi tuần thêm vào nó, đừng dựng dự án mới mỗi chương." },
+    ],
+    pitfalls: [
+      "**Đọc sách như một danh mục annotation.** Giá trị nằm ở đánh đổi giữa các chiến lược — chương 7 dành hẳn một mục \"Chọn chiến lược\" cho bốn cách ánh xạ inheritance. Học thuộc annotation mà không bật SQL log để nhìn schema và câu lệnh thật là bỏ đúng phần đó.",
+      "**Chương 18 dạy công nghệ đã ngưng phát triển.** Hibernate OGM không còn được phát triển tích cực và không theo kịp Jakarta EE. Đọc để hiểu ý tưởng mở rộng khả chuyển của JPA sang NoSQL, đừng dựng hệ thống mới trên nó. Đây là ghi chú thời sự, không phải chê nguồn.",
+      "**Tưởng tên package và giá trị mặc định là hằng số.** Ranh giới `javax.persistence` và `jakarta.persistence`, mặc định của Hibernate, API của Spring Data — tất cả đổi theo phiên bản. Đọc để hiểu cơ chế, còn cấu hình thì tra lại theo phiên bản đang chạy; Hibernate ORM documentation ở chân thanh bên là chỗ tra.",
+      "**Bỏ qua chương 10 vì tên nó nghe hiền.** \"Quản lý dữ liệu\" là chương persistence context — cơ chế mà chương 12 về lazy loading và chương 11 về transaction đều đứng lên trên. Đọc lướt chương này là ba tuần sau không hiểu gì.",
+    ],
+    doneWhen: [
+      "Nhìn một domain model là nói được cái gì nên là entity, cái gì nên là value type, và vì sao.",
+      "Chọn được một trong bốn chiến lược inheritance cho một cây thừa kế cụ thể và nêu lý do bằng đánh đổi.",
+      "Giải thích được vì sao một vòng lặp trên collection sinh ra N+1 câu SQL, và chữa được bằng ít nhất hai cách khác nhau.",
+      "Nói được một entity đang ở trạng thái nào trong vòng đời persistence, và thao tác nào chuyển nó sang trạng thái nào.",
+      "Chặn được lost update bằng optimistic locking, và nói được khi nào phải dùng pessimistic thay thế.",
+      "Viết được test cho tầng persistence chạy trên database thật mà không rò rỉ trạng thái giữa các test.",
     ],
   },
 

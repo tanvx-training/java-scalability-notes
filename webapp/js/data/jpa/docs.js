@@ -3,9 +3,11 @@
 // vào webapp/content/, nên `file` luôn có dạng content/jpa/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
 // `chapter` giữ ĐÚNG số chương sách: 1–20, liền mạch, bản dịch đủ chương.
-// `part` là null cho CẢ 20: bộ nguồn không có README, không tệp nào chứa chữ
-// "Phần", và PDF tách theo chương nên không có trang phân Phần. Điền tên Phần
-// theo trí nhớ về bản in tiếng Anh là bịa — giống cách wgjd và jcip xử lý.
+// `part` là null cho CẢ 20: bản dịch nhận vào không kèm README của người dịch,
+// và `sources/jpa/README.md` là do repo tự viết, cũng không phân Phần. Không
+// tệp markdown nào chứa chữ "Phần", và PDF tách theo chương nên không có trang
+// phân Phần. Điền tên Phần theo trí nhớ về bản in tiếng Anh là bịa — giống
+// cách wgjd và jcip xử lý.
 
 export const docs = [
   {
