@@ -74,6 +74,8 @@ const EXPECTED = {
     // Lĩnh vực Optimizing Cloud Native Java — 15 chương (1–15), bản dịch đủ chương.
     "docs:ocnj": 15,
     "roadmap-items:ocnj": 48,
+    // Lĩnh vực JPA — 20 chương Java Persistence with Spring Data and Hibernate.
+    "docs:jpa": 20,
   },
 };
 

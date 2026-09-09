@@ -16,6 +16,7 @@ import { docs as springStart } from "./spring-start/docs.js";
 import { docs as wgjd } from "./wgjd/docs.js";
 import { docs as jcip } from "./jcip/docs.js";
 import { docs as ocnj } from "./ocnj/docs.js";
+import { docs as jpa } from "./jpa/docs.js";
 
 export const docs = [
   ...kubernetes,
@@ -31,4 +32,5 @@ export const docs = [
   ...wgjd,
   ...jcip,
   ...ocnj,
+  ...jpa,
 ];

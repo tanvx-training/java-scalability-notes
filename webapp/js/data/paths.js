@@ -17,8 +17,8 @@ export const PATHS = {
   java: {
     label: "Java Backend",
     icon: "☕",
-    desc: "Một nghề, tám chặng: Spring cơ bản → Java hiện đại → xuống dưới nắp JVM (bytecode, JMM, build, container) → nền concurrency cổ điển (thread safety, lock, AQS, JMM) → đo và tối ưu trên cloud (GC, JIT, observability, profiling) → khả năng mở rộng trên Tomcat → concurrency sau Loom → bảo mật. Lập trình hệ thống là nền tuỳ chọn cho ai muốn hiểu tới tầng kernel.",
-    fields: ["spring-start", "modern-java", "wgjd", "jcip", "ocnj", "java", "modern-concurrency", "spring-security"],
+    desc: "Một nghề, chín chặng: Spring cơ bản → Java hiện đại → xuống dưới nắp JVM (bytecode, JMM, build, container) → nền concurrency cổ điển (thread safety, lock, AQS, JMM) → đo và tối ưu trên cloud (GC, JIT, observability, profiling) → persistence (ánh xạ, persistence context, transaction, fetch) → khả năng mở rộng trên Tomcat → concurrency sau Loom → bảo mật. Lập trình hệ thống là nền tuỳ chọn cho ai muốn hiểu tới tầng kernel.",
+    fields: ["spring-start", "modern-java", "wgjd", "jcip", "ocnj", "jpa", "java", "modern-concurrency", "spring-security"],
     foundation: ["sysprog"],
   },
   data: {
