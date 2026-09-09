@@ -204,7 +204,7 @@ function renderTrack(root, track, focusItemId) {
         weekNum,
         h("div", { class: "grow", style: "min-width:0" },
           h("div", { class: "lab-title" }, `${week.week} — ${week.title}`),
-          h("div", { class: "muted small" }, week.goal),
+          h("div", { class: "muted small", html: inlineMd(week.goal ?? "") }),
           h("div", { class: "progress", style: "margin-top:7px;height:5px;max-width:220px" }, weekBar)),
         weekCount),
       body
