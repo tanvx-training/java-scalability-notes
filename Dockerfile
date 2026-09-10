@@ -17,6 +17,10 @@ RUN webapp/scripts/build-content.sh webapp/content \
 ########################
 FROM nginx:alpine
 COPY --from=builder /repo/webapp /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 RUN sed -i '/^pid /d' /etc/nginx/nginx.conf && \
     sed -i '1i pid /tmp/nginx.pid;' /etc/nginx/nginx.conf
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/healthz >/dev/null 2>&1 || exit 1

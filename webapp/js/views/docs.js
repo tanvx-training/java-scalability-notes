@@ -382,9 +382,19 @@ let mermaidPromise = null;
 
 function loadMermaid() {
   if (!mermaidPromise) {
-    mermaidPromise = import(
-      "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs"
-    ).then((m) => m.default);
+    // Dùng bản UMD nhúng kèm trong js/vendor/ (không phải CDN) để app chạy được
+    // trên server nội bộ không ra internet. Bản ESM của mermaid bị code-split
+    // thành ~1.000 tệp chunk nên không nhúng kèm được.
+    mermaidPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = new URL("../vendor/mermaid.min.js", import.meta.url).href;
+      s.onload = () =>
+        window.mermaid
+          ? resolve(window.mermaid)
+          : reject(new Error("mermaid nạp xong nhưng không thấy window.mermaid"));
+      s.onerror = () => reject(new Error("không nạp được js/vendor/mermaid.min.js"));
+      document.head.append(s);
+    });
   }
   return mermaidPromise;
 }
