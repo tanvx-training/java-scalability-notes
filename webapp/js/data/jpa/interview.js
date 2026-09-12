@@ -176,4 +176,165 @@ for (Item i : batch) { /* ... */ }`,
     ],
     refs: ["jpa-06", "jpa-05"],
   },
+
+  // ===== jpa-assoc — Collection & association (jpa-iq05–jpa-iq08) =====
+  {
+    id: "jpa-iq05",
+    field: "jpa",
+    topic: "jpa-assoc",
+    level: 1,
+    minutes: 5,
+    question: "Trong một association hai chiều `Item` ↔ `Bid`, tham số `mappedBy` nói lên điều gì, và nếu chỉ cập nhật collection bên `Item` mà quên gán `bid.setItem(item)` thì chuyện gì xảy ra?",
+    mustCover: [
+      "`mappedBy` chỉ ra rằng phía này **không** sở hữu quan hệ: nó bảo Hibernate nạp collection bằng cột foreign key đã được ánh xạ bởi property được nêu tên",
+      "Phía sở hữu là phía có cột foreign key — ở đây là `Bid#item` ánh xạ bằng `@ManyToOne`, vì cột `ITEM_ID` nằm trên bảng `BID`",
+      "Chỉ phía sở hữu mới sinh ra `UPDATE` cột khoá ngoại; thêm vào collection nghịch không ghi gì xuống, nên khoá ngoại vẫn `null` hoặc giữ giá trị cũ",
+      "`mappedBy` là **bắt buộc** khi association một-nhiều là hai chiều và cột khoá ngoại đã được ánh xạ ở phía kia",
+    ],
+    model: "Một association hai chiều trong JPA vẫn chỉ là **một** cột khoá ngoại trong cơ sở dữ liệu, và hai property Java cùng nhìn vào cột đó. `mappedBy` là cách nói ai không chịu trách nhiệm: đặt `@OneToMany(mappedBy = \"item\")` trên `Item#bids` nghĩa là collection này được nạp từ cột khoá ngoại mà property `Bid#item` đã ánh xạ, chứ bản thân nó không ánh xạ cột nào. Phía sở hữu là `Bid`, vì cột `ITEM_ID` nằm trên bảng `BID` và được ánh xạ bằng `@ManyToOne`. Hệ quả trực tiếp: khi chỉ gọi `item.getBids().add(bid)`, không có gì được ghi xuống — phía nghịch không sinh câu lệnh cập nhật khoá ngoại — nên hoặc bản ghi không được lưu, hoặc được lưu với `ITEM_ID` là `null`. Tệ hơn, trong cùng một persistence context thì collection trong bộ nhớ trông vẫn đúng, nên lỗi chỉ lộ ra sau khi context đóng và dữ liệu được đọc lại. Vì vậy thành ngữ chuẩn là viết một hàm tiện ích đặt cả hai phía trong một lần gọi. Sách cũng lưu ý mặc định `fetch` của mọi ánh xạ collection là `FetchType.LAZY`, và đó là mặc định tốt — `EAGER` hiếm khi cần.",
+    redFlags: [
+      "Nói `mappedBy` chỉ để \"tránh tạo bảng nối\" — nó nói về quyền sở hữu cột khoá ngoại, không phải về bảng nối",
+      "Khẳng định Hibernate tự đồng bộ hai phía; nó không làm vậy, và ảo giác đó bền vì trong cùng persistence context collection trông vẫn đúng",
+      "Đề nghị bỏ `mappedBy` cho \"cả hai phía cùng ghi\" — khi đó JPA coi đây là hai association riêng biệt và sinh thêm bảng nối",
+    ],
+    probes: [
+      "Vì sao lỗi này thường chỉ lộ ra ở lần đọc sau khi persistence context đã đóng?",
+      "Nếu bỏ hẳn `mappedBy` khỏi `@OneToMany` thì schema sinh ra khác thế nào?",
+      "Sách liệt kê những lợi ích nào của việc ánh xạ collection `Item#bids`, và nói cái giá là gì?",
+    ],
+    refs: ["jpa-08"],
+  },
+  {
+    id: "jpa-iq06",
+    field: "jpa",
+    topic: "jpa-assoc",
+    level: 2,
+    minutes: 8,
+    code: {
+      lang: "java",
+      text: `@Entity
+public class Item {
+    @Id @GeneratedValue
+    private Long id;
+
+    @OneToMany(mappedBy = "item", cascade = CascadeType.PERSIST)
+    private Set<Bid> bids = new HashSet<>();
+
+    public Set<Bid> getBids() { return bids; }
+}
+
+@Entity
+public class Bid {
+    @Id @GeneratedValue
+    private Long id;
+
+    @ManyToOne
+    private Item item;
+
+    public void setItem(Item item) { this.item = item; }
+}
+
+// Trong service:
+@Transactional
+public void addBid(Long itemId, BigDecimal amount) {
+    Item item = itemRepository.findById(itemId).orElseThrow();
+    Bid bid = new Bid(amount);
+    item.getBids().add(bid);          // chỉ đụng một phía
+}`,
+    },
+    question: "Sau khi method này chạy xong, bảng `BID` có thêm dòng mới nhưng cột `ITEM_ID` lại là `NULL`. Giải thích cơ chế, rồi sửa cho đúng.",
+    mustCover: [
+      "Cascade `PERSIST` từ collection khiến `Bid` **được lưu**, nên có dòng mới — đó là lý do triệu chứng là `NULL` chứ không phải mất hẳn bản ghi",
+      "Nhưng cột khoá ngoại do phía sở hữu `Bid#item` quyết định, và property đó chưa bao giờ được gán nên ghi xuống `null`",
+      "Sửa bằng một hàm tiện ích đặt **cả hai phía** trong một lần gọi, đặt trên entity cha để không chỗ gọi nào quên được",
+      "Hàm gỡ liên kết cũng phải đối xứng: xoá khỏi collection **và** gán `null` cho phía sở hữu, nếu không dòng cũ vẫn giữ khoá ngoại",
+    ],
+    model: "Hai chuyện độc lập đang xảy ra cùng lúc. Việc dòng mới xuất hiện là nhờ `cascade = CascadeType.PERSIST`: khi persistence context flush, `Item` đang ở trạng thái được quản lý nên thao tác lưu lan sang mọi `Bid` trong collection, và `INSERT` chạy. Việc `ITEM_ID` là `NULL` thì thuộc về quyền sở hữu quan hệ: `Item#bids` khai `mappedBy` nên nó chỉ đọc cột khoá ngoại chứ không ghi; giá trị cột hoàn toàn do `Bid#item` quyết định, mà property ấy chưa được gán. Cách sửa đúng là không để chỗ gọi phải nhớ hai bước — đặt một hàm tiện ích trên `Item` làm cả hai việc: thêm vào collection rồi gọi `bid.setItem(this)`. Và phải làm đối xứng cho chiều gỡ: chỉ `bids.remove(bid)` là chưa đủ, phải `bid.setItem(null)` thì dòng cũ mới thôi trỏ về `Item`. Một điểm dễ bỏ sót khi kiểm thử: nếu viết assert ngay trong cùng transaction, `item.getBids()` vẫn trả về bid vừa thêm dù cột khoá ngoại sai, vì ta đang đọc collection trong bộ nhớ chứ không đọc lại từ database — test phải flush và clear persistence context trước khi kiểm.",
+    redFlags: [
+      "Thêm `@JoinColumn(nullable = false)` rồi coi là đã sửa — đó chỉ đổi lỗi `NULL` âm thầm thành lỗi ràng buộc, nguyên nhân vẫn nguyên",
+      "Đổ lỗi cho cascade: cascade đang hoạt động đúng như khai báo, vấn đề nằm ở phía sở hữu chưa được gán",
+      "Viết test assert trong cùng transaction rồi kết luận đã sửa xong — collection trong bộ nhớ che mất cột khoá ngoại sai",
+    ],
+    probes: [
+      "Viết hàm gỡ liên kết cho đúng đối xứng, và nói rõ nó phải làm những gì",
+      "Nếu đổi `Set<Bid>` sang `Collection<Bid>` khởi tạo bằng `ArrayList` thì hành vi nạp đổi thế nào?",
+      "Vì sao thêm phần tử vào một bag không kích hoạt nạp collection, còn thêm vào set thì có?",
+    ],
+    refs: ["jpa-08"],
+  },
+  {
+    id: "jpa-iq07",
+    field: "jpa",
+    topic: "jpa-assoc",
+    level: 3,
+    minutes: 9,
+    question: "Bạn ánh xạ `Item#bids` — một collection có thể rất lớn và được thêm phần tử liên tục. Chọn kiểu collection nào ở phía nghịch, và khi nào bạn đổi ý?",
+    tradeoffs: [
+      {
+        option: "Bag — `Collection<Bid>` khởi tạo bằng `ArrayList`, `@OneToMany(mappedBy = \"item\")`",
+        when: "Collection có thể rất lớn và thao tác chính là **thêm** phần tử. Bag không phải giữ chỉ số như list, cũng không phải kiểm tra trùng lặp như set, nên thêm phần tử mới **không kích hoạt nạp** collection. Sách gọi đây là collection nghịch tốt nhất cho một association một-nhiều ánh xạ bằng `mappedBy`.",
+      },
+      {
+        option: "`Set<Bid>` khởi tạo bằng `HashSet`",
+        when: "Cần ngữ nghĩa không trùng lặp và collection đủ nhỏ để việc nạp khi thêm phần tử không thành vấn đề. Đây là lựa chọn mọi JPA provider đều hỗ trợ, nên hợp khi cần khả chuyển ngoài Hibernate.",
+      },
+      {
+        option: "`List<Bid>` với `@OrderColumn`",
+        when: "Thứ tự phần tử là **dữ liệu nghiệp vụ** cần lưu lại, chứ không phải thứ tự hiển thị tính được lúc truy vấn. Đắt hơn hẳn vì Hibernate phải duy trì cột chỉ số; nếu chỉ cần sắp xếp lúc đọc thì dùng `ORDER BY` khi nạp, hoặc sắp trong bộ nhớ bằng comparator.",
+      },
+    ],
+    mustCover: [
+      "Trục quyết định thứ nhất là **chi phí nạp khi thêm phần tử**: bag thêm được mà không nạp, set và list thì phải nạp trước",
+      "Trục thứ hai là ngữ nghĩa cần giữ: cho phép trùng lặp hay không, và thứ tự có phải dữ liệu phải lưu hay không",
+      "Sách phân biệt **sắp xếp** trong bộ nhớ bằng comparator với **sắp thứ tự** khi nạp bằng mệnh đề `ORDER BY` của SQL — hai cơ chế khác nhau",
+      "Giới hạn của bag: không eager-fetch được hai bag cùng lúc, vì các câu `SELECT` sinh ra độc lập với nhau",
+      "Nhưng giới hạn đó không phải mất mát lớn, vì nạp hai collection cùng lúc luôn dẫn tới tích Descartes bất kể kiểu collection nào",
+    ],
+    model: "Sách trả lời câu này khá dứt khoát cho đúng tình huống đang hỏi: bag có đặc tính hiệu năng tốt nhất trong các collection dùng cho association một-nhiều hai chiều. Lý do nằm ở chỗ collection trong Hibernate mặc định được nạp khi truy cập lần đầu, mà bag không phải duy trì chỉ số phần tử như list cũng không phải kiểm tra trùng lặp như set — nên thêm một phần tử mới không buộc phải nạp toàn bộ collection trước. Với một `Item` có hàng nghìn bid và thao tác chính là thêm bid mới, khác biệt này là một lần nạp toàn bảng con so với không nạp gì. Cái giá là không thể eager-fetch hai bag cùng lúc, vì các câu `SELECT` sinh ra không liên quan nhau và phải giữ riêng — nhưng sách nói rõ đây không phải mất mát lớn, bởi nạp hai collection đồng thời luôn tạo tích Descartes và ta muốn tránh nó bất kể kiểu collection là gì. Chọn `Set` khi thật sự cần chặn trùng lặp và collection đủ nhỏ, hoặc khi cần khả chuyển sang JPA provider khác. Chọn `List` với `@OrderColumn` chỉ khi thứ tự là dữ liệu nghiệp vụ phải lưu — và ở đây phải phân biệt rõ hai cơ chế sách tách bạch: sắp xếp trong bộ nhớ bằng comparator của Java, so với sắp thứ tự lúc nạp bằng mệnh đề `ORDER BY` trong SQL. Nếu chỉ cần hiển thị bid theo thời gian giảm dần thì đó là việc của truy vấn, không phải của kiểu collection.",
+    redFlags: [
+      "Chọn `List` vì \"cần thứ tự\" mà không tách bạch thứ tự hiển thị lúc đọc với thứ tự là dữ liệu phải lưu",
+      "Cho rằng `Set` luôn an toàn nhất — với collection lớn, mỗi lần thêm phần tử là một lần nạp toàn bộ",
+      "Nói bag \"không dùng được vì không eager-fetch hai cái cùng lúc\" mà không nhận ra việc đó tự nó đã là thứ nên tránh",
+    ],
+    probes: [
+      "`SortedSet` khởi tạo bằng `TreeSet` khác gì, và vì sao sách cảnh báo về nó?",
+      "Nếu cần cả `bids` lẫn `images` của cùng một `Item` trong một màn hình, bạn nạp thế nào để không tạo tích Descartes?",
+      "Vì sao sách khuyên khởi tạo collection ngay ở chỗ khai báo field chứ không trong constructor hay setter?",
+    ],
+    refs: ["jpa-08", "jpa-09"],
+  },
+  {
+    id: "jpa-iq08",
+    field: "jpa",
+    topic: "jpa-assoc",
+    level: 4,
+    minutes: 13,
+    incident: {
+      symptom: "Quan hệ `Category` ↔ `Item` được ánh xạ `@ManyToMany` thuần với bảng nối `CATEGORY_ITEM`. Nghiệp vụ vừa yêu cầu ghi lại ai gán item vào category và lúc nào. Bản vá đầu tiên thêm hai cột vào bảng nối, nhưng Hibernate không ghi gì vào đó; tệ hơn, mỗi lần lưu một `Category` đã sửa, log SQL cho thấy một lệnh `DELETE FROM CATEGORY_ITEM WHERE CATEGORY_ID = ?` rồi chèn lại toàn bộ.",
+      scale: "Category lớn nhất có 47.000 item; thao tác sửa một category mất 9–14 giây và khoá bảng nối đủ lâu để các request khác timeout.",
+      constraints: "Dữ liệu gán hiện có phải giữ nguyên, không được mất lịch sử. Hai dịch vụ khác đang đọc bảng nối trực tiếp. Cửa sổ phát hành 30 phút vào ban đêm.",
+    },
+    question: "Bạn chẩn đoán và thiết kế lại quan hệ này thế nào?",
+    mustCover: [
+      "`@ManyToMany` thuần **che giấu** bảng nối sau một collection, nên không có chỗ nào để mang thuộc tính riêng của liên kết",
+      "Hành vi xoá-rồi-chèn-lại là hệ quả của việc Hibernate quản lý bảng nối như một collection giá trị chứ không như tập entity có định danh",
+      "Cách sửa của sách: biểu diễn nhiều-nhiều thành **hai association nhiều-một** tới một entity trung gian ánh xạ thẳng vào bảng nối",
+      "Sách khuyến nghị cân nhắc entity trung gian **trước** khi ánh xạ `@ManyToMany`, chính vì thêm cột vào bảng nối là điều gần như không tránh khỏi",
+      "Entity trung gian dùng khoá hợp thành gói trong class embeddable, ánh xạ bằng `@EmbeddedId`; đánh dấu bất biến cho phép Hibernate bỏ dirty checking",
+      "Di trú giữ nguyên dữ liệu: bảng nối không đổi hình, chỉ thêm cột cho phép `null` rồi backfill — nên hai dịch vụ đọc trực tiếp vẫn chạy",
+    ],
+    model: "Cả hai triệu chứng có chung một gốc: `@ManyToMany` thuần cố tình che giấu bảng nối, coi nó như một collection giá trị của `Category` chứ không như một tập thực thể có định danh riêng. Vì thế nó không có chỗ để mang thuộc tính nào của chính liên kết — hai cột mới thêm vào không thuộc ánh xạ nào nên không bao giờ được ghi. Và vì Hibernate không biết dòng nào trong bảng nối tương ứng với phần tử nào, cách an toàn duy nhất khi collection đổi là xoá sạch theo `CATEGORY_ID` rồi chèn lại — với 47.000 item thì đó chính là 9–14 giây và khoảng khoá bảng đang gây timeout. Sách đưa ra đúng lối thoát và còn khuyên nên nghĩ tới nó từ trước: luôn có thể biểu diễn một association nhiều-nhiều thành hai association nhiều-một tới một class trung gian, và mô hình đó dễ mở rộng hơn, nên các tác giả có xu hướng không dùng `@ManyToMany` thông thường — bởi việc phải thêm cột vào bảng nối là điều không tránh khỏi và sửa mã về sau rất tốn công. Cụ thể, dựng một entity `CategorizedItem` ánh xạ thẳng vào bảng nối, mang timestamp và người tạo liên kết, với khoá hợp thành gói trong một class embeddable lồng tĩnh và ánh xạ bằng `@EmbeddedId`; đánh dấu nó `@Immutable` để Hibernate bỏ được dirty checking khi flush. Từ đó `Category` và `Item` mỗi bên giữ một `@OneToMany` tới entity trung gian, và sửa một liên kết chỉ còn là một `INSERT` hoặc `DELETE` đúng một dòng. Về di trú thì đây là ca dễ chịu: hình dạng bảng nối không đổi, ta chỉ thêm hai cột cho phép `null` rồi backfill, nên hai dịch vụ đọc trực tiếp vẫn thấy đúng cấu trúc cũ và không phải phát hành cùng đêm — vừa với cửa sổ 30 phút.",
+    redFlags: [
+      "Đề xuất thêm `@JoinTable` với cột phụ và nghĩ Hibernate sẽ tự ghi — `@ManyToMany` không có chỗ nào để ánh xạ thuộc tính của liên kết",
+      "Quy hành vi xoá-rồi-chèn cho cấu hình cascade hoặc kiểu collection, thay vì cho việc bảng nối không có định danh phần tử",
+      "Giữ `@ManyToMany` rồi thêm một bảng thứ hai chỉ để chứa metadata — sinh ra hai nguồn sự thật cho cùng một liên kết",
+      "Đổi schema bảng nối theo cách buộc hai dịch vụ kia phải phát hành cùng lúc, trong khi chỉ cần thêm cột nullable là đủ",
+    ],
+    probes: [
+      "Vì sao khoá hợp thành ở entity trung gian nên gói trong embeddable thay vì hai field rời?",
+      "Đánh dấu entity trung gian là bất biến giúp được gì lúc flush?",
+      "Sau khi đổi, một thao tác gỡ một item khỏi category sinh ra mấy câu SQL?",
+    ],
+    refs: ["jpa-09", "jpa-08"],
+  },
 ];
