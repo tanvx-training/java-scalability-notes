@@ -62,6 +62,7 @@ const EXPECTED = {
     "roadmap-items:modern-java": 48,
     // Lĩnh vực Kafka — 13 chương (2–14) Kafka: The Definitive Guide ấn bản 2.
     "docs:kafka": 13,
+    "interview:kafka": 24,
     "roadmap-items:kafka": 44,
     // Lĩnh vực Spring Start Here — 15 chương + 1 hướng dẫn học (Manning 2021).
     "docs:spring-start": 16,

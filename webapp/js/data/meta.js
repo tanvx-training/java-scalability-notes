@@ -181,4 +181,11 @@ export const INTERVIEW_TOPICS = {
   "dd-transaction":  { label: "Transaction và mức cô lập",                    short: "Transaction",  field: "ddia" },
   "dd-distributed":  { label: "Rắc rối hệ phân tán và consensus",             short: "Hệ phân tán",  field: "ddia" },
   "dd-processing":   { label: "Batch và stream processing",                   short: "Processing",   field: "ddia" },
+
+  "kf-producer":     { label: "Producer: ghi message",                               short: "Producer",   field: "kafka" },
+  "kf-consumer":     { label: "Consumer: đọc và commit offset",                      short: "Consumer",   field: "kafka" },
+  "kf-internals":    { label: "Cơ chế bên trong: controller, replication, lưu trữ",  short: "Bên trong",  field: "kafka" },
+  "kf-reliability":  { label: "Truyền tin cậy và exactly-once",                      short: "Tin cậy",    field: "kafka" },
+  "kf-integration":  { label: "Data pipeline, mirroring và admin",                   short: "Pipeline",   field: "kafka" },
+  "kf-ops":          { label: "Bảo mật, vận hành, giám sát và stream",               short: "Vận hành",   field: "kafka" },
 };

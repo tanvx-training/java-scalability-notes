@@ -98,7 +98,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Kafka: The Definitive Guide, ấn bản 2 (Gwen Shapira, Todd Palino, Rajini Sivaram, Krit Petty — O'Reilly) — chương 2–14: cài đặt, producer, consumer, cơ chế bên trong, truyền tin cậy, exactly-once, data pipeline, mirroring, bảo mật, vận hành, giám sát và stream processing.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "kafka.apache.org/documentation", href: "https://kafka.apache.org/documentation/" },
   },
   "spring-start": {
