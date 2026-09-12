@@ -641,4 +641,157 @@ public class PricingService {
     ],
     refs: ["jpa-11"],
   },
+
+  // ===== jpa-fetch — Fetch plan & truy vấn (jpa-iq17–jpa-iq20) =====
+  {
+    id: "jpa-iq17",
+    field: "jpa",
+    topic: "jpa-fetch",
+    level: 1,
+    minutes: 6,
+    question: "Sách tách bạch **fetch plan**, **fetch strategy** và **fetch profile**. Ba khái niệm đó khác nhau thế nào, và vì sao `FetchType` đặt trên annotation chỉ là điểm khởi đầu chứ không phải quyết định cuối?",
+    mustCover: [
+      "Fetch plan trả lời **nạp cái gì** — những node nào của đồ thị entity có mặt trong bộ nhớ khi thao tác kết thúc",
+      "Fetch strategy trả lời **nạp bằng cách nào** — mấy câu `SELECT`, dùng join, lô, hay subselect",
+      "Fetch profile là một plan đặt tên sẵn, bật lên cho từng trường hợp dùng thay vì sửa ánh xạ",
+      "`FetchType` trên annotation là mặc định **toàn cục** cho mọi chỗ dùng entity đó, nhưng nhu cầu nạp lại khác nhau theo từng thủ tục",
+      "Truy vấn JPQL, `CriteriaQuery` hay SQL tuỳ chỉnh **ghi đè** được mặc định đó cho riêng một thủ tục",
+    ],
+    model: "Ba khái niệm trả lời ba câu hỏi khác nhau và trộn chúng lại là nguồn của phần lớn lỗi hiệu năng ORM. Fetch plan là *cái gì*: khi thao tác kết thúc thì những phần nào của đồ thị entity đã nằm trong bộ nhớ — chỉ `Item`, hay cả `seller` của nó, hay cả `bids`. Fetch strategy là *bằng cách nào*: cùng một plan có thể thực hiện bằng nhiều câu `SELECT` riêng, bằng một `JOIN`, bằng prefetch theo lô, hay bằng subselect — và lựa chọn ấy quyết định số câu lệnh cùng kích thước result set. Fetch profile là một plan được đặt tên và khai sẵn để bật lên theo từng trường hợp dùng, thay vì phải sửa ánh xạ mỗi lần một màn hình cần khác đi. Chỗ mấu chốt là `FetchType` trên annotation chỉ định nghĩa mặc định, mà mặc định thì mang tính toàn cục: nó áp cho mọi chỗ dùng entity ấy trong toàn ứng dụng. Trong khi đó nhu cầu nạp là cục bộ — màn hình danh sách cần khác màn hình chi tiết. Sách nói thẳng ta cần tìm điểm cân bằng giữa hai thái cực: fetch plan lazy hoàn toàn dễ dẫn tới quá nhiều câu lệnh, mỗi lệnh nạp một mẩu nhỏ, tức bài toán n+1; còn eager thì ít câu lệnh hơn nhưng mỗi lệnh kéo về khối dữ liệu lớn hơn và dễ rơi vào tích Descartes. Vì thế mặc định nên để lazy, rồi với từng thủ tục cụ thể mà ghi đè bằng JPQL, `CriteriaQuery` hoặc truy vấn tuỳ chỉnh.",
+    redFlags: [
+      "Coi `FetchType` là quyết định cuối cùng rồi đi chỉnh annotation mỗi khi một màn hình chậm — sửa toàn cục cho nhu cầu cục bộ",
+      "Dùng lẫn lộn \"lazy với eager\" (fetch plan) và \"join hay nhiều select\" (fetch strategy) như thể cùng một trục",
+      "Nói eager luôn nhanh hơn vì ít truy vấn hơn, bỏ qua tích Descartes mà sách đặt ngay cạnh n+1 như hai thái cực",
+    ],
+    probes: [
+      "Cùng một fetch plan có mấy cách thực hiện, và khác nhau ở chi phí nào?",
+      "Vì sao sách khuyến nghị mặc định để mọi association và collection ở chế độ nạp theo yêu cầu?",
+      "Fetch profile khác gì với việc viết sẵn vài truy vấn JPQL có `join fetch`?",
+    ],
+    refs: ["jpa-12"],
+  },
+  {
+    id: "jpa-iq18",
+    field: "jpa",
+    topic: "jpa-fetch",
+    level: 2,
+    minutes: 9,
+    code: {
+      lang: "java",
+      text: `public interface ItemRepository extends JpaRepository<Item, Long> {
+    List<Item> findByAuctionEndGreaterThan(LocalDateTime t);
+}
+
+// Trong service:
+List<Item> items = itemRepository.findByAuctionEndGreaterThan(now);
+for (Item item : items) {
+    log.info("{} - {}", item.getName(), item.getSeller().getUsername());
+}
+
+/* SQL log:
+   select i.* from ITEM i where i.AUCTION_END > ?
+   select u.* from USERS u where u.ID = ?
+   select u.* from USERS u where u.ID = ?
+   select u.* from USERS u where u.ID = ?
+   ... (còn 497 dòng nữa)
+*/`,
+    },
+    question: "Đọc log SQL trên và chỉ ra chính xác dòng mã nào làm phát sinh 500 câu lệnh, rồi viết lại cho đúng.",
+    mustCover: [
+      "Câu `SELECT` đầu nạp danh sách; mỗi lần chạm `item.getSeller()` khởi tạo một proxy và sinh thêm **một** câu lệnh — tổng cộng n+1",
+      "Chỗ nổ là **vòng lặp**, không phải câu truy vấn: truy vấn chỉ khai fetch plan không đủ cho thứ vòng lặp sẽ chạm tới",
+      "Cách sửa thứ nhất: `@Query` với `join fetch` để nạp `seller` trong cùng một câu lệnh",
+      "Cách sửa thứ hai: `@EntityGraph` trên query method, khai fetch plan mà không phải viết JPQL",
+      "Cách sửa thứ ba khi không cần cả entity: dùng **projection** trả về đúng hai trường cần in",
+    ],
+    model: "Log đã nói hết: một câu `SELECT` cho danh sách, rồi mỗi phần tử thêm một câu cho `USERS`. Đó là bài toán n+1 selects đúng như sách mô tả — và ví dụ trong sách gần như trùng khít, một vòng lặp chạm `item.getSeller().getUsername()` sau một truy vấn nạp `Item`. Điều quan trọng khi chỉ chỗ hỏng là nó **không** nằm ở câu truy vấn: truy vấn chạy đúng một lần và làm đúng việc nó khai. Chỗ hỏng là dòng `item.getSeller()` trong vòng lặp, nơi một association lazy bị chạm tới n lần ngoài fetch plan. Nói cách khác, fetch plan được quyết định ở chỗ truy vấn nhưng nhu cầu thật lại lộ ra ở chỗ dùng, và lỗi là ở khoảng cách giữa hai chỗ đó. Ba cách sửa theo thứ tự tôi cân nhắc. Nếu thật sự cần entity `Item` đầy đủ thì khai fetch plan ngay tại truy vấn, bằng `@Query(\"select i from Item i join fetch i.seller where i.auctionEnd > :t\")`, gộp còn một câu lệnh. Nếu muốn giữ query method dẫn xuất từ tên thì `@EntityGraph(attributePaths = \"seller\")` cho kết quả tương đương mà không phải viết JPQL. Còn nếu chỗ dùng chỉ cần tên item và tên người bán — đúng như vòng lặp này — thì cách sạch nhất là một projection trả về đúng hai trường, vì khi đó không có entity nào được quản lý, không có proxy nào để khởi tạo, và không có đường nào để n+1 quay lại. Việc cần làm trước khi chọn là bật SQL log và đếm — chính là thứ log trong đề bài đang cho thấy.",
+    redFlags: [
+      "Đổi association sang `FetchType.EAGER` để chữa: sửa toàn cục cho một chỗ dùng, và sách đặt tích Descartes ngay cạnh n+1 như cái giá phải trả",
+      "Nói \"Hibernate chậm\" mà không đọc log để thấy đúng hình dạng 1 + n",
+      "Chỉ vào câu truy vấn là chỗ hỏng, trong khi nó chạy đúng một lần — chỗ hỏng là vòng lặp chạm association ngoài fetch plan",
+      "Thêm `@Transactional` cho vòng lặp rồi coi là xong — giữ context mở khiến ngoại lệ biến mất nhưng 500 câu lệnh vẫn nguyên",
+    ],
+    probes: [
+      "Nếu vòng lặp còn chạm cả `item.getBids()` nữa, `join fetch` hai collection có chạy được không?",
+      "Khi nào bạn chọn projection thay vì `join fetch`?",
+      "Prefetch theo lô đổi hình dạng log này thành thế nào?",
+    ],
+    refs: ["jpa-12", "jpa-04"],
+  },
+  {
+    id: "jpa-iq19",
+    field: "jpa",
+    topic: "jpa-fetch",
+    level: 3,
+    minutes: 10,
+    question: "Một màn hình danh sách có phân trang hiển thị 50 item mỗi trang, mỗi dòng cần tên người bán và số lượt đấu giá. Bạn nạp dữ liệu bằng cách nào?",
+    tradeoffs: [
+      {
+        option: "Projection / DTO — truy vấn trả thẳng đúng các trường cần",
+        when: "Chỗ dùng **chỉ đọc và chỉ hiển thị**, đúng như một màn hình danh sách. Không có entity được quản lý nên không có proxy, không có đường nào để n+1 quay lại, và phân trang chạy đúng ở tầng SQL. Đây là lựa chọn mặc định của tôi cho màn hình danh sách.",
+      },
+      {
+        option: "`join fetch` hoặc `@EntityGraph` cho association nhiều-một",
+        when: "Cần entity đầy đủ để chạy logic nghiệp vụ chứ không chỉ hiển thị. An toàn với association **nhiều-một** như `seller` vì số dòng không nhân lên. Với một-nhiều thì phân trang vỡ — xem phương án dưới.",
+      },
+      {
+        option: "Prefetch theo lô hoặc subselect cho phía collection",
+        when: "Cần cả collection **và** phải giữ phân trang. Truy vấn chính vẫn phân trang đúng ở tầng SQL, collection được nạp sau bằng số câu lệnh cố định thay vì n câu — đổi một lần round-trip thêm lấy việc phân trang không vỡ.",
+      },
+    ],
+    mustCover: [
+      "`join fetch` một association **một-nhiều** nhân số dòng lên, nên phân trang ở tầng SQL không còn ứng với số bản ghi nghiệp vụ",
+      "Khi đó Hibernate buộc phải nạp hết rồi cắt trang **trong bộ nhớ** — đúng thứ ta muốn tránh trên một bảng lớn",
+      "Không eager-fetch được hai collection cùng lúc, vì kết quả là tích Descartes",
+      "Đếm số lượt đấu giá thì không cần nạp collection: một hàm tổng hợp trong truy vấn rẻ hơn nhiều lần",
+      "Trục chọn là **chỗ dùng cần gì**: chỉ hiển thị thì projection, cần chạy nghiệp vụ thì entity kèm fetch plan tường minh",
+    ],
+    model: "Câu này có một cái bẫy nằm ở chỗ gộp phân trang với `join fetch`. Với `seller` thì không sao: đó là association nhiều-một nên mỗi `Item` vẫn ứng đúng một dòng, `join fetch` gộp được vào một câu lệnh và `LIMIT` vẫn đúng. Nhưng với `bids` thì khác hẳn — một `Item` có 30 bid sẽ thành 30 dòng trong result set, nên `LIMIT 50` không còn cắt ra 50 item mà cắt ra 50 dòng. Hibernate biết điều đó và xử lý bằng cách nạp toàn bộ rồi cắt trang trong bộ nhớ, tức là đúng thứ tệ nhất trên một bảng lớn. Vì vậy tôi tách hai nhu cầu ra. Với màn hình danh sách chỉ để hiển thị, tôi chọn projection: một truy vấn trả về tên item, tên người bán và `count(b)` gom nhóm — không entity nào được quản lý, không proxy nào để khởi tạo, phân trang chạy đúng ở tầng SQL, và số lượt đấu giá lấy bằng hàm tổng hợp thay vì nạp cả collection về rồi gọi `size()`. Nếu chỗ dùng thật sự cần entity để chạy logic nghiệp vụ, tôi vẫn phân trang trên truy vấn chính rồi nạp `seller` bằng `@EntityGraph`, và với phía collection thì dùng prefetch theo lô hoặc subselect — cả hai giữ nguyên phân trang ở tầng SQL và biến n câu lệnh thành một số cố định. Cái không bao giờ chọn là `join fetch` hai collection cùng lúc: sách nói rõ kết quả là tích Descartes, và đây cũng là chỗ Hibernate sẽ từ chối thẳng.",
+    redFlags: [
+      "`join fetch` một collection rồi phân trang, không nhận ra số dòng đã nhân lên và Hibernate phải cắt trang trong bộ nhớ",
+      "Nạp cả collection `bids` chỉ để gọi `size()`, trong khi một hàm đếm trong truy vấn là đủ",
+      "Chọn `@EntityGraph` theo phản xạ cho mọi thứ, kể cả khi màn hình chỉ hiển thị vài trường",
+      "Cố eager-fetch cả `seller` lẫn `bids` trong một câu lệnh để \"đỡ round-trip\"",
+    ],
+    probes: [
+      "Vì sao `join fetch` một association nhiều-một thì phân trang vẫn đúng, còn một-nhiều thì không?",
+      "Prefetch theo lô khác prefetch bằng subselect ở chỗ nào?",
+      "Nếu màn hình cần thêm một nút gọi hành động nghiệp vụ trên item, projection còn đủ không?",
+    ],
+    refs: ["jpa-12", "jpa-19"],
+  },
+  {
+    id: "jpa-iq20",
+    field: "jpa",
+    topic: "jpa-fetch",
+    level: 4,
+    minutes: 14,
+    incident: {
+      symptom: "Một endpoint báo cáo từng chạy tốt nay ném `MultipleBagFetchException` ngay lúc khởi động ứng dụng, sau khi một đội khác thêm `join fetch o.lineItems` vào truy vấn vốn đã có `join fetch o.payments`. Bản vá vội đổi cả hai collection sang `Set` làm ứng dụng khởi động được, nhưng endpoint giờ trả về sai: tổng tiền đơn hàng lớn gấp nhiều lần thực tế và phân trang trả về số bản ghi không ổn định.",
+      scale: "Bảng `ORDERS` 8,4 triệu dòng; đơn hàng trung bình 6 line item và 2 payment. Endpoint phân trang 100 đơn mỗi trang, được một dashboard gọi mỗi 30 giây.",
+      constraints: "Phân trang phải giữ đúng ngữ nghĩa 100 **đơn hàng** mỗi trang. Không được nạp toàn bộ bảng vào bộ nhớ. Endpoint nằm trong hợp đồng API đã công bố nên hình dạng JSON trả về không đổi được.",
+    },
+    question: "Bạn chẩn đoán và xử lý thế nào?",
+    mustCover: [
+      "Ngoại lệ ban đầu là Hibernate **từ chối** fetch hai collection cùng lúc, vì kết quả sẽ là tích Descartes",
+      "Đổi sang `Set` không sửa tích Descartes — nó chỉ khiến `Set` **khử trùng lặp** nên ngoại lệ biến mất còn kết quả thì sai âm thầm",
+      "Tổng tiền lớn gấp nhiều lần vì mỗi line item bị nhân với mỗi payment: 6 × 2 = 12 dòng cho một đơn hàng",
+      "Phân trang không ổn định vì `LIMIT` đang cắt trên số **dòng của result set**, không phải số đơn hàng",
+      "Cách sửa: phân trang trên truy vấn chính chỉ nạp `ORDERS`, rồi nạp hai collection bằng prefetch theo lô hoặc subselect — số câu lệnh cố định, phân trang vẫn đúng ở tầng SQL",
+      "Tổng tiền nên tính bằng hàm tổng hợp trong truy vấn riêng, không bằng cách duyệt collection đã nạp",
+    ],
+    model: "Ngoại lệ đầu tiên thật ra là Hibernate đang bảo vệ ta. Fetch hai collection trong một câu lệnh tạo ra tích Descartes — sách nói thẳng rằng nạp hai collection đồng thời luôn dẫn tới tích Descartes và đó là loại thao tác cần tránh, bất kể kiểu collection là gì — nên Hibernate từ chối thay vì lặng lẽ trả kết quả sai. Bản vá đổi sang `Set` đã gỡ đúng cái chốt an toàn ấy: tích Descartes vẫn xảy ra y nguyên ở tầng SQL, nhưng `Set` khử trùng lặp khi dựng đồ thị object nên ngoại lệ biến mất. Đó là lý do lỗi chuyển từ ồn ào sang âm thầm. Hai triệu chứng còn lại suy ra trực tiếp: với 6 line item và 2 payment, một đơn hàng cho 12 dòng trong result set, nên mỗi line item xuất hiện 2 lần và tổng tiền cộng dư gấp đôi — con số sai tỉ lệ thuận với số payment chứ không ngẫu nhiên. Còn phân trang không ổn định vì `LIMIT 100` đang cắt 100 **dòng** của tích Descartes, và mỗi đơn hàng chiếm số dòng khác nhau tuỳ số line item và payment của nó. Cách sửa là tách việc phân trang khỏi việc nạp collection: truy vấn chính chỉ chạm bảng `ORDERS`, có `LIMIT` và `OFFSET` đúng nghĩa 100 đơn hàng; hai collection nạp sau bằng prefetch theo lô hoặc subselect, cho số câu lệnh cố định thay vì n câu và không đụng gì tới phân trang. Riêng tổng tiền thì đừng tính bằng cách duyệt collection đã nạp — một truy vấn tổng hợp gom nhóm theo đơn hàng vừa đúng vừa rẻ hơn nhiều, và với dashboard gọi mỗi 30 giây trên 8,4 triệu dòng thì khác biệt đó đáng kể. Hình dạng JSON không đổi nên hợp đồng API vẫn giữ nguyên.",
+    redFlags: [
+      "Coi việc đổi sang `Set` là cách sửa hợp lệ — nó biến một lỗi ồn ào thành một lỗi âm thầm, tệ hơn hẳn",
+      "Giải thích tổng tiền sai là \"lỗi làm tròn\" hay \"dữ liệu bẩn\", thay vì nhận ra hệ số nhân đúng bằng số payment",
+      "Giữ `join fetch` rồi thêm `distinct` và tin rằng phân trang đã đúng — `distinct` xử lý đồ thị object, không đổi số dòng mà `LIMIT` đang đếm",
+      "Đề xuất nạp hết rồi cắt trang trong bộ nhớ — ràng buộc đã cấm, và với 8,4 triệu dòng thì đó là cách làm sập dịch vụ",
+    ],
+    probes: [
+      "Vì sao `distinct` trong JPQL không cứu được phân trang ở đây?",
+      "Với 6 line item và 2 payment, một đơn hàng cho ra mấy dòng, và tổng tiền sai theo hệ số bao nhiêu?",
+      "Bạn viết một bài kiểm nào để lỗi này không quay lại lần nữa?",
+    ],
+    refs: ["jpa-12"],
+  },
 ];
