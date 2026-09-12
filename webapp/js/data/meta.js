@@ -160,4 +160,11 @@ export const INTERVIEW_TOPICS = {
   "java-tomcat":   { label: "Tomcat thread pool và sizing",           short: "Tomcat",   field: "java" },
   "java-pool":     { label: "Connection pool sizing",                 short: "DB pool",  field: "java" },
   "java-tx":       { label: "@Transactional: proxy, ThreadLocal và bẫy", short: "Tx",     field: "java" },
+
+  "mj-lambda":      { label: "Lambda và behavior parameterization",    short: "Lambda",      field: "modern-java" },
+  "mj-stream":      { label: "Stream và collector",                    short: "Stream",      field: "modern-java" },
+  "mj-parallel":    { label: "Xử lý song song và hiệu năng",           short: "Song song",   field: "modern-java" },
+  "mj-optional":    { label: "Optional, Date/Time và default method",  short: "Optional",    field: "modern-java" },
+  "mj-async":       { label: "CompletableFuture và reactive",          short: "Async",       field: "modern-java" },
+  "mj-functional":  { label: "Tư duy hàm và kỹ thuật FP",              short: "Tư duy hàm",  field: "modern-java" },
 };

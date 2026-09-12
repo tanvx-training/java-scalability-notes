@@ -17,13 +17,14 @@ import { jpaInterview } from "./jpa/interview.js";
 import { jcipInterview } from "./jcip/interview.js";
 import { ocnjInterview } from "./ocnj/interview.js";
 import { javaInterview } from "./java/interview.js";
+import { modernJavaInterview } from "./modern-java/interview.js";
 
 export const allDocs = docs;
 export const allTracks = tracks;
 export const allFlashcards = [...flashcards, ...sysprogFlashcards];
 export const allQuestions = [...questions, ...sysprogQuestionsPart1, ...sysprogQuestionsPart2];
 export const allMatrices = [seniorJavaMatrix];
-export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview];
+export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview];
 
 export function fieldOfRecord(rec) {
   const f = rec?.field;

@@ -57,6 +57,7 @@ const EXPECTED = {
     "roadmap-items:ddia": 48,
     // Lĩnh vực Modern Java in Action — 21 chương sách Manning.
     "docs:modern-java": 21,
+    "interview:modern-java": 24,
     "roadmap-items:modern-java": 48,
     // Lĩnh vực Kafka — 13 chương (2–14) Kafka: The Definitive Guide ấn bản 2.
     "docs:kafka": 13,
@@ -729,11 +730,30 @@ const IQ_CONTRACT = {
   4: { need: ["incident"],  ban: [],                                minutes: [8, 20] },
 };
 
-await check("IQ1 — interview.id duy nhất và đúng dạng <field>-iq<NN>", () => {
+// Tiền tố doc id của một lĩnh vực — id phỏng vấn phải cùng họ với nó.
+// Không dùng thẳng field id vì hai thứ đó lệch nhau ở nhiều lĩnh vực:
+// field "modern-java" có doc id "mjia-01", field "spring-security" có
+// "springsec-01". Buộc id phỏng vấn theo field id sẽ tạo ra "modern-java-iq01"
+// nằm lệch hẳn nếp đặt tên của repo; buộc theo tiền tố doc giữ được cả tính
+// kiểm chứng được lẫn tính nhất quán với tài liệu mà câu hỏi trỏ tới.
+function docPrefixOf(field) {
+  const ids = docs.filter((d) => fieldOf(d) === field).map((d) => d.id);
+  const prefixes = new Set(ids.map((id) => id.slice(0, id.indexOf("-"))));
+  return prefixes.size === 1 ? [...prefixes][0] : null;
+}
+
+await check("IQ1 — interview.id duy nhất và cùng tiền tố với doc id của lĩnh vực", () => {
   const dup = dupes(interviews.map((q) => q.id));
   expect(!dup.length, `id trùng: ${dup.join(", ")}`);
-  const bad = interviews.filter((q) => !new RegExp(`^${fieldOf(q)}-iq\\d{2}$`).test(q.id ?? ""));
-  expect(!bad.length, `id sai dạng: ${bad.map((q) => q.id).join(", ")}`);
+  const bad = [];
+  for (const q of interviews) {
+    const prefix = docPrefixOf(fieldOf(q));
+    if (!prefix) { bad.push(`${q.id}: lĩnh vực "${fieldOf(q)}" không có tiền tố doc id duy nhất`); continue; }
+    if (!new RegExp(`^${prefix}-iq\\d{2}$`).test(q.id ?? "")) {
+      bad.push(`${q.id}: phải khớp "${prefix}-iq<NN>"`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
 });
 
 await check("IQ2 — interview.topic hợp lệ và khớp field", () => {

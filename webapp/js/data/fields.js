@@ -88,7 +88,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Modern Java in Action (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — lambda, stream, collector, Optional, Date/Time API, module system, CompletableFuture và reactive, tư duy hàm.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "dev.java", href: "https://dev.java/" },
   },
   kafka: {
