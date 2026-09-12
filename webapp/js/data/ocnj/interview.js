@@ -492,4 +492,485 @@ class AuditHandler implements Handler {
     ],
     refs: ["ocnj-05", "ocnj-12"],
   },
+
+  // ===== ocnj-cloud — Phần cứng, OS và cloud stack (ocnj-iq13–ocnj-iq16) =====
+  {
+    id: "ocnj-iq13",
+    field: "ocnj",
+    topic: "ocnj-cloud",
+    level: 1,
+    minutes: 5,
+    question: "\"Mechanical sympathy\" nghĩa là gì, và với một lập trình viên Java — vốn làm việc trên một máy ảo — thì hiểu biết về phần cứng còn giúp được gì?",
+    mustCover: [
+      "Mechanical sympathy là ý tưởng rằng **hiểu biết về phần cứng là vô giá** khi ta cần vắt kiệt thêm hiệu năng",
+      "Nguồn gốc là câu của Jackie Stewart: không cần là kỹ sư để đua xe, nhưng phải có mechanical sympathy",
+      "Nó **không chỉ** dùng cho các trường hợp cực đoan — hiểu biết nền tảng cũng hữu ích khi xử lý vấn đề production",
+      "Với Java, JVM che phần cứng nhưng **không xoá** nó: tính cục bộ bộ nhớ, cache line, dự đoán nhánh vẫn quyết định hiệu năng thật",
+      "Đây là lý do những thứ như **compaction** của GC lại quan trọng: object gần nhau thì có nhiều khả năng nằm sẵn trong cache line đúng",
+    ],
+    model: "Mechanical sympathy là ý tưởng rằng hiểu biết về phần cứng là vô giá cho những trường hợp ta cần vắt kiệt thêm hiệu năng. Cụm từ này do Martin Thompson đặt ra, tham chiếu trực tiếp tới câu của Jackie Stewart: bạn không cần phải là kỹ sư để trở thành tay đua, nhưng bạn phải có mechanical sympathy. Điểm tôi muốn nhấn là sách không đặt nó riêng cho các trường hợp cực đoan: có hiểu biết nền tảng về phần cứng và hệ điều hành cũng hữu ích khi xử lý các vấn đề production thông thường và khi tìm cách cải thiện hiệu năng tổng thể. Với Java thì lập luận \"tôi làm việc trên máy ảo nên không cần biết phần cứng\" nghe hợp lý mà sai, vì JVM che phần cứng nhưng không xoá nó. Tính cục bộ bộ nhớ vẫn quyết định: một vòng lặp đi qua dữ liệu liền kề nhanh hơn nhiều lần cùng vòng lặp đi qua dữ liệu rải rác, dù bytecode gần như giống nhau. Cache line vẫn là đơn vị thật của việc đọc bộ nhớ. Dự đoán nhánh vẫn quyết định chi phí của một điều kiện trong vòng lặp nóng. Và có một chỗ hai tầng gặp nhau rất rõ: compaction của garbage collector có xu hướng đặt các object liên quan gần nhau, mà gần nhau thì đọc hiệu quả hơn vì có nhiều khả năng đã nằm sẵn trong cache line đúng — nên một đặc tính tưởng như thuần túy thuộc GC lại là một quyết định về tính cục bộ bộ nhớ. Nói cách khác, mechanical sympathy với lập trình viên Java không có nghĩa là viết mã như C, mà là biết đủ để hiểu vì sao hai đoạn mã tương đương về logic lại khác nhau về hiệu năng, và để không bị bất ngờ khi một phép đo không khớp với trực giác về số lệnh.",
+    redFlags: [
+      "Nói phần cứng không liên quan vì JVM đã trừu tượng hoá — JVM che chứ không xoá",
+      "Coi mechanical sympathy chỉ dành cho mã tần suất cực cao, trong khi sách nói nó hữu ích cả cho vấn đề production thường ngày",
+      "Không nối được phần cứng với bất cứ quyết định nào ở tầng JVM, chẳng hạn compaction",
+    ],
+    probes: [
+      "Cho một cặp đoạn mã tương đương logic mà khác nhau về tính cục bộ bộ nhớ",
+      "Vì sao compaction của GC lại là một quyết định về phần cứng?",
+      "Một mô hình hệ thống đơn giản giúp bạn suy luận về những giới hạn nào?",
+    ],
+    refs: ["ocnj-07"],
+  },
+  {
+    id: "ocnj-iq14",
+    field: "ocnj",
+    topic: "ocnj-cloud",
+    level: 2,
+    minutes: 8,
+    code: {
+      lang: "yaml",
+      text: `# Deployment của một dịch vụ Java, JDK 11 sớm
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: api
+          image: registry.local/api:1.9
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "2"
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+          env:
+            - name: JAVA_OPTS
+              value: "-Xmx900m"
+          # không có readinessProbe, chỉ có livenessProbe
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 10`,
+      },
+    question: "Cấu hình này có mấy vấn đề riêng của Java khi chạy trong container? Chỉ ra từng cái và nói hậu quả quan sát được của nó.",
+    mustCover: [
+      "`-Xmx900m` sát `limits.memory` 1Gi nhưng **heap không phải toàn bộ** bộ nhớ JVM: metaspace, thread stack, code cache, bộ nhớ ngoài heap đều nằm ngoài `-Xmx`",
+      "Hậu quả: tiến trình bị **kernel giết** vì vượt giới hạn bộ nhớ, biểu hiện là container bị khởi động lại chứ không phải `OutOfMemoryError`",
+      "Đặt `-Xmx` cứng làm mất khả năng **thích ứng theo giới hạn container** — nên dùng tỉ lệ theo bộ nhớ khả dụng",
+      "`requests.cpu` 500m trong khi `limits` 2 nghĩa là pod có thể bị **tiết chế CPU**, và JVM lại nhìn số CPU để chọn số thread GC và kích thước pool mặc định",
+      "**Thiếu `readinessProbe`** là vấn đề nặng nhất về độ trễ: lưu lượng vào ngay khi tiến trình lên, tức vào đúng giai đoạn chưa nóng máy",
+      "`livenessProbe` không thay được `readinessProbe`: nó trả lời \"còn sống\", không trả lời \"sẵn sàng nhận tải\"",
+    ],
+    model: "Có bốn vấn đề, xếp theo mức ảnh hưởng. Vấn đề nặng nhất về độ trễ là thiếu `readinessProbe`. Khi chỉ có `livenessProbe`, lưu lượng được đưa vào ngay khi pod được coi là chạy, tức đúng vào giai đoạn JVM còn thông dịch và JIT chưa biên dịch các đường nóng — quan sát được là một đợt độ trễ cao sau mỗi lần triển khai. Hai probe trả lời hai câu khác nhau: liveness nói \"tiến trình còn sống, đừng giết tôi\", readiness nói \"tôi sẵn sàng nhận tải\", và cái thứ hai là cái load balancer cần. Vấn đề nặng nhất về ổn định là quan hệ giữa `-Xmx900m` và `limits.memory` 1Gi. Heap không phải toàn bộ bộ nhớ của JVM: metaspace, stack của từng thread, code cache của JIT, bộ đệm ngoài heap và bộ nhớ mà thư viện native dùng đều nằm ngoài `-Xmx`. Nên tổng bộ nhớ tiến trình sẽ vượt 900m khá xa, và khi vượt 1Gi thì kernel giết tiến trình — quan sát được là container bị khởi động lại đột ngột, **không** phải một `OutOfMemoryError` trong log, và đó chính là điểm làm nhiều đội truy sai hướng. Vấn đề thứ ba là việc đặt `-Xmx` cứng: nó làm cấu hình mất khả năng thích ứng, nên mỗi lần đổi giới hạn container lại phải sửa hai chỗ và rất dễ lệch; đặt heap theo tỉ lệ bộ nhớ khả dụng an toàn hơn. Vấn đề thứ tư là khoảng cách giữa `requests.cpu` 500m và `limits.cpu` 2: pod có thể bị tiết chế khi cụm đông, và điều này tương tác xấu với Java vì JVM nhìn số CPU nó thấy để chọn số thread GC cùng kích thước một số pool mặc định — nên một pod bị tiết chế có thể đồng thời đang chạy một cấu hình GC được chọn cho một máy rộng hơn thực tế nó được dùng. Quan sát được là độ trễ dao động theo mức đông của cụm, thứ rất khó truy nếu không biết cơ chế.",
+    redFlags: [
+      "Chỉ nói \"nên tăng memory limit\" mà không nêu heap chỉ là một phần bộ nhớ JVM",
+      "Tìm `OutOfMemoryError` trong log khi container bị kernel giết — sẽ không có dòng nào",
+      "Coi `livenessProbe` là đủ vì \"nó cũng kiểm tra HTTP\"",
+      "Bỏ qua việc JVM chọn tham số mặc định theo số CPU nó quan sát được",
+    ],
+    probes: [
+      "Ngoài heap, còn những vùng bộ nhớ nào của JVM mà `-Xmx` không kiểm soát?",
+      "Bạn phân biệt container bị kernel giết với JVM ném lỗi hết bộ nhớ bằng cách nào?",
+      "`readinessProbe` của bạn nên kiểm gì để thật sự nói được \"sẵn sàng nhận tải\"?",
+    ],
+    refs: ["ocnj-09", "ocnj-08"],
+  },
+  {
+    id: "ocnj-iq15",
+    field: "ocnj",
+    topic: "ocnj-cloud",
+    level: 3,
+    minutes: 10,
+    question: "Một dịch vụ Java cần thêm năng lực. Bạn chọn cho pod to hơn hay chạy nhiều pod hơn?",
+    tradeoffs: [
+      {
+        option: "Nhiều pod nhỏ",
+        when: "Workload chia nhỏ được và không có state dùng chung. Cô lập lỗi tốt hơn, co giãn mịn hơn, và dễ lấp chỗ trống trên cụm. Cái giá riêng của Java là **mỗi pod phải nóng máy lại**, nên tổng chi phí nóng máy tăng theo số pod và theo tần suất thay pod.",
+      },
+      {
+        option: "Ít pod nhưng to",
+        when: "Khi có bộ đệm trong tiến trình đáng kể, hoặc khi chi phí nóng máy và bộ nhớ nền của JVM chiếm tỉ lệ lớn. JVM dùng bộ nhớ hiệu quả hơn ở một tiến trình to so với nhiều tiến trình nhỏ cộng lại, và heap to cho GC nhiều không gian xoay xở hơn.",
+      },
+      {
+        option: "Đo cả hai trên workload thật rồi chọn",
+        when: "Luôn là bước cuối trước khi chốt, vì hai hướng trên đổi nhau ở những đại lượng khác nhau — thông lượng trên mỗi đơn vị tài nguyên, độ trễ đuôi, thời gian phục hồi — và không có thứ tự ưu tiên chung cho mọi dịch vụ.",
+      },
+    ],
+    mustCover: [
+      "Java có một chi phí **cố định theo tiến trình** mà nhiều runtime khác không có: bộ nhớ nền và giai đoạn nóng máy",
+      "Vì vậy nhân số pod lên là nhân cả chi phí đó lên, khác với việc chia một tiến trình lớn thành nhiều tiến trình nhỏ ở runtime khởi động tức thì",
+      "Bộ đệm trong tiến trình **không chia sẻ được** giữa các pod, nên nhiều pod nhỏ làm giảm tỉ lệ hit của cache",
+      "Đổi lại, nhiều pod cho **cô lập lỗi** và co giãn mịn hơn, và dễ xếp lên cụm hơn",
+      "Phải xét cả tương tác với `requests`/`limits`: pod to dễ bị cụm từ chối xếp chỗ hơn",
+      "Quyết định cuối phải dựa trên **đo trên workload thật**, không dựa trên nguyên tắc chung",
+    ],
+    model: "Câu này với một dịch vụ Java khác với cùng câu hỏi cho một runtime khởi động tức thì, vì Java có một chi phí cố định theo tiến trình: bộ nhớ nền của JVM, và giai đoạn nóng máy trước khi JIT biên dịch các đường nóng. Nhân số pod lên là nhân cả hai thứ đó lên. Nên tôi bắt đầu bằng việc hỏi hai câu định lượng: bộ nhớ nền chiếm bao nhiêu phần trăm giới hạn của một pod, và một pod sống bao lâu so với thời gian nó cần để nóng. Nếu bộ nhớ nền chiếm phần lớn và pod bị thay thường xuyên thì nhiều pod nhỏ là một cách trả tiền cho chi phí cố định nhiều lần mà không nhận thêm năng lực tương ứng. Yếu tố thứ hai là bộ đệm trong tiến trình: nó không chia sẻ được giữa các pod, nên chia cùng một lượng tải cho gấp bốn số pod nghĩa là mỗi cache chỉ thấy một phần tư lưu lượng và tỉ lệ hit giảm — với dịch vụ dựa nhiều vào cache nội bộ thì đây thường là yếu tố quyết định. Ngược lại, nhiều pod nhỏ có những lợi thế thật mà tôi không bỏ qua: một pod hỏng ảnh hưởng phần nhỏ năng lực thay vì phần lớn, co giãn mịn hơn nên theo tải sát hơn, và pod nhỏ dễ được cụm tìm chỗ xếp hơn — pod to có thể nằm chờ vì không node nào còn đủ chỗ, thứ biến một quyết định kiến trúc thành một vấn đề vận hành. Heap to cũng cho GC nhiều không gian xoay xở hơn, dù điều đó đi kèm lần dừng có thể dài hơn nên phải đối chiếu với yêu cầu độ trễ. Vì hai hướng đổi nhau ở những đại lượng khác nhau — thông lượng trên mỗi đơn vị tài nguyên, độ trễ đuôi, thời gian phục hồi — tôi không chốt bằng nguyên tắc mà dựng cả hai cấu hình trên workload thật, đo đủ ba đại lượng đó, rồi chọn theo cái nào đang là ràng buộc của dịch vụ này.",
+    redFlags: [
+      "Trả lời \"cứ nhiều pod nhỏ vì đó là cloud native\" mà không xét chi phí cố định theo tiến trình của Java",
+      "Bỏ qua việc bộ đệm trong tiến trình không chia sẻ được giữa các pod",
+      "Không xét việc pod to khó được xếp chỗ trên cụm",
+      "Chốt mà không đo trên workload thật",
+    ],
+    probes: [
+      "Bộ nhớ nền của JVM chiếm bao nhiêu trong một pod 512Mi, và bạn đo nó thế nào?",
+      "Dịch vụ dựa nhiều vào cache nội bộ thì lựa chọn của bạn đổi ra sao?",
+      "Heap to giúp gì và làm xấu gì cho GC?",
+    ],
+    refs: ["ocnj-09", "ocnj-08"],
+  },
+  {
+    id: "ocnj-iq16",
+    field: "ocnj",
+    topic: "ocnj-cloud",
+    level: 4,
+    minutes: 14,
+    incident: {
+      symptom: "Một dịch vụ chạy tốt hàng tuần rồi đột ngột có 3 pod bị khởi động lại trong 10 phút, lặp lại vài ngày một lần. Log ứng dụng dừng giữa câu, không có `OutOfMemoryError`, không có exception. GC log cho thấy heap ổn định quanh 60% suốt thời gian đó. Pod có `limits.memory` 2Gi và `-Xmx1600m`.",
+      scale: "52 pod. Mỗi đợt khởi động lại làm mất khoảng 6% năng lực trong 90 giây, và vì trùng giờ cao điểm nên đã gây hai lần vượt SLA trong tháng.",
+      constraints: "Không được nâng `limits.memory` — trần bộ nhớ toàn cụm đã chốt và 11 đội khác đang dùng chung. Không đổi được ứng dụng sang runtime khác. Phải đưa ra chẩn đoán có bằng chứng, vì lần trước đội đã đoán sai và tốn hai tuần.",
+      },
+    question: "Heap ổn định 60% và không có `OutOfMemoryError` — vậy vì sao pod chết? Nêu chẩn đoán và cách bạn chứng minh nó.",
+    mustCover: [
+      "Không có `OutOfMemoryError` mà tiến trình dừng giữa câu là dấu hiệu tiến trình bị **kernel giết**, không phải JVM tự kết thúc",
+      "Heap ổn định 60% chỉ nói về **heap**, và heap **không phải** toàn bộ bộ nhớ JVM",
+      "Thủ phạm nằm ở vùng **ngoài heap**: metaspace, code cache, stack của thread, bộ đệm trực tiếp, bộ nhớ thư viện native",
+      "`-Xmx1600m` trên `limits` 2Gi chỉ để lại khoảng 400Mi cho **tất cả** phần còn lại — quá mỏng",
+      "Tính chất \"chạy tốt hàng tuần rồi đột ngột\" gợi một vùng ngoài heap **tăng dần**, chẳng hạn số thread hoặc bộ đệm trực tiếp bị rò",
+      "Chứng minh bằng cách theo dõi **bộ nhớ toàn tiến trình** và từng vùng ngoài heap, không chỉ heap",
+      "Trong ràng buộc không nâng limit: **giảm `-Xmx`** để chừa chỗ, và chặn nguồn tăng ở vùng ngoài heap",
+    ],
+    model: "Ba dấu hiệu cùng chỉ một hướng. Log dừng giữa câu và không có `OutOfMemoryError` nghĩa là JVM không tự kết thúc — nếu hết heap thì nó sẽ ném lỗi và ghi được ít nhất một dòng. Tiến trình biến mất không kịp ghi gì là hành vi của việc bị kernel giết vì vượt giới hạn bộ nhớ của container. Và heap ổn định 60% không mâu thuẫn với điều đó chút nào, vì nó chỉ nói về heap: metaspace, code cache của JIT, stack của từng thread, bộ đệm trực tiếp ngoài heap và bộ nhớ mà thư viện native cấp phát đều nằm ngoài `-Xmx` nhưng đều tính vào giới hạn container. Làm số học thì thấy ngay chỗ mỏng: `-Xmx1600m` trên `limits.memory` 2Gi chỉ chừa khoảng 400Mi cho tất cả phần còn lại, mà riêng metaspace cộng code cache cộng stack của vài trăm thread đã ăn gần hết. Tính chất \"chạy tốt hàng tuần rồi đột ngột chết theo đợt\" gợi thêm một điều: có một vùng ngoài heap tăng dần cho tới khi vượt ngưỡng — ứng viên hàng đầu là số thread tăng không giới hạn, hoặc bộ đệm trực tiếp bị cấp phát mà không được giải phóng, hoặc một thư viện native rò rỉ. Việc ba pod chết trong 10 phút rồi lặp lại vài ngày một lần khớp với việc chúng cùng khởi động cùng thời điểm nên cùng đạt ngưỡng cùng lúc. Về cách chứng minh, và đây là phần đề bài đòi vì đội đã đoán sai một lần: tôi không đổi gì trước khi có dữ liệu. Việc cần làm là theo dõi bộ nhớ **toàn tiến trình** thay vì chỉ heap, tách theo từng vùng — heap, metaspace, code cache, thread, bộ đệm trực tiếp — và vẽ chúng theo thời gian trên một pod cho tới khi nó chết. Vùng nào có đường tăng đơn điệu chính là thủ phạm, và đó là bằng chứng chứ không phải giả thuyết. Song song, tôi ghi lại số thread theo thời gian vì nó là đại lượng rẻ nhất để kiểm và là nguyên nhân thường gặp nhất. Về can thiệp trong ràng buộc không được nâng giới hạn: giảm `-Xmx` để chừa chỗ thật cho vùng ngoài heap là việc làm được ngay và an toàn vì heap chỉ dùng 60%; nhưng phải nói rõ đó là cầm máu, không phải cách sửa — nếu có một vùng đang tăng đơn điệu thì giảm heap chỉ dời thời điểm chết, và cách sửa thật là chặn nguồn tăng đó.",
+    redFlags: [
+      "Đi tìm `OutOfMemoryError` trong log rồi kết luận \"không phải vấn đề bộ nhớ\"",
+      "Lấy heap ổn định 60% làm bằng chứng bộ nhớ khoẻ — heap không phải toàn bộ bộ nhớ tiến trình",
+      "Đòi nâng `limits.memory` — ràng buộc đã cấm, và nó cũng chỉ dời thời điểm chết",
+      "Giảm `-Xmx` rồi tuyên bố đã sửa xong mà không tìm nguồn tăng ở vùng ngoài heap",
+      "Đoán thêm một giả thuyết nữa mà không đo, đúng sai lầm đã tốn hai tuần lần trước",
+    ],
+    probes: [
+      "Bạn theo dõi bộ nhớ ngoài heap bằng những đại lượng nào?",
+      "Vì sao ba pod lại chết gần như cùng lúc rồi lặp lại theo chu kỳ?",
+      "Nếu không vùng nào tăng đơn điệu mà pod vẫn chết thì bạn nghĩ tới gì tiếp?",
+    ],
+    refs: ["ocnj-09", "ocnj-07"],
+  },
+
+  // ===== ocnj-observe — Observability và profiling (ocnj-iq17–ocnj-iq20) =====
+  {
+    id: "ocnj-iq17",
+    field: "ocnj",
+    topic: "ocnj-observe",
+    level: 1,
+    minutes: 5,
+    question: "Ba trụ cột của observability là gì? Nói mỗi trụ cột trả lời được câu hỏi nào mà hai trụ cột kia không trả lời được.",
+    mustCover: [
+      "Ba trụ cột là **metrics**, **logs** và **traces**",
+      "Chúng khác nhau ở những khía cạnh **nền tảng về hình dáng và hình thức** của dữ liệu, không chỉ khác về công cụ",
+      "**Metrics** là đại lượng tổng hợp theo thời gian — trả lời \"có gì đang bất thường, và từ khi nào\"",
+      "**Logs** là sự kiện rời rạc có ngữ cảnh — trả lời \"chuyện gì đã xảy ra với trường hợp cụ thể này\"",
+      "**Traces** nối các bước của **một** request xuyên nhiều thành phần — trả lời \"thời gian dồn ở tầng nào\"",
+      "Với hệ phân tán thì trace là trụ cột không thay thế được: metrics và logs đều mất quan hệ **nhân quả xuyên dịch vụ**",
+    ],
+    model: "Ba trụ cột là metrics, logs và traces, và sách nhấn rằng chúng chỉ những nguồn dữ liệu khác nhau ở các khía cạnh nền tảng về hình dáng và hình thức — nghĩa là khác biệt không nằm ở công cụ mà ở bản chất dữ liệu, nên không trụ cột nào thay được trụ cột khác. Metrics là đại lượng tổng hợp theo thời gian: rẻ để lưu, rẻ để truy vấn trên khoảng dài, nên nó là thứ trả lời \"có gì đang bất thường, và bất thường từ khi nào\". Cái nó không làm được là nói cho ta biết chuyện gì xảy ra với một trường hợp cụ thể, vì tổng hợp đã xoá mất từng cá thể. Logs là sự kiện rời rạc kèm ngữ cảnh, nên nó trả lời đúng câu kia: request này thất bại vì sao, giá trị đầu vào là gì, nhánh nào đã chạy. Cái nó không làm được là cho một cái nhìn tổng hợp — đọc log để trả lời \"độ trễ p99 tuần này thế nào\" là dùng sai công cụ — và trong hệ phân tán thì log của từng dịch vụ không tự nối lại thành một câu chuyện. Traces lấp đúng khoảng đó: chúng nối các bước của **một** request xuyên nhiều thành phần, nên trả lời được \"thời gian dồn ở tầng nào\" và \"thành phần nào gọi thành phần nào theo thứ tự nào\". Đó là câu hỏi mà cả metrics lẫn logs đều không trả lời được, vì cả hai đều mất quan hệ nhân quả xuyên dịch vụ — metrics mất vì tổng hợp, logs mất vì rời rạc theo từng tiến trình. Trong thực hành thì ba trụ cột thường dùng theo thứ tự: metrics báo có vấn đề và khoanh thời gian, traces khoanh tầng, logs cho chi tiết ở tầng đó.",
+    redFlags: [
+      "Coi ba trụ cột là ba công cụ thay thế nhau, chọn một là đủ",
+      "Dùng log để trả lời câu hỏi tổng hợp, hoặc dùng metrics để điều tra một request cụ thể",
+      "Không nêu được vì sao trace là thứ không thay thế được trong hệ phân tán",
+    ],
+    probes: [
+      "Bạn dùng ba trụ cột theo thứ tự nào khi có sự cố, và vì sao thứ tự đó?",
+      "Thêm nhiều metric có bù được việc thiếu trace không?",
+      "Antipattern nào hay gặp trong kiến trúc observability?",
+    ],
+    refs: ["ocnj-10"],
+  },
+  {
+    id: "ocnj-iq18",
+    field: "ocnj",
+    topic: "ocnj-observe",
+    level: 2,
+    minutes: 7,
+    code: {
+      lang: "java",
+      text: `@RestController
+public class OrderController {
+
+    private final MeterRegistry registry;
+
+    @PostMapping("/orders")
+    public Order create(@RequestBody OrderRequest req) {
+        // Đo thời gian xử lý
+        long start = System.nanoTime();
+        Order o = service.create(req);
+        registry.timer("order.create",
+                       "customer", req.getCustomerId(),      // (1)
+                       "orderId",  o.getId().toString())     // (2)
+                .record(System.nanoTime() - start, NANOSECONDS);
+
+        log.info("Đã tạo đơn {} cho khách {}", o.getId(), req.getCustomerId());
+        return o;
+    }
+}`,
+    },
+    question: "Đoạn instrumentation này làm sập hệ thống giám sát sau hai tuần chạy. Chỉ ra nguyên nhân, rồi viết lại cho đúng.",
+    mustCover: [
+      "Hai tag `customer` và `orderId` có **lực lượng không giới hạn**: mỗi giá trị mới tạo ra một chuỗi thời gian mới",
+      "`orderId` là **duy nhất cho mỗi request**, nên nó sinh một chuỗi thời gian cho **mỗi đơn hàng** — đây là nguyên nhân chính",
+      "Đó là hiện tượng **nổ lực lượng** (cardinality explosion): chi phí ở hệ thống metrics tăng theo **số tổ hợp tag**, không theo số request",
+      "Metrics là dữ liệu **tổng hợp** — định danh từng cá thể thuộc về logs hoặc traces, không thuộc về metrics",
+      "Sửa: bỏ hẳn `orderId` khỏi tag; `customer` chỉ giữ nếu số khách **có giới hạn và nhỏ**, nếu không thì thay bằng một tag phân nhóm",
+      "Định danh cần cho việc điều tra thì đặt vào **log** và vào **trace**, nơi chi phí tỉ lệ với số sự kiện chứ không nhân lên theo tổ hợp",
+    ],
+    model: "Nguyên nhân là nổ lực lượng, và thủ phạm chính là tag `orderId`. Một hệ thống metrics lưu dữ liệu theo chuỗi thời gian, và mỗi tổ hợp tag khác nhau là một chuỗi thời gian riêng cần được lập chỉ mục và giữ trong bộ nhớ. `orderId` là duy nhất cho mỗi đơn hàng, nên đoạn mã này tạo ra một chuỗi thời gian mới cho **mỗi request** — sau hai tuần thì đó là hàng triệu chuỗi, mỗi chuỗi chỉ có đúng một điểm dữ liệu và không bao giờ được ghi thêm. Chi phí của hệ thống metrics tăng theo số tổ hợp tag chứ không theo số request, nên đây không phải vấn đề khối lượng mà là vấn đề hình dạng dữ liệu. `customer` là thủ phạm thứ hai, nhẹ hơn nhưng vẫn thật: nó có giới hạn về lý thuyết nhưng giới hạn đó tăng theo thời gian và không nằm dưới kiểm soát của ta. Sai lầm nền tảng là dùng metrics để làm việc của logs và traces: metrics là dữ liệu tổng hợp, và định danh từng cá thể vốn không thuộc về nó. Viết lại thì tôi bỏ hẳn `orderId`. Với `customer`, nếu số khách hàng thật sự nhỏ và có giới hạn thì giữ được; nếu không thì thay bằng một tag phân nhóm có lực lượng cố định — hạng khách, vùng, hoặc kênh — vì đó vẫn đủ để trả lời câu hỏi tổng hợp \"nhóm nào đang chậm\". Những tag nên có thay vào đó là các chiều có lực lượng hữu hạn và ổn định: kết quả thành công hay thất bại, loại đơn, phiên bản API. Còn định danh cần cho việc điều tra thì đặt đúng chỗ: `orderId` và `customerId` vào log, và quan trọng hơn là vào trace kèm trace id — ở đó chi phí tỉ lệ với số sự kiện chứ không nhân lên theo tổ hợp, và ta vẫn đi từ một metric bất thường xuống tới đúng request cụ thể. Đó cũng là minh hoạ cho việc ba trụ cột khác nhau về hình dạng dữ liệu nên phải dùng đúng việc.",
+    redFlags: [
+      "Chỉ nói \"quá nhiều metric\" mà không nêu cơ chế nổ lực lượng theo tổ hợp tag",
+      "Đề nghị giữ `orderId` nhưng lấy mẫu bớt — vẫn sinh chuỗi thời gian mới cho mỗi id được lấy",
+      "Tăng dung lượng hệ thống giám sát thay vì sửa hình dạng dữ liệu",
+      "Bỏ luôn cả instrumentation cho an toàn, mất khả năng quan sát",
+    ],
+    probes: [
+      "Tag nào an toàn để thêm, và tiêu chí của bạn là gì?",
+      "Bạn đi từ một metric bất thường xuống tới một request cụ thể bằng đường nào?",
+      "Vì sao lấy mẫu không cứu được bài toán lực lượng?",
+    ],
+    refs: ["ocnj-11", "ocnj-10"],
+  },
+  {
+    id: "ocnj-iq19",
+    field: "ocnj",
+    topic: "ocnj-observe",
+    level: 3,
+    minutes: 10,
+    question: "Bạn cần tìm nguyên nhân một dịch vụ production đang chậm. Chọn công cụ nào để quan sát, và điều gì làm bạn đổi công cụ?",
+    tradeoffs: [
+      {
+        option: "JFR — luôn bật với chi phí thấp",
+        when: "Điểm khởi đầu cho production. Chi phí đủ thấp để bật liên tục, nên nó bắt được cả những sự cố **không tái hiện theo yêu cầu** — thứ mà một phiên profiling bật sau khi sự cố đã qua không bao giờ thấy.",
+      },
+      {
+        option: "Profiler lấy mẫu, gắn vào tiến trình đang chạy",
+        when: "Khi cần biết thời gian CPU dồn ở đâu với độ phân giải cao hơn. Chi phí thấp và không đòi khởi động lại, nhưng nó trả lời \"ở đâu\" chứ không phải \"vì sao\", và có thể bỏ sót thời gian chờ nếu chỉ lấy mẫu thread đang chạy.",
+      },
+      {
+        option: "Memory profiling",
+        when: "Khi triệu chứng liên quan tới cấp phát hoặc GC — allocation rate cao, mức chiếm dụng sau GC tăng dần. Nó trả lời câu hỏi khác hẳn CPU profiling, và bật sai loại là mất thời gian.",
+      },
+    ],
+    mustCover: [
+      "Chọn công cụ theo **câu hỏi cần trả lời**, không theo thứ quen dùng: CPU dồn ở đâu, thời gian chờ ở đâu, hay bộ nhớ đi đâu",
+      "Profiling trên production có **khía cạnh vận hành** phải cân: chi phí, ảnh hưởng tới chính thứ đang đo, và quyền truy cập",
+      "Chi phí thu thập tự nó ảnh hưởng tới phép đo — quan sát một hệ thống làm hệ thống đó chậm đi đôi chút",
+      "JFR đủ rẻ để **bật liên tục**, nên nó bắt được sự cố không tái hiện theo yêu cầu",
+      "Profiler lấy mẫu chỉ nói **ở đâu**, không nói **vì sao** — vẫn cần đọc mã và giả thuyết",
+      "Nếu triệu chứng là độ trễ đuôi chứ không phải CPU cao thì profiling CPU có thể **không thấy gì**, phải đo thời gian chờ",
+    ],
+    model: "Tôi chọn theo câu hỏi cần trả lời chứ không theo công cụ quen. Có ba câu hỏi khác nhau và ba loại công cụ tương ứng: thời gian CPU dồn ở đâu, thời gian **chờ** dồn ở đâu, và bộ nhớ đi đâu. Bật sai loại là mất thời gian, và đây là sai lầm hay gặp nhất — chạy CPU profiler cho một sự cố độ trễ đuôi rồi không thấy gì, vì thời gian đang nằm ở chờ chứ ở tính. Điểm khởi đầu của tôi trên production là JFR, và lý do nằm ở khía cạnh vận hành: nó đủ rẻ để bật liên tục, nên khi sự cố xảy ra ta **đã có** dữ liệu của khoảng thời gian đó. Điều này quan trọng hơn vẻ ngoài vì phần lớn sự cố production không tái hiện theo yêu cầu; một phiên profiling bật sau khi sự cố đã qua thì đo một hệ thống đang khoẻ. Khi cần độ phân giải cao hơn về CPU, tôi gắn một profiler lấy mẫu vào tiến trình đang chạy — chi phí thấp, không cần khởi động lại — nhưng phải nói rõ hai giới hạn: nó trả lời \"ở đâu\" chứ không \"vì sao\", nên vẫn cần đọc mã và dựng giả thuyết; và nếu nó chỉ lấy mẫu thread đang chạy thì thời gian chờ khoá hay chờ I/O sẽ vắng mặt hoàn toàn, đúng lúc ta cần nhất. Memory profiling thì tôi chuyển sang khi triệu chứng chỉ về hướng đó — allocation rate cao, hoặc mức chiếm dụng sau GC tăng dần. Xuyên suốt cả ba, có một điều phải giữ trong đầu: chi phí thu thập tự nó ảnh hưởng tới phép đo. Quan sát một hệ thống làm nó chậm đi đôi chút, và với những phép đo chi tiết thì mức ảnh hưởng đó có thể đủ để đổi kết luận — nên tôi luôn hỏi mình đang trả bao nhiêu cho dữ liệu, và liệu cái giá đó có làm sai lệch chính thứ mình muốn thấy hay không.",
+    redFlags: [
+      "Chạy CPU profiler cho một sự cố độ trễ đuôi rồi kết luận \"không tìm ra gì\"",
+      "Chỉ bật profiling sau khi sự cố đã qua và mong thấy được nguyên nhân",
+      "Bỏ qua chi phí của việc thu thập, nhất là khi bật ở mức chi tiết cao trên production",
+      "Đọc kết quả profiler như câu trả lời cuối cùng thay vì như một giả thuyết cần kiểm",
+    ],
+    probes: [
+      "Vì sao một profiler chỉ lấy mẫu thread đang chạy lại bỏ sót đúng thứ bạn cần?",
+      "Bạn quyết định mức chi tiết của JFR trên production thế nào?",
+      "Khi kết quả profiler chỉ vào một method thư viện, bước tiếp theo của bạn là gì?",
+    ],
+    refs: ["ocnj-12", "ocnj-10"],
+  },
+  {
+    id: "ocnj-iq20",
+    field: "ocnj",
+    topic: "ocnj-observe",
+    level: 4,
+    minutes: 13,
+    incident: {
+      symptom: "Một dịch vụ có dashboard \"tất cả xanh\" — CPU 40%, heap 55%, tỉ lệ lỗi 0,02%, độ trễ p95 60ms — nhưng khách hàng liên tục báo trang tải chậm. Đội đã thêm 30 metric mới trong ba tháng qua và vẫn không tìm ra gì. Dịch vụ gọi 6 dịch vụ nội bộ khác; không có trace, chỉ có metrics và log.",
+      scale: "9.000 request mỗi giây. Khiếu nại tập trung vào một luồng nghiệp vụ chiếm khoảng 4% lưu lượng. Ba tháng điều tra không kết luận được.",
+      constraints: "Không được thêm metric nữa — hệ thống giám sát đã chạm trần chi phí. Phải có kết quả trong 2 tuần. Sáu dịch vụ kia thuộc bốn đội khác, không thể yêu cầu họ đổi mã trong thời gian đó.",
+    },
+    question: "Vì sao 30 metric mới không giúp gì? Nêu điều bạn thiếu và cách bạn lấy được nó trong 2 tuần mà không thêm metric.",
+    mustCover: [
+      "Đọc đúng bằng chứng: 30 metric trong ba tháng không cải thiện gì, nghĩa là thứ thiếu **không phải thêm dữ liệu cùng loại**",
+      "Khoảng trống cụ thể là **trace** — với một dịch vụ gọi 6 dịch vụ khác, câu \"thời gian dồn ở tầng nào\" chỉ trace trả lời được",
+      "p95 60ms là số **tổng hợp trên toàn bộ lưu lượng**, nên một luồng chiếm 4% có thể rất chậm mà vẫn bị che hoàn toàn",
+      "Phải đo **theo luồng nghiệp vụ** và nhìn **đuôi** phân bố, không phải p95 toàn cục",
+      "Tỉ lệ lỗi 0,02% cũng không nói gì vì vấn đề là **chậm**, không phải lỗi",
+      "Cách lấy trace trong 2 tuần mà không đổi mã 6 dịch vụ kia: truyền **trace id** và đo ở phía gọi của chính dịch vụ mình",
+      "Đo ở phía gọi đã đủ khoanh được **dịch vụ nào** chậm, rồi mới đi thương lượng với đúng một đội thay vì bốn",
+    ],
+    model: "30 metric mới không giúp gì vì chúng bổ sung vào đúng trụ cột đã có sẵn. Metrics, logs và traces khác nhau ở những khía cạnh nền tảng về hình dáng và hình thức dữ liệu, nên thiếu trace thì không lượng metric nào bù được — với một dịch vụ gọi 6 dịch vụ khác, câu hỏi \"thời gian dồn ở tầng nào\" là câu mà metrics không trả lời được vì tổng hợp đã xoá mất quan hệ nhân quả, và logs cũng không, vì chúng rời rạc theo từng tiến trình. Còn một vấn đề thứ hai độc lập với trace và cũng đủ để giải thích ba tháng bế tắc: p95 60ms là con số tổng hợp trên toàn bộ 9.000 request mỗi giây, trong khi khiếu nại tập trung vào một luồng chiếm 4% lưu lượng. Một luồng chiếm 4% có thể chậm hàng giây mà p95 toàn cục vẫn đẹp — nó nằm hoàn toàn trong phần đuôi bị phép tổng hợp che đi. Tỉ lệ lỗi 0,02% cũng không nói gì vì vấn đề là chậm, không phải lỗi. Nên hai thứ tôi thiếu là: phân tách theo luồng nghiệp vụ, và quan hệ nhân quả xuyên dịch vụ. Trong hai tuần và không được thêm metric, tôi làm theo thứ tự này. Việc đầu tiên, rẻ nhất và làm được ngay: đo độ trễ **của riêng luồng 4% đó** và nhìn đuôi phân bố chứ không nhìn p95 — dữ liệu này lấy từ log vốn đã có, không cần metric mới. Chỉ riêng bước đó có thể xác nhận hay loại bỏ toàn bộ giả thuyết trong một ngày. Việc thứ hai là lấy quan hệ nhân quả mà không cần bốn đội kia đổi mã: sinh một trace id ở biên vào của dịch vụ mình, truyền nó xuống theo header của 6 lời gọi, và **đo ở phía gọi** — tức ghi lại thời gian mỗi lời gọi đi ra mất bao lâu, kèm trace id. Điều này hoàn toàn nằm trong mã của tôi. Đo ở phía gọi không cho thấy bên trong 6 dịch vụ kia, nhưng nó đủ để trả lời câu hỏi quyết định là **dịch vụ nào** đang chậm và chậm ở phần đuôi nào — và khi đã có con số đó, tôi đi thương lượng với đúng một đội có bằng chứng trong tay, thay vì đề nghị cả bốn đội cùng đổi mã dựa trên phỏng đoán. Đó cũng là cách biến ràng buộc \"không thể yêu cầu họ đổi mã\" từ vật cản thành thứ không còn cần thiết.",
+    redFlags: [
+      "Đề nghị thêm metric hoặc dashboard — ràng buộc đã cấm, và ba tháng qua đã chứng minh cách đó không hiệu quả",
+      "Tin dashboard xanh nghĩa là hệ thống khoẻ, trong khi p95 toàn cục che được một luồng chiếm 4%",
+      "Đòi triển khai trace đầy đủ trên cả 6 dịch vụ trước khi làm được gì — không khả thi trong 2 tuần",
+      "Dùng tỉ lệ lỗi để lập luận về một vấn đề độ trễ",
+      "Bỏ qua bước rẻ nhất là tách độ trễ theo luồng nghiệp vụ từ log đã có",
+    ],
+    probes: [
+      "Đo ở phía gọi thấy được gì và không thấy được gì?",
+      "Vì sao p95 toàn cục che được một luồng chiếm 4% lưu lượng?",
+      "Sau khi khoanh được dịch vụ chậm, bạn trình bày bằng chứng cho đội kia thế nào?",
+    ],
+    refs: ["ocnj-10", "ocnj-11"],
+  },
+
+  // ===== ocnj-concurrent — Hiệu năng đồng thời và hệ phân tán (ocnj-iq21–ocnj-iq24) =====
+  {
+    id: "ocnj-iq21",
+    field: "ocnj",
+    topic: "ocnj-concurrent",
+    level: 1,
+    minutes: 6,
+    question: "Virtual thread giải quyết bài toán gì mà thread nền tảng không giải được, và nó **không** giúp gì?",
+    mustCover: [
+      "Virtual thread làm cho mô hình **một thread một task** khả thi ở số lượng rất lớn, vì chúng rẻ để tạo và rẻ để chặn",
+      "Nó nhắm vào workload **chờ nhiều** — I/O, gọi mạng — nơi thread nền tảng bị giới hạn bởi chi phí của chính thread",
+      "Nó **không** làm tăng năng lực CPU: với task thiên tính toán, số lõi vẫn là trần",
+      "Nó **không** làm mã đồng thời tự đúng: JMM, tranh chấp và bất biến chia sẻ vẫn nguyên như cũ",
+      "Nó cho phép viết mã **tuần tự dễ đọc** mà đạt được mức mở rộng trước đây phải dùng lối bất đồng bộ",
+    ],
+    model: "Bài toán mà virtual thread giải là chi phí của chính thread. Với thread nền tảng, mỗi thread tương ứng một thread hệ điều hành và tốn bộ nhớ stack cùng chi phí lập lịch, nên số thread bị giới hạn ở bậc nghìn — và điều đó buộc ta từ bỏ mô hình một thread một task khi cần phục vụ hàng chục nghìn kết nối đồng thời. Lối thoát trước đây là lập trình bất đồng phóng: callback, future, reactive — mã mở rộng tốt nhưng khó đọc, khó debug, và stack trace mất nghĩa. Virtual thread làm thread trở nên rẻ để tạo và rẻ để chặn, nên mô hình một thread một task quay lại khả thi ở số lượng rất lớn; giá trị lớn nhất của nó là ta viết được mã tuần tự dễ đọc mà vẫn đạt mức mở rộng trước đây phải trả bằng lối bất đồng bộ. Phần \"không giúp gì\" quan trọng không kém và là chỗ hay bị nói sai. Thứ nhất, nó không làm tăng năng lực CPU: với task thiên tính toán, trần vẫn là số lõi, và tạo một triệu virtual thread để chạy một triệu vòng lặp tính toán chỉ làm mọi thứ chậm hơn. Nó nhắm vào workload chờ nhiều, nơi nút thắt là chi phí thread chứ không phải chu kỳ CPU. Thứ hai, và tôi cho là điểm đáng nhấn nhất, nó không làm mã đồng thời tự đúng: Java Memory Model không đổi, tranh chấp khoá không đổi, các bất biến trải trên nhiều biến vẫn cần được bảo vệ như cũ. Đổi sang virtual thread mà mã vốn đã có race thì chỉ là chạy cùng lỗi đó ở quy mô lớn hơn — và với nhiều thread hơn thì cửa sổ tranh chấp được thăm dò nhiều hơn, nên lỗi vốn hiếm có thể bắt đầu xuất hiện thường xuyên.",
+    redFlags: [
+      "Nói virtual thread làm ứng dụng nhanh hơn nói chung, không phân biệt workload chờ nhiều với tính nhiều",
+      "Tin rằng nó thay thế được việc phải suy nghĩ về JMM và tranh chấp",
+      "Cho rằng nó luôn thay được lối reactive trong mọi trường hợp",
+    ],
+    probes: [
+      "Với task thiên tính toán, virtual thread đổi gì?",
+      "Mã đang có race chuyển sang virtual thread thì chuyện gì xảy ra?",
+      "Fork/Join và parallel stream nhắm vào loại workload nào?",
+    ],
+    refs: ["ocnj-13"],
+  },
+  {
+    id: "ocnj-iq22",
+    field: "ocnj",
+    topic: "ocnj-concurrent",
+    level: 2,
+    minutes: 8,
+    code: {
+      lang: "java",
+      text: `public class ReportService {
+
+    // Gọi 4 dịch vụ, mỗi lời gọi khoảng 200ms, đều là chờ mạng
+    public Report build(Long id) {
+        return orders.stream()
+            .parallel()
+            .map(o -> enrich(o))        // enrich() gọi HTTP, chặn ~200ms
+            .collect(toReport());
+    }
+
+    // Ở một chỗ khác trong cùng JVM:
+    public long countPrimes(long limit) {
+        return LongStream.rangeClosed(2, limit)
+            .parallel()
+            .filter(this::isPrime)      // thuần tính toán
+            .count();
+    }
+}`,
+    },
+    question: "Hai method này dùng cùng một cơ chế song song nhưng chỉ một trong hai dùng đúng. Chỉ ra cái nào sai, vì sao, và sửa.",
+    mustCover: [
+      "`parallel()` trên stream chạy trên một pool **dùng chung toàn JVM** với số thread theo số lõi",
+      "`countPrimes` dùng đúng: thuần tính toán, số lõi là trần thật, pool theo số lõi là cấu hình hợp lý",
+      "`build` dùng sai: các lời gọi **chặn** chiếm thread của pool dùng chung trong 200ms mỗi lần",
+      "Hệ quả là nó **làm chậm mọi phần khác** của JVM đang dùng cùng pool — ảnh hưởng vượt ra ngoài method này",
+      "Số thread theo số lõi cũng là **sai cấu hình** cho workload chờ: với I/O ta cần nhiều thread hơn số lõi",
+      "Sửa `build` bằng cơ chế phù hợp cho việc chờ — virtual thread hoặc một executor riêng có kích thước theo tỉ lệ chờ trên tính",
+    ],
+    model: "`countPrimes` dùng đúng và `build` dùng sai, và cả hai đều quy về một sự thật: `parallel()` trên stream chạy trên một pool dùng chung của cả JVM, với số thread chọn theo số lõi. Với `countPrimes` thì đó là cấu hình hợp lý — công việc thuần tính toán, trần thật là số lõi, nên một pool cỡ số lõi là đúng thứ cần, và không có thread nào bị chặn nên không ai bị giữ chỗ. `build` thì ngược lại trên mọi mặt. Mỗi lần `enrich` chặn khoảng 200ms để chờ mạng, và trong suốt 200ms đó nó chiếm một thread của pool dùng chung mà không tiêu một chu kỳ CPU nào. Hai hậu quả. Thứ nhất, chính `build` cũng không nhanh như mong: pool chỉ có vài thread nên bốn lời gọi không thực sự chạy song song hết, và với workload chờ thì số thread đúng phải nhiều hơn số lõi, tính theo tỉ lệ giữa thời gian chờ và thời gian tính. Thứ hai, và nghiêm trọng hơn vì nó vượt ra ngoài method này: pool ấy dùng chung toàn JVM, nên trong lúc `build` giữ thread để chờ mạng thì `countPrimes` và mọi đoạn `parallel()` khác trong ứng dụng đều bị chậm theo. Một quyết định cục bộ trở thành một điểm tắc toàn cục, và đó là dạng lỗi rất khó truy vì triệu chứng xuất hiện ở nơi khác với nguyên nhân. Sửa thì tôi không cố chỉnh pool dùng chung mà đổi cơ chế cho đúng loại việc: `build` là workload chờ nhiều nên nó thuộc về virtual thread, nơi việc chặn là rẻ và không giữ chỗ của ai; nếu chưa dùng được virtual thread thì tách một executor riêng cho các lời gọi ra ngoài, kích thước đặt theo tỉ lệ chờ trên tính, và tuyệt đối không dùng chung với pool tính toán. `countPrimes` giữ nguyên.",
+    redFlags: [
+      "Nói `parallel()` luôn nhanh hơn nên cả hai đều ổn",
+      "Đề nghị tăng kích thước pool dùng chung — biến một cấu hình đúng cho tính toán thành sai cho cả hai",
+      "Không nhận ra pool dùng chung khiến ảnh hưởng vượt ra ngoài method đang sửa",
+      "Chuyển `countPrimes` sang virtual thread vì \"virtual thread mới hơn\"",
+    ],
+    probes: [
+      "Vì sao dùng chung pool giữa việc chờ và việc tính lại nguy hiểm?",
+      "Bạn tính kích thước executor cho `build` thế nào?",
+      "Fork/Join phù hợp với hình dạng công việc nào?",
+    ],
+    refs: ["ocnj-13"],
+  },
+  {
+    id: "ocnj-iq23",
+    field: "ocnj",
+    topic: "ocnj-concurrent",
+    level: 3,
+    minutes: 11,
+    question: "Một dịch vụ cần trạng thái dùng chung giữa nhiều instance. Bạn chọn mô hình nhất quán nào, và điều gì buộc bạn đổi?",
+    tradeoffs: [
+      {
+        option: "Nhất quán cuối cùng — replication bất đồng bộ",
+        when: "Khi nghiệp vụ chịu được việc đọc ra dữ liệu hơi cũ. Độ trễ thấp, chịu được phân vùng mạng, mở rộng tốt. Cái giá là phải **thiết kế cho xung đột**: mọi đường đọc phải hiểu dữ liệu có thể cũ, và phải có quy tắc hoà giải.",
+      },
+      {
+        option: "Nhất quán mạnh qua giao thức đồng thuận",
+        when: "Khi có bất biến **không được vi phạm dù chỉ một khoảnh khắc** — số dư, tồn kho, quyền. Đổi lại là độ trễ ghi cao hơn vì phải chờ đa số đồng ý, và khi mất đa số thì hệ thống **từ chối ghi** chứ không chấp nhận sai.",
+      },
+      {
+        option: "Không chia sẻ — phân vùng trạng thái theo khoá",
+        when: "Khi trạng thái chia được theo một khoá tự nhiên và mỗi instance sở hữu một phần. Khử hẳn bài toán nhất quán thay vì giải nó, đổi lại là bài toán định tuyến và tái cân bằng khi số instance đổi.",
+      },
+    ],
+    mustCover: [
+      "Câu hỏi quyết định là **bất biến nào không được phép vi phạm**, và trong bao lâu",
+      "Giao thức đồng thuận mua tính nhất quán bằng **độ trễ ghi** và bằng việc **từ chối ghi** khi mất đa số",
+      "Nhất quán cuối cùng không phải \"yếu hơn\" mà là **dịch chi phí** sang tầng ứng dụng: phải có quy tắc hoà giải xung đột",
+      "Phương án thứ ba đáng xét trước hai phương án kia: **khử** bài toán bằng phân vùng thường rẻ hơn giải nó",
+      "Phải nói được **chế độ hỏng**: mỗi lựa chọn hỏng theo cách khác nhau khi mạng phân vùng",
+      "Đừng chọn theo tiếng tăm — phải đối chiếu với yêu cầu nghiệp vụ cụ thể và đo trên workload thật",
+    ],
+    model: "Tôi bắt đầu bằng một câu hỏi nghiệp vụ chứ không kỹ thuật: có bất biến nào không được phép vi phạm dù chỉ một khoảnh khắc hay không, và nếu có thì hậu quả của việc vi phạm là gì. Với những bất biến kiểu số dư không được âm, tồn kho không được bán vượt, hay quyền truy cập, thì câu trả lời là có và tôi cần nhất quán mạnh qua một giao thức đồng thuận. Điều phải nói rõ khi chọn hướng này là cái giá và chế độ hỏng: mỗi lần ghi phải chờ đa số đồng ý nên độ trễ ghi cao hơn, và khi mất đa số thì hệ thống **từ chối ghi** — đó là một quyết định thiết kế có chủ ý, chọn dừng phục vụ thay vì chấp nhận dữ liệu sai. Với phần lớn trạng thái khác thì nghiệp vụ chịu được dữ liệu hơi cũ, và nhất quán cuối cùng cho độ trễ thấp cùng khả năng chịu phân vùng. Nhưng tôi không gọi nó là \"yếu hơn\": nó dịch chi phí sang tầng ứng dụng. Chọn nó nghĩa là cam kết rằng mọi đường đọc đều hiểu dữ liệu có thể cũ, và rằng có quy tắc hoà giải xung đột rõ ràng — nếu hai instance cùng sửa một bản ghi thì bên nào thắng, và theo tiêu chí gì. Bỏ qua phần cam kết đó chính là cách nhất quán cuối cùng biến thành dữ liệu sai âm thầm. Phương án tôi luôn xét **trước** cả hai là phân vùng trạng thái theo khoá để mỗi instance sở hữu một phần và không chia sẻ gì: nó khử bài toán nhất quán thay vì giải nó, và khử một bài toán thường rẻ hơn giải nó. Cái giá là bài toán định tuyến — request phải tới đúng instance sở hữu khoá — và bài toán tái cân bằng khi số instance đổi, hai thứ này cụ thể và giải được, khác với việc sống chung với xung đột. Quyết định cuối tôi đặt cạnh yêu cầu nghiệp vụ và đo trên workload thật, vì cùng một mô hình có thể đúng cho một phần trạng thái và sai cho phần khác của cùng dịch vụ.",
+    redFlags: [
+      "Chọn nhất quán mạnh cho mọi thứ \"để an toàn\", trả độ trễ ghi cho cả dữ liệu không cần tới nó",
+      "Chọn nhất quán cuối cùng mà không định nghĩa quy tắc hoà giải xung đột",
+      "Không xét phương án phân vùng, vốn thường khử được bài toán",
+      "Không nói được hệ thống hỏng thế nào khi mạng phân vùng",
+    ],
+    probes: [
+      "Hệ thống của bạn làm gì khi mất đa số?",
+      "Hai instance cùng sửa một bản ghi — bên nào thắng, và theo tiêu chí gì?",
+      "Phân vùng theo khoá tạo ra bài toán mới nào?",
+    ],
+    refs: ["ocnj-14"],
+  },
+  {
+    id: "ocnj-iq24",
+    field: "ocnj",
+    topic: "ocnj-concurrent",
+    level: 4,
+    minutes: 15,
+    incident: {
+      symptom: "Sau khi đổi tầng HTTP sang virtual thread, thông lượng tăng 3 lần đúng như kỳ vọng, nhưng độ trễ p99 xấu đi 5 lần và xuất hiện những đợt treo 8–20 giây. GC log bình thường. Thread dump cho thấy hàng nghìn virtual thread đứng chờ cùng một `synchronized` block bọc một `HashMap` dùng làm cache trong bộ nhớ.",
+      scale: "Trước đổi: 1.400 request/giây, p99 90ms. Sau đổi: 4.200 request/giây, p99 460ms, và mỗi giờ vài đợt treo. Pool nền tảng cũ có 200 thread.",
+      constraints: "Không được quay lại thread nền tảng — quyết định kiến trúc đã chốt và ba dịch vụ khác đã chuyển theo. Cache phải giữ trong bộ nhớ vì độ trễ yêu cầu dưới 1ms cho lần đọc hit. Phải xử lý trong sprint này.",
+      },
+    question: "Vì sao cùng đoạn mã cache đó chạy tốt với 200 thread nền tảng mà vỡ với virtual thread? Nêu chẩn đoán và cách sửa.",
+    mustCover: [
+      "Virtual thread **không** làm mã đồng thời tự đúng: tranh chấp khoá vẫn là tranh chấp khoá",
+      "Trước đây pool 200 thread **đã đóng vai một cơ chế giới hạn ngầm** cho số bên tranh chấp lock",
+      "Bỏ giới hạn đó nghĩa là hàng nghìn bên cùng tranh một lock, nên hàng đợi chờ dài ra và **độ trễ đuôi nổ**",
+      "Đây là ví dụ cho việc gỡ một nút thắt làm **lộ ra** nút thắt kế tiếp — thông lượng tăng thật, chỗ tắc chỉ dịch sang chỗ khác",
+      "Sửa đúng bản chất: bỏ lock khỏi đường nóng bằng **cấu trúc dữ liệu đồng thời** thay cho `HashMap` bọc `synchronized`",
+      "Nếu vẫn còn chỗ phải giới hạn, hãy giới hạn **tường minh** bằng semaphore thay vì dựa vào kích thước pool",
+      "Đo lại bằng **phân bố độ trễ**, không chỉ thông lượng — vì chính việc chỉ nhìn thông lượng đã che mất vấn đề này",
+    ],
+    model: "Đoạn mã cache không đổi, nhưng số bên tranh chấp thì đổi hai bậc độ lớn. Trước đây pool 200 thread nền tảng đóng một vai mà không ai khai ra: nó là cơ chế giới hạn ngầm cho số bên có thể đồng thời tranh một lock. Với tối đa 200 bên xếp hàng trước `synchronized` block, hàng đợi ngắn và thời gian chờ nằm trong ngân sách. Chuyển sang virtual thread bỏ mất giới hạn đó — giờ hàng nghìn virtual thread cùng chạy tới cùng một lock, hàng đợi dài ra tương ứng, và vì thời gian chờ tỉ lệ với độ dài hàng đợi nên độ trễ đuôi nổ đúng như quan sát. Những đợt treo 8–20 giây là khi hàng đợi tích tụ đủ lớn. Điều quan trọng phải nói với đội là chẩn đoán này không phủ định quyết định kiến trúc: thông lượng tăng 3 lần là thật, virtual thread đã làm đúng việc của nó. Cái đã xảy ra là gỡ một nút thắt làm lộ ra nút thắt kế tiếp — và nút thắt kế tiếp là cái lock ấy, vốn đã luôn ở đó nhưng bị pool 200 thread che khuất. Đây cũng là minh hoạ trực tiếp cho điều virtual thread **không** làm: nó không khiến mã đồng thời tự đúng, JMM và tranh chấp khoá vẫn nguyên. Cách sửa đúng bản chất là bỏ lock khỏi đường nóng thay vì đi chỉnh mức song song: thay `HashMap` bọc `synchronized` bằng một cấu trúc dữ liệu đồng thời, thứ cho nhiều bên đọc chạy song song và chỉ khoá mịn khi ghi. Riêng việc này giải quyết ca đang có và giữ được yêu cầu độ trễ dưới 1ms cho lần đọc hit, vì đường hit không còn phải xếp hàng. Điểm thứ hai tôi sẽ đưa vào cùng sprint như một nguyên tắc: nếu ở đâu đó thật sự cần giới hạn số bên đồng thời — chẳng hạn tầng gọi ra một dịch vụ ngoài — thì phải giới hạn **tường minh** bằng semaphore, chứ không dựa vào kích thước pool làm giới hạn ngầm; vì đúng chỗ dựa ngầm ấy là thứ vừa biến mất và gây ra sự cố này. Cuối cùng là cách đo: tiêu chí nghiệm thu phải là phân bố độ trễ chứ không chỉ thông lượng, bởi chính việc chỉ nhìn thông lượng đã khiến lần đổi vừa rồi được coi là thành công trong khi nó đang phá p99.",
+    redFlags: [
+      "Đề nghị quay lại thread nền tảng — ràng buộc đã cấm, và nó chỉ che lại nút thắt thay vì sửa",
+      "Nói virtual thread \"chưa trưởng thành\" thay vì nhận ra lock là nút thắt đã luôn tồn tại",
+      "Giới hạn số virtual thread cho giống pool cũ: tái lập giới hạn ngầm, bỏ luôn lợi ích vừa đạt",
+      "Chỉnh tham số GC — GC log đã bình thường",
+      "Nghiệm thu lần sửa bằng thông lượng, đúng sai lầm đã che mất vấn đề lần này",
+    ],
+    probes: [
+      "Vì sao thời gian chờ lại tỉ lệ với số bên tranh chấp?",
+      "Sau khi đổi sang cấu trúc dữ liệu đồng thời, còn chỗ nào trong đường nóng dựa vào giới hạn ngầm không?",
+      "Bạn đặt tiêu chí nghiệm thu nào cho lần sửa này?",
+    ],
+    refs: ["ocnj-13", "ocnj-14"],
+  },
 ];
