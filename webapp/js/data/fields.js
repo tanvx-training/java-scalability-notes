@@ -108,7 +108,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Spring Start Here (Laurențiu Spilcă, Manning 2021) — sách nhập môn Spring: context và bean, wiring, abstraction, bean scope, AOP, Spring Boot và MVC, web scope, REST, data source, transaction, Spring Data và kiểm thử.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "spring.io — Spring Framework", href: "https://spring.io/projects/spring-framework" },
   },
   wgjd: {

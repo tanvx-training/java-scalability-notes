@@ -67,6 +67,7 @@ const EXPECTED = {
     "roadmap-items:kafka": 44,
     // Lĩnh vực Spring Start Here — 15 chương + 1 hướng dẫn học (Manning 2021).
     "docs:spring-start": 16,
+    "interview:spring-start": 24,
     "roadmap-items:spring-start": 32,
     // Lĩnh vực The Well-Grounded Java Developer — 16 chương (1–8, 11–18);
     // chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch.

@@ -195,4 +195,11 @@ export const INTERVIEW_TOPICS = {
   "mc-scoped":      { label: "Scoped values",                                      short: "Scoped",      field: "modern-concurrency" },
   "mc-reactive":    { label: "Reactive sau virtual thread",                        short: "Reactive",    field: "modern-concurrency" },
   "mc-framework":   { label: "Framework và di trú thực tế",                        short: "Framework",   field: "modern-concurrency" },
+
+  "ss-context":  { label: "Spring context: định nghĩa và wiring bean",  short: "Context",  field: "spring-start" },
+  "ss-scope":    { label: "Abstraction, bean scope và vòng đời",        short: "Scope",    field: "spring-start" },
+  "ss-aop":      { label: "Spring AOP",                                 short: "AOP",      field: "spring-start" },
+  "ss-mvc":      { label: "Spring Boot, MVC và web scope",              short: "MVC",      field: "spring-start" },
+  "ss-rest":     { label: "REST service và REST client",                short: "REST",     field: "spring-start" },
+  "ss-data":     { label: "Data source, transaction và kiểm thử",       short: "Data",     field: "spring-start" },
 };
