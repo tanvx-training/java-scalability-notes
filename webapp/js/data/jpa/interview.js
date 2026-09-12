@@ -154,7 +154,7 @@ for (Item i : batch) { /* ... */ }`,
       scale: "4,2 triệu dòng `ITEM`, 11 dịch vụ khác nhau đọc bảng này, trong đó 3 dịch vụ không do đội bạn sở hữu và có dịch vụ đọc bằng SQL thuần chứ không qua JPA.",
       constraints: "Không được downtime quá 5 phút, không được sửa đồng thời 11 dịch vụ trong một lần phát hành, và dữ liệu lịch sử phải đọc lại được đúng giá trị cũ để đối soát.",
     },
-    question: "Bạn chẩn đoán và xử lý tình huống này thế nào?",
+    question: "Hai triệu chứng ở trên có phải cùng một nguyên nhân không? Nêu đường di trú của bạn theo từng pha, và nói rõ pha nào để lại rủi ro gì.",
     mustCover: [
       "Tách bạch hai việc khác nhau: đổi **kiểu trong domain model** và đổi **schema cơ sở dữ liệu** — sách nêu đúng ba mặt phải làm là sửa schema, di trú dữ liệu hiện có, và cập nhật mọi ứng dụng truy cập database",
       "Đưa vào một class value type **bất biến** mang cả số tiền lẫn đơn vị, rồi ánh xạ nó bằng JPA converter — converter đóng vai vùng đệm linh hoạt giữa ứng dụng và cơ sở dữ liệu",
@@ -314,7 +314,7 @@ public void addBid(Long itemId, BigDecimal amount) {
       scale: "Category lớn nhất có 47.000 item; thao tác sửa một category mất 9–14 giây và khoá bảng nối đủ lâu để các request khác timeout.",
       constraints: "Dữ liệu gán hiện có phải giữ nguyên, không được mất lịch sử. Hai dịch vụ khác đang đọc bảng nối trực tiếp. Cửa sổ phát hành 30 phút vào ban đêm.",
     },
-    question: "Bạn chẩn đoán và thiết kế lại quan hệ này thế nào?",
+    question: "Vì sao hai cột mới không bao giờ được ghi, và vì sao mỗi lần lưu lại xoá rồi chèn lại cả bảng nối? Quan hệ này nên được mô hình hoá lại thành gì?",
     mustCover: [
       "`@ManyToMany` thuần **che giấu** bảng nối sau một collection, nên không có chỗ nào để mang thuộc tính riêng của liên kết",
       "Hành vi xoá-rồi-chèn-lại là hệ quả của việc Hibernate quản lý bảng nối như một collection giá trị chứ không như tập entity có định danh",
@@ -463,7 +463,7 @@ public class ItemService {
       scale: "23 endpoint đang dùng chung 6 entity có association lazy; khoảng 4% request của giờ cao điểm trả về 500.",
       constraints: "Không được bật `spring.jpa.open-in-view` — đội đã ra quyết định kiến trúc cấm giữ persistence context mở qua tầng view. Không được đổi `FetchType` sang `EAGER` trên các association dùng chung. Không được dừng dịch vụ để phát hành.",
     },
-    question: "Bạn chẩn đoán và xử lý thế nào?",
+    question: "Vì sao lỗi chỉ nổ ở một số endpoint, và vì sao bộ test tích hợp vẫn xanh? Với hai lối tắt quen thuộc đều bị cấm, bạn sửa thế nào?",
     mustCover: [
       "Ngoại lệ này nghĩa là một association lazy được chạm tới **sau khi** persistence context đã đóng, tức object đã ở trạng thái detached",
       "Nó xuất hiện ngay sau khi tách tầng vì trước đó lời gọi nằm trong cùng đơn vị công việc, còn giờ serialize xảy ra bên ngoài ranh giới transaction",
@@ -617,7 +617,7 @@ public class PricingService {
       scale: "HikariCP với maximum-pool-size 20; thời gian chờ lấy connection trung bình nhảy từ 2ms lên 28 giây. API đối tác có p99 khoảng 6 giây và thỉnh thoảng lên 30 giây. Giờ cao điểm khoảng 340 request/giây.",
       constraints: "Không được nâng pool size — DBA đã chốt trần kết nối cho cả cụm. Không đổi được SLA của API đối tác. Phải giữ tính nhất quán giữa việc ghi đơn hàng và kết quả xác thực.",
     },
-    question: "Bạn chẩn đoán và sửa thế nào?",
+    question: "Hãy tính ra trần thông lượng mà pool này chịu được, rồi nói bạn cắt đơn vị công việc ra sao mà vẫn giữ được yêu cầu nhất quán.",
     mustCover: [
       "Connection được giữ suốt **toàn bộ** thân transaction, nên thời gian chờ API đối tác cộng thẳng vào thời gian giữ connection",
       "Số học pool là thứ phải nói ra: 20 connection chia cho thời gian giữ ~6 giây cho thông lượng tối đa khoảng 3 giao dịch/giây, quá xa 340 request/giây",
@@ -771,7 +771,7 @@ for (Item item : items) {
       scale: "Bảng `ORDERS` 8,4 triệu dòng; đơn hàng trung bình 6 line item và 2 payment. Endpoint phân trang 100 đơn mỗi trang, được một dashboard gọi mỗi 30 giây.",
       constraints: "Phân trang phải giữ đúng ngữ nghĩa 100 **đơn hàng** mỗi trang. Không được nạp toàn bộ bảng vào bộ nhớ. Endpoint nằm trong hợp đồng API đã công bố nên hình dạng JSON trả về không đổi được.",
     },
-    question: "Bạn chẩn đoán và xử lý thế nào?",
+    question: "Bản vá đổi hai collection sang `Set` thực ra đã làm gì? Giải thích cả hai con số sai, rồi nói bạn nạp lại dữ liệu thế nào để phân trang trở về đúng nghĩa.",
     mustCover: [
       "Ngoại lệ ban đầu là Hibernate **từ chối** fetch hai collection cùng lúc, vì kết quả sẽ là tích Descartes",
       "Đổi sang `Set` không sửa tích Descartes — nó chỉ khiến `Set` **khử trùng lặp** nên ngoại lệ biến mất còn kết quả thì sai âm thầm",
@@ -793,5 +793,165 @@ for (Item item : items) {
       "Bạn viết một bài kiểm nào để lỗi này không quay lại lần nữa?",
     ],
     refs: ["jpa-12"],
+  },
+
+  // ===== jpa-spring — Tích hợp Spring & kiểm thử (jpa-iq21–jpa-iq24) =====
+  {
+    id: "jpa-iq21",
+    field: "jpa",
+    topic: "jpa-spring",
+    level: 1,
+    minutes: 5,
+    question: "`EntityManager` không an toàn với nhiều luồng và gắn với một đơn vị công việc. Vậy vì sao tiêm thẳng nó vào một field của bean singleton lại chạy được?",
+    mustCover: [
+      "Thứ được tiêm vào không phải một instance thật mà là một **proxy** dùng chung",
+      "Mỗi lời gọi phương thức, proxy tra ra đơn vị công việc **của luồng hiện hành** rồi uỷ nhiệm sang đó",
+      "Nhờ vậy một bean singleton vẫn dùng được một tài nguyên có phạm vi transaction mà không tự quản lý vòng đời nào",
+      "Ranh giới đơn vị công việc do khai báo `@Transactional` quyết định, chứ không do việc tiêm",
+      "Nếu gọi ngoài mọi ranh giới transaction thì không có đơn vị công việc nào để uỷ nhiệm — đó là lúc lỗi lộ ra",
+    ],
+    model: "Nghịch lý chỉ là bề ngoài, vì object nằm trong field ấy không phải cái ta tưởng. Spring tiêm vào một proxy dùng chung, an toàn với nhiều luồng theo đúng nghĩa nó chẳng giữ trạng thái nào của riêng mình. Mỗi khi ta gọi một phương thức trên proxy đó, nó tra ra đơn vị công việc đang gắn với luồng hiện hành rồi chuyển lời gọi sang đúng đối tượng thật của luồng ấy. Hai luồng cùng chạy qua một bean singleton sẽ đi tới hai đối tượng khác nhau, và không luồng nào thấy dữ liệu của luồng kia. Đây chính là điều dependency injection mang lại cho tầng persistence: mã ứng dụng không phải mở, đóng, hay truyền tay một tài nguyên có vòng đời ngắn, mà chỉ khai báo mình cần nó. Hệ quả cần nói tiếp là ranh giới thật nằm ở chỗ khác — nó do `@Transactional` quyết định, không do việc tiêm. Proxy chỉ biết tìm đơn vị công việc của luồng; nếu ta gọi ở một chỗ hoàn toàn ngoài mọi ranh giới transaction thì chẳng có gì để nó tìm, và đó đúng là lúc lỗi lộ ra. Cũng chính cơ chế này giải thích vì sao gọi một phương thức `@Transactional` từ bên trong cùng một class lại không tạo ra transaction mới: lời gọi nội bộ không đi qua proxy.",
+    redFlags: [
+      "Nói `EntityManager` \"thật ra an toàn với nhiều luồng\" — nó không, và đó chính là lý do phải có proxy",
+      "Cho rằng tiêm vào là đủ để có transaction; ranh giới do khai báo quyết định, không do việc tiêm",
+      "Không giải thích được vì sao gọi một phương thức `@Transactional` từ trong cùng class lại không có tác dụng",
+    ],
+    probes: [
+      "Hai request đồng thời đi qua cùng một bean singleton — mỗi bên làm việc với đối tượng nào?",
+      "Gọi một phương thức `@Transactional` từ một phương thức khác trong cùng class thì chuyện gì xảy ra?",
+      "Sách trình bày mẫu DAO với Spring — DAO khác Spring Data repository ở chỗ nào?",
+    ],
+    refs: ["jpa-14"],
+  },
+  {
+    id: "jpa-iq22",
+    field: "jpa",
+    topic: "jpa-spring",
+    level: 2,
+    minutes: 8,
+    code: {
+      lang: "java",
+      text: `@SpringBootTest
+@Transactional                     // mặc định: rollback ở cuối mỗi test
+class ItemRepositoryTest {
+
+    @Autowired ItemRepository itemRepository;
+    @Autowired EntityManager em;
+
+    @Test
+    void saveItemWithTooLongName() {
+        Item item = new Item();
+        item.setName("x".repeat(500));      // cột NAME là VARCHAR(255)
+        itemRepository.save(item);
+
+        assertNotNull(item.getId());        // XANH
+    }
+
+    @Test
+    void updateSellerLink() {
+        Item item = itemRepository.findById(1L).orElseThrow();
+        item.getBids().add(new Bid(TEN));   // chỉ đụng một phía
+        assertEquals(1, item.getBids().size());   // XANH
+    }
+}`,
+    },
+    question: "Cả hai test đều xanh nhưng cả hai lỗi đều nổ trên production. Giải thích vì sao bộ test này bỏ lọt, rồi sửa.",
+    mustCover: [
+      "Mặc định của Spring TestContext là **rollback** transaction ở cuối mỗi test, nên transaction không bao giờ commit",
+      "`save` chỉ **xếp hàng** thao tác; câu lệnh SQL chỉ chạy lúc flush, mà rollback thì không cần flush — lỗi độ dài cột không bao giờ lộ ra",
+      "Test thứ hai đọc collection **trong bộ nhớ** của cùng persistence context, nên nó không hề kiểm tra thứ đã ghi xuống",
+      "Sửa bằng cách ép `flush()` để buộc sinh SQL, và `clear()` để lần đọc sau phải đi xuống cơ sở dữ liệu thật",
+      "Hành vi rollback mặc định đổi được bằng `@Commit` hoặc `@Rollback(false)` khi thật sự cần kiểm hành vi lúc commit",
+    ],
+    model: "Hai test này đang kiểm những thứ khác với thứ chúng tưởng mình kiểm, và cả hai đều vì cùng một lý do: transaction không bao giờ đi tới đích. Spring TestContext mặc định rollback transaction ở cuối mỗi test — đó là hành vi tốt vì nó giữ nội dung cơ sở dữ liệu y như trước khi chạy, nhưng nó cũng có nghĩa là không có lần commit nào. Với test thứ nhất, `save` chỉ xếp hàng thao tác chèn; câu lệnh `INSERT` thật chỉ được sinh lúc flush, và vì transaction bị rollback nên flush không bao giờ xảy ra. Ràng buộc độ dài cột nằm ở cơ sở dữ liệu, nên nó chẳng có cơ hội nào để nổ; `assertNotNull(item.getId())` xanh chỉ chứng minh khoá đã được sinh, không chứng minh dòng ghi được. Với test thứ hai, `item.getBids()` đọc collection trong bộ nhớ của đúng persistence context vừa thêm phần tử vào — nên assert đó đúng kể cả khi cột khoá ngoại chưa bao giờ được gán. Cách sửa cho cả hai là buộc test đi qua đúng hai ranh giới mà production đi qua: gọi `em.flush()` để bắt buộc sinh SQL, và gọi `em.clear()` để đẩy mọi thứ ra khỏi persistence context, khiến lần đọc kế tiếp phải xuống cơ sở dữ liệu thật. Sau khi thêm hai lời gọi đó, test thứ nhất sẽ ném lỗi ràng buộc ngay và test thứ hai sẽ đọc lại được cột khoá ngoại đang `null`. Khi cần kiểm cả hành vi tại thời điểm commit — trigger, ràng buộc hoãn, listener sau commit — thì đổi mặc định bằng `@Commit` hoặc `@Rollback(false)`, nhưng khi đó phải tự lo dọn dữ liệu.",
+    redFlags: [
+      "Nói \"test xanh nên mã đúng\" mà không hỏi transaction có bao giờ chạm cơ sở dữ liệu hay không",
+      "Bỏ `@Transactional` khỏi test class để \"cho thật\" — mất luôn cơ chế dọn dữ liệu và làm các test phụ thuộc thứ tự nhau",
+      "Tin rằng `save()` sinh `INSERT` ngay tại dòng gọi nó",
+      "Thêm assert vào cùng persistence context rồi coi là đã kiểm được thứ ghi xuống",
+    ],
+    probes: [
+      "`flush()` và `clear()` mỗi cái giải quyết phần nào của bài toán?",
+      "Khi nào bạn chấp nhận đánh đổi để dùng `@Commit` trong test?",
+      "Làm sao kiểm được một ràng buộc chỉ có hiệu lực tại thời điểm commit?",
+    ],
+    refs: ["jpa-20"],
+  },
+  {
+    id: "jpa-iq23",
+    field: "jpa",
+    topic: "jpa-spring",
+    level: 3,
+    minutes: 10,
+    question: "Bạn chọn nền tảng nào để kiểm thử tầng persistence, và điều gì khiến bạn đổi?",
+    tradeoffs: [
+      {
+        option: "Cơ sở dữ liệu thật chạy trong container, cùng loại và cùng phiên bản với production",
+        when: "Mặc định của tôi cho tầng persistence. Sách xếp kiểm thử persistence vào mức **integration** — ta đang phụ thuộc vào cách cơ sở dữ liệu hoạt động, nên nền tảng phải là chính nó. Đây là cách duy nhất bắt được khác biệt phương ngữ SQL, kiểu cột và hành vi khoá. Đổi lại là thời gian khởi động và một phụ thuộc hạ tầng khi chạy test.",
+      },
+      {
+        option: "Cơ sở dữ liệu nhúng trong bộ nhớ",
+        when: "Vòng phản hồi khi phát triển cục bộ, hoặc dự án mà tầng persistence chỉ dùng cấu trúc đơn giản khả chuyển. Nhanh và không cần hạ tầng, nhưng phương ngữ khác production nên nó **không thể** bắt được đúng loại lỗi mà tầng này hay mắc.",
+      },
+      {
+        option: "Mock repository, không chạm cơ sở dữ liệu",
+        when: "Kiểm logic nghiệp vụ **phía trên** tầng persistence, nơi truy vấn chỉ là dữ liệu đầu vào. Thuộc tầng unit ở đáy kim tự tháp. Không bao giờ dùng để kiểm chính ánh xạ hay truy vấn — mock sẽ trả về đúng thứ ta dạy nó trả về, kể cả khi truy vấn thật sai.",
+      },
+    ],
+    mustCover: [
+      "Sách xếp kiểm thử ứng dụng persistence vào mức **integration**, vì ta phụ thuộc vào cách cơ sở dữ liệu hoạt động",
+      "Hai mục tiêu phải giữ: hành vi test **nhất quán** giữa các lần chạy, và nội dung cơ sở dữ liệu y như trước khi chạy",
+      "Mock không kiểm được ánh xạ hay truy vấn — nó chỉ trả lại thứ ta đã dạy nó",
+      "Cơ sở dữ liệu nhúng khác phương ngữ với production, nên chính loại lỗi nguy hiểm nhất lại lọt qua",
+      "Trục chọn là **loại rủi ro test cần bắt**, không phải test chạy nhanh tới đâu",
+    ],
+    model: "Câu hỏi đúng không phải nền tảng nào nhanh hơn mà là mỗi nền tảng bắt được loại rủi ro nào. Sách đặt kiểm thử persistence ở mức integration của kim tự tháp và nói rõ lý do: ta đang kết hợp mã của mình với tương tác cơ sở dữ liệu và phụ thuộc vào cách cơ sở dữ liệu hoạt động. Từ đó suy ra ngay giới hạn của hai phương án còn lại. Mock repository không chạm cơ sở dữ liệu nên nó trả lại đúng thứ ta dạy nó — một truy vấn viết sai vẫn cho test xanh, một ánh xạ sai cột cũng vậy. Nó hữu ích, nhưng cho tầng khác: kiểm logic nghiệp vụ phía trên, nơi kết quả truy vấn chỉ là dữ liệu đầu vào. Cơ sở dữ liệu nhúng thì có chạm thật nhưng chạm một phương ngữ khác, nên đúng loại lỗi ta sợ nhất — hàm SQL khác nhau, kiểu cột ánh xạ khác nhau, hành vi khoá và ràng buộc khác nhau — lại là loại nó không thể bắt. Vì vậy mặc định của tôi là một cơ sở dữ liệu thật trong container, cùng loại và cùng phiên bản với production, và tôi giữ hai mục tiêu sách nêu: hành vi nhất quán giữa các lần chạy, và nội dung cơ sở dữ liệu y như trước khi chạy — cái thứ hai đạt được bằng chính cơ chế rollback mặc định của Spring TestContext. Cơ sở dữ liệu nhúng tôi vẫn dùng, nhưng cho vòng lặp phát triển cục bộ khi cần phản hồi trong vài giây, với hiểu biết rõ ràng rằng cổng kiểm chứng thật nằm ở tầng chạy container.",
+    redFlags: [
+      "Dùng cơ sở dữ liệu nhúng rồi tin rằng tầng persistence đã được kiểm — chính khác biệt phương ngữ là thứ nó không thể bắt",
+      "Mock repository để kiểm một truy vấn: mock trả lại thứ ta dạy nó, nên truy vấn sai vẫn xanh",
+      "Chọn theo tốc độ chạy test thay vì theo loại rủi ro cần bắt",
+      "Bỏ luôn cơ chế rollback để \"test giống thật hơn\", đánh mất tính nhất quán giữa các lần chạy",
+    ],
+    probes: [
+      "Nêu một lỗi cụ thể mà cơ sở dữ liệu nhúng không thể bắt được",
+      "Bạn giữ nội dung cơ sở dữ liệu y như trước khi chạy bằng cách nào?",
+      "Trong kim tự tháp kiểm thử, test tầng persistence nên chiếm tỉ trọng thế nào so với unit test?",
+    ],
+    refs: ["jpa-20"],
+  },
+  {
+    id: "jpa-iq24",
+    field: "jpa",
+    topic: "jpa-spring",
+    level: 4,
+    minutes: 13,
+    incident: {
+      symptom: "Bộ test 900 bài xanh toàn bộ trên CI, nhưng bản phát hành tối qua hỏng ngay khi lên production: một truy vấn ném lỗi cú pháp SQL, một cột `TIMESTAMP` lệch múi giờ 7 tiếng, và một ràng buộc `UNIQUE` mà không ai biết là có lại chặn luồng nhập liệu. CI dùng cơ sở dữ liệu nhúng trong bộ nhớ với `hbm2ddl` sinh schema; production dùng PostgreSQL với schema do đội DBA quản lý tay.",
+      scale: "17 dịch vụ dùng chung một schema; bản phát hành tối qua phải cuộn ngược sau 40 phút, ảnh hưởng khoảng 12.000 người dùng.",
+      constraints: "Không đổi được việc DBA sở hữu schema production. Bộ test phải chạy xong dưới 15 phút để giữ vòng phản hồi CI. Không được sửa dữ liệu production để làm test chạy được.",
+    },
+    question: "Vì sao 900 bài test xanh không nói lên được điều gì về production? Quy trình kiểm chứng mới của bạn gồm những gì, và nó giữ ngân sách CI bằng cách nào?",
+    mustCover: [
+      "Cả ba lỗi có chung một gốc: CI và production chạy **hai schema khác nhau trên hai engine khác nhau**, nên CI không kiểm chứng cái sắp phát hành",
+      "`hbm2ddl` sinh schema từ ánh xạ nghĩa là test luôn chạy trên một schema **suy ra từ chính mã đang kiểm** — nó không thể phát hiện chênh lệch với schema thật",
+      "Ràng buộc `UNIQUE` không ai biết là bằng chứng schema production là nguồn sự thật độc lập, và nó phải được đưa vào quy trình",
+      "Đổi CI sang PostgreSQL trong container, cùng phiên bản production — bắt được cả lỗi cú pháp lẫn lệch múi giờ",
+      "Schema cho test phải lấy từ **script di trú có phiên bản** áp lên container, không sinh từ ánh xạ; DBA vẫn sở hữu nội dung script",
+      "Thêm một cổng kiểm chứng so ánh xạ với schema thật để chênh lệch bị bắt lúc build chứ không lúc phát hành",
+      "Giữ ngân sách 15 phút bằng cách tách tầng: unit test vẫn chạy nhanh, chỉ test tầng persistence mới cần container, và dùng chung một container cho cả bộ",
+    ],
+    model: "Ba triệu chứng trông rời rạc nhưng quy về một câu: CI đang kiểm chứng một hệ thống khác với hệ thống sắp phát hành. Cơ sở dữ liệu nhúng có phương ngữ SQL riêng nên một truy vấn hợp lệ ở đó vẫn có thể sai cú pháp trên PostgreSQL; cách xử lý kiểu ngày giờ khác nhau nên lệch múi giờ chỉ lộ ra khi chạy engine thật; và vì `hbm2ddl` sinh schema từ chính ánh xạ đang kiểm, test luôn chạy trên một schema suy ra từ mã — nó không bao giờ thấy được ràng buộc `UNIQUE` mà DBA đã thêm vào schema thật. Đó là điểm quan trọng nhất phải nói ra: một bộ test dựng schema từ mã của mình thì về nguyên tắc không thể phát hiện chênh lệch giữa mã và schema thật, dù có bao nhiêu bài test. Quy trình mới gồm ba phần. Thứ nhất, CI chạy PostgreSQL trong container đúng phiên bản production — riêng việc này đã bắt được lỗi cú pháp và lệch múi giờ. Thứ hai, schema của container không sinh từ ánh xạ mà áp từ chính bộ script di trú có phiên bản dùng cho production; DBA vẫn sở hữu nội dung script, ta chỉ đưa chúng vào quy trình build, nên ràng buộc `UNIQUE` kia sẽ có mặt trong test ngay từ đầu. Thứ ba, thêm một cổng kiểm chứng so ánh xạ với schema đã áp và cho build đỏ khi lệch — đây là thứ biến \"phát hiện lúc phát hành\" thành \"phát hiện lúc build\". Về ngân sách 15 phút thì tách theo tầng đúng như kim tự tháp: phần lớn trong 900 bài là unit test không cần container và vẫn chạy nhanh như cũ; chỉ nhóm test tầng persistence mới cần cơ sở dữ liệu thật, và cả nhóm dùng chung một container khởi động một lần cho toàn bộ bộ test, với rollback mặc định giữ cho các bài không giẫm lên nhau.",
+    redFlags: [
+      "Sửa từng lỗi một — vá truy vấn, ép múi giờ, thêm ràng buộc vào ánh xạ — mà không chạm tới lý do CI không kiểm chứng được production",
+      "Bật `hbm2ddl` trên production cho \"khớp với CI\": đảo ngược đúng chiều, và trao schema của 17 dịch vụ cho một ánh xạ",
+      "Kết luận \"cần thêm test\" — 900 bài đã xanh, số lượng không phải vấn đề, nền tảng chạy chúng mới là",
+      "Bỏ cơ sở dữ liệu nhúng khỏi mọi thứ và bắt cả 900 bài chạy qua container, phá vỡ ngân sách 15 phút",
+    ],
+    probes: [
+      "Cổng so ánh xạ với schema thật hoạt động thế nào, và nó chạy ở bước nào của build?",
+      "Ai sở hữu script di trú sau khi đổi, và quy trình duyệt thay đổi schema ra sao?",
+      "Nếu một dịch vụ trong 17 cái kia đổi schema, bạn phát hiện bằng cách nào trước khi nó làm hỏng dịch vụ của mình?",
+    ],
+    refs: ["jpa-14", "jpa-20"],
   },
 ];

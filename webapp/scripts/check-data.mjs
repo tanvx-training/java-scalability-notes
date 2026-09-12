@@ -79,7 +79,7 @@ const EXPECTED = {
     "roadmap-items:jpa": 52,
     // Ngân hàng câu hỏi phỏng vấn JPA — 6 chủ đề × 4 cấp độ, viết dần qua
     // các task. Số này TĂNG DẦN cho tới 24; sửa ở đây TRƯỚC khi viết dữ liệu.
-    "interview:jpa": 20,
+    "interview:jpa": 24,
   },
 };
 
