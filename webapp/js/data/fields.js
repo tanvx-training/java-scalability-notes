@@ -37,7 +37,7 @@ export const FIELDS = {
     unit: "Bài",
     desc: "Series 10 bài về khả năng mở rộng của ứng dụng Java/Spring Boot trên Tomcat: TCP/kernel → Tomcat internals → JVM concurrency → capacity planning → transaction.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs"],
+    modules: ["dashboard", "guide", "docs", "interview"],
     // Không có nguồn ngoài phù hợp cho series này — bỏ qua thay vì bịa link.
   },
   "spring-security": {

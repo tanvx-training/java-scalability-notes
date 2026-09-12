@@ -153,4 +153,11 @@ export const INTERVIEW_TOPICS = {
   "ocnj-cloud":      { label: "Phần cứng, OS và cloud stack",        short: "Cloud",       field: "ocnj" },
   "ocnj-observe":    { label: "Observability và profiling",          short: "Observe",     field: "ocnj" },
   "ocnj-concurrent": { label: "Hiệu năng đồng thời và hệ phân tán",  short: "Đồng thời",   field: "ocnj" },
+
+  "java-request":  { label: "Hành trình request và timeout",          short: "Request",  field: "java" },
+  "java-blocking": { label: "Blocking, non-blocking và thread lifecycle", short: "Blocking", field: "java" },
+  "java-vthread":  { label: "Virtual threads",                        short: "VThread",  field: "java" },
+  "java-tomcat":   { label: "Tomcat thread pool và sizing",           short: "Tomcat",   field: "java" },
+  "java-pool":     { label: "Connection pool sizing",                 short: "DB pool",  field: "java" },
+  "java-tx":       { label: "@Transactional: proxy, ThreadLocal và bẫy", short: "Tx",     field: "java" },
 };
