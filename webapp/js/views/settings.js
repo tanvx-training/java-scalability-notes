@@ -43,6 +43,8 @@ const KEY_LABELS = {
   "tracker.checked": "Ma trận năng lực",
   "flash.srs": "Lịch ôn flashcard",
   "quiz.stats": "Thống kê trắc nghiệm",
+  "interview.stats": "Thống kê phỏng vấn",
+  "interview.notes": "Ghi chú phỏng vấn",
   "exam.history": "Lịch sử thi thử",
   "docs.read": "Tài liệu đã đọc",
   "recent": "Mục mở gần đây",

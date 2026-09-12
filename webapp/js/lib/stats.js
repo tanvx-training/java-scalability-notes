@@ -4,7 +4,7 @@
 
 import { store } from "./store.js";
 import { docsRead } from "./activity.js";
-import { getDocs, getTracks, getFlashcards, getQuestions, getMatrices } from "../data/index.js";
+import { getDocs, getTracks, getFlashcards, getQuestions, getMatrices, getInterviews } from "../data/index.js";
 
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 
@@ -55,6 +55,36 @@ export function quizStats(field) {
   return { seen, correct, total: qs.length, acc: seen ? pct(correct, seen) : null, seenPct: pct(seen, qs.length) };
 }
 
+// Tự chấm, không chấm máy: `last` là trạng thái HIỆN TẠI của một câu (0 chưa
+// đạt · 1 một phần · 2 đạt), `best` là kỷ lục. Thống kê lấy `last` vì câu hỏi
+// "giờ tôi đứng ở đâu" mới là câu đáng trả lời — một lần đạt hồi tháng trước
+// rồi nay trả lời hụt thì không còn là đạt.
+export function interviewStats(field) {
+  const saved = store.get("interview.stats", {});
+  const bank = getInterviews(field);
+  const byLevel = { 1: { seen: 0, passed: 0, total: 0 }, 2: { seen: 0, passed: 0, total: 0 },
+                    3: { seen: 0, passed: 0, total: 0 }, 4: { seen: 0, passed: 0, total: 0 } };
+  let seen = 0, passed = 0;
+  for (const q of bank) {
+    const lv = byLevel[q.level];
+    if (lv) lv.total++;
+    const s = saved[q.id];
+    if (!s || !s.seen) continue;
+    seen++;
+    if (lv) lv.seen++;
+    if (s.last === 2) {
+      passed++;
+      if (lv) lv.passed++;
+    }
+  }
+  return {
+    seen, passed, total: bank.length,
+    seenPct: pct(seen, bank.length),
+    passPct: seen ? pct(passed, seen) : null,
+    byLevel,
+  };
+}
+
 export function examStats() {
   const hist = store.get("exam.history", []);
   if (!hist.length) return { best: null, count: 0, passCount: 0 };
@@ -84,7 +114,9 @@ export function fieldSummary(field) {
   if (cards) parts.push(`${cards} thẻ`);
   const qs = getQuestions(field).length;
   if (qs) parts.push(`${qs} câu hỏi`);
+  const iq = getInterviews(field).length;
+  if (iq) parts.push(`${iq} câu phỏng vấn`);
   const cr = getMatrices(field).flatMap((m) => m.modules).flatMap((m) => m.topics).flatMap((t) => t.checklist).length;
   if (cr) parts.push(`${cr} tiêu chí`);
-  return { docs: nDocs, items, cards, questions: qs, criteria: cr, text: parts.join(" · ") };
+  return { docs: nDocs, items, cards, questions: qs, interviews: iq, criteria: cr, text: parts.join(" · ") };
 }

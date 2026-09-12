@@ -10,7 +10,7 @@ import { tracks } from "../data/roadmap.js";
 import { docs } from "../data/docs-index.js";
 import { fieldOfRecord } from "../data/index.js";
 import { fieldGuides, trackGuides, groupGuides } from "../data/guides.js";
-import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, trackStats, pct } from "./stats.js";
+import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, interviewStats, trackStats, pct } from "./stats.js";
 
 // ---------- Đảo chỉ mục: tài liệu ← bài học ----------
 
@@ -125,6 +125,19 @@ export function stepStatus(step, field) {
       const okAcc = (s.acc ?? 0) >= needAcc;
       const progress = Math.round((Math.min(1, s.seenPct / needSeen) * 50) + (Math.min(1, (s.acc ?? 0) / needAcc) * 50));
       return { done: okSeen && okAcc, progress, detail: `đã gặp ${s.seen}/${s.total} câu${s.acc != null ? ` · đúng ${s.acc}%` : ""}` };
+    }
+    case "interview": {
+      const s = interviewStats(field);
+      const needSeen = d.seenPct ?? 50;
+      const needPass = d.passPct ?? 70;
+      const progress = Math.round(
+        Math.min(1, s.seenPct / needSeen) * 50 +
+        Math.min(1, (s.passPct ?? 0) / needPass) * 50);
+      return {
+        done: s.seenPct >= needSeen && (s.passPct ?? 0) >= needPass,
+        progress,
+        detail: `đã tự chấm ${s.seen}/${s.total} câu${s.passPct != null ? ` · đạt ${s.passPct}%` : ""}`,
+      };
     }
     case "exam": {
       const s = examStats();
