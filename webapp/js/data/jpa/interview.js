@@ -485,4 +485,160 @@ public class ItemService {
     ],
     refs: ["jpa-10"],
   },
+
+  // ===== jpa-tx — Transaction & concurrency (jpa-iq13–jpa-iq16) =====
+  {
+    id: "jpa-iq13",
+    field: "jpa",
+    topic: "jpa-tx",
+    level: 1,
+    minutes: 6,
+    question: "Chuẩn ANSI SQL định nghĩa các mức cô lập theo hiện tượng nào được phép xảy ra. Kể bốn hiện tượng đó, và nói mức nào chặn được cái nào.",
+    mustCover: [
+      "**Lost update**: hai transaction cùng đọc một giá trị rồi lần lượt ghi đè nhau — lần commit cuối cùng thắng, cập nhật của bên kia biến mất",
+      "**Dirty read**: đọc phải thay đổi mà transaction khác chưa commit, nguy hiểm vì thay đổi đó có thể bị rollback sau đó",
+      "**Unrepeatable read**: đọc cùng một mục dữ liệu hai lần và mỗi lần ra một trạng thái khác, do bên khác ghi rồi commit xen vào giữa",
+      "**Phantom read**: chạy một truy vấn hai lần, lần sau có thêm hoặc bớt dòng vì bên khác đã chèn hoặc xoá xen vào giữa",
+      "Tăng mức cô lập kéo theo chi phí cao hơn và **suy giảm nghiêm trọng** về hiệu năng lẫn khả năng mở rộng — không thể \"dừng thế giới\" trong hệ thống OLTP đa người dùng",
+    ],
+    model: "Bốn hiện tượng xếp theo đúng thứ tự các mức cô lập nới dần ra. Lost update là nặng nhất: hai transaction cùng đọc một giá trị, transaction thứ nhất ghi bản cập nhật của nó, rồi transaction thứ hai ghi đè bằng bản của nó — cập nhật thứ nhất mất sạch, và sách gọi đúng tên hiện tượng này là *lần commit cuối cùng thắng*. Nó chỉ xảy ra ở hệ thống không hiện thực kiểm soát đồng thời nào cả. Dirty read là đọc phải dữ liệu chưa commit của bên khác; nguy hiểm vì bên đó có thể rollback và ta đã đọc thứ chưa bao giờ tồn tại. Unrepeatable read là đọc cùng một mục hai lần ra hai trạng thái, vì có bên ghi và commit xen vào giữa. Phantom read thì khác ở chỗ nó nói về **tập kết quả** chứ không về một dòng: chạy lại truy vấn thì thấy thêm dòng mới hoặc mất dòng cũ do bên khác chèn hoặc xoá. Về các mức: read uncommitted đã chặn lost update — một transaction không được ghi vào dòng mà transaction chưa commit khác đã ghi — nhưng vẫn cho đọc mọi dòng nên dirty read còn nguyên. Read committed thêm việc chặn dirty read, nhưng vẫn cho phép unrepeatable read và phantom read. Càng lên cao càng chặn được nhiều nhưng sách nói rõ cái giá: chi phí cao hơn và suy giảm nghiêm trọng về hiệu năng lẫn khả năng mở rộng. Đó là lý do phần lớn hệ thống dừng ở read committed rồi xử lý phần còn lại bằng kiểm soát đồng thời ở tầng ứng dụng, chứ không nâng mức cô lập của cơ sở dữ liệu.",
+    redFlags: [
+      "Gộp unrepeatable read với phantom read làm một — cái thứ nhất nói về một dòng đổi giá trị, cái thứ hai nói về tập kết quả đổi số dòng",
+      "Đề nghị đặt serializable cho chắc, không nhắc gì tới việc hiệu năng và khả năng mở rộng suy giảm nghiêm trọng",
+      "Cho rằng mức cô lập mặc định của cơ sở dữ liệu đã đủ chặn lost update giữa hai lần đọc-sửa-ghi ở tầng ứng dụng",
+    ],
+    probes: [
+      "Vì sao read committed vẫn không cứu được một luồng đọc-sửa-ghi kéo dài qua nhiều lần gọi?",
+      "Mức cô lập đặt ở đâu trong một ứng dụng Spring, và nó áp lên phạm vi nào?",
+      "Hiện tượng nào trong bốn cái trên là thứ `@Version` nhắm tới?",
+    ],
+    refs: ["jpa-11"],
+  },
+  {
+    id: "jpa-iq14",
+    field: "jpa",
+    topic: "jpa-tx",
+    level: 2,
+    minutes: 8,
+    code: {
+      lang: "java",
+      text: `@Entity
+public class Item {
+    @Id @GeneratedValue
+    private Long id;
+
+    private BigDecimal buyNowPrice;
+    // không có field nào mang @Version
+
+    public BigDecimal getBuyNowPrice() { return buyNowPrice; }
+    public void setBuyNowPrice(BigDecimal p) { this.buyNowPrice = p; }
+}
+
+@Service
+public class PricingService {
+
+    @Transactional                         // isolation mặc định: READ_COMMITTED
+    public void applyMarkdown(Long itemId, BigDecimal percent) {
+        Item item = itemRepository.findById(itemId).orElseThrow();
+        BigDecimal current = item.getBuyNowPrice();
+        BigDecimal next = current.multiply(percent);
+        item.setBuyNowPrice(next);
+    }
+}`,
+    },
+    question: "Hai người vận hành cùng chạy method này trên một item trong vòng một giây. Item đang để giá 1.000.000. Người A giảm 10%, người B giảm 20%. Dựng lại từng bước điều thực sự xảy ra, rồi sửa.",
+    mustCover: [
+      "Cả hai transaction đọc cùng giá trị gốc 1.000.000 vì lần đọc của B xảy ra trước khi A commit",
+      "A ghi 900.000, B ghi 800.000 — kết quả cuối là 800.000, đúng bằng chỉ áp một lần giảm giá; cập nhật của A mất",
+      "Đây chính là **lost update**, và mức cô lập read committed không chặn được vì cả hai lần ghi đều hợp lệ với từng transaction riêng lẻ",
+      "Cách sửa là thêm một field `@Version`: Hibernate đưa số phiên bản vào mệnh đề `WHERE` của `UPDATE` và tăng nó lên, nên lần ghi thứ hai không khớp dòng nào và ném ngoại lệ",
+      "Ngoại lệ đó phải được xử lý ở tầng gọi — thử lại hoặc báo cho người dùng — chứ bản thân `@Version` không tự hoà giải xung đột",
+    ],
+    model: "Đây là lost update đúng theo định nghĩa sách. Diễn biến từng bước: A đọc 1.000.000; B đọc 1.000.000 — hợp lệ vì A chưa commit và read committed chỉ chặn đọc dữ liệu chưa commit chứ không chặn đọc dữ liệu cũ; A tính 900.000 và commit; B tính 800.000 từ giá trị nó đọc lúc đầu và commit đè lên. Kết quả cuối là 800.000, tức giá chỉ giảm một lần thay vì hai. Không transaction nào làm gì sai theo góc nhìn của riêng nó, nên không mức cô lập thông thường nào báo lỗi — và đây chính là lý do sách tách kiểm soát đồng thời thành một mục riêng thay vì để mặc cho mức cô lập. Cách sửa là kiểm soát đồng thời lạc quan: thêm một field mang `@Version` vào `Item`. Từ đó mỗi lệnh `UPDATE` Hibernate sinh ra đều mang thêm điều kiện phiên bản trong `WHERE` và tăng phiên bản lên; khi B commit, dòng đã ở phiên bản mới do A ghi nên câu lệnh không khớp dòng nào, Hibernate thấy số dòng bị ảnh hưởng bằng không và ném ngoại lệ. Phải nói rõ giới hạn: `@Version` chỉ **phát hiện** xung đột chứ không giải quyết nó. Tầng gọi phải quyết định làm gì — với thao tác giảm giá theo phần trăm thì thử lại là an toàn vì phép tính dựa trên giá trị vừa đọc lại, còn với thao tác người dùng nhập tay thì nên báo lỗi để họ xem lại. Nếu tranh chấp cao đến mức thử lại liên tục thất bại thì mới tính tới khoá bi quan.",
+    redFlags: [
+      "Nâng mức cô lập lên serializable để chữa — chặn được nhưng đổi lấy suy giảm hiệu năng nghiêm trọng cho một bài toán chỉ cần một cột phiên bản",
+      "Nói `@Transactional` tự nó đã chặn lost update: transaction bảo đảm tính nguyên tử, không bảo đảm giá trị vừa đọc còn nguyên lúc ghi",
+      "Thêm `@Version` rồi để ngoại lệ nổi thẳng ra người dùng, không có chiến lược thử lại hay thông báo nào",
+      "Gộp cả hai thao tác vào một câu `UPDATE ... SET price = price * ?` rồi coi là xong — đúng cho riêng ca này nhưng không trả lời được câu hỏi về đọc-sửa-ghi nói chung",
+    ],
+    probes: [
+      "Sau khi thêm `@Version`, câu `UPDATE` Hibernate sinh ra trông thế nào?",
+      "Thao tác nào thử lại được an toàn, thao tác nào thì không?",
+      "Nếu `Item` được sửa từ một job batch không đi qua JPA thì cột phiên bản còn đáng tin không?",
+    ],
+    refs: ["jpa-11"],
+  },
+  {
+    id: "jpa-iq15",
+    field: "jpa",
+    topic: "jpa-tx",
+    level: 3,
+    minutes: 10,
+    question: "Một bảng tồn kho bị nhiều luồng cùng ghi. Bạn chọn kiểm soát đồng thời lạc quan hay khoá bi quan tường minh, và ngưỡng nào khiến bạn đổi?",
+    tradeoffs: [
+      {
+        option: "Lạc quan — một field `@Version`",
+        when: "Tranh chấp **thưa**: phần lớn transaction chạy qua không đụng nhau. Không giữ khoá nào ở cơ sở dữ liệu nên không chặn ai, mở rộng tốt. Cái giá là khi xung đột xảy ra thì công đã làm bị bỏ đi và phải thử lại — chấp nhận được khi thử lại hiếm và rẻ.",
+      },
+      {
+        option: "Bi quan — `LockModeType.PESSIMISTIC_READ` hoặc `PESSIMISTIC_WRITE` kèm timeout",
+        when: "Tranh chấp **dày**, hoặc thử lại đắt, hoặc thao tác không lặp lại được một cách an toàn. Khoá được giữ ở cơ sở dữ liệu nên bên kia phải chờ thay vì làm hỏng việc. Luôn đặt `javax.persistence.lock.timeout` để một luồng kẹt không kéo cả hệ thống theo, và cân nhắc nguy cơ deadlock.",
+      },
+    ],
+    mustCover: [
+      "Lạc quan **không khoá gì**: nó phát hiện xung đột lúc ghi, nên chi phí dồn vào những lần thử lại",
+      "Bi quan **khoá thật** ở cơ sở dữ liệu: nó ngăn xung đột từ đầu, nên chi phí dồn vào thời gian chờ và nguy cơ deadlock",
+      "Trục quyết định là **tần suất tranh chấp** đối chiếu với **chi phí thử lại** — không phải cái nào an toàn hơn về mặt lý thuyết",
+      "Khoá bi quan phải đi kèm timeout tường minh, nếu không một luồng giữ khoá lâu sẽ kéo theo cả hàng đợi",
+      "Sách dành một mục riêng cho việc tránh deadlock, tức đây là rủi ro thật của hướng bi quan chứ không phải chuyện lý thuyết",
+    ],
+    model: "Hai hướng này khác nhau ở chỗ đặt chi phí. Lạc quan không giữ khoá nào: mỗi lần ghi mang theo điều kiện phiên bản, xung đột chỉ bị phát hiện tại thời điểm ghi, và chi phí là toàn bộ công đã làm trong transaction thất bại phải làm lại. Vì không chặn ai nên nó mở rộng rất tốt khi tranh chấp thưa — và với phần lớn nghiệp vụ thì tranh chấp đúng là thưa. Bi quan thì ngược lại: `setLockMode` với `PESSIMISTIC_READ` hoặc `PESSIMISTIC_WRITE` khiến cơ sở dữ liệu giữ khoá thật, bên kia phải chờ, nên không có công nào bị bỏ phí nhưng thông lượng bị giới hạn bởi thời gian giữ khoá. Vậy trục quyết định không phải cái nào an toàn hơn — cả hai đều đúng — mà là tần suất tranh chấp nhân với chi phí một lần thử lại. Tồn kho là ca đáng cân nhắc vì nó hay có điểm nóng: vài SKU chiếm phần lớn lượt ghi. Tôi sẽ bắt đầu bằng lạc quan cho toàn bộ, đo tỉ lệ ngoại lệ phiên bản theo từng SKU, và chỉ chuyển sang bi quan cho nhóm điểm nóng nếu tỉ lệ thử lại vượt ngưỡng chịu được. Một tín hiệu khác buộc phải dùng bi quan là thao tác **không lặp lại an toàn được** — có gọi ra ngoài, có gửi thư, có ghi sổ kế toán — vì khi đó thử lại không còn là chuyện rẻ. Chọn bi quan thì bắt buộc đi kèm hai thứ: một timeout tường minh như sách minh hoạ bằng `javax.persistence.lock.timeout`, và một trật tự khoá nhất quán để tránh deadlock — sách dành hẳn một mục cho việc này nên đó là rủi ro thật.",
+    redFlags: [
+      "Chọn bi quan làm mặc định \"cho chắc\" mà không đo tần suất tranh chấp — đổi thông lượng lấy một sự an toàn thường không cần tới",
+      "Nói lạc quan \"nhẹ hơn\" mà không tính chi phí thử lại khi điểm nóng khiến xung đột xảy ra liên tục",
+      "Đặt khoá bi quan không kèm timeout, rồi xử lý hàng đợi kẹt bằng cách khởi động lại dịch vụ",
+      "Bỏ qua việc có thao tác không thể thử lại an toàn — đây là tín hiệu mạnh hơn mọi con số về tần suất",
+    ],
+    probes: [
+      "`PESSIMISTIC_READ` khác `PESSIMISTIC_WRITE` ở chỗ nào, và bạn chọn cái nào cho việc trừ tồn kho?",
+      "Bạn đo tần suất tranh chấp bằng chỉ số nào trước khi quyết định đổi?",
+      "Hai luồng cùng khoá hai dòng theo thứ tự ngược nhau — chuyện gì xảy ra và bạn chặn thế nào?",
+    ],
+    refs: ["jpa-11"],
+  },
+  {
+    id: "jpa-iq16",
+    field: "jpa",
+    topic: "jpa-tx",
+    level: 4,
+    minutes: 15,
+    incident: {
+      symptom: "Mỗi ngày vào khung 19–20h, ứng dụng bắt đầu ném `CannotGetJdbcConnectionException` hàng loạt. Các endpoint hoàn toàn không đụng cơ sở dữ liệu cũng chậm theo. Log cho thấy một method `@Transactional` gọi một API đối tác để xác thực thanh toán, ngay giữa thân transaction.",
+      scale: "HikariCP với maximum-pool-size 20; thời gian chờ lấy connection trung bình nhảy từ 2ms lên 28 giây. API đối tác có p99 khoảng 6 giây và thỉnh thoảng lên 30 giây. Giờ cao điểm khoảng 340 request/giây.",
+      constraints: "Không được nâng pool size — DBA đã chốt trần kết nối cho cả cụm. Không đổi được SLA của API đối tác. Phải giữ tính nhất quán giữa việc ghi đơn hàng và kết quả xác thực.",
+    },
+    question: "Bạn chẩn đoán và sửa thế nào?",
+    mustCover: [
+      "Connection được giữ suốt **toàn bộ** thân transaction, nên thời gian chờ API đối tác cộng thẳng vào thời gian giữ connection",
+      "Số học pool là thứ phải nói ra: 20 connection chia cho thời gian giữ ~6 giây cho thông lượng tối đa khoảng 3 giao dịch/giây, quá xa 340 request/giây",
+      "Endpoint không đụng cơ sở dữ liệu cũng chậm vì chúng chờ cùng một pool — pool cạn là lỗi lan toàn hệ thống, không phải lỗi cục bộ",
+      "Cách sửa cốt lõi: đưa lời gọi ra ngoài ranh giới transaction — cắt thành ghi trước, gọi ngoài, rồi transaction thứ hai ghi kết quả",
+      "Tính nhất quán giữ bằng trạng thái trung gian cộng cơ chế hoà giải, chứ không bằng cách kéo dài transaction",
+      "Đặt timeout tường minh cho lời gọi ra ngoài — không có timeout thì p99 30 giây của đối tác trở thành thời gian giữ connection của ta",
+    ],
+    model: "Gốc rễ là một câu đơn giản: một connection bị giữ suốt thân `@Transactional`, nên mọi thứ nằm trong thân đó — kể cả việc chờ một hệ thống khác — đều tính vào thời gian giữ connection. Làm phép tính sẽ thấy vấn đề không có đường thoát nào khác: pool 20 connection, mỗi giao dịch giữ khoảng 6 giây thì trần thông lượng là quãng 3 giao dịch mỗi giây, trong khi giờ cao điểm cần 340 request mỗi giây. Pool cạn trong vài chục giây đầu và sau đó mọi thứ xếp hàng — đó cũng là lý do các endpoint không đụng cơ sở dữ liệu cũng chậm: chúng chờ chính cái pool ấy, nên một điểm tắc cục bộ biến thành sự cố toàn hệ thống. Nâng pool size không phải câu trả lời kể cả khi DBA cho phép, vì nó chỉ dời điểm gãy sang cơ sở dữ liệu; ở đây ràng buộc đã chặn sẵn lối tắt đó, và chặn đúng. Cách sửa là cắt đơn vị công việc thành ba đoạn: transaction thứ nhất ghi đơn hàng ở trạng thái chờ xác thực rồi commit và **trả connection lại**; lời gọi API đối tác chạy hoàn toàn ngoài transaction, có timeout tường minh thấp hơn hẳn p99 của đối tác; transaction thứ hai ghi kết quả và chuyển trạng thái. Về yêu cầu nhất quán — vốn là ràng buộc khó nhất của đề bài — thì đúng là ta đánh đổi tính nguyên tử tức thời lấy tính nhất quán cuối cùng, nên phải bù bằng thiết kế chứ không bằng hy vọng: trạng thái chờ phải là trạng thái hợp lệ mà mọi phần đọc đơn hàng đều hiểu, và phải có một job hoà giải quét các đơn kẹt ở trạng thái chờ quá lâu để hỏi lại đối tác hoặc huỷ. Việc cần làm ngay trong lúc chờ triển khai là đặt timeout cho lời gọi ra ngoài — chỉ riêng nó đã cắt được phần đuôi 30 giây đang phá pool.",
+    redFlags: [
+      "Nâng maximum-pool-size làm cách sửa chính — ràng buộc đã cấm, và kể cả không cấm thì nó chỉ dời điểm gãy sang cơ sở dữ liệu",
+      "Đổ lỗi cho API đối tác chậm mà không nhận ra lỗi thiết kế là để lời gọi đó nằm trong thân transaction",
+      "Chuyển lời gọi sang bất đồng bộ nhưng vẫn nằm trong thân transaction — connection vẫn bị giữ y như cũ",
+      "Bỏ qua yêu cầu nhất quán, cắt transaction ra mà không có trạng thái trung gian và cơ chế hoà giải nào",
+      "Không đặt timeout cho lời gọi ra ngoài, tức là để SLA của bên thứ ba quyết định thời gian giữ connection của mình",
+    ],
+    probes: [
+      "Làm phép tính: pool 20, mỗi giao dịch giữ 6 giây thì trần thông lượng là bao nhiêu?",
+      "Đơn hàng kẹt ở trạng thái chờ xác thực thì ai dọn, và dọn theo quy tắc nào?",
+      "Bạn dựng lại sự cố này trong môi trường kiểm thử bằng cách nào?",
+    ],
+    refs: ["jpa-11"],
+  },
 ];
