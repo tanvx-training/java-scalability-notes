@@ -139,4 +139,11 @@ export const INTERVIEW_TOPICS = {
   "jpa-tx":        { label: "Transaction & concurrency",      short: "Transaction", field: "jpa" },
   "jpa-fetch":     { label: "Fetch plan & truy vấn",          short: "Fetch",       field: "jpa" },
   "jpa-spring":    { label: "Tích hợp Spring & kiểm thử",     short: "Spring",      field: "jpa" },
+
+  "jcip-safety":   { label: "Thread safety & chia sẻ đối tượng",   short: "Safety",    field: "jcip" },
+  "jcip-design":   { label: "Thiết kế class thread-safe",          short: "Thiết kế",  field: "jcip" },
+  "jcip-blocks":   { label: "Building block của java.util.concurrent", short: "Building block", field: "jcip" },
+  "jcip-exec":     { label: "Thực thi task, huỷ và thread pool",   short: "Thực thi",  field: "jcip" },
+  "jcip-liveness": { label: "Deadlock, hiệu năng & khả năng mở rộng", short: "Liveness", field: "jcip" },
+  "jcip-lowlevel": { label: "Explicit lock, AQS, atomic và JMM",   short: "Tầng thấp", field: "jcip" },
 };
