@@ -71,7 +71,7 @@ const EXPECTED = {
     // + phụ lục A; chương 1, 9 (GUI) và 12 (kiểm thử) không có trong bản dịch.
     "docs:jcip": 14,
     "roadmap-items:jcip": 40,
-    "interview:jcip": 12,
+    "interview:jcip": 24,
     // Lĩnh vực Optimizing Cloud Native Java — 15 chương (1–15), bản dịch đủ chương.
     "docs:ocnj": 15,
     "roadmap-items:ocnj": 48,
