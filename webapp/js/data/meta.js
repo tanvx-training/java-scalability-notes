@@ -167,4 +167,11 @@ export const INTERVIEW_TOPICS = {
   "mj-optional":    { label: "Optional, Date/Time và default method",  short: "Optional",    field: "modern-java" },
   "mj-async":       { label: "CompletableFuture và reactive",          short: "Async",       field: "modern-java" },
   "mj-functional":  { label: "Tư duy hàm và kỹ thuật FP",              short: "Tư duy hàm",  field: "modern-java" },
+
+  "wg-modern":      { label: "Java hiện đại: record, sealed, pattern matching",  short: "Java hiện đại",  field: "wgjd" },
+  "wg-module":      { label: "Hệ thống module",                                  short: "Module",         field: "wgjd" },
+  "wg-bytecode":    { label: "Class file, bytecode và nội tại JVM",              short: "Bytecode",       field: "wgjd" },
+  "wg-concurrent":  { label: "Lập trình đồng thời và thư viện JDK",              short: "Concurrency",    field: "wgjd" },
+  "wg-perf":        { label: "Hiểu về hiệu năng Java",                           short: "Hiệu năng",      field: "wgjd" },
+  "wg-build":       { label: "Build, container và kiểm thử",                     short: "Build & test",   field: "wgjd" },
 };
