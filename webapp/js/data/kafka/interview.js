@@ -627,7 +627,7 @@ while (true) {
       scale: "6.000 bản ghi mỗi phút. Consumer đã bị khởi động lại 61 lần trong ba tháng vì triển khai. Bản ghi trùng gây sai số trong báo cáo doanh thu.",
       constraints: "Không đổi được schema database để thêm ràng buộc duy nhất — 4 hệ thống khác đang ghi vào bảng đó với quy ước khác. Phải chặn được, và phải xác định được 8.400 bản ghi đã trùng.",
       },
-    question: "Topic không trùng mà database trùng — điều đó khoanh lỗi vào đâu? Nêu chẩn đoán và cách sửa trong ràng buộc không đổi schema.",
+    question: "Topic sạch mà database trùng: bảo đảm \"exactly-once\" của Kafka thực ra kết thúc ở đâu? Và làm gì khi không đổi được schema?",
     mustCover: [
       "Topic không trùng nghĩa là bảo đảm phía Kafka **đang hoạt động đúng** — lỗi nằm ở chặng sau",
       "Chặng ghi ra database **không** nằm trong phạm vi transaction của Kafka, nên nó chỉ có bảo đảm ít nhất một lần",

@@ -344,7 +344,7 @@ http.addFilterAfter(new TenantHeaderFilter(),
       scale: "240.000 lần thất bại được đếm, 1.900 lần được ghi nhật ký — khoảng 0,8%. Trong 6 tuần đó có một đợt dò mật khẩu kéo dài 4 ngày nhắm vào 80 tài khoản mà không ai phát hiện.",
       constraints: "Không đổi được hệ thống thu gom nhật ký. Phải giải thích được con số 0,8%. Phải bảo đảm không bỏ sót sự kiện nào sau khi sửa, và chứng minh được điều đó.",
       },
-    question: "0,8% nói gì? Nêu chẩn đoán, cách sửa, và cách bạn chứng minh lần này không còn bỏ sót.",
+    question: "0,8% là tỉ lệ của cái gì? Chỉ ra cơ chế, vì sao không vị trí nào trong chuỗi chữa được nó, và sau khi sửa bạn đối chiếu với con số nào.",
     mustCover: [
       "Manh mối: 0,8% không phải \"đôi khi lỗi\" mà là \"gần như **không bao giờ** chạy\"",
       "`addFilterAt` đặt bộ lọc **cùng vị trí** với `BasicAuthenticationFilter`, và khi cùng vị trí thì **thứ tự không được định nghĩa**",

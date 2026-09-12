@@ -299,7 +299,7 @@ private static final ThreadLocal<Cache> CACHE = ThreadLocal.withInitial(Cache::n
       scale: "3.000 request/giây, mỗi request tạo một virtual thread và gọi đối tác một lần. Container 3Gi. Trước khi bật virtual thread, dịch vụ dùng pool 300 thread và chưa từng cạn bộ nhớ.",
       constraints: "Không sửa được dịch vụ đối tác. Không quay lại thread nền tảng. Phải giữ được năng lực đã tăng, không đánh đổi hết để lấy ổn định.",
       },
-    question: "Vì sao cùng một đối tác chậm mà trước đây không cạn bộ nhớ? Làm phép tính, rồi nêu cách sửa giữ được năng lực.",
+    question: "Từ 3.000 req/s và p99 8 giây, tính số virtual thread cùng tồn tại. Con số đó nói gì về chế độ hỏng đã thay đổi, và bạn dựng lại trần thế nào?",
     mustCover: [
       "Trước đây pool 300 thread là **trần ngầm**: quá 300 request đồng thời thì phần còn lại **xếp hàng ngoài**, chưa chiếm tài nguyên xử lý",
       "Bật virtual thread bỏ trần đó, nên mọi request được **nhận vào** và mỗi cái giữ trạng thái của nó",

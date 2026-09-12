@@ -603,7 +603,7 @@ thành công, và phòng có hai lịch trùng.`,
       scale: "12.000 lượt đặt mỗi ngày. Bán vượt chỉ xảy ra với những suất chiếu **gần hết ghế**, chiếm khoảng 3% số suất. 380 vé đã phải hoàn tiền kèm bồi thường.",
       constraints: "Không nâng được mức cô lập toàn cục — một báo cáo nặng đang dựa vào mức hiện tại để không bị abort. Phải giải thích được vì sao bài kiểm luôn xanh. Phải chặn được, không chỉ giảm.",
       },
-    question: "Vì sao bài kiểm luôn xanh trong khi lỗi xảy ra thật? Nêu chẩn đoán và cách chặn trong ràng buộc không nâng mức cô lập toàn cục.",
+    question: "Một bài kiểm thử đúng tình huống mà luôn xanh — nó thiếu điều kiện gì? Rồi chặn 380 vé vượt số ghế mà không nâng mức cô lập toàn cục.",
     mustCover: [
       "Hiện tượng là **write skew**: hai transaction cùng đọc số ghế còn trống, cùng thấy đủ, rồi mỗi bên ghi một dòng vé mới",
       "Bài kiểm luôn xanh vì nó gần như chắc chắn chạy **tuần tự** — hai thao tác không thật sự đồng thời",
