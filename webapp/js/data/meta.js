@@ -174,4 +174,11 @@ export const INTERVIEW_TOPICS = {
   "wg-concurrent":  { label: "Lập trình đồng thời và thư viện JDK",              short: "Concurrency",    field: "wgjd" },
   "wg-perf":        { label: "Hiểu về hiệu năng Java",                           short: "Hiệu năng",      field: "wgjd" },
   "wg-build":       { label: "Build, container và kiểm thử",                     short: "Build & test",   field: "wgjd" },
+
+  "dd-tradeoff":     { label: "Đánh đổi kiến trúc và yêu cầu phi chức năng",  short: "Đánh đổi",     field: "ddia" },
+  "dd-model":        { label: "Mô hình dữ liệu, lưu trữ và encoding",         short: "Mô hình",      field: "ddia" },
+  "dd-replication":  { label: "Replication và sharding",                      short: "Replication",  field: "ddia" },
+  "dd-transaction":  { label: "Transaction và mức cô lập",                    short: "Transaction",  field: "ddia" },
+  "dd-distributed":  { label: "Rắc rối hệ phân tán và consensus",             short: "Hệ phân tán",  field: "ddia" },
+  "dd-processing":   { label: "Batch và stream processing",                   short: "Processing",   field: "ddia" },
 };

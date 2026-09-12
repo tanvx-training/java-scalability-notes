@@ -54,6 +54,7 @@ const EXPECTED = {
     "roadmap-items:modern-concurrency": 32,
     // Lĩnh vực DDIA — 14 chương Designing Data-Intensive Applications ấn bản 2.
     "docs:ddia": 14,
+    "interview:ddia": 24,
     "roadmap-items:ddia": 48,
     // Lĩnh vực Modern Java in Action — 21 chương sách Manning.
     "docs:modern-java": 21,

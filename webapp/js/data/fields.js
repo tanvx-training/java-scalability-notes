@@ -78,7 +78,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Designing Data-Intensive Applications, ấn bản 2 (Martin Kleppmann, O'Reilly) — mô hình dữ liệu, lưu trữ, replication, sharding, transaction, hệ phân tán, batch và stream processing.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "dataintensive.net", href: "https://dataintensive.net/" },
   },
   "modern-java": {
