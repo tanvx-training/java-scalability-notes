@@ -494,4 +494,477 @@ public class RateCache {
     ],
     refs: ["java-05", "java-08"],
   },
+
+  // ===== java-tomcat — Tomcat thread pool và sizing (java-iq13–java-iq16) =====
+  {
+    id: "java-iq13",
+    field: "java",
+    topic: "java-tomcat",
+    level: 1,
+    minutes: 6,
+    question: "Tomcat thread pool là một `ThreadPoolExecutor` với ba con số cấu hình. Kể chúng, và giải thích vì sao hành vi nạp task của Tomcat **ngược** với `ThreadPoolExecutor` chuẩn.",
+    mustCover: [
+      "Ba con số là số thread tối thiểu giữ thường trực, số thread tối đa, và dung lượng hàng đợi task",
+      "`ThreadPoolExecutor` chuẩn: đầy thread lõi thì **đưa vào hàng đợi trước**, chỉ mở thêm thread khi hàng đợi **đã đầy**",
+      "Với hàng đợi lớn thì hành vi chuẩn đó nghĩa là thread tối đa gần như **không bao giờ** được dùng tới",
+      "Tomcat đảo lại bằng cách can thiệp vào `offer()` của hàng đợi: nó **từ chối nhận** khi còn chỗ mở thread mới",
+      "Nhờ vậy pool **mở thread tới trần trước**, rồi mới xếp hàng — đúng thứ một web server cần",
+      "Hệ quả cấu hình: hàng đợi lớn kết hợp pool chuẩn là cái bẫy; hiểu mánh này mới đặt được ba con số có nghĩa",
+    ],
+    model: "Ba con số là số thread giữ thường trực, số thread tối đa, và dung lượng hàng đợi task. Chỗ đáng nói là hành vi nạp task, vì nó phản trực giác. `ThreadPoolExecutor` chuẩn của Java xử lý theo thứ tự: nếu số thread chưa đạt mức lõi thì tạo thread mới; nếu đã đạt thì **đưa task vào hàng đợi**; chỉ khi hàng đợi đã đầy nó mới mở thêm thread cho tới trần tối đa. Thứ tự đó hợp lý cho một pool tính toán, nhưng với một web server thì nó gây hậu quả kỳ lạ: nếu hàng đợi được đặt lớn — mà mặc định thường lớn — thì hàng đợi gần như không bao giờ đầy, nên số thread tối đa gần như không bao giờ được dùng tới. Ta cấu hình trần 200 thread rồi thấy hệ thống chỉ dùng 10, trong khi request xếp hàng chờ. Tomcat giải quyết bằng cách can thiệp đúng vào điểm quyết định: nó dùng một hàng đợi riêng mà phương thức nhận task được viết lại để **từ chối nhận** khi pool còn chỗ mở thread mới. Executor thấy hàng đợi từ chối thì hiểu là hàng đợi đầy, nên nó mở thread mới — và cứ thế cho tới khi đạt trần tối đa. Chỉ khi đã đạt trần thì hàng đợi mới thật sự nhận task. Kết quả là thứ tự đảo lại: mở thread tới trần trước, xếp hàng sau, đúng thứ một web server cần vì mỗi request đang chờ là một người dùng đang chờ. Hiểu mánh này là điều kiện để đặt ba con số có nghĩa: nếu không biết, ta sẽ đọc sai hành vi của pool và đi chỉnh sai tham số.",
+    redFlags: [
+      "Mô tả hành vi của `ThreadPoolExecutor` chuẩn rồi áp thẳng cho Tomcat",
+      "Cho rằng tăng số thread tối đa luôn có tác dụng, không biết hàng đợi có thể vô hiệu hoá nó",
+      "Không nêu được vì sao một web server cần thứ tự ngược lại",
+    ],
+    probes: [
+      "Nếu dùng `ThreadPoolExecutor` chuẩn với hàng đợi 10.000 và trần 200 thread thì chuyện gì xảy ra?",
+      "Hàng đợi task nên đặt lớn hay nhỏ, và nó đổi chế độ hỏng thế nào?",
+      "Bạn quan sát số thread đang hoạt động của Tomcat bằng gì?",
+    ],
+    refs: ["java-06"],
+  },
+  {
+    id: "java-iq14",
+    field: "java",
+    topic: "java-tomcat",
+    level: 2,
+    minutes: 8,
+    code: {
+      lang: "yaml",
+      text: `# Cấu hình của một dịch vụ sau khi đội "tối ưu để chịu tải"
+server:
+  tomcat:
+    threads:
+      max: 4000              # "để không bao giờ bị từ chối"
+      min-spare: 4000
+    accept-count: 20000      # hàng đợi task rất lớn
+    connection-timeout: 300000
+
+# Container: cpu limit 2, memory limit 2Gi
+# Đo được: mỗi request ~50ms giữ connection DB, ~55ms tổng
+# Hikari maximum-pool-size: 20`,
+    },
+    question: "Cấu hình này làm thông lượng **giảm** so với trước khi \"tối ưu\". Chỉ ra từng lỗi và giải thích cơ chế, rồi đưa ra bộ số bạn chọn.",
+    mustCover: [
+      "4000 thread trên 2 core: phần lớn thời gian CPU đi vào **context switch** thay vì công việc hữu ích",
+      "4000 thread cũng ăn bộ nhớ stack đáng kể, trên container 2Gi thì đó là rủi ro bị kernel giết",
+      "`min-spare` bằng `max` nghĩa là **giữ thường trực** 4000 thread ngay cả khi nhàn — trả giá mà không nhận gì",
+      "Hàng đợi 20.000 cộng timeout 300 giây nghĩa là request chờ **rất lâu** rồi mới được xử lý, khi client đã bỏ đi",
+      "Trần thật không phải số thread mà là **connection pool 20**: hơn 20 request cùng cần database thì phần còn lại xếp hàng",
+      "Bộ số đúng phải suy từ số core và tỉ lệ chờ trên tính, rồi **đối chiếu** với connection pool cho nhất quán",
+      "\"Không bao giờ bị từ chối\" là mục tiêu sai: từ chối sớm tốt hơn chờ 300 giây rồi vẫn thất bại",
+    ],
+    model: "Cấu hình này sai ở cả bốn con số, và chúng sai theo cách cộng dồn. Thứ nhất, 4000 thread trên container 2 core: số thread vượt xa mức song song thật, nên phần lớn thời gian CPU đi vào việc chuyển ngữ cảnh giữa các thread thay vì làm việc hữu ích — đây chính là cơ chế làm thông lượng **giảm** sau khi \"tối ưu\". Thứ hai, 4000 thread ăn bộ nhớ stack đáng kể, và trên container 2Gi thì nó vừa lấn heap vừa đẩy tiến trình tới nguy cơ bị kernel giết. Thứ ba, `min-spare` bằng `max` nghĩa là giữ thường trực toàn bộ 4000 thread kể cả lúc nhàn — trả giá bộ nhớ và lập lịch mà không nhận lại gì. Thứ tư, hàng đợi 20.000 cộng timeout kết nối 300 giây tạo ra chế độ hỏng tệ nhất: không ai bị từ chối, nhưng request nằm chờ hàng chục giây tới vài phút rồi mới được xử lý, lúc đó client đã bỏ đi từ lâu — ta tiêu tài nguyên để trả lời những câu không còn ai nghe. Và điều quan trọng nhất mà cấu hình này bỏ qua hoàn toàn: trần thật của hệ thống không phải số thread mà là connection pool 20. Mỗi request giữ connection 50ms trong tổng 55ms, nên gần như mọi thread đều cần database; quá 20 thread thì phần còn lại chỉ xếp hàng chờ connection chứ không làm gì. Nuôi 4000 thread cho một hệ thống chỉ chạy được 20 việc song song là định nghĩa của việc chỉnh sai chỗ. Bộ số tôi chọn thì suy từ dưới lên: với 2 core và tỉ lệ chờ trên tổng là 50 trên 55, mức song song hữu ích chỉ ở bậc vài chục — nên tôi đặt số thread tối đa ở bậc đó, cho `min-spare` nhỏ hơn nhiều để pool co giãn được, giữ hàng đợi ở mức vừa đủ hấp thụ đỉnh ngắn chứ không phải vài chục nghìn, và hạ timeout kết nối xuống mức có nghĩa với client. Quan trọng hơn cả các con số là đổi mục tiêu: \"không bao giờ bị từ chối\" là mục tiêu sai, vì từ chối sớm cho client biết ngay để thử lại, còn chờ 300 giây rồi vẫn thất bại thì tệ cho cả hai bên.",
+    redFlags: [
+      "Chỉ nói \"4000 thread là quá nhiều\" mà không nêu cơ chế context switch và không nhắc connection pool 20 là trần thật",
+      "Đề nghị nâng connection pool lên 4000 cho khớp số thread",
+      "Giữ mục tiêu \"không bao giờ từ chối request\" làm tiêu chí thiết kế",
+      "Bỏ qua việc `min-spare` bằng `max` nên chi phí bị trả cả lúc nhàn",
+    ],
+    probes: [
+      "Vì sao nuôi nhiều thread hơn mức song song thật lại làm thông lượng giảm chứ chỉ là không tăng?",
+      "Bạn chọn dung lượng hàng đợi theo tiêu chí nào?",
+      "Nếu nâng connection pool lên 200 thì chuyện gì xảy ra ở phía database?",
+    ],
+    refs: ["java-07", "java-06"],
+  },
+  {
+    id: "java-iq15",
+    field: "java",
+    topic: "java-tomcat",
+    level: 3,
+    minutes: 10,
+    question: "Bạn cần bảo vệ một dịch vụ khỏi quá tải. Đặt \"cái van\" ở tầng nào, và phân biệt giới hạn đồng thời với giới hạn tốc độ.",
+    tradeoffs: [
+      {
+        option: "Giới hạn **đồng thời** — bulkhead, số việc chạy cùng lúc",
+        when: "Khi tài nguyên bị giới hạn là **số việc song song**: connection, thread, bộ nhớ cho request đang xử lý. Nó tự điều tiết theo độ chậm của hệ thống — hệ thống chậm đi thì số việc đồng thời đạt trần sớm hơn, nên nó phản ứng đúng ngay cả khi ta không đo lại gì.",
+      },
+      {
+        option: "Giới hạn **tốc độ** — rate limit, số request mỗi giây",
+        when: "Khi cần thực thi một hợp đồng về mức dùng: hạn mức theo khách hàng, chống lạm dụng, phân bổ công bằng giữa nhiều bên. Nó **không** tự điều tiết theo độ chậm — 1.000 request mỗi giây vẫn được cho qua dù hệ thống đang chậm gấp mười.",
+      },
+      {
+        option: "Cả hai, ở hai tầng khác nhau",
+        when: "Cấu hình tôi dùng thực tế: rate limit ở biên theo từng khách hàng để bảo vệ tính công bằng, và bulkhead ở trong theo từng phụ thuộc để bảo vệ tài nguyên. Hai cái giải hai bài, không thay nhau được.",
+      },
+    ],
+    mustCover: [
+      "Hai khái niệm **khác trục**: một cái đếm việc **đang chạy**, cái kia đếm việc **đến trong một đơn vị thời gian**",
+      "Giới hạn đồng thời **tự điều tiết** theo độ chậm của hệ thống; giới hạn tốc độ thì không",
+      "Vì vậy để bảo vệ tài nguyên thì bulkhead đúng hơn; để thực thi hạn mức thì rate limit đúng hơn",
+      "Bulkhead nên đặt **theo từng phụ thuộc** để một phụ thuộc hỏng không tiêu năng lực của các phụ thuộc khác",
+      "Đặt van ở biên rẻ hơn nhưng thô hơn; đặt van ở trong chính xác hơn nhưng request đã tiêu tài nguyên để đi tới đó",
+      "Khi van đóng, hành vi phải là **từ chối sớm** với tín hiệu rõ ràng để client biết đường xử lý",
+    ],
+    model: "Hai khái niệm này bị dùng lẫn rất thường xuyên, nhưng chúng ở hai trục khác nhau: giới hạn đồng thời đếm số việc **đang chạy** tại một thời điểm, còn giới hạn tốc độ đếm số việc **đến** trong một đơn vị thời gian. Khác biệt quan trọng nhất suy ra từ đó: giới hạn đồng thời tự điều tiết theo độ chậm của hệ thống. Nếu database chậm đi gấp ba, mỗi việc giữ chỗ lâu hơn gấp ba nên trần đồng thời đạt sớm hơn và hệ thống tự giảm nhận việc — không cần ai đo lại gì. Giới hạn tốc độ thì mù với điều đó: 1.000 request mỗi giây vẫn được cho qua dù hệ thống đang chậm gấp mười, nên nó không bảo vệ được tài nguyên. Từ đó ra nguyên tắc chọn: bảo vệ tài nguyên thì dùng giới hạn đồng thời, thực thi hợp đồng về mức dùng thì dùng giới hạn tốc độ. Và vì hai cái giải hai bài khác nhau nên trong thực tế tôi dùng cả hai ở hai tầng: rate limit ở biên theo từng khách hàng, để một khách hàng chạy job đồng bộ không chiếm hết năng lực của những khách hàng khác — đây là bài toán công bằng; và bulkhead ở trong theo từng phụ thuộc, để khi một API đối tác treo thì chỉ phần năng lực dành cho nó bị chiếm. Về chỗ đặt van thì có một đánh đổi thật: đặt ở biên rẻ hơn vì request bị chặn trước khi tiêu tài nguyên, nhưng thô hơn vì ở đó ta chưa biết request này sẽ chạm những phụ thuộc nào; đặt ở trong chính xác hơn nhưng request đã tiêu một phần tài nguyên để đi tới đó. Cuối cùng, hành vi khi van đóng quan trọng không kém bản thân cái van: phải từ chối sớm với một tín hiệu rõ ràng — mã lỗi đúng, kèm chỉ dẫn về thời điểm thử lại — để client biết đường xử lý thay vì chờ rồi timeout.",
+    redFlags: [
+      "Dùng rate limit để bảo vệ tài nguyên, không nhận ra nó mù với độ chậm của hệ thống",
+      "Đặt một bulkhead dùng chung cho mọi phụ thuộc nên mất khả năng cô lập lỗi",
+      "Chỉ đặt van mà không định nghĩa hành vi khi van đóng",
+      "Coi hai cơ chế là hai cách làm cùng một việc và chọn một",
+    ],
+    probes: [
+      "Database chậm gấp ba — hai cơ chế phản ứng khác nhau thế nào?",
+      "Bạn chọn giá trị cho một bulkhead ở đường gọi database bằng cách nào?",
+      "Client nên đọc tín hiệu từ chối của bạn thế nào để không làm sự cố nặng hơn?",
+    ],
+    refs: ["java-06"],
+  },
+  {
+    id: "java-iq16",
+    field: "java",
+    topic: "java-tomcat",
+    level: 4,
+    minutes: 15,
+    incident: {
+      symptom: "Một dịch vụ được chuyển từ máy ảo 8 core sang container với `cpu limit` 2. Sau khi chuyển, thông lượng giảm 40% dù cấu hình ứng dụng không đổi, và độ trễ p99 tăng gấp ba. Đội đã thử tăng `cpu limit` lên 4 và chỉ cải thiện được 10%.",
+      scale: "Trước: 1.100 request/giây trên mỗi máy ảo. Sau: 660 request/giây mỗi container. Đã chuyển 30 dịch vụ theo cùng cách và nhiều dịch vụ có cùng triệu chứng.",
+      constraints: "Không quay lại máy ảo — việc chuyển sang container là chương trình toàn công ty. Ngân sách CPU toàn cụm đã chốt nên không thể nâng limit cho cả 30 dịch vụ. Phải đưa ra hướng dẫn dùng lại được cho 29 dịch vụ kia, không chỉ sửa một cái.",
+      },
+    question: "Vì sao cấu hình không đổi mà thông lượng giảm, và vì sao tăng CPU limit chỉ giúp được 10%? Nêu hướng dẫn dùng lại được.",
+    mustCover: [
+      "JVM và các thư viện chọn nhiều tham số mặc định theo **số core quan sát được** — số thread GC, kích thước một số pool, mức song song của fork/join",
+      "Trong container, số core JVM thấy có thể **không khớp** với `cpu limit` thật nếu không cấu hình đúng — đây là biến số hay bị quên nhất",
+      "Nếu JVM vẫn thấy 8 core trong khi chỉ được dùng 2, nó cấu hình cho một máy rộng hơn thực tế: quá nhiều thread trên quá ít CPU",
+      "Hệ quả là **tiết chế CPU** cộng context switch — thông lượng giảm và độ trễ đuôi tăng, đúng triệu chứng",
+      "Tăng limit từ 2 lên 4 chỉ cải thiện 10% vì nó **không sửa** sai lệch giữa số core quan sát được và số core thật",
+      "Hướng dẫn dùng lại được: bảo đảm JVM đọc đúng giới hạn container, rồi **suy lại** các con số sizing theo số core thật",
+      "Và phải **đo lại** từng dịch vụ sau khi sửa, vì mỗi dịch vụ có tỉ lệ chờ trên tính khác nhau",
+    ],
+    model: "Cụm từ \"cấu hình ứng dụng không đổi\" chính là gốc rễ, vì cấu hình đúng cho 8 core là cấu hình sai cho 2 core — và tệ hơn, một phần cấu hình không nằm trong tay ta mà do JVM và thư viện tự chọn theo số core chúng quan sát được. Số thread GC, mức song song của fork/join, kích thước mặc định của vài pool đều suy từ con số đó. Nên nếu JVM vẫn thấy 8 core trong khi cgroup chỉ cho dùng 2, nó sẽ cấu hình cho một máy rộng gấp bốn thực tế: nhiều thread GC hơn mức CPU cho phép, mức song song cao hơn thực tế. Kết quả là tiết chế CPU cộng chi phí chuyển ngữ cảnh, và biểu hiện đúng như quan sát — thông lượng giảm, độ trễ đuôi tăng mạnh hơn cả thông lượng vì hàng đợi nội bộ dài ra. Đây là biến số hay bị quên nhất khi đếm core trong thế giới container. Việc tăng limit từ 2 lên 4 mà chỉ cải thiện 10% là bằng chứng xác nhận, không phải bằng chứng phản bác: nếu vấn đề thuần là thiếu CPU thì gấp đôi CPU phải cho cải thiện gần gấp đôi; chỉ 10% nghĩa là nút thắt nằm ở sai lệch giữa cấu hình và tài nguyên, và sai lệch đó vẫn còn nguyên khi ta chỉ đổi một phía. Hướng dẫn dùng lại được cho cả 30 dịch vụ gồm ba bước, xếp theo thứ tự bắt buộc. Bước một, kiểm chứng số core mà JVM thật sự quan sát được ở bên trong container và đối chiếu với `cpu limit`; đây là bước chẩn đoán rẻ nhất và nên là mục đầu tiên trong bất kỳ danh mục kiểm tra chuyển container nào. Bước hai, bảo đảm JVM đọc đúng giới hạn cgroup, để mọi mặc định suy theo số core đều tự khớp — riêng bước này có thể lấy lại phần lớn thông lượng đã mất mà không tốn thêm CPU nào. Bước ba, suy lại các con số sizing do ta tự đặt — số worker thread, connection pool — theo số core thật và theo tỉ lệ chờ trên tính của từng dịch vụ. Bước ba không thể làm chung cho cả 30 dịch vụ vì tỉ lệ chờ trên tính khác nhau, nên hướng dẫn phải nói rõ: bước một và hai là công thức chung, bước ba là phép đo riêng cho từng dịch vụ, và tiêu chí nghiệm thu là thông lượng cùng p99 so với mốc trên máy ảo.",
+    redFlags: [
+      "Kết luận container chậm hơn máy ảo về bản chất",
+      "Tiếp tục nâng `cpu limit` — việc gấp đôi CPU chỉ cho 10% đã loại giả thuyết thiếu CPU",
+      "Đưa ra một bộ số cố định áp cho cả 30 dịch vụ, bỏ qua việc tỉ lệ chờ trên tính khác nhau",
+      "Chỉnh tham số GC bằng tay trước khi sửa việc JVM đọc sai số core",
+      "Bỏ qua việc kiểm chứng số core JVM quan sát được — bước chẩn đoán rẻ nhất",
+    ],
+    probes: [
+      "Bạn kiểm chứng số core JVM quan sát được bên trong container bằng cách nào?",
+      "Những mặc định nào của JVM suy theo số core?",
+      "Vì sao độ trễ p99 tăng mạnh hơn tỉ lệ thông lượng giảm?",
+    ],
+    refs: ["java-07"],
+  },
+
+  // ===== java-pool — Connection pool sizing (java-iq17–java-iq20) =====
+  {
+    id: "java-iq17",
+    field: "java",
+    topic: "java-pool",
+    level: 1,
+    minutes: 6,
+    question: "Vì sao tăng số connection lại có thể làm database **chậm đi**? Nêu các loại chi phí mà connection thừa bắt database trả.",
+    mustCover: [
+      "Khi số connection đang thực thi vượt **khả năng song song thật** của database, connection thừa không giúp gì",
+      "Chi phí thứ nhất: **chuyển ngữ cảnh** — mỗi tiến trình hoặc thread của database tranh nhau ít core, đúng bệnh quá nhiều thread nhưng diễn ra trên máy database",
+      "Chi phí thứ hai: **tranh chấp tài nguyên chung** — lock manager, buffer pool, WAL; càng đông kẻ tranh thì phần xếp hàng nội bộ trong mỗi truy vấn càng dài",
+      "Chi phí thứ ba: **bộ nhớ** — với PostgreSQL mỗi connection là một tiến trình có overhead riêng, nên trăm connection nhàn vẫn ăn RAM đáng kể",
+      "Kết quả thực nghiệm đáng nhớ: **thu nhỏ** pool kéo thời gian phản hồi từ khoảng 100ms xuống khoảng 2ms",
+      "Nguyên tắc rút ra: muốn một pool **nhỏ và bão hoà** với thread xếp hàng chờ connection, hơn là pool phình to với hàng trăm connection đạp nhau",
+    ],
+    model: "Trực giác \"nhiều connection thì xử lý được nhiều\" sai vì nó giả định database mở rộng tuyến tính theo số connection, mà thực tế database có một mức song song thật bị giới hạn bởi số core và bởi tốc độ đĩa. Khi số connection đang thực thi vượt mức đó, những connection thừa không giúp gì mà bắt database trả ba loại thuế. Thuế thứ nhất là chuyển ngữ cảnh: mỗi tiến trình hoặc thread của database tranh nhau ít core, đúng căn bệnh quá nhiều thread mà ta gặp ở tầng ứng dụng, chỉ lần này nó diễn ra trên máy database. Thuế thứ hai là tranh chấp các tài nguyên dùng chung bên trong database — lock manager, buffer pool, WAL; càng đông kẻ tranh thì phần thời gian xếp hàng nội bộ trong mỗi truy vấn càng dài, nên mỗi truy vấn tự nó chậm đi dù không có gì đổi ở kế hoạch thực thi. Thuế thứ ba là bộ nhớ: với PostgreSQL mỗi connection là một tiến trình riêng với vùng làm việc và cache catalog của nó, nên hàng trăm connection nhàn rỗi vẫn ăn RAM đáng kể — và RAM đó lẽ ra nên dành cho buffer pool. Con số đáng nhớ nhất là kết quả thực nghiệm của nhóm Oracle Real-World Performance: thu nhỏ pool kéo thời gian phản hồi từ khoảng 100ms xuống khoảng 2ms, tức nhanh hơn khoảng năm chục lần bằng cách **giảm** số connection. Cách diễn đạt của tác giả HikariCP gói lại ý này rất gọn: điều ta muốn là một pool nhỏ và bão hoà, với các thread xếp hàng chờ connection, chứ không phải một pool phình to với hàng trăm connection đạp nhau — một hàng đợi đứng trước một database chạy hết tốc lực vẫn tốt hơn một database nghẹt thở vì đám đông.",
+    redFlags: [
+      "Nói pool lớn hơn thì luôn tốt hơn, hoặc chỉ nêu \"tốn tài nguyên\" mà không nêu cơ chế nào",
+      "Chỉ nhắc bộ nhớ mà bỏ qua chuyển ngữ cảnh và tranh chấp tài nguyên chung",
+      "Không phân biệt số connection **đang thực thi** với số connection **đang mở**",
+    ],
+    probes: [
+      "Vì sao hàng đợi ở phía ứng dụng lại tốt hơn hàng đợi bên trong database?",
+      "Với một database dùng thread thay vì tiến trình, thuế nào giảm đi và thuế nào vẫn còn?",
+      "Bạn biết mức song song thật của database bằng cách nào?",
+    ],
+    refs: ["java-08"],
+  },
+  {
+    id: "java-iq18",
+    field: "java",
+    topic: "java-pool",
+    level: 2,
+    minutes: 9,
+    code: {
+      lang: "text",
+      text: `Số liệu đo được của một dịch vụ:
+
+  Lưu lượng mục tiêu ......... 1600 request/giây
+  Thông lượng mỗi instance ... 327 request/giây
+  Tomcat threads.max ......... 18
+  Thời gian giữ connection ... 50ms mỗi request
+  Tổng thời gian mỗi request . 55ms
+  PostgreSQL max_connections . 100
+
+Cấu hình hiện tại:
+  spring.datasource.hikari.maximum-pool-size: 50
+  spring.datasource.hikari.minimum-idle: 5`,
+    },
+    question: "Tính ra bộ số đúng cho cấu hình này, trình bày từng bước. Rồi nói ba con số nào dễ bị nhầm với nhau ở đây.",
+    mustCover: [
+      "Số instance: lưu lượng mục tiêu chia thông lượng mỗi instance, khoảng 1600 chia 327 nên **5 instance**",
+      "Pool mỗi instance = `threads.max` × (thời gian giữ connection / tổng thời gian request) = 18 × 50/55, khoảng **17**",
+      "Công thức **tự ràng buộc**: tỉ lệ luôn nhỏ hơn 1 nên kết quả luôn nhỏ hơn `threads.max`, không bao giờ ra số vô lý",
+      "Đây chính là **định luật Little**: số connection đang dùng = tốc độ query × thời gian mỗi connection bị giữ",
+      "Cấu hình hiện tại sai hai chỗ: pool 50 **vượt** `threads.max` 18 nên 32 connection không bao giờ dùng tới; `minimum-idle` 5 nghĩa là trả độ trễ tạo connection đúng lúc cao điểm",
+      "Ba con số dễ nhầm: **17** là pool mỗi instance, **85** là tổng connection của 5 instance, và **`max_connections` 100** là trần phía database",
+      "Phải kiểm 85 nằm dưới 100 — và phải chừa chỗ cho kết nối vận hành, nên biên an toàn ở đây rất mỏng",
+    ],
+    model: "Tôi đi theo hai phép tính rồi kiểm một ràng buộc. Phép thứ nhất, số instance: lưu lượng mục tiêu chia cho thông lượng mỗi instance, 1600 chia 327 xấp xỉ 5 instance. Phép thứ hai, pool cho mỗi instance: lấy `threads.max` nhân với tỉ lệ giữa thời gian giữ connection và tổng thời gian request, tức 18 nhân 50 trên 55, xấp xỉ 17. Công thức này có một tính chất đáng nêu vì nó bảo vệ ta khỏi sai lầm phổ biến: tỉ lệ luôn nhỏ hơn 1, nên kết quả luôn nhỏ hơn `threads.max` — không bao giờ ra một con số vô lý vượt trần thread. Bản chất của nó chính là định luật Little: số connection đang dùng bằng tốc độ query nhân thời gian mỗi connection bị giữ. Đối chiếu với cấu hình hiện tại thì thấy hai lỗi. Pool 50 vượt cả `threads.max` 18, nên 32 connection trong đó về nguyên tắc không bao giờ được dùng tới — chúng chỉ ăn RAM ở phía database. Và `minimum-idle` 5 nghĩa là pool co lại khi nhàn, nên đúng lúc lưu lượng dựng lên ta phải trả thêm độ trễ tạo connection mới; với một pool nhỏ như 17 thì giữ pool phẳng, đặt `minimum-idle` bằng `maximum-pool-size`, là lựa chọn đúng. Phần ba con số dễ nhầm là chỗ tôi sẽ nói rõ vì nó gây sự cố thật: **17** là pool của **một** instance, **85** là tổng connection khi 5 instance cùng chạy, và **100** là `max_connections` phía PostgreSQL. Ràng buộc phải kiểm là 85 nhỏ hơn 100 — nó thoả, nhưng biên chỉ còn 15, mà database còn cần chỗ cho kết nối vận hành, sao lưu, migration và công cụ quan sát. Nên tôi sẽ coi đây là biên quá mỏng và đề xuất một trong hai hướng: nâng `max_connections` sau khi kiểm bộ nhớ phía database, hoặc giảm nhẹ pool mỗi instance rồi đo lại. Điểm phải nhớ là mỗi lần thêm instance là thêm cả một pool, nên con số 17 chỉ có nghĩa khi đặt cạnh số instance.",
+    redFlags: [
+      "Đặt pool lớn hơn `threads.max` — phần vượt không bao giờ dùng tới",
+      "Tính pool cho một instance rồi quên nhân với số instance khi đối chiếu `max_connections`",
+      "Để `minimum-idle` nhỏ hơn nhiều so với `maximum-pool-size` trên một pool vốn đã nhỏ",
+      "Kết luận 85 dưới 100 là an toàn mà không chừa chỗ cho kết nối vận hành",
+    ],
+    probes: [
+      "Nếu tự co giãn nâng số instance lên 10 thì chuyện gì xảy ra ở phía database?",
+      "Vì sao công thức tự ràng buộc là một tính chất tốt?",
+      "`leak-detection-threshold` giúp bạn phát hiện điều gì?",
+    ],
+    refs: ["java-08", "java-07"],
+  },
+  {
+    id: "java-iq19",
+    field: "java",
+    topic: "java-pool",
+    level: 3,
+    minutes: 10,
+    question: "Bạn phát hiện các request đang chờ rất lâu để lấy connection từ pool. Bạn xử lý theo hướng nào?",
+    tradeoffs: [
+      {
+        option: "Rút ngắn **thời gian giữ** connection",
+        when: "Hướng đầu tiên và hiệu quả nhất, vì số connection cần tỉ lệ thuận với thời gian giữ. Đưa mọi thứ không cần connection ra khỏi vùng transaction — gọi HTTP, tính toán, gửi thư. Không tốn thêm tài nguyên nào ở phía database.",
+      },
+      {
+        option: "Nâng pool",
+        when: "Chỉ khi đã xác nhận database còn dư mức song song thật **và** tổng connection của mọi instance vẫn dưới trần. Nếu database đã bão hoà thì nâng pool làm mọi truy vấn chậm đi, tức đổi hàng đợi ở ứng dụng thành hàng đợi bên trong database — chỗ tệ hơn.",
+      },
+      {
+        option: "Giảm nhu cầu — bớt số truy vấn mỗi request",
+        when: "Khi nguyên nhân là mỗi request chạm database quá nhiều lần, chẳng hạn N+1. Nó giảm cả thời gian giữ lẫn tải database cùng lúc, nên thường là hướng cho lợi ích lớn nhất — nhưng tốn công sửa mã nhiều nhất.",
+      },
+    ],
+    mustCover: [
+      "Phải chẩn đoán trước: chờ connection có thể do **pool nhỏ**, do **giữ quá lâu**, hoặc do **database đã bão hoà** — ba nguyên nhân, ba cách sửa khác nhau",
+      "Phân biệt được chúng bằng cách xem thời gian **thực thi truy vấn** có tăng hay không: nếu truy vấn vẫn nhanh thì database chưa bão hoà",
+      "Nếu database đã bão hoà thì nâng pool làm mọi thứ **chậm đi** — hàng đợi chuyển vào bên trong database",
+      "Rút ngắn thời gian giữ là hướng có lợi nhất về mặt tài nguyên vì nó không đòi thêm gì ở phía database",
+      "Phải kiểm ràng buộc toàn cục: tổng connection của **mọi** instance phải dưới trần phía database, có chừa chỗ vận hành",
+      "Hàng đợi chờ connection ở phía ứng dụng là thứ **nên** tồn tại — mục tiêu không phải triệt tiêu nó",
+    ],
+    model: "Trước khi chọn hướng, tôi phân định ba nguyên nhân có cùng triệu chứng. Một là pool đặt quá nhỏ so với nhu cầu thật. Hai là connection bị giữ quá lâu mỗi request, nên số connection cần cao hơn đáng lẽ. Ba là database đã bão hoà, nên connection nào cũng chậm và hàng đợi dài ra. Phân biệt chúng không khó nếu đo đúng: xem thời gian thực thi truy vấn có tăng hay không. Nếu truy vấn vẫn nhanh như bình thường mà request phải chờ lấy connection thì database chưa bão hoà, vấn đề nằm ở phía ta — pool nhỏ hoặc giữ lâu. Nếu chính thời gian truy vấn cũng tăng thì database đã bão hoà, và đây là chỗ quyết định: khi đó nâng pool làm mọi thứ chậm đi, vì nó chỉ chuyển hàng đợi từ phía ứng dụng vào bên trong database — nơi hàng đợi ấy còn kéo theo tranh chấp lock manager và buffer pool. Hàng đợi đứng trước một database chạy hết tốc lực tốt hơn một database nghẹt thở vì đám đông. Giả sử database chưa bão hoà, tôi vẫn thử hướng rút ngắn thời gian giữ trước khi nâng pool, vì số connection cần tỉ lệ thuận với thời gian giữ: đưa mọi thứ không cần connection ra khỏi vùng transaction — lời gọi HTTP, tính toán nặng, gửi thư — thường cắt được thời gian giữ đáng kể mà không đòi thêm tài nguyên nào ở phía database, tức nó cải thiện cả hai phía cùng lúc. Hướng cho lợi ích lớn nhất nhưng tốn công nhất là giảm số truy vấn mỗi request; nếu nguyên nhân là N+1 thì sửa nó vừa giảm thời gian giữ vừa giảm tải database. Nâng pool là hướng tôi làm sau cùng và chỉ khi đã xác nhận hai điều: database còn dư mức song song thật, và tổng connection của mọi instance vẫn dưới trần phía database sau khi chừa chỗ cho kết nối vận hành. Một điểm cuối đáng nói vì nó hay bị hiểu sai: hàng đợi chờ connection là thứ **nên** tồn tại, không phải lỗi cần triệt tiêu — mục tiêu là nó ngắn và ổn định, chứ không phải bằng không.",
+    redFlags: [
+      "Nâng pool là phản xạ đầu tiên, chưa kiểm thời gian thực thi truy vấn",
+      "Nâng pool khi database đã bão hoà — đổi hàng đợi ở ứng dụng thành hàng đợi trong database",
+      "Quên kiểm tổng connection của mọi instance so với trần phía database",
+      "Coi mục tiêu là không còn ai phải chờ connection",
+    ],
+    probes: [
+      "Bạn dùng đại lượng nào để biết database đã bão hoà hay chưa?",
+      "Những việc gì thường bị để lại trong vùng transaction mà không cần connection?",
+      "Hàng đợi chờ connection dài bao nhiêu thì bạn coi là bình thường?",
+    ],
+    refs: ["java-08"],
+  },
+  {
+    id: "java-iq20",
+    field: "java",
+    topic: "java-pool",
+    level: 4,
+    minutes: 14,
+    incident: {
+      symptom: "Mỗi khi lưu lượng tăng và tự co giãn thêm instance, dịch vụ **chậm đi** thay vì nhanh lên, và database bắt đầu từ chối kết nối mới với lỗi hết slot. Khi lưu lượng giảm và số instance co lại, mọi thứ trở lại bình thường.",
+      scale: "Bình thường 6 instance, cao điểm co giãn tới 24. Mỗi instance có `maximum-pool-size` 20 và `minimum-idle` 20. PostgreSQL `max_connections` là 200.",
+      constraints: "Không tắt được tự co giãn — nó là cơ chế duy nhất chịu được đỉnh tải. Không nâng được `max_connections` vì bộ nhớ máy database đã sát trần. Phải giữ được khả năng co giãn tới 24 instance.",
+      },
+    question: "Hãy làm phép tính cho thấy vấn đề, rồi nêu cách sửa giữ được khả năng co giãn tới 24 instance.",
+    mustCover: [
+      "Phép tính: 24 instance × 20 connection = **480**, vượt xa `max_connections` 200 — nên database từ chối kết nối",
+      "`minimum-idle` bằng 20 nghĩa là mỗi instance **giữ thường trực** 20 connection ngay khi vừa lên, kể cả khi chưa có tải",
+      "Vì vậy trần bị vượt ngay ở khoảng 10 instance, không cần tới 24",
+      "Việc thêm instance làm **chậm đi** là dấu hiệu database đã bão hoà: connection thừa gây tranh chấp và chuyển ngữ cảnh trên máy database",
+      "Lỗi gốc là thiết kế: pool được đặt cho **một** instance mà không có ràng buộc nào ở mức **toàn cụm**",
+      "Sửa: pool mỗi instance phải suy từ **trần toàn cụm chia số instance tối đa**, chừa chỗ cho kết nối vận hành",
+      "24 instance với biên vận hành nghĩa là pool mỗi instance chỉ ở bậc **6–7**, và phải kiểm lại nó có đủ theo công thức `threads.max` × tỉ lệ giữ hay không",
+      "Nếu 6–7 không đủ thì bài toán thật là **giảm thời gian giữ** connection hoặc thêm một tầng pool dùng chung, không phải nâng pool",
+    ],
+    model: "Phép tính phơi bày vấn đề ngay: 24 instance nhân 20 connection mỗi instance bằng 480, trong khi `max_connections` chỉ 200. Tệ hơn, `minimum-idle` cũng là 20 nên mỗi instance giữ thường trực đủ 20 connection ngay từ lúc vừa lên, kể cả khi chưa nhận request nào — nghĩa là trần bị vượt ở khoảng 10 instance chứ không cần tới 24, và đó giải thích vì sao sự cố xuất hiện ngay khi bắt đầu co giãn. Triệu chứng \"thêm instance mà chậm đi\" là dấu hiệu thứ hai và nó nói về phía database: khi số connection đang thực thi vượt mức song song thật, connection thừa bắt database trả thuế chuyển ngữ cảnh và thuế tranh chấp lock manager cùng buffer pool, nên mỗi truy vấn tự nó chậm đi. Ta đang trả tiền để làm database nghẹt thở. Lỗi gốc không phải một con số sai mà là một thiếu sót thiết kế: pool được đặt cho **một** instance, trong khi ràng buộc thật nằm ở mức **toàn cụm**, và không có gì trong hệ thống ràng hai thứ đó với nhau — nên tự co giãn, vốn là một cơ chế tốt, trở thành cơ chế phá trần. Cách sửa là đảo chiều phép tính: pool mỗi instance phải suy từ trần toàn cụm chia cho số instance tối đa, sau khi chừa chỗ cho kết nối vận hành, sao lưu, migration và công cụ quan sát. Với 200 trừ khoảng 30 cho vận hành, còn 170 chia 24 thì pool mỗi instance chỉ ở bậc 6 hoặc 7. Bước tiếp theo là bước trung thực: kiểm xem 6–7 có đủ hay không theo công thức `threads.max` nhân tỉ lệ thời gian giữ connection trên tổng thời gian request. Nếu đủ thì ta đã xong và còn được lợi vì database thôi bị quá tải. Nếu không đủ thì phải nói rõ rằng bài toán thật không phải nâng pool mà là giảm nhu cầu: rút ngắn thời gian giữ connection bằng cách đưa mọi việc không cần connection ra khỏi vùng transaction, giảm số truy vấn mỗi request, hoặc đặt một tầng pool dùng chung phía trước database để nhiều instance chia sẻ cùng một tập connection thay vì mỗi instance giữ riêng. Đồng thời tôi sẽ hạ `minimum-idle` xuống thấp hơn nhiều so với `maximum-pool-size` cho trường hợp này — trái với nguyên tắc pool phẳng thông thường — vì ở đây chi phí của việc giữ connection nhàn là chiếm slot toàn cụm, và nó lớn hơn lợi ích tránh độ trễ tạo connection.",
+    redFlags: [
+      "Nâng `max_connections` — ràng buộc đã cấm, và nó cũng không sửa được việc database đã bão hoà",
+      "Tắt tự co giãn hoặc giới hạn số instance — bỏ đúng cơ chế chịu đỉnh tải",
+      "Chỉ hạ pool mỗi instance mà không suy từ trần toàn cụm chia số instance tối đa",
+      "Bỏ qua `minimum-idle` bằng 20, vốn làm trần bị vượt ngay ở 10 instance",
+      "Kết luận pool 6–7 là đủ mà không kiểm lại bằng công thức thời gian giữ",
+    ],
+    probes: [
+      "Bao nhiêu instance thì trần bị vượt với cấu hình hiện tại?",
+      "Vì sao ở ca này bạn hạ `minimum-idle` dù nguyên tắc thông thường là giữ pool phẳng?",
+      "Nếu pool 6 không đủ theo công thức thì bạn làm gì tiếp?",
+    ],
+    refs: ["java-08", "java-07"],
+  },
+
+  // ===== java-tx — @Transactional: proxy, ThreadLocal và bẫy (java-iq21–java-iq24) =====
+  {
+    id: "java-iq21",
+    field: "java",
+    topic: "java-tx",
+    level: 1,
+    minutes: 6,
+    question: "`@Transactional` chỉ là một annotation. Giải thích cơ chế thật làm nó hoạt động, và vì sao gọi một method `@Transactional` từ bên trong cùng class lại không có tác dụng.",
+    mustCover: [
+      "Annotation chỉ là cái nhãn; sức mạnh nằm ở **proxy** mà Spring đặt trước bean",
+      "Proxy mở transaction trước khi gọi method thật và commit hoặc rollback sau khi nó trả về",
+      "Transaction được gắn vào **thread** qua `ThreadLocal`, nên mọi thứ chạy trong thread đó thấy được cùng một connection",
+      "Lời gọi từ bên trong cùng class là **self-invocation**: nó đi thẳng tới method thật, **không** qua proxy",
+      "Không qua proxy nghĩa là không ai mở transaction — annotation vẫn nằm đó và hoàn toàn vô tác dụng",
+      "Vì transaction bound vào thread, chuyển việc sang thread khác cũng làm mất ngữ cảnh transaction",
+    ],
+    model: "`@Transactional` không tự làm gì cả; nó là một cái nhãn để Spring biết phải bọc cái gì. Cơ chế thật là proxy: Spring đặt một object đứng trước bean của ta, và mọi lời gọi từ bên ngoài đi qua object đó. Khi một lời gọi tới một method có nhãn, proxy làm ba việc theo thứ tự — lấy một connection và mở transaction, gọi method thật, rồi commit nếu trả về bình thường hoặc rollback nếu có ngoại lệ thuộc loại cần rollback. Chi tiết quan trọng thứ hai là transaction được gắn vào **thread**, qua `ThreadLocal`: connection được cất vào một chỗ gắn với thread hiện hành, nên mọi mã chạy trong thread đó — kể cả những repository nằm sâu vài tầng — đều lấy được đúng connection ấy mà không phải truyền tay. Đó là lý do ta viết mã nghiệp vụ như thể không có transaction nào tồn tại. Từ hai chi tiết đó suy ra ngay câu trả lời cho phần thứ hai. Khi một method của bean gọi một method khác **trong cùng class**, lời gọi đó không đi ra ngoài rồi quay lại mà đi thẳng tới method thật trong cùng object — nó không đi qua proxy. Proxy không biết gì về lời gọi ấy nên không ai mở transaction; annotation vẫn nằm chình ình trên method và hoàn toàn vô tác dụng. Đây là lỗi khó thấy vì mã đọc rất hợp lý và không có cảnh báo nào. Cùng logic đó giải thích một lỗi họ hàng: vì transaction bound vào thread, nếu ta chuyển việc sang một thread khác — một executor, một `@Async` — thì thread mới không thấy `ThreadLocal` của thread cũ, nên nó nằm ngoài transaction dù mã trông như nằm trong.",
+    redFlags: [
+      "Nói Spring \"đọc annotation lúc chạy rồi tự mở transaction\" mà không nhắc proxy",
+      "Không nối được self-invocation với việc lời gọi không đi qua proxy",
+      "Bỏ qua việc transaction bound vào thread, nên không giải thích được các lỗi liên quan tới đổi thread",
+    ],
+    probes: [
+      "Bạn kiểm chứng một method có thật sự mở transaction hay không bằng cách nào?",
+      "Đặt `@Transactional` trên interface hay trên class impl, và vì sao?",
+      "Nếu bắt buộc phải gọi nội bộ mà vẫn cần transaction thì làm thế nào?",
+    ],
+    refs: ["java-09"],
+  },
+  {
+    id: "java-iq22",
+    field: "java",
+    topic: "java-tx",
+    level: 2,
+    minutes: 9,
+    code: {
+      lang: "java",
+      text: `@Service
+public class InvoiceService {
+
+    @Transactional
+    private void persist(Invoice inv) {          // (1) private
+        repo.save(inv);
+    }
+
+    @Transactional
+    public final void finalize(Invoice inv) {    // (2) final
+        repo.save(inv);
+    }
+
+    @Transactional
+    public void importBatch(List<Invoice> list) throws IOException {
+        for (Invoice inv : list) repo.save(inv);
+        if (!checksumOk(list))
+            throw new IOException("checksum lệch");   // (3)
+    }
+}`,
+    },
+    question: "Ba method này có ba lỗi khác nhau, và cả ba đều **không** báo lỗi lúc biên dịch hay lúc khởi động. Chỉ ra từng cái và nói triệu chứng quan sát được.",
+    mustCover: [
+      "(1) `private`: CGLIB tạo **subclass** và override method để chèn interceptor, nhưng override một method `private` là chuyện **không tồn tại** trong Java",
+      "(2) `final`: không kế thừa được thì không bọc được — cùng một lý do thuộc về **bytecode**, không phải Spring",
+      "Triệu chứng của (1) và (2) giống nhau: log **không có** dòng mở transaction nào, mỗi `save` tự commit riêng lẻ",
+      "(3) Ngoại lệ **checked**: mặc định Spring chỉ rollback với `RuntimeException` và `Error`",
+      "Nên `IOException` làm Spring **im lặng commit** phần đã ghi — triệu chứng tệ nhất vì không có lỗi nào lộ ra",
+      "Quy ước này kế thừa từ EJB: checked exception được đọc là \"nghiệp vụ đã tính đến\", nên Spring tôn trọng và commit",
+      "Muốn khác đi phải khai tường minh loại ngoại lệ cần rollback",
+    ],
+    model: "Ba lỗi, và điểm chung khiến chúng nguy hiểm là không cái nào báo gì lúc biên dịch hay lúc khởi động. Hai lỗi đầu cùng một gốc và gốc đó nằm ở Java chứ không ở Spring. Spring Boot mặc định dùng CGLIB, tức nó sinh một subclass kế thừa chính class của bean rồi override method để chèn interceptor. Với method `private` thì việc override đơn giản là không tồn tại trong Java, nên không có cách nào bọc nó. Với method `final` thì không kế thừa được nên cũng không bọc được. Triệu chứng của cả hai giống nhau và rất dễ bị bỏ qua: log hoàn toàn không có dòng mở transaction nào, và mỗi `save` chạy ở chế độ tự commit riêng lẻ — nên nếu một bản ghi thất bại giữa chừng thì các bản ghi trước đã nằm vĩnh viễn trong database. Khi thấy annotation nằm chình ình mà không có transaction nào, việc đầu tiên cần soát là method có `private` hay `final` không. Lỗi thứ ba khác bản chất và tệ hơn vì nó im lặng nhất. Mặc định Spring chỉ rollback khi gặp `RuntimeException` và `Error`; một ngoại lệ **checked** như `IOException` sẽ khiến Spring **commit** phần đã ghi. Đây không phải bug mà là quy ước kế thừa từ EJB: Spring đọc checked exception là \"nghiệp vụ đã tính đến trường hợp này rồi\" nên nó tôn trọng và commit. Nhưng một quy ước mà người viết mã không biết thì với người đó nó vẫn là bug — và là loại bug không ném lỗi nào cả: `importBatch` sẽ ghi một nửa lô hoá đơn, ném `IOException` lên tầng trên, và phần đã ghi vẫn nằm đó. Ba tháng sau kế toán phát hiện lệch số. Muốn hành vi khác thì phải khai tường minh loại ngoại lệ cần rollback trên annotation.",
+    redFlags: [
+      "Nói Spring có lỗi hoặc cấu hình thiếu, không nhận ra giới hạn nằm ở bytecode Java",
+      "Tin rằng mọi ngoại lệ đều gây rollback",
+      "Chỉ tìm ba lỗi ở tầng cú pháp mà không nêu triệu chứng quan sát được của từng cái",
+      "Đổi `IOException` sang `RuntimeException` làm cách sửa duy nhất, không nhắc tới việc khai tường minh",
+    ],
+    probes: [
+      "Nếu bean có interface và dùng JDK proxy thì bảng giới hạn đổi thế nào?",
+      "Bạn khai gì trên annotation để rollback cả checked exception?",
+      "`readOnly` có chặn được việc ghi không, và nó thật sự là gì?",
+    ],
+    refs: ["java-10", "java-09"],
+  },
+  {
+    id: "java-iq23",
+    field: "java",
+    topic: "java-tx",
+    level: 3,
+    minutes: 11,
+    question: "Một method `@Transactional` cần gọi một API bên ngoài rồi ghi kết quả. Bạn đặt ranh giới transaction ở đâu?",
+    tradeoffs: [
+      {
+        option: "Cắt thành hai transaction, lời gọi API nằm **giữa**",
+        when: "Mặc định của tôi. Connection chỉ bị giữ trong hai đoạn ghi ngắn, không bị giữ suốt thời gian chờ API. Đổi lại là mất tính nguyên tử tức thời, nên phải có **trạng thái trung gian** và một cơ chế hoà giải cho những bản ghi kẹt.",
+      },
+      {
+        option: "Giữ một transaction bao cả lời gọi API",
+        when: "Chỉ khi lời gọi rất nhanh, có timeout chặt, và lưu lượng thấp. Được tính nguyên tử đơn giản, nhưng connection bị giữ **từ lúc method bắt đầu tới lúc kết thúc** — không phải mượn lúc chạy SQL rồi trả — nên nó nhân thời gian giữ connection lên theo độ trễ của bên ngoài.",
+      },
+      {
+        option: "Ghi trước, đẩy lời gọi API sang **sau khi commit**",
+        when: "Khi việc gọi API là hệ quả chứ không phải điều kiện của việc ghi — gửi thông báo, đồng bộ hệ thống khác. Transaction ngắn nhất có thể, và việc gọi có thể thử lại độc lập. Cần một hàng đợi hoặc bảng việc cần làm để không mất lời gọi khi tiến trình chết.",
+      },
+    ],
+    mustCover: [
+      "Connection bị giữ **suốt cả method** có transaction, không phải chỉ trong lúc chạy câu SQL",
+      "Vì vậy một lời gọi mạng trong vùng transaction nhân thời gian giữ connection lên theo độ trễ của bên ngoài",
+      "Số connection cần tỉ lệ thuận với thời gian giữ, nên nó **nhân trực tiếp** vào kích thước pool cần thiết",
+      "Chế độ hỏng khi bên ngoài chậm là **cạn connection pool** — và nó ảnh hưởng cả những đường đi không liên quan",
+      "Cắt transaction là đổi tính nguyên tử tức thời lấy tính nhất quán cuối cùng, nên phải thiết kế trạng thái trung gian",
+      "Nếu lời gọi là **hệ quả** chứ không phải điều kiện thì đẩy ra sau commit là lựa chọn tốt nhất",
+      "`@Async` cộng `@Transactional` không giải được vì transaction bound vào thread — thread mới nằm ngoài transaction cũ",
+    ],
+    model: "Điểm xuất phát là một sự thật hay bị hiểu sai: khi một method có transaction, connection được lấy lúc method bắt đầu và giữ tới lúc method kết thúc — không phải mượn trong lúc chạy câu SQL rồi trả ngay. Nên mọi thứ nằm trong thân method đều tính vào thời gian giữ connection, kể cả việc ngồi chờ một API bên ngoài. Hậu quả có thể tính ra được: số connection cần tỉ lệ thuận với thời gian giữ, nên nếu lời gọi API mất 200ms trong khi phần ghi chỉ mất 10ms thì ta vừa nhân nhu cầu connection lên hơn hai chục lần. Và chế độ hỏng thì tệ hơn con số: khi bên ngoài chậm, pool cạn, và mọi đường đi khác cần database cũng đứng theo — một tính năng lỗi làm sập những tính năng không liên quan. Vì vậy mặc định của tôi là cắt: transaction thứ nhất ghi bản ghi ở trạng thái chờ và commit, trả connection về; lời gọi API chạy hoàn toàn ngoài transaction với timeout chặt; transaction thứ hai ghi kết quả và chuyển trạng thái. Cái giá phải nói thẳng là mất tính nguyên tử tức thời, nên tôi bù bằng thiết kế chứ không bằng hy vọng: trạng thái chờ phải là trạng thái hợp lệ mà mọi phần đọc đều hiểu, và phải có một job hoà giải quét những bản ghi kẹt ở trạng thái chờ quá lâu. Nếu lời gọi API thật ra là **hệ quả** của việc ghi chứ không phải điều kiện — gửi thông báo, đồng bộ sang hệ thống khác — thì lựa chọn tốt hơn nữa là ghi trước rồi đẩy lời gọi ra sau commit, qua một hàng đợi hoặc một bảng việc cần làm để nó không bị mất nếu tiến trình chết. Tôi chỉ giữ một transaction bao cả lời gọi khi API rất nhanh, có timeout chặt và lưu lượng thấp, và khi đó vẫn phải tính lại kích thước pool theo thời gian giữ mới. Một lối tắt cần loại ngay: dùng `@Async` để \"đẩy lời gọi ra ngoài\" không giải được bài toán nguyên tử, vì transaction bound vào thread nên thread mới nằm hoàn toàn ngoài transaction cũ — ta được một lời gọi bất đồng bộ nhưng mất luôn bảo đảm về tính nhất quán.",
+    redFlags: [
+      "Tin rằng connection chỉ bị giữ trong lúc chạy câu SQL",
+      "Giữ lời gọi mạng trong vùng transaction rồi nâng pool để chịu được",
+      "Dùng `@Async` và nghĩ nó giữ được ngữ cảnh transaction",
+      "Cắt transaction mà không thiết kế trạng thái trung gian và cơ chế hoà giải",
+    ],
+    probes: [
+      "Tính ra pool cần thiết trong hai phương án đầu, với API 200ms và phần ghi 10ms",
+      "Bản ghi kẹt ở trạng thái chờ thì ai dọn và theo quy tắc nào?",
+      "Vì sao `@Async` không mang được transaction sang thread mới?",
+    ],
+    refs: ["java-10", "java-09"],
+  },
+  {
+    id: "java-iq24",
+    field: "java",
+    topic: "java-tx",
+    level: 4,
+    minutes: 15,
+    incident: {
+      symptom: "Một luồng nhập liệu báo thành công nhưng khoảng 0,4% lô hàng bị ghi **một nửa** — có bản ghi chi tiết mà không có bản ghi tổng. Không exception nào trong log, không cảnh báo. Ở một luồng khác, đội lại gặp `UnexpectedRollbackException` ném ra từ một method không hề gọi rollback.",
+      scale: "Khoảng 8.000 lô mỗi ngày, nên 0,4% là chừng 32 lô lệch mỗi ngày, tích luỹ 6 tháng. Kế toán vừa phát hiện khi đối soát quý.",
+      constraints: "Không đổi được chữ ký các method public — 5 module khác đang gọi. Phải xác định được toàn bộ lô đã lệch trong 6 tháng. Phải giải thích được cả hai triệu chứng, vì đội nghi đó là hai lỗi không liên quan.",
+      },
+    question: "Hai triệu chứng này có liên quan tới nhau không? Nêu chẩn đoán cho từng cái và cách bạn truy lại 6 tháng dữ liệu.",
+    mustCover: [
+      "Triệu chứng thứ nhất: một ngoại lệ **checked** làm Spring im lặng commit phần đã ghi thay vì rollback",
+      "Mặc định chỉ `RuntimeException` và `Error` gây rollback; quy ước này kế thừa từ EJB và **không** báo lỗi gì",
+      "Đó là lý do không có exception trong log của dịch vụ: ngoại lệ đã bị bắt ở đâu đó, còn transaction thì đã commit",
+      "Triệu chứng thứ hai: một transaction **lồng** bị đánh dấu rollback-only, nhưng transaction ngoài vẫn cố commit",
+      "Khi transaction ngoài commit một transaction đã bị đánh dấu, Spring ném `UnexpectedRollbackException` — cái dấu \"hàng hỏng\"",
+      "Hai triệu chứng **cùng gốc**: ranh giới transaction và chính sách rollback chưa được thiết kế, chỉ được để mặc định",
+      "Sửa: khai tường minh loại ngoại lệ cần rollback, và rà lại propagation ở các lời gọi lồng",
+      "Truy lại 6 tháng bằng **đối soát dữ liệu** — tìm bản ghi chi tiết không có bản ghi tổng tương ứng, không dựa vào log",
+    ],
+    model: "Hai triệu chứng trông khác nhau nhưng cùng một gốc, và tôi sẽ trả lời phần \"có liên quan không\" trước vì nó quyết định cách sửa. Triệu chứng thứ nhất là ngoại lệ checked. Mặc định Spring chỉ rollback với `RuntimeException` và `Error`; một ngoại lệ checked như `IOException` hay một `BusinessException` kế thừa `Exception` sẽ khiến Spring **commit** phần đã ghi. Đây là quy ước kế thừa từ EJB — checked exception được đọc là \"nghiệp vụ đã tính đến trường hợp này\" — nên Spring tôn trọng và commit, hoàn toàn im lặng. Nó khớp trọn bộ triệu chứng: lô được ghi một nửa, luồng báo thành công, và không có exception nào trong log vì ngoại lệ đã bị bắt ở tầng trên rồi xử lý như một trường hợp nghiệp vụ bình thường. Triệu chứng thứ hai là `UnexpectedRollbackException`, và nó là dấu vết của một cơ chế khác: khi một transaction lồng gặp ngoại lệ và bị đánh dấu rollback-only, transaction ngoài vẫn tiếp tục chạy và tới lúc commit thì Spring phát hiện nó đang commit một transaction đã bị đánh dấu — nên nó ném ngoại lệ ấy, như một cái dấu \"hàng hỏng\" dán lên transaction. Method ném ra không hề gọi rollback là đúng, vì bên đánh dấu là một method khác nằm sâu hơn. Gốc chung của hai cái là ranh giới transaction và chính sách rollback chưa bao giờ được thiết kế, chỉ được để mặc định rồi tin rằng mặc định làm điều ta muốn. Nên cách sửa cũng chung một hướng và không cần đổi chữ ký nào — thay đổi nằm trong annotation và trong cách tổ chức lời gọi. Cụ thể: khai tường minh loại ngoại lệ cần rollback trên các method ghi, để một `BusinessException` không còn lặng lẽ commit; và rà lại propagation ở mọi lời gọi lồng để quyết định rõ đâu là một đơn vị công việc, thay vì để transaction lồng đánh dấu chéo lên transaction ngoài. Riêng việc truy lại 6 tháng thì tôi không dựa vào log, vì log chưa từng ghi gì về những lô này. Tôi đối soát trên dữ liệu: tìm mọi bản ghi chi tiết không có bản ghi tổng tương ứng trong toàn bộ 6 tháng — đó chính xác là tập lô đã lệch, đọc được ngay mà không cần bản vá lên trước, và nó vừa để đối soát với kế toán vừa là mốc để xác nhận bản vá đã thật sự chặn được lỗ hổng.",
+    redFlags: [
+      "Coi hai triệu chứng là hai lỗi không liên quan và sửa riêng lẻ",
+      "Tin rằng mọi ngoại lệ đều gây rollback, nên không giải thích được lô ghi một nửa",
+      "Bắt `UnexpectedRollbackException` rồi bỏ qua — đó là cái dấu báo dữ liệu đã hỏng, không phải tiếng ồn",
+      "Đòi đổi chữ ký method để sửa — ràng buộc đã cấm, và không cần thiết",
+      "Dùng log để dựng lại 6 tháng, trong khi log chưa từng ghi gì",
+    ],
+    probes: [
+      "Bạn khai gì để một `BusinessException` gây rollback?",
+      "Vì sao method ném `UnexpectedRollbackException` lại không phải method đánh dấu rollback?",
+      "Sau khi vá, bạn dùng chỉ số nào để chứng minh lỗ hổng đã bị chặn?",
+    ],
+    refs: ["java-10", "java-09"],
+  },
 ];
