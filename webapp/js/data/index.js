@@ -21,13 +21,14 @@ import { modernJavaInterview } from "./modern-java/interview.js";
 import { wgjdInterview } from "./wgjd/interview.js";
 import { ddiaInterview } from "./ddia/interview.js";
 import { kafkaInterview } from "./kafka/interview.js";
+import { modernConcurrencyInterview } from "./modern-concurrency/interview.js";
 
 export const allDocs = docs;
 export const allTracks = tracks;
 export const allFlashcards = [...flashcards, ...sysprogFlashcards];
 export const allQuestions = [...questions, ...sysprogQuestionsPart1, ...sysprogQuestionsPart2];
 export const allMatrices = [seniorJavaMatrix];
-export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview, ...wgjdInterview, ...ddiaInterview, ...kafkaInterview];
+export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview, ...wgjdInterview, ...ddiaInterview, ...kafkaInterview, ...modernConcurrencyInterview];
 
 export function fieldOfRecord(rec) {
   const f = rec?.field;

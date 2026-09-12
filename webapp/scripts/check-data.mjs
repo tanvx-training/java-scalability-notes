@@ -51,6 +51,7 @@ const EXPECTED = {
     "matrix-criteria:senior-java": 96,
     // Lĩnh vực Modern Concurrency in Java — 8 chương sách O'Reilly.
     "docs:modern-concurrency": 8,
+    "interview:modern-concurrency": 24,
     "roadmap-items:modern-concurrency": 32,
     // Lĩnh vực DDIA — 14 chương Designing Data-Intensive Applications ấn bản 2.
     "docs:ddia": 14,

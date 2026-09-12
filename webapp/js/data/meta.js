@@ -188,4 +188,11 @@ export const INTERVIEW_TOPICS = {
   "kf-reliability":  { label: "Truyền tin cậy và exactly-once",                      short: "Tin cậy",    field: "kafka" },
   "kf-integration":  { label: "Data pipeline, mirroring và admin",                   short: "Pipeline",   field: "kafka" },
   "kf-ops":          { label: "Bảo mật, vận hành, giám sát và stream",               short: "Vận hành",   field: "kafka" },
+
+  "mc-vthread":     { label: "Virtual thread: cơ chế và kỳ vọng",                  short: "VThread",     field: "modern-concurrency" },
+  "mc-mechanics":   { label: "Cơ chế concurrency hiện đại: pool và continuation",  short: "Cơ chế",      field: "modern-concurrency" },
+  "mc-structured":  { label: "Structured concurrency",                             short: "Structured",  field: "modern-concurrency" },
+  "mc-scoped":      { label: "Scoped values",                                      short: "Scoped",      field: "modern-concurrency" },
+  "mc-reactive":    { label: "Reactive sau virtual thread",                        short: "Reactive",    field: "modern-concurrency" },
+  "mc-framework":   { label: "Framework và di trú thực tế",                        short: "Framework",   field: "modern-concurrency" },
 };
