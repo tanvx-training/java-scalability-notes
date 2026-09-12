@@ -337,4 +337,152 @@ public void addBid(Long itemId, BigDecimal amount) {
     ],
     refs: ["jpa-09", "jpa-08"],
   },
+
+  // ===== jpa-lifecycle — Persistence context & vòng đời (jpa-iq09–jpa-iq12) =====
+  {
+    id: "jpa-iq09",
+    field: "jpa",
+    topic: "jpa-lifecycle",
+    level: 1,
+    minutes: 6,
+    question: "JPA định nghĩa bốn trạng thái cho một instance entity. Kể tên chúng, nói rõ cái gì đẩy một instance từ trạng thái này sang trạng thái kia, và persistence context đóng vai trò gì trong bức tranh đó?",
+    mustCover: [
+      "Bốn trạng thái là **transient**, **persistent**, **detached** và **removed**",
+      "Instance tạo bằng `new` là transient: trạng thái mất và bị thu gom rác ngay khi không còn ai tham chiếu, và không có cơ chế rollback nào cho nó",
+      "Chuyển từ transient sang persistent cần **hoặc** một lời gọi `persist()`, **hoặc** tạo tham chiếu từ một instance đã persistent có bật cascade cho association đó",
+      "Persistence context là dịch vụ ghi nhớ mọi sửa đổi và thay đổi trạng thái trong một **đơn vị công việc**, và là phạm vi của identity — đây cũng chính là bộ nhớ đệm cấp một",
+    ],
+    model: "JPA phơi ra bốn trạng thái và giấu độ phức tạp nội bộ của Hibernate khỏi mã client. **Transient** là instance vừa `new` ra: nó chỉ sống trong bộ nhớ, mất đi khi hết tham chiếu, và Hibernate không cung cấp chức năng hoàn tác nào cho nó — sửa giá một `Item` transient rồi thì không tự động undo được. **Persistent** là instance đang được một persistence context quản lý và gắn với một dòng trong cơ sở dữ liệu. **Detached** là instance từng persistent nhưng context quản lý nó đã đóng; nó vẫn giữ giá trị định danh nên vẫn nói được nó ứng với dòng nào, nhưng không còn ai theo dõi thay đổi của nó. **Removed** là instance đã được đánh dấu xoá và sẽ biến thành lệnh `DELETE` khi context flush. Về chuyển đổi, điểm hay bị bỏ sót là có **hai** đường đi từ transient sang persistent: gọi `persist()` tường minh, hoặc chỉ cần tạo một tham chiếu từ một instance đã persistent nếu association đó bật cascade — chính đường thứ hai giải thích vì sao nhiều object được lưu mà mã nguồn chẳng gọi `save` lần nào. Persistence context là thứ buộc tất cả lại: nó ghi nhớ mọi sửa đổi trong một đơn vị công việc, và nó là phạm vi định danh — trong cùng một context, hai lần nạp cùng một dòng luôn trả về cùng một instance, và đó cũng là điều khiến nó đóng vai bộ nhớ đệm cấp một.",
+    redFlags: [
+      "Chỉ kể ba trạng thái, bỏ sót removed — hoặc coi removed đồng nghĩa với đã xoá khỏi cơ sở dữ liệu, trong khi lệnh `DELETE` mới chỉ được xếp hàng",
+      "Nói cách duy nhất để lưu một object là gọi `persist()` — bỏ qua đường cascade từ một instance đã persistent",
+      "Mô tả persistence context chỉ như một cache tăng tốc, không nói tới vai trò phạm vi định danh và nơi ghi nhớ thay đổi",
+    ],
+    probes: [
+      "Trong cùng một persistence context, hai lần `find()` cùng một id trả về cùng một instance hay hai instance?",
+      "Instance ở trạng thái removed còn quay lại persistent được không, và bằng cách nào?",
+      "Vì sao sách nói mã nghiệp vụ như `calculateTotalPrice()` có thể hoàn toàn không biết tới persistence?",
+    ],
+    refs: ["jpa-10"],
+  },
+  {
+    id: "jpa-iq10",
+    field: "jpa",
+    topic: "jpa-lifecycle",
+    level: 2,
+    minutes: 7,
+    code: {
+      lang: "java",
+      text: `@Service
+public class ItemService {
+
+    @Transactional
+    public void applyDiscount(Long itemId, BigDecimal percent) {
+        Item item = itemRepository.findById(itemId).orElseThrow();
+        item.setBuyNowPrice(item.getBuyNowPrice().multiply(percent));
+        // không gọi itemRepository.save(item)
+    }
+
+    @Transactional(readOnly = false)
+    public void renameFromDto(ItemDto dto) {
+        Item detached = dto.toEntity();      // có id, tạo bằng new
+        detached.setName(dto.getName());
+        // không gọi save, không gọi merge
+    }
+}`,
+    },
+    question: "Method thứ nhất vẫn ghi được giá mới xuống cơ sở dữ liệu dù không gọi `save`. Method thứ hai thì không ghi gì. Giải thích hai hành vi này.",
+    mustCover: [
+      "Ở method thứ nhất, `findById` trả về instance ở trạng thái **persistent**, được persistence context quản lý",
+      "Persistence context ghi nhớ trạng thái lúc nạp và so lại khi **flush**; phát hiện chênh lệch thì tự sinh `UPDATE` — không cần lời gọi lưu nào",
+      "Ở method thứ hai, object tạo bằng `new` **không** được context nào quản lý dù đã có giá trị định danh, nên không ai theo dõi thay đổi của nó",
+      "Muốn ghi object ở trạng thái đó phải gọi `merge()`, và phải dùng **instance trả về** chứ không dùng tiếp tham chiếu cũ",
+    ],
+    model: "Khác biệt nằm ở chỗ object có đang được persistence context quản lý hay không. Trong `applyDiscount`, `findById` nạp `Item` vào persistence context của transaction hiện hành, nên nó ở trạng thái persistent. Context giữ lại ảnh chụp trạng thái lúc nạp; tới lúc flush — thường là khi commit — nó so ảnh chụp đó với trạng thái hiện tại, thấy `buyNowPrice` đã đổi và tự sinh một lệnh `UPDATE`. Không có lời gọi lưu nào vì không cần: cơ chế theo dõi thay đổi là mặc định của một instance được quản lý. Trong `renameFromDto` thì ngược lại: `dto.toEntity()` tạo object bằng `new`, và dù ta có tự gán id cho nó thì nó vẫn không nằm trong persistence context nào. Về phân loại nó tương đương trạng thái detached — có định danh, biết ứng với dòng nào, nhưng không ai theo dõi. Không có ảnh chụp để so, nên flush không sinh câu lệnh nào và thay đổi im lặng biến mất. Cách sửa là gọi `merge()`: Hibernate tìm trong context xem có instance persistent nào cùng định danh không, không có thì nạp từ cơ sở dữ liệu, rồi **sao chép** trạng thái của object ta đưa vào lên instance persistent ấy và trả instance đó về. Điểm bắt buộc phải nói: từ đó trở đi phải dùng instance trả về và bỏ tham chiếu cũ — nó đã cũ và không còn biểu diễn trạng thái hiện tại; mọi thành phần khác trong ứng dụng còn giữ tham chiếu cũ đều phải chuyển sang.",
+    redFlags: [
+      "Nói `findById` \"tự động bật chế độ lưu\" — cơ chế là so ảnh chụp lúc flush, không phải một chế độ nào được bật",
+      "Sửa method thứ hai bằng cách gọi `save()` mà không nói gì tới việc phải dùng instance trả về",
+      "Cho rằng gán id thủ công là đủ để object được quản lý — định danh không quyết định trạng thái quản lý",
+    ],
+    probes: [
+      "Nếu `applyDiscount` ném exception sau dòng `setBuyNowPrice` thì `UPDATE` có chạy không?",
+      "`merge()` xử lý một object hoàn toàn chưa có định danh thế nào?",
+      "Đặt `@Transactional(readOnly = true)` lên method thứ nhất thì điều gì đổi?",
+    ],
+    refs: ["jpa-10"],
+  },
+  {
+    id: "jpa-iq11",
+    field: "jpa",
+    topic: "jpa-lifecycle",
+    level: 3,
+    minutes: 9,
+    question: "Tầng web gửi xuống một object đã mang sẵn định danh, dựng lại từ form người dùng. Bạn lưu nó bằng cách nào, và điều gì khiến bạn chọn khác đi?",
+    tradeoffs: [
+      {
+        option: "`merge()` object dựng từ form",
+        when: "Kiến trúc dựa hẳn trên detachment: tầng web dựng object đầy đủ và gửi xuống nguyên khối. Sách lưu ý `merge()` xử lý được **cả** object detached lẫn transient, nên một kiến trúc kiểu này có thể không bao giờ gọi tới `persist()`. Đổi lại phải kỷ luật chuyển mọi tham chiếu sang instance trả về.",
+      },
+      {
+        option: "Nạp lại bằng `find()` rồi chép từng field cần sửa",
+        when: "Form chỉ gửi một phần entity, hoặc có field người dùng **không được phép** đổi. `merge()` chép toàn bộ trạng thái nên field vắng mặt trong form sẽ bị ghi đè thành `null` — đây là ca phải tránh `merge()`.",
+      },
+      {
+        option: "`persist()` một object hoàn toàn mới",
+        when: "Object chưa có định danh và ta biết chắc đây là bản ghi mới. Rõ ràng về ý định hơn `merge()`, và không tốn một lần `SELECT` để đi tìm dòng cũ.",
+      },
+    ],
+    mustCover: [
+      "`merge()` không gắn object của bạn vào context — nó **sao chép** trạng thái lên một instance persistent rồi trả instance đó về",
+      "Nếu chưa có instance nào cùng định danh trong context, Hibernate **nạp từ cơ sở dữ liệu** trước, nên `merge()` có thể tốn thêm một câu `SELECT`",
+      "Nếu tra cứu theo định danh cũng không thấy dòng nào, Hibernate khởi tạo instance mới và chèn — `merge()` im lặng trở thành thao tác chèn",
+      "Rủi ro lớn nhất của `merge()` là ghi đè: nó chép toàn bộ trạng thái, nên field không có trong form sẽ thành `null`",
+      "Sau `merge()` phải bỏ tham chiếu cũ và chuyển mọi thành phần đang giữ nó sang instance trả về",
+    ],
+    model: "Trước khi chọn, phải nói đúng `merge()` làm gì, vì tên gọi dễ gây hiểu nhầm. Nó không biến object của ta thành persistent. Hibernate tìm trong persistence context một instance persistent cùng định danh; không có thì nạp từ cơ sở dữ liệu; rồi sao chép trạng thái từ object ta đưa vào lên instance ấy và **trả instance ấy về**. Object gốc vẫn nằm ngoài context và từ giây phút đó đã lỗi thời. Ba hệ quả thực tế. Thứ nhất, `merge()` có thể tốn một câu `SELECT` mà `persist()` không cần. Thứ hai, nếu không tìm thấy dòng nào mang định danh đó, Hibernate khởi tạo instance mới rồi chèn — nên một thao tác ta nghĩ là cập nhật có thể lặng lẽ thành thao tác chèn, và với id đến từ phía client thì đó là một lỗ hổng cần chặn ở tầng kiểm tra đầu vào. Thứ ba, và đây là cái bẫy hay gặp nhất: `merge()` chép **toàn bộ** trạng thái, nên nếu form chỉ gửi ba field còn entity có mười field, bảy field kia sẽ bị ghi thành `null`. Vì vậy tôi chọn `merge()` khi tầng web thật sự gửi xuống entity đầy đủ và kiến trúc đã chấp nhận mô hình detachment; còn khi form gửi một phần, tôi nạp lại bằng `find()` rồi chép đúng những field được phép sửa — chậm hơn một câu `SELECT` nhưng không có đường nào để mất dữ liệu. Và trong cả hai trường hợp, kỷ luật bắt buộc là từ sau `merge()` thì mọi chỗ phải dùng instance trả về.",
+    redFlags: [
+      "Nói `merge()` \"gắn object vào persistence context\" — nó sao chép sang một instance khác, và tiếp tục dùng tham chiếu cũ là nguồn lỗi kinh điển",
+      "Dùng `merge()` cho form gửi một phần entity mà không nhận ra các field vắng mặt sẽ bị ghi đè thành `null`",
+      "Tin rằng `merge()` luôn là cập nhật — không có dòng nào mang định danh đó thì nó chèn mới",
+    ],
+    probes: [
+      "Id đến từ client và không tồn tại trong cơ sở dữ liệu — bạn chặn ở đâu để `merge()` không lặng lẽ chèn bản ghi mới?",
+      "Nếu persistence context đã có sẵn một instance cùng định danh thì `merge()` còn chạy `SELECT` không?",
+      "Sách nói một kiến trúc dựa trên detachment có thể không bao giờ gọi `persist()` — bạn thấy đánh đổi gì ở đó?",
+    ],
+    refs: ["jpa-10", "jpa-02"],
+  },
+  {
+    id: "jpa-iq12",
+    field: "jpa",
+    topic: "jpa-lifecycle",
+    level: 4,
+    minutes: 14,
+    incident: {
+      symptom: "Sau khi tách tầng controller khỏi service để dựng một API mới, `LazyInitializationException` nổ ở khâu serialize JSON. Lỗi không xuất hiện đều: endpoint danh sách thì chạy, endpoint chi tiết thì hỏng, và test tích hợp vẫn xanh toàn bộ.",
+      scale: "23 endpoint đang dùng chung 6 entity có association lazy; khoảng 4% request của giờ cao điểm trả về 500.",
+      constraints: "Không được bật `spring.jpa.open-in-view` — đội đã ra quyết định kiến trúc cấm giữ persistence context mở qua tầng view. Không được đổi `FetchType` sang `EAGER` trên các association dùng chung. Không được dừng dịch vụ để phát hành.",
+    },
+    question: "Bạn chẩn đoán và xử lý thế nào?",
+    mustCover: [
+      "Ngoại lệ này nghĩa là một association lazy được chạm tới **sau khi** persistence context đã đóng, tức object đã ở trạng thái detached",
+      "Nó xuất hiện ngay sau khi tách tầng vì trước đó lời gọi nằm trong cùng đơn vị công việc, còn giờ serialize xảy ra bên ngoài ranh giới transaction",
+      "Test vẫn xanh vì test chạy trong transaction nên context chưa đóng — phải flush và clear context, hoặc kiểm ngoài transaction, mới tái hiện được",
+      "Bật giữ context mở qua tầng view là **đường cụt**: nó chỉ đẩy việc nạp ra ngoài ranh giới transaction, sinh truy vấn ngoài kiểm soát và che mất lỗi thiết kế fetch plan",
+      "Cách đúng là quyết định fetch plan tại chỗ gọi — nạp sẵn đúng thứ cần bằng `join fetch` hoặc `@EntityGraph` — và trả về DTO thay vì entity ra khỏi tầng service",
+    ],
+    model: "Ngoại lệ nói đúng một chuyện: có người chạm vào một association lazy khi object đã detached, tức persistence context quản lý nó đã đóng. Trước khi tách tầng, việc serialize vô tình vẫn nằm trong cùng đơn vị công việc nên proxy còn khởi tạo được; tách xong thì transaction kết thúc ở ranh giới service, còn Jackson mới bắt đầu duyệt object sau đó. Điều đó giải thích cả tính không đều: endpoint danh sách trả về projection phẳng nên không chạm association nào, còn endpoint chi tiết trả nguyên entity và đi vào nhánh lazy. Nó cũng giải thích vì sao test xanh — test chạy trong transaction nên context chưa đóng; muốn tái hiện phải flush rồi clear context, hoặc kiểm ở ngoài ranh giới transaction, và đó là việc phải làm đầu tiên để có một bài kiểm tái hiện được. Về cách chữa, ràng buộc của đề bài đã chặn sẵn hai lối tắt phổ biến, và chặn đúng. Giữ persistence context mở qua tầng view không sửa gì cả: nó chỉ dời thời điểm nạp ra ngoài ranh giới transaction, khiến truy vấn phát sinh ở chỗ không ai kiểm soát và che mất chính lỗi thiết kế fetch plan. Đổi `FetchType` sang `EAGER` còn tệ hơn vì nó là quyết định toàn cục cho mọi chỗ dùng entity đó, trong khi nhu cầu nạp lại khác nhau theo từng màn hình — mà sách cũng nói rõ mặc định lazy của collection là mặc định tốt và `EAGER` hiếm khi cần. Đường đúng là đưa quyết định nạp về đúng chỗ gọi: mỗi truy vấn khai fetch plan của riêng nó bằng `join fetch` hoặc `@EntityGraph`, và tầng service trả DTO thay vì để entity đi ra ngoài ranh giới transaction. Thứ tự triển khai thì bám theo dữ liệu: log ngoại lệ để xếp hạng 23 endpoint theo số lỗi thật, sửa nhóm gây ra phần lớn 4% trước, và vì mỗi endpoint sửa được độc lập nên không cần dừng dịch vụ.",
+    redFlags: [
+      "Đề xuất bật giữ context mở qua tầng view — ràng buộc đã cấm, và kể cả không cấm thì nó che lỗi chứ không sửa",
+      "Chuyển association sang `EAGER` cho xong: một quyết định toàn cục cho một nhu cầu cục bộ, và thường kéo theo N+1 ở chỗ khác",
+      "Gọi `Hibernate.initialize()` rải rác trong controller — vẫn là nạp ngoài fetch plan, chỉ khác ở chỗ thủ công",
+      "Kết luận \"test xanh nên nhánh đó không lỗi\" mà không nhận ra test đang chạy trong transaction nên không bao giờ tái hiện được",
+    ],
+    probes: [
+      "Viết một test thật sự bắt được lỗi này — nó phải khác test hiện tại ở chỗ nào?",
+      "Vì sao endpoint danh sách không hỏng còn endpoint chi tiết thì hỏng?",
+      "Nếu buộc phải trả entity ra ngoài service, bạn còn cách nào an toàn không?",
+    ],
+    refs: ["jpa-10"],
+  },
 ];
