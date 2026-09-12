@@ -148,7 +148,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Java Persistence with Spring Data and Hibernate (Cătălin Tudose — Manning) — đủ 20 chương: object/relational paradigm mismatch và vai trò của ORM, dựng dự án với JPA thuần, Hibernate native và Spring Data JPA, domain model và metadata, query method và projection, ánh xạ persistent class, value type, inheritance, collection và entity association, vòng đời persistence và EntityManager, transaction và điều khiển đồng thời, fetch plan và fetch profile, cascade, Envers và data filter, tích hợp với Spring theo mẫu DAO, Spring Data JDBC, Spring Data REST, Spring Data MongoDB, Hibernate OGM, Querydsl, và kiểm thử tầng persistence bằng Spring TestContext.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "hibernate.org — ORM documentation", href: "https://hibernate.org/orm/documentation/" },
   },
 };
@@ -171,6 +171,7 @@ export const NAV_GROUPS = [
   { title: "Luyện tập", items: [
       { id: "flashcards", label: "Flashcards",      icon: "🃏", href: "#/flashcards" },
       { id: "quiz",       label: "Trắc nghiệm",     icon: "✅", href: "#/quiz" },
+      { id: "interview",  label: "Câu hỏi phỏng vấn", icon: "🎤", href: "#/interview" },
       { id: "exam",       label: "Thi thử",         icon: "⏱️", href: "#/exam" },
       { id: "labs",       label: "Labs thực hành",  icon: "🧪", href: "#/labs" } ] },
 ];

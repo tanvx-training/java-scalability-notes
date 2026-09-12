@@ -126,3 +126,17 @@ export const DIFFICULTY = {
   2: { label: "Trung bình", color: "amber" },
   3: { label: "Khó", color: "red" },
 };
+
+// Chủ đề của ngân hàng câu hỏi phỏng vấn — cùng hình dạng DOMAINS/TOPICS, nhưng
+// `field` BẮT BUỘC khai tường minh (DOMAINS mặc định "kubernetes" vì lý do lịch
+// sử; ngân hàng này mới nên không thừa kế mặc định đó).
+//
+// Chỉ khai chủ đề cho lĩnh vực ĐÃ có câu hỏi — giống nếp `modules` trong fields.js.
+export const INTERVIEW_TOPICS = {
+  "jpa-mapping":   { label: "Ánh xạ & domain model",          short: "Ánh xạ",      field: "jpa" },
+  "jpa-assoc":     { label: "Collection & association",       short: "Association", field: "jpa" },
+  "jpa-lifecycle": { label: "Persistence context & vòng đời", short: "Vòng đời",    field: "jpa" },
+  "jpa-tx":        { label: "Transaction & concurrency",      short: "Transaction", field: "jpa" },
+  "jpa-fetch":     { label: "Fetch plan & truy vấn",          short: "Fetch",       field: "jpa" },
+  "jpa-spring":    { label: "Tích hợp Spring & kiểm thử",     short: "Spring",      field: "jpa" },
+};

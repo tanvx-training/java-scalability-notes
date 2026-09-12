@@ -8,7 +8,7 @@ import { getDocs, getMatrices, getTracks } from "../data/index.js";
 import { labs } from "../data/kubernetes/labs.js";
 import { currentField, goToField } from "../lib/field.js";
 import { recentItems, streakInfo } from "../lib/activity.js";
-import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, fieldSummary, trackStats } from "../lib/stats.js";
+import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, interviewStats, fieldSummary, trackStats } from "../lib/stats.js";
 import { fieldProgress } from "../lib/guides.js";
 
 // Tiến độ đại diện: lộ trình nếu có, không thì tài liệu đã đọc.
@@ -26,6 +26,7 @@ export function render(root) {
   const mx = matrixStats(fieldKey);
   const fl = flashStats(fieldKey);
   const qz = quizStats(fieldKey);
+  const iv = interviewStats(fieldKey);
   const ex = examStats();
   const fp = has("guide") ? fieldProgress(fieldKey) : null;
   const st = streakInfo();
@@ -94,6 +95,9 @@ export function render(root) {
       extra: `${fl.fresh} thẻ chưa học · ${fl.total} tổng`, tone: fl.due ? "red" : null }) : null,
     has("quiz") ? statCard({ icon: "✅", num: qz.acc == null ? "—" : `${qz.acc}%`, label: "Độ chính xác trắc nghiệm", href: "#/quiz",
       extra: `đã gặp ${qz.seen}/${qz.total} câu` }) : null,
+    has("interview") ? statCard({ icon: "🎤", num: iv.passPct == null ? "—" : `${iv.passPct}%`,
+      label: "Tỉ lệ đạt phỏng vấn", href: "#/interview",
+      extra: `${iv.seen}/${iv.total} câu đã tự chấm` }) : null,
     has("exam") ? statCard({ icon: "⏱️", num: ex.best == null ? "—" : `${ex.best}%`, label: "Điểm thi thử tốt nhất", href: "#/exam",
       extra: ex.count ? `${ex.count} lượt thi · đậu ${ex.passCount}` : "chưa thi lần nào" }) : null,
     has("tracker") ? statCard({ icon: "📊", num: `${mx.pct}%`, label: "Ma trận năng lực", href: "#/tracker",
