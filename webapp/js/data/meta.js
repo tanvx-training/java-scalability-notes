@@ -202,4 +202,11 @@ export const INTERVIEW_TOPICS = {
   "ss-mvc":      { label: "Spring Boot, MVC và web scope",              short: "MVC",      field: "spring-start" },
   "ss-rest":     { label: "REST service và REST client",                short: "REST",     field: "spring-start" },
   "ss-data":     { label: "Data source, transaction và kiểm thử",       short: "Data",     field: "spring-start" },
+
+  "ssec-auth":      { label: "Xác thực: UserDetails, PasswordEncoder, SecurityContext",  short: "Xác thực",    field: "spring-security" },
+  "ssec-filter":    { label: "Chuỗi bộ lọc HTTP",                                        short: "Bộ lọc",      field: "spring-security" },
+  "ssec-authz":     { label: "Phân quyền endpoint và phương thức",                       short: "Phân quyền",  field: "spring-security" },
+  "ssec-csrf":      { label: "CSRF và CORS",                                             short: "CSRF/CORS",   field: "spring-security" },
+  "ssec-oauth":     { label: "OAuth 2 và OpenID Connect",                                short: "OAuth 2",     field: "spring-security" },
+  "ssec-reactive":  { label: "Bảo mật phản ứng và kiểm thử",                             short: "Reactive",    field: "spring-security" },
 };
