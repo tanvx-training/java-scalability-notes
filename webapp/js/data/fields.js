@@ -27,7 +27,7 @@ export const FIELDS = {
     certFilter: false,
     // Mở dần theo dữ liệu: "docs" thêm ở Task 6, "roadmap" Task 8,
     // "flashcards" Task 10, "quiz" Task 11. Khai sớm là bất biến #7 báo đỏ.
-    modules: ["dashboard", "guide", "roadmap", "docs", "flashcards", "quiz"],
+    modules: ["dashboard", "guide", "roadmap", "docs", "flashcards", "quiz", "interview"],
     externalRef: { label: "illinois-cs241/coursebook", href: "https://github.com/illinois-cs241/coursebook" },
   },
   java: {

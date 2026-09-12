@@ -209,4 +209,11 @@ export const INTERVIEW_TOPICS = {
   "ssec-csrf":      { label: "CSRF và CORS",                                             short: "CSRF/CORS",   field: "spring-security" },
   "ssec-oauth":     { label: "OAuth 2 và OpenID Connect",                                short: "OAuth 2",     field: "spring-security" },
   "ssec-reactive":  { label: "Bảo mật phản ứng và kiểm thử",                             short: "Reactive",    field: "spring-security" },
+
+  "spiq-c":         { label: "C, con trỏ và bộ cấp phát bộ nhớ",      short: "C & malloc",  field: "sysprog" },
+  "spiq-process":   { label: "Tiến trình, fork và tín hiệu",          short: "Tiến trình",  field: "sysprog" },
+  "spiq-thread":    { label: "Luồng và đồng bộ hoá",                  short: "Đồng bộ",     field: "sysprog" },
+  "spiq-deadlock":  { label: "Deadlock và lập lịch",                  short: "Deadlock",    field: "sysprog" },
+  "spiq-vm":        { label: "Bộ nhớ ảo, mmap và IPC",                short: "Bộ nhớ ảo",   field: "sysprog" },
+  "spiq-io":        { label: "Hệ thống tệp, mạng và I/O không chặn",  short: "Tệp & Mạng",  field: "sysprog" },
 };

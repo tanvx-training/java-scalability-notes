@@ -22,6 +22,7 @@ const K8S_ONLY_MODULES = ["certs", "commands", "exam", "labs"];
 const EXPECTED = {
   counts: {
     "docs:sysprog": 18,
+    "interview:sysprog": 24,
     "roadmap-items:sysprog": 50,
     "flashcards:sysprog": 90,
     "questions:sysprog": 110,
