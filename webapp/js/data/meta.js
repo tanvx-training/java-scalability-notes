@@ -146,4 +146,11 @@ export const INTERVIEW_TOPICS = {
   "jcip-exec":     { label: "Thực thi task, huỷ và thread pool",   short: "Thực thi",  field: "jcip" },
   "jcip-liveness": { label: "Deadlock, hiệu năng & khả năng mở rộng", short: "Liveness", field: "jcip" },
   "jcip-lowlevel": { label: "Explicit lock, AQS, atomic và JMM",   short: "Tầng thấp", field: "jcip" },
+
+  "ocnj-method":     { label: "Phương pháp luận đo và thống kê",      short: "Phương pháp", field: "ocnj" },
+  "ocnj-jvm":        { label: "Nội tại JVM và thực thi mã",          short: "JVM",         field: "ocnj" },
+  "ocnj-gc":         { label: "Garbage collection",                  short: "GC",          field: "ocnj" },
+  "ocnj-cloud":      { label: "Phần cứng, OS và cloud stack",        short: "Cloud",       field: "ocnj" },
+  "ocnj-observe":    { label: "Observability và profiling",          short: "Observe",     field: "ocnj" },
+  "ocnj-concurrent": { label: "Hiệu năng đồng thời và hệ phân tán",  short: "Đồng thời",   field: "ocnj" },
 };

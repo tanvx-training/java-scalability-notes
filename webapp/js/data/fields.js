@@ -138,7 +138,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt Optimizing Cloud Native Java, ấn bản 2 (Benjamin J. Evans, James Gough, Chris Newland — O'Reilly) — đủ 15 chương: hệ phân loại hiệu năng và cách đọc đồ thị, phương pháp luận kiểm thử và thống kê phi chuẩn, nội tại JVM (classloading, JIT, quản lý bộ nhớ), garbage collection từ mark-and-sweep tới G1/Shenandoah/ZGC, thực thi mã và AOT/GraalVM, phần cứng và mechanical sympathy, cloud stack và triển khai Java trên Kubernetes, observability với Micrometer/Prometheus/OpenTelemetry, profiling với JFR và Async Profiler, kỹ thuật hiệu năng đồng thời, mẫu hình hệ phân tán, và Panama/Leyden/Valhalla. Phụ lục A (microbenchmarking) và B (danh mục antipattern) không có trong bộ nguồn.",
     certFilter: false,
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "docs.oracle.com — HotSpot GC Tuning Guide", href: "https://docs.oracle.com/en/java/javase/21/gctuning/" },
   },
   jpa: {
