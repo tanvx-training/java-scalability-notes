@@ -22,7 +22,7 @@ Nguồn markdown nằm ở [`../sources/`](../sources/README.md); app đọc b�
 | 📊 Ma trận năng lực | 6 module / 34 chủ đề / 96 tiêu chí Senior Java theo 4 cấp độ — chỉ lĩnh vực Lộ trình Senior Java |
 | 🎓 Chứng chỉ K8s · ⚡ Thực hành nhanh · 🧪 Labs · ⏱️ Thi thử | Chỉ lĩnh vực Kubernetes: so sánh 5 chứng chỉ; 130 lệnh, 48 YAML mẫu, 16 quy trình, thẻ trước giờ thi (ghim, lọc, chế độ gọn); 22 lab đề thật; thi thử bấm giờ theo tỷ trọng domain |
 | 🃏 Flashcards · ✅ Trắc nghiệm | 174 thẻ spaced repetition, 220 câu có giải thích — Kubernetes và Lập trình hệ thống |
-| 🎤 Câu hỏi phỏng vấn | 24 câu tự luận có đáp án mẫu và rubric, 6 chủ đề × 4 cấp năng lực (L1 Hiểu lý thuyết → L4 Thiết kế & xử lý sự cố) — hiện chỉ lĩnh vực JPA. Hai pha: trả lời rồi mới lật đáp án; tự tick từng ý `mustCover` rồi tự chấm ba mức; tổng kết tách theo cấp để thấy rụng ở tầng nào. Hợp đồng cứng theo cấp do `check-data.mjs` ép: L2 phải có `code`, L3 phải có `tradeoffs`, L4 phải có `incident` |
+| 🎤 Câu hỏi phỏng vấn | 96 câu tự luận có đáp án mẫu và rubric trên 4 lĩnh vực (JPA, Java Concurrency in Practice, Optimizing Cloud Native Java, Java Scalability) — mỗi lĩnh vực 6 chủ đề × 4 cấp năng lực (L1 Hiểu lý thuyết → L4 Thiết kế & xử lý sự cố), đúng 6 câu mỗi cấp. Hai pha: trả lời rồi mới lật đáp án; tự tick từng ý `mustCover` rồi tự chấm ba mức; tổng kết tách theo cấp để thấy rụng ở tầng nào. Hợp đồng cứng theo cấp do `check-data.mjs` ép: L2 phải có `code`, L3 phải có `tradeoffs`, L4 phải có `incident` |
 | 🔍 Tìm kiếm toàn cục | `Ctrl/⌘ K` hoặc `/`: tài liệu, bài học, lab, lệnh, YAML, quy trình, flashcard — **khớp không dấu**, chuyển lĩnh vực tự động khi mở kết quả |
 | ⚙️ Cài đặt & tiến độ | Theme (sáng / tối / hệ thống), cỡ chữ đọc, **xuất / nhập toàn bộ tiến độ** (JSON), dung lượng từng khoá, đặt lại |
 
@@ -91,7 +91,8 @@ webapp/
 │       ├── roadmap-*.js      #   track lộ trình theo tuần
 │       └── …                 #   kubernetes: certs, commands, snippets, playbooks, examday, labs,
 │                             #   flashcards, questions; sysprog: flashcards, questions;
-│                             #   senior-java: matrix; jpa: interview
+│                             #   senior-java: matrix;
+│                             #   jpa · jcip · ocnj · java: interview
 └── js/views/                 # dashboard, guide, roadmap, docs, tracker, certs, commands,
                               # flashcards, quiz, interview, exam, labs, settings
 ```
