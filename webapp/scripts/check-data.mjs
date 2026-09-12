@@ -77,6 +77,9 @@ const EXPECTED = {
     // Lĩnh vực JPA — 20 chương Java Persistence with Spring Data and Hibernate.
     "docs:jpa": 20,
     "roadmap-items:jpa": 52,
+    // Ngân hàng câu hỏi phỏng vấn JPA — 6 chủ đề × 4 cấp độ, viết dần qua
+    // các task. Số này TĂNG DẦN cho tới 24; sửa ở đây TRƯỚC khi viết dữ liệu.
+    "interview:jpa": 4,
   },
 };
 

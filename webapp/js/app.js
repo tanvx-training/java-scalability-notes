@@ -16,6 +16,7 @@ import * as docs from "./views/docs.js";
 import * as commands from "./views/commands.js";
 import * as flashcards from "./views/flashcards.js";
 import * as quiz from "./views/quiz.js";
+import * as interview from "./views/interview.js";
 import * as exam from "./views/exam.js";
 import * as labs from "./views/labs.js";
 import * as tracker from "./views/tracker.js";
@@ -30,6 +31,7 @@ const routes = {
   commands,
   flashcards,
   quiz,
+  interview,
   exam,
   labs,
   tracker,
