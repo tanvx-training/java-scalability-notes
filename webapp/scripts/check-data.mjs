@@ -113,10 +113,11 @@ function dupes(ids) {
 }
 
 // ---- Nạp dữ liệu ----
-const { DOMAINS, TOPICS } = await import("../js/data/meta.js");
+const { DOMAINS, TOPICS, INTERVIEW_TOPICS } = await import("../js/data/meta.js");
 const { docs } = await import("../js/data/docs-index.js");
 const { tracks } = await import("../js/data/roadmap.js");
-const { allFlashcards: flashcards, allQuestions: questions, allMatrices: matrices } =
+const { allFlashcards: flashcards, allQuestions: questions, allMatrices: matrices,
+        allInterviews: interviews } =
   await import("../js/data/index.js");
 const { bookCrossref } = await import("../js/data/book-crossref.js");
 const { weeksPart1 } = await import("../js/data/kubernetes/roadmap-ckad-part1.js");
@@ -259,6 +260,7 @@ await check("Mọi link #/docs/<id> trỏ tới tài liệu có thật", () => {
   }
   for (const c of flashcards) scan(c.back, `${c.id} back`);
   for (const q of questions) scan(q.explanation, `${q.id} explanation`);
+  for (const q of interviews) scan(q.model, `${q.id} model`);
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
@@ -322,6 +324,7 @@ await check("Mọi link #/roadmap/<trackId> trỏ tới track có thật", () =>
   }
   for (const c of flashcards) scan(c.back, `${c.id} back`);
   for (const q of questions) scan(q.explanation, `${q.id} explanation`);
+  for (const q of interviews) scan(q.model, `${q.id} model`);
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
@@ -702,6 +705,150 @@ await check("Module chỉ dành cho Kubernetes không bị lĩnh vực khác kha
   expect(!bad.length, bad.join("; "));
 });
 
+// ---- #IQ — Ngân hàng câu hỏi phỏng vấn ----
+//
+// Thang cấp độ lấy nguyên từ ma trận năng lực Senior Java. Khác `difficulty`
+// 1–3 của ngân hàng trắc nghiệm: difficulty đo ĐỘ KHÓ của một câu, level đo
+// LOẠI năng lực câu đó đòi hỏi.
+//
+// IQ4 là bất biến mang nhiều sức nặng nhất. Mỗi cấp buộc phải có artifact của
+// cấp đó và không được có artifact của cấp cao hơn, nên không thể dán nhãn L4
+// cho một câu lý thuyết suông: muốn L4 thì phải thật sự viết ra một `incident`
+// có triệu chứng, quy mô và ràng buộc. Ngược lại, muốn hạ một câu xuống L1 cho
+// dễ viết thì phải bỏ hết artifact đi — lúc ấy nó đã tự trở về đúng tầng.
+const IQ_CONTRACT = {
+  1: { need: [],            ban: ["code", "tradeoffs", "incident"], minutes: [3, 6] },
+  2: { need: ["code"],      ban: ["incident"],                      minutes: [4, 10] },
+  3: { need: ["tradeoffs"], ban: [],                                minutes: [5, 12] },
+  4: { need: ["incident"],  ban: [],                                minutes: [8, 20] },
+};
+
+await check("IQ1 — interview.id duy nhất và đúng dạng <field>-iq<NN>", () => {
+  const dup = dupes(interviews.map((q) => q.id));
+  expect(!dup.length, `id trùng: ${dup.join(", ")}`);
+  const bad = interviews.filter((q) => !new RegExp(`^${fieldOf(q)}-iq\\d{2}$`).test(q.id ?? ""));
+  expect(!bad.length, `id sai dạng: ${bad.map((q) => q.id).join(", ")}`);
+});
+
+await check("IQ2 — interview.topic hợp lệ và khớp field", () => {
+  const bad = interviews.filter((q) => {
+    const t = INTERVIEW_TOPICS[q.topic];
+    return !t || t.field !== fieldOf(q);
+  });
+  expect(!bad.length, `sai topic/field: ${bad.map((q) => `${q.id}→${q.topic}`).join(", ")}`);
+});
+
+await check("IQ3 — khung chung của câu hỏi phỏng vấn", () => {
+  const bad = [];
+  const nonEmpty = (v) => typeof v === "string" && v.trim().length > 0;
+  const listOf = (v, n) => Array.isArray(v) && v.length >= n && v.every(nonEmpty);
+  for (const q of interviews) {
+    if (![1, 2, 3, 4].includes(q.level)) bad.push(`${q.id}: level "${q.level}" ngoài 1..4`);
+    if (!nonEmpty(q.question)) bad.push(`${q.id}: thiếu question`);
+    if (!nonEmpty(q.model)) bad.push(`${q.id}: thiếu model`);
+    if (!listOf(q.mustCover, 3)) bad.push(`${q.id}: mustCover cần ≥3 chuỗi không rỗng`);
+    else if (new Set(q.mustCover.map((x) => x.trim())).size !== q.mustCover.length) {
+      bad.push(`${q.id}: mustCover có ý trùng nhau`);
+    }
+    if (!listOf(q.redFlags, 1)) bad.push(`${q.id}: redFlags cần ≥1 chuỗi không rỗng`);
+    if (!listOf(q.probes, 1)) bad.push(`${q.id}: probes cần ≥1 chuỗi không rỗng`);
+    if (!Number.isInteger(q.minutes)) bad.push(`${q.id}: minutes phải là số nguyên`);
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("IQ4 — hợp đồng artifact theo cấp độ", () => {
+  const bad = [];
+  const filled = (v) => typeof v === "string" && v.trim().length > 0;
+  for (const q of interviews) {
+    const c = IQ_CONTRACT[q.level];
+    if (!c) continue;  // level sai đã do IQ3 bắt; không báo đỏ hai lần cùng một lỗi
+    for (const key of c.need) {
+      if (!(key in q)) bad.push(`${q.id} (L${q.level}): thiếu "${key}" bắt buộc`);
+    }
+    for (const key of c.ban) {
+      if (key in q) bad.push(`${q.id} (L${q.level}): không được có "${key}"`);
+    }
+    if ("code" in q && !(filled(q.code?.lang) && filled(q.code?.text))) {
+      bad.push(`${q.id}: code cần đủ lang + text`);
+    }
+    if ("tradeoffs" in q) {
+      if (!Array.isArray(q.tradeoffs) || q.tradeoffs.length < 2) {
+        bad.push(`${q.id}: tradeoffs cần ≥2 phương án`);
+      } else if (!q.tradeoffs.every((t) => filled(t?.option) && filled(t?.when))) {
+        bad.push(`${q.id}: mỗi tradeoff cần đủ option + when`);
+      }
+    }
+    if ("incident" in q && !["symptom", "scale", "constraints"].every((k) => filled(q.incident?.[k]))) {
+      bad.push(`${q.id}: incident cần đủ symptom + scale + constraints`);
+    }
+    const [lo, hi] = c.minutes;
+    if (Number.isInteger(q.minutes) && (q.minutes < lo || q.minutes > hi)) {
+      bad.push(`${q.id} (L${q.level}): minutes=${q.minutes} ngoài khoảng ${lo}–${hi}`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("IQ5 — interview.refs trỏ tài liệu có thật, cùng lĩnh vực", () => {
+  const byId = new Map(docs.map((d) => [d.id, d]));
+  const bad = [];
+  for (const q of interviews) {
+    if (!Array.isArray(q.refs) || !q.refs.length) { bad.push(`${q.id}: refs rỗng`); continue; }
+    for (const r of q.refs) {
+      const d = byId.get(r);
+      if (!d) bad.push(`${q.id}: ref "${r}" không phải doc id`);
+      else if (fieldOf(d) !== fieldOf(q)) bad.push(`${q.id}: ref "${r}" thuộc lĩnh vực khác`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// IQ6 soát CẢ HAI CHIỀU, khác #7/#7c. Ghi chú ở #7c nói rõ vì sao không mở rộng
+// chiều ngược cho flashcards/quiz: không có ca thật để kiểm chứng. Ở đây module
+// hoàn toàn mới nên không có dữ liệu cũ nào để làm đỏ oan — đặt cả hai chiều từ
+// đầu là rẻ nhất.
+await check("IQ6 — khai module interview ⇔ có dữ liệu (hai chiều)", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    const has = interviews.some((q) => fieldOf(q) === id);
+    if (f.modules.includes("interview") && !has) {
+      bad.push(`${id} khai "interview" nhưng không có câu hỏi`);
+    }
+    if (!f.modules.includes("interview") && has) {
+      bad.push(`${id} có câu hỏi phỏng vấn nhưng không khai module "interview"`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// IQ7 — đề bài không được chứa nguyên văn một ý trong rubric: đọc đề mà thấy
+// sẵn đáp án thì phần tự chấm mất hết ý nghĩa. Ngưỡng 12 ký tự để một mệnh đề
+// ngắn dùng chung (vd tên một annotation) không bị báo đỏ oan.
+await check("IQ7 — đề bài không tiết lộ rubric", () => {
+  const bad = [];
+  for (const q of interviews) {
+    const ask = String(q.question ?? "").toLowerCase();
+    for (const m of q.mustCover ?? []) {
+      const t = String(m).trim().toLowerCase();
+      if (t.length >= 12 && ask.includes(t)) {
+        bad.push(`${q.id}: mustCover "${m}" nằm nguyên văn trong question`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("IQ8 — EXPECTED.counts phủ mọi lĩnh vực khai interview", () => {
+  const bad = [];
+  for (const [id, f] of Object.entries(FIELDS)) {
+    if (f.modules.includes("interview") && !(`interview:${id}` in EXPECTED.counts)) {
+      bad.push(`thiếu "interview:${id}"`);
+    }
+  }
+  expect(!bad.length, `${bad.join("; ")} trong EXPECTED.counts`);
+});
+
 await check("navFor() lọc đúng và bỏ nhóm rỗng", () => {
   for (const id of FIELD_ORDER) {
     const groups = navFor(id);
@@ -805,7 +952,7 @@ await check("Câu hỏi sysprog phân bổ đúng theo domain", () => {
 // ---- Hướng dẫn học (module guide) ----
 const { fieldGuides, trackGuides, groupGuides } = await import("../js/data/guides.js");
 const VIEW_ROUTES = new Set(readdirSync(join(WEBAPP, "js/views")).map((f) => f.replace(/\.js$/, "")));
-const DONE_KINDS = new Set(["track", "roadmap", "docs", "doc", "flashcards", "quiz", "exam", "tracker", "manual"]);
+const DONE_KINDS = new Set(["track", "roadmap", "docs", "doc", "flashcards", "quiz", "exam", "tracker", "interview", "manual"]);
 
 // G1 — khai module guide ⇔ có fieldGuides[field]; và hình dạng tối thiểu.
 await check("Lĩnh vực khai module guide có fieldGuides và ngược lại", () => {
@@ -862,7 +1009,7 @@ await check("fieldGuides[].steps: id duy nhất, href/done hợp lệ", () => {
         if (d[k] != null && !(d[k] > 0 && d[k] <= 100)) bad.push(`${field}/${s.id} done.${k}=${d[k]} ngoài (0,100]`);
       }
       // Module mà bước nhắm tới phải được lĩnh vực khai.
-      const need = { flashcards: "flashcards", quiz: "quiz", exam: "exam", tracker: "tracker", track: "roadmap", roadmap: "roadmap", docs: "docs", doc: "docs" }[d.kind];
+      const need = { flashcards: "flashcards", quiz: "quiz", exam: "exam", tracker: "tracker", interview: "interview", track: "roadmap", roadmap: "roadmap", docs: "docs", doc: "docs" }[d.kind];
       if (need && !FIELDS[field].modules.includes(need)) bad.push(`${field}/${s.id} cần module "${need}" mà lĩnh vực không khai`);
       if (s.href) {
         const m = s.href.match(/^#\/([a-z-]+)(?:\/([^/]+))?/);
@@ -989,10 +1136,11 @@ await check("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap/tracker",
 // Bảng kỳ vọng
 await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
   const actual = {};
-  for (const f of new Set([...docs, ...flashcards, ...questions].map(fieldOf))) {
+  for (const f of new Set([...docs, ...flashcards, ...questions, ...interviews].map(fieldOf))) {
     actual[`docs:${f}`] = docs.filter((d) => fieldOf(d) === f).length;
     actual[`flashcards:${f}`] = flashcards.filter((c) => fieldOf(c) === f).length;
     actual[`questions:${f}`] = questions.filter((q) => fieldOf(q) === f).length;
+    actual[`interview:${f}`] = interviews.filter((q) => fieldOf(q) === f).length;
   }
   for (const t of tracks) {
     const f = fieldOf(t);

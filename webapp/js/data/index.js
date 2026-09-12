@@ -13,12 +13,14 @@ import { questions } from "./kubernetes/questions.js";
 import { sysprogQuestionsPart1 } from "./sysprog/questions-part1.js";
 import { sysprogQuestionsPart2 } from "./sysprog/questions-part2.js";
 import { seniorJavaMatrix } from "./senior-java/matrix.js";
+import { jpaInterview } from "./jpa/interview.js";
 
 export const allDocs = docs;
 export const allTracks = tracks;
 export const allFlashcards = [...flashcards, ...sysprogFlashcards];
 export const allQuestions = [...questions, ...sysprogQuestionsPart1, ...sysprogQuestionsPart2];
 export const allMatrices = [seniorJavaMatrix];
+export const allInterviews = [...jpaInterview];
 
 export function fieldOfRecord(rec) {
   const f = rec?.field;
@@ -32,6 +34,7 @@ export const getTracks = by(allTracks);
 export const getFlashcards = by(allFlashcards);
 export const getQuestions = by(allQuestions);
 export const getMatrices = by(allMatrices);
+export const getInterviews = by(allInterviews);
 
 export const getDomains = (fieldId) =>
   Object.entries(DOMAINS).filter(([, d]) => d.field === fieldId);
