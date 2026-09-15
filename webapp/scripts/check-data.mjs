@@ -40,8 +40,9 @@ const EXPECTED = {
     // Lĩnh vực Java chỉ có tài liệu, không có lộ trình/flashcard/trắc nghiệm.
     "docs:java": 10,
     "interview:java": 24,
-    // Lĩnh vực Spring Security — 21 chương Spring Security in Action
-    "docs:spring-security": 21,
+    // Lĩnh vực Spring Security — 17 chương (2–18) Spring Security in Action ấn bản 2;
+    // chương 1 và hai phụ lục không có bản dịch.
+    "docs:spring-security": 17,
     "interview:spring-security": 24,
     "roadmap-items:spring-security": 30,
     // Lĩnh vực Lộ trình Senior Java — 5 tài liệu kế hoạch 24 tháng.
@@ -740,7 +741,7 @@ const IQ_CONTRACT = {
 // Tiền tố doc id của một lĩnh vực — id phỏng vấn phải cùng họ với nó.
 // Không dùng thẳng field id vì hai thứ đó lệch nhau ở nhiều lĩnh vực:
 // field "modern-java" có doc id "mjia-01", field "spring-security" có
-// "springsec-01". Buộc id phỏng vấn theo field id sẽ tạo ra "modern-java-iq01"
+// "springsec-02". Buộc id phỏng vấn theo field id sẽ tạo ra "modern-java-iq01"
 // nằm lệch hẳn nếp đặt tên của repo; buộc theo tiền tố doc giữ được cả tính
 // kiểm chứng được lẫn tính nhất quán với tài liệu mà câu hỏi trỏ tới.
 function docPrefixOf(field) {

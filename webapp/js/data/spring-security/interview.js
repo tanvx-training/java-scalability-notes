@@ -1,15 +1,14 @@
 // Ngân hàng câu hỏi phỏng vấn Spring Security — 24 câu,
-// 6 chủ đề × 4 cấp độ năng lực.
+// 6 chủ đề × 4 cấp độ năng lực (đúng 6 câu mỗi cấp).
 //
-// Nguồn: bản dịch tiếng Việt Spring Security in Action, 2nd ed.
-// (Laurenţiu Spilcă, Manning 2024).
+// Nguồn: bản dịch tiếng Việt Spring Security in Action, ấn bản 2
+// (Laurentiu Spilca, Manning) — 17 chương (2–18) trong sources/spring-security/.
 //
-// LƯU Ý: chương 14 (máy chủ uỷ quyền OAuth 2) chỉ còn phần đầu trong nguồn,
-// nên không câu nào neo vào nó. Nội dung OAuth 2 lấy từ ch 13, 15, 16.
+// Thang cấp độ và HỢP ĐỒNG THEO CẤP giống hệt ngân hàng JPA:
+//   L1 hiểu lý thuyết (3–6′, không artifact) · L2 đọc/viết code (4–10′, bắt buộc `code`)
+//   L3 đánh đổi thiết kế (5–12′, bắt buộc `tradeoffs`) · L4 xử lý sự cố (8–20′, bắt buộc `incident`)
 //
-// Thang cấp độ và HỢP ĐỒNG THEO CẤP giống hệt ngân hàng JPA.
-//
-// GIỮ NGUYÊN id (springsec-iq01–springsec-iq24).
+// GIỮ NGUYÊN id (springsec-iq01–springsec-iq24) — tiến độ localStorage lưu theo id này.
 
 export const springSecurityInterview = [
 
@@ -20,89 +19,101 @@ export const springSecurityInterview = [
     topic: "ssec-auth",
     level: 1,
     minutes: 5,
-    question: "Kể lại luồng xác thực của Spring Security theo từng thành phần, và nói rõ mỗi thành phần chịu trách nhiệm gì.",
+    question: "Đi theo một request từ lúc nó chạm vào ứng dụng cho tới lúc controller biết được người gọi là ai. Kể tên từng component tham gia và nói rõ mỗi component chịu trách nhiệm gì.",
     mustCover: [
-      "**Bộ lọc xác thực** chặn request đến và chuyển trách nhiệm xác thực cho `AuthenticationManager`",
-      "`AuthenticationManager` không tự xác thực — nó dùng một hoặc nhiều **`AuthenticationProvider`**",
-      "`AuthenticationProvider` là nơi chứa **logic xác thực**; muốn đổi cách xác thực thì đổi ở đây",
-      "Để so khớp tên đăng nhập và mật khẩu, provider dựa vào **`UserDetailsService`** và **`PasswordEncoder`**",
-      "`UserDetailsService` chỉ có một việc: **tìm người dùng theo tên đăng nhập**",
-      "`UserDetails` là cách Spring Security hiểu về một người dùng; quyền hạn của người dùng là các **`GrantedAuthority`**",
-      "`PasswordEncoder` mô tả cách mật khẩu được băm và cách **kiểm tra** một chuỗi thô có khớp chuỗi băm",
-      "Xác thực xong, bộ lọc lưu đối tượng `Authentication` vào **`SecurityContext`** cho phần còn lại của request",
-      "Và thứ tự cố định: ứng dụng **xác thực trước, phân quyền sau**",
+      "Một **authentication filter** trong filter chain chặn request và không tự xác thực — nó chuyển việc cho `AuthenticationManager`",
+      "`AuthenticationManager` cũng không xác thực: nó chọn và gọi một `AuthenticationProvider` phù hợp",
+      "`AuthenticationProvider` là nơi chứa **logic xác thực thật**, và là điểm mở rộng khi cần một cách xác thực khác",
+      "Với username/password, provider ủy quyền tìm user cho **`UserDetailsService`** và so khớp mật khẩu cho **`PasswordEncoder`**",
+      "`UserDetails` mô tả user; quyền của user là tập **`GrantedAuthority`**",
+      "Xác thực xong, đối tượng `Authentication` được cất vào **`SecurityContext`** cho phần còn lại của request",
+      "Thứ tự là cố định: **authentication trước, authorization sau**",
     ],
-    model: "Tôi kể theo đường đi của request vì đó là cách nhớ nó không nhầm. Bộ lọc xác thực đứng trong chuỗi bộ lọc HTTP, chặn request đến và không tự làm gì cả — nó chuyển trách nhiệm cho `AuthenticationManager`. `AuthenticationManager` cũng không tự xác thực; nhiệm vụ của nó là chọn và gọi một `AuthenticationProvider` phù hợp. `AuthenticationProvider` là nơi chứa logic xác thực thật, và đây là điểm mở rộng quan trọng nhất của kiến trúc: khi cần một cách xác thực khác — mã một lần, xác thực qua một hệ thống ngoài, thêm một bước kiểm tra — thì đó là chỗ ta viết. Với cách xác thực bằng tên đăng nhập và mật khẩu, provider dựa vào hai thành phần: `UserDetailsService` để lấy người dùng, và `PasswordEncoder` để so khớp mật khẩu. `UserDetailsService` được thiết kế rất hẹp — nó chỉ tìm người dùng theo tên đăng nhập, vì đó là hành động duy nhất framework cần để hoàn tất xác thực. Nếu ứng dụng còn cần thêm, sửa, xoá người dùng thì có `UserDetailsManager` mở rộng từ nó; việc tách đôi như vậy nghĩa là ứng dụng chỉ xác thực thì không bị buộc phải cài đặt những hành vi nó không dùng. Người dùng được biểu diễn bằng `UserDetails`, và những gì người dùng được phép làm là một tập `GrantedAuthority`. `PasswordEncoder` thì tôi muốn nhấn rằng nó mô tả **hai** việc chứ không một: cách băm mật khẩu, và cách kiểm tra một chuỗi thô có khớp với chuỗi băm đã lưu — vì băm là hàm một chiều nên phải luôn có hàm so khớp đi kèm. Cuối luồng, sau khi xác thực thành công, bộ lọc lưu đối tượng `Authentication` vào `SecurityContext`, và từ đó controller hay bất kỳ lớp nào cũng đọc được người dùng hiện tại. Chi tiết cuối và nó giải thích nhiều hành vi gây bối rối: ứng dụng luôn xác thực trước rồi mới phân quyền. Nên một endpoint mở cho mọi người vẫn trả 401 nếu ta gửi kèm thông tin đăng nhập sai — request không bao giờ tới được bộ lọc phân quyền.",
+    model: "Tôi kể theo đường đi của request vì đó là cách nhớ không nhầm. Trước hết, mọi thứ bắt đầu ở filter chain — đây là tầng đầu tiên chặn HTTP request, và một filter xác thực nằm trong chuỗi đó. Filter này không tự làm gì cả, nó chuyển trách nhiệm cho `AuthenticationManager`. Đến lượt mình, `AuthenticationManager` cũng không xác thực; việc của nó là chọn và gọi một `AuthenticationProvider` phù hợp với kiểu `Authentication` đang có. `AuthenticationProvider` mới là nơi chứa logic thật, và đây là điểm mở rộng quan trọng nhất của kiến trúc: khi cần xác thực bằng mã một lần, bằng chứng chỉ, hay bằng một hệ thống ngoài, đó là chỗ ta viết. Với cách xác thực bằng username và mật khẩu, provider dựa vào hai thành phần tách rời có chủ ý: `UserDetailsService` để lấy user, và `PasswordEncoder` để so khớp mật khẩu. Tôi muốn nhấn vào chữ tách rời — `UserDetailsService` được thiết kế rất hẹp, chỉ có đúng một phương thức tìm user theo username, vì đó là hành động duy nhất framework cần để hoàn tất xác thực; nếu ứng dụng còn cần tạo, sửa, xoá user thì đã có `UserDetailsManager` mở rộng từ nó. Bản thân user được biểu diễn bằng `UserDetails`, và những gì user được phép làm là một tập `GrantedAuthority`. Cuối luồng, filter lưu đối tượng `Authentication` vào `SecurityContext`, và từ đó bất kỳ tầng nào cũng đọc được người dùng hiện tại. Chi tiết cuối cùng, và nó giải thích nhiều hành vi gây bối rối: ứng dụng luôn xác thực trước rồi mới phân quyền. Nên một endpoint mở cho tất cả vẫn trả 401 nếu request gửi kèm thông tin đăng nhập sai — nó chết ở bước xác thực, không bao giờ đi tới bước phân quyền.",
     redFlags: [
       "Nói `AuthenticationManager` tự thực hiện logic xác thực",
-      "Cho rằng `UserDetailsService` cũng lo việc tạo và sửa người dùng",
-      "Không biết `PasswordEncoder` phải có cả hàm so khớp",
+      "Cho rằng `UserDetailsService` cũng lo việc tạo và sửa user",
+      "Không biết filter chain là tầng đầu tiên, nghĩ Spring Security chặn ở tầng controller",
       "Đảo thứ tự: cho rằng phân quyền chạy trước xác thực",
     ],
     probes: [
-      "Muốn thêm một bước xác thực bằng mã một lần thì bạn viết ở thành phần nào?",
-      "Vì sao `UserDetailsService` và `UserDetailsManager` lại được tách làm hai?",
+      "Muốn thêm một bước xác thực bằng mã một lần thì bạn viết ở component nào?",
+      "Vì sao `UserDetailsService` và `UserDetailsManager` lại được tách làm hai contract?",
       "Endpoint `permitAll()` mà gửi mật khẩu sai thì nhận status gì, vì sao?",
     ],
-    refs: ["springsec-03", "springsec-04"],
+    refs: ["springsec-02", "springsec-03", "springsec-06"],
   },
   {
     id: "springsec-iq02",
     field: "spring-security",
     topic: "ssec-auth",
     level: 2,
-    minutes: 9,
+    minutes: 8,
     code: {
       lang: "java",
       text: `@Service
-public class ReportService {
-    @Async                                                     // (1)
-    public void generateReport() {
-        SecurityContext ctx = SecurityContextHolder.getContext();
-        String username = ctx.getAuthentication().getName();   // (2) NPE ở đây
-        // ... dựng báo cáo cho username
+public class DbUserDetailsService implements UserDetailsService {
+
+    private final UserRepository repo;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) {
+        User u = repo.findByUsername(username);
+        if (u == null) {
+            return null;                                   // (1)
+        }
+        return new SimpleUser(u);
     }
 }
 
-@RestController
-public class ReportController {
-    private final ReportService reportService;
-    private final ExecutorService pool = Executors.newFixedThreadPool(4);
+@Component
+public class DbAuthenticationProvider implements AuthenticationProvider {
 
-    @PostMapping("/report")
-    public void report() {
-        reportService.generateReport();                        // (3)
-        pool.submit(() -> auditLog.record(                     // (4)
-            SecurityContextHolder.getContext()
-                .getAuthentication().getName()));              // (5) cũng NPE
+    private final DbUserDetailsService users;
+
+    @Override
+    public Authentication authenticate(Authentication a) {
+        String username = a.getName();
+        String password = String.valueOf(a.getCredentials());
+
+        UserDetails u = users.loadUserByUsername(username);
+
+        if (u.getPassword().equals(password)) {            // (2)
+            return new UsernamePasswordAuthenticationToken(
+                    username, password, u.getAuthorities()); // (3)
+        }
+        throw new BadCredentialsException("Sai thông tin đăng nhập");
+    }
+
+    @Override
+    public boolean supports(Class<?> type) {
+        return true;                                        // (4)
     }
 }`,
     },
-    question: "Hai chỗ cùng ném `NullPointerException` khi đọc người dùng hiện tại. Giải thích cơ chế, rồi sửa từng chỗ.",
+    question: "Đoạn code này là một cặp UserDetailsService + AuthenticationProvider tự viết, chạy được trong đường đi thuận lợi. Bốn chỗ đánh số đều có vấn đề — chỉ ra từng chỗ, nói hậu quả cụ thể, và sửa lại.",
     mustCover: [
-      "Chiến lược mặc định là **`MODE_THREADLOCAL`**: mỗi thread có `SecurityContext` riêng của nó",
-      "Bộ lọc xác thực đặt `Authentication` vào context của **thread đang phục vụ request**",
-      "Dòng (1) làm phương thức chạy trên **thread khác**, nên context của nó rỗng → `getAuthentication()` trả `null`",
-      "Dòng (4) cũng vậy: thread trong pool do ta tạo, Spring không biết nó tồn tại",
-      "Sửa chỗ (1): đổi chiến lược sang **`MODE_INHERITABLETHREADLOCAL`** để context được sao sang thread của `@Async`",
-      "Sửa chỗ (4): Spring **không** quản lý được thread ta tự tạo, nên phải sao context **tường minh**",
-      "Cách tường minh: bọc tác vụ bằng `DelegatingSecurityContextRunnable`, hoặc bọc chính pool bằng `DelegatingSecurityContextExecutorService`",
-      "**Không** dùng `MODE_GLOBAL` — nó cho mọi thread thấy **một** context duy nhất, tức mọi người dùng lẫn vào nhau",
-      "Cách đơn giản và tôi ưa hơn cả hai: **truyền tên người dùng làm tham số** thay vì đọc từ context ở thread khác",
+      "(1) trả `null` là sai contract — phải ném `UsernameNotFoundException`; hệ quả là dòng dưới ném `NullPointerException` thay vì lỗi xác thực có nghĩa",
+      "(2) so sánh mật khẩu bằng `equals` nghĩa là mật khẩu đang được lưu ở dạng thô; phải dùng `passwordEncoder.matches(raw, encoded)`",
+      "Băm là hàm một chiều nên không thể \"băm lại rồi so chuỗi\" với thuật toán có salt — đó là lý do contract có sẵn `matches`",
+      "(3) đối tượng `Authentication` trả về vẫn mang **mật khẩu thô**; nó sẽ nằm trong `SecurityContext` suốt request",
+      "(3) nên trả về principal là `UserDetails` và truyền `null` cho credentials",
+      "(4) `supports()` trả `true` cho mọi kiểu khiến provider nhận cả những `Authentication` nó không hiểu; phải kiểm đúng kiểu được hỗ trợ",
+      "Provider nên **ủy quyền** cho `UserDetailsService` và `PasswordEncoder` thay vì tự xử lý mật khẩu",
     ],
-    model: "Cả hai chỗ cùng một cơ chế. Chiến lược mặc định quản lý `SecurityContext` là `MODE_THREADLOCAL`, nghĩa là context được giữ trong một `ThreadLocal` và mỗi thread chỉ thấy phần của riêng nó. Bộ lọc xác thực đặt `Authentication` vào context của thread đang phục vụ request; bất kỳ thread nào khác đều bắt đầu với một context rỗng, nên `getAuthentication()` trả `null` và dòng sau ném `NullPointerException`. Dòng (1) đưa phương thức sang một thread khác, nên nó rơi đúng vào trường hợp đó; dòng (4) cũng vậy, và tệ hơn một chút vì thread đó do ta tạo nên Spring còn không biết nó tồn tại. Cách sửa khác nhau ở hai chỗ, và đó là điểm chính. Với `@Async`, Spring biết thread đó nên ta chỉ cần đổi chiến lược sang `MODE_INHERITABLETHREADLOCAL`; khi ấy context được sao từ thread cha sang thread chạy phương thức bất đồng bộ. Với pool ta tự tạo thì đổi chiến lược không giúp gì, vì Spring không có chỗ nào để chèn việc sao chép — ta phải làm tường minh, bằng cách bọc tác vụ trong `DelegatingSecurityContextRunnable`, hoặc gọn hơn là bọc chính `ExecutorService` bằng `DelegatingSecurityContextExecutorService` để mọi tác vụ nộp vào đó đều mang context theo. Tôi sẽ chọn bọc pool, vì bọc từng tác vụ nghĩa là ai cũng phải nhớ, và lỗi này chỉ lộ ra khi chạy. Có một lựa chọn thứ ba mà tôi nói rõ để loại: `MODE_GLOBAL` cho mọi thread thấy cùng một context duy nhất. Nó làm cả hai `NullPointerException` biến mất, nên rất dễ bị chọn — nhưng trong một ứng dụng web nhiều người dùng thì nó có nghĩa là danh tính của người dùng này bị thread của người dùng khác đọc thấy, tức một lỗ hổng rò rỉ danh tính nghiêm trọng hơn nhiều lần lỗi ban đầu. Cuối cùng, nếu được thiết kế lại, tôi sẽ không đọc context ở thread khác chút nào: lấy tên người dùng ở ranh giới request rồi **truyền nó làm tham số** vào tác vụ. Khi đó thông tin đi theo dữ liệu chứ không theo thread, và cả lớp vấn đề này biến mất thay vì được cấu hình quanh.",
+    model: "Tôi đi lần lượt bốn chỗ. Chỗ (1): contract của `loadUserByUsername` không cho phép trả `null` — khi không tìm thấy user thì phải ném `UsernameNotFoundException`. Hậu quả ở đây rất cụ thể và rất khó chẩn đoán: provider gọi xong nhận `null`, rồi dòng ngay dưới gọi `u.getPassword()` và ném `NullPointerException`. Người vận hành nhìn log sẽ thấy một NPE ở tầng bảo mật thay vì một lỗi đăng nhập bình thường, và không biết chuyện gì đã xảy ra. Chỗ (2) là chỗ nặng nhất. Việc so sánh mật khẩu bằng `equals` chỉ đúng khi mật khẩu trong database đang ở dạng thô — nghĩa là cả kho mật khẩu đang nằm trần trong database. Cách sửa là băm khi lưu và dùng `passwordEncoder.matches(password, u.getPassword())` khi kiểm tra. Ở đây tôi muốn nói rõ vì sao contract lại có hai phương thức chứ không một: băm là hàm một chiều, và các thuật toán tử tế đều có salt, nên cùng một mật khẩu băm hai lần cho ra hai chuỗi khác nhau. Vì thế không thể tự băm lại rồi so chuỗi được — phải để chính thuật toán nói \"chuỗi thô này có khớp chuỗi băm kia không\". Chỗ (3): đối tượng trả về nhận `password` làm credentials, nên mật khẩu thô sẽ đi tiếp vào `SecurityContext` và sống đến hết request; bất kỳ chỗ nào log security context ra là mật khẩu rơi vào log. Tôi trả về principal là `UserDetails` và credentials là `null`, vì sau khi xác thực xong thì không ai cần tới mật khẩu nữa. Chỗ (4): `supports()` trả `true` vô điều kiện nghĩa là provider này nhận cả những kiểu `Authentication` nó không hiểu — nếu sau này hệ thống thêm một cơ chế xác thực khác, provider này vẫn nhảy vào xử lý và làm hỏng luồng đó. Nó phải kiểm đúng kiểu mình hỗ trợ. Nhìn tổng thể, cả bốn lỗi có chung một gốc: provider đang tự làm mọi thứ. Thiết kế mà sách nhấn là giữ các trách nhiệm tách rời — provider ủy quyền việc tìm user cho `UserDetailsService`, việc kiểm chứng mật khẩu cho `PasswordEncoder`, và chỉ điều phối hai thứ đó.",
     redFlags: [
-      "Đặt `MODE_GLOBAL` để \"cho gọn\" — rò rỉ danh tính giữa các người dùng",
-      "Đổi chiến lược sang `MODE_INHERITABLETHREADLOCAL` rồi tin rằng pool tự tạo cũng được chữa",
-      "Kiểm tra `null` rồi bỏ qua, ghi báo cáo với người dùng \"unknown\"",
-      "Đọc người dùng từ một field của service để \"khỏi phải lấy từ context\"",
+      "Chỉ thấy lỗi mật khẩu thô mà bỏ qua ba chỗ còn lại",
+      "Sửa (2) thành `passwordEncoder.encode(password).equals(u.getPassword())` — vẫn sai với thuật toán có salt",
+      "Cho rằng trả `null` ở (1) là chấp nhận được vì \"provider tự kiểm tra null\"",
+      "Không nhận ra mật khẩu thô đi vào `SecurityContext` ở (3)",
     ],
     probes: [
-      "Vì sao `MODE_INHERITABLETHREADLOCAL` không cứu được pool bạn tự tạo?",
-      "`MODE_GLOBAL` gây hậu quả cụ thể gì trong ứng dụng web?",
-      "Truyền tên người dùng làm tham số có nhược điểm nào không?",
+      "Nếu database đang lưu mật khẩu thô của 50.000 user, bạn chuyển sang băm thế nào mà không bắt ai đặt lại mật khẩu?",
+      "`supports()` trả `false` thì `AuthenticationManager` làm gì tiếp?",
+      "Vì sao contract `PasswordEncoder` phải có cả `encode` lẫn `matches`?",
     ],
-    refs: ["springsec-06"],
+    refs: ["springsec-03", "springsec-04", "springsec-06"],
   },
   {
     id: "springsec-iq03",
@@ -110,87 +121,83 @@ public class ReportController {
     topic: "ssec-auth",
     level: 3,
     minutes: 10,
-    question: "Hệ thống cũ lưu mật khẩu băm bằng SHA-256. Bạn cần chuyển sang bcrypt mà không buộc 400.000 người dùng đổi mật khẩu. Chọn cách nào?",
+    question: "Một dịch vụ mới cần nguồn user. Bạn có ba lựa chọn quen thuộc trong Spring Security cho việc này. Chọn một và bảo vệ lựa chọn đó — giả định là một ứng dụng nội bộ, vài nghìn người dùng, đã có sẵn PostgreSQL.",
     tradeoffs: [
       {
-        option: "`DelegatingPasswordEncoder`, di trú dần khi người dùng đăng nhập",
-        when: "Lựa chọn mặc định. Tiền tố `{...}` trong chuỗi băm cho biết thuật toán, nên hệ thống đọc được cả hai loại; người dùng mới và người đăng nhập lại được băm bằng bcrypt. Không ai bị buộc đổi mật khẩu, và số bản ghi yếu giảm dần.",
+        option: "`InMemoryUserDetailsManager`",
+        when: "Chỉ dùng cho ví dụ học tập, proof of concept, và các bài test. User nằm trong bộ nhớ ứng dụng nên mất sạch khi khởi động lại và không chia sẻ được giữa các instance. Với tình huống đề bài thì đây là lựa chọn sai, nhưng nên nói ra để cho thấy mình biết ranh giới của nó.",
       },
       {
-        option: "Băm lại toàn bộ ngay",
-        when: "Không làm được. Băm là hàm một chiều, nên ta **không có** mật khẩu thô để băm lại — chỉ có chuỗi băm SHA-256. Muốn bcrypt thì phải có mật khẩu thô, tức phải chờ người dùng nhập.",
+        option: "`JdbcUserDetailsManager`",
+        when: "Đã có database quan hệ và không muốn kéo thêm framework nào vào tầng bảo mật. Lợi thế sách nêu là nó dùng thẳng JDBC nên không khoá ứng dụng vào một ORM. Đổi lại, nó mong đợi một schema nhất định; schema của bạn khác thì phải cấu hình lại các câu truy vấn, và bạn được thêm sẵn cả hành vi tạo/sửa/xoá user mà có thể bạn không cần.",
       },
       {
-        option: "Băm bọc: bcrypt lên trên chuỗi SHA-256 đã có",
-        when: "Chạy được ngay cho toàn bộ người dùng, nhưng độ mạnh vẫn bị chặn bởi lớp trong: kẻ tấn công vẫn dò được mật khẩu yếu qua SHA-256 nếu lấy được cả hai tầng. Và nó tạo ra một lược đồ phi tiêu chuẩn phải tự duy trì mãi.",
+        option: "`UserDetailsService` tự viết trên repository sẵn có",
+        when: "Bảng user đã tồn tại với cấu trúc riêng, hoặc thông tin user phải lấy từ nhiều nguồn (bảng user + bảng phân quyền + một dịch vụ ngoài). Bạn viết đúng một phương thức, kiểm soát hoàn toàn truy vấn, và tái dùng tầng dữ liệu sẵn có. Đổi lại phải tự lo hiệu năng truy vấn và tự ném đúng `UsernameNotFoundException`.",
+      },
+      {
+        option: "`LdapUserDetailsManager`",
+        when: "Tổ chức đã có thư mục LDAP hoặc Active Directory là nguồn danh tính chuẩn. Khi đó mọi lựa chọn trên đều sai hướng vì chúng tạo ra nguồn danh tính thứ hai — thứ sẽ lệch với nguồn thật trong vòng vài tháng.",
       },
     ],
     mustCover: [
-      "Ràng buộc nền: băm là **một chiều**, nên ta không có mật khẩu thô để băm lại hàng loạt",
-      "Vì thế mọi lời giải đều phải chờ người dùng **nhập mật khẩu** một lần",
-      "`DelegatingPasswordEncoder` giải đúng bài này: nó chọn bộ mã hoá theo **tiền tố** của chuỗi băm",
-      "Cần đánh tiền tố cho dữ liệu cũ (ví dụ `{sha256}`), vì bản ghi cũ không có tiền tố nào",
-      "Hoặc đặt bộ mã hoá mặc định là loại cũ để chuỗi không tiền tố vẫn khớp — nhưng khi đó bản ghi **mới** cũng nhận mặc định đó, nên đây là bẫy",
-      "Cách đúng: mặc định là **bcrypt**, và tiền tố hoá tường minh các bản ghi cũ",
-      "Khi người dùng đăng nhập thành công bằng chuỗi cũ, **băm lại** mật khẩu vừa nhập bằng bcrypt rồi ghi đè",
-      "Phải theo dõi tiến độ: còn bao nhiêu bản ghi `{sha256}`, và có mốc thời gian để cưỡng chế đổi mật khẩu với phần còn lại",
-      "Vì nếu không có mốc kết thúc, ta sẽ mang hai lược đồ mãi mãi — và bản ghi yếu vẫn là bản ghi yếu",
+      "Nêu được rằng lựa chọn phụ thuộc trước hết vào việc **nguồn danh tính thật** của tổ chức nằm ở đâu",
+      "`InMemoryUserDetailsManager` bị loại vì mất dữ liệu khi khởi động lại và không dùng chung giữa nhiều instance",
+      "Phân biệt `UserDetailsService` (chỉ tìm user) với `UserDetailsManager` (thêm tạo/sửa/xoá) và chọn đúng cái ứng dụng cần",
+      "Lợi thế của `JdbcUserDetailsManager` là dùng thẳng JDBC, không khoá ứng dụng vào framework khác",
+      "Cái giá của `JdbcUserDetailsManager` là schema mà nó mong đợi",
+      "Nêu được một lựa chọn cụ thể kèm lý do, không liệt kê rồi bỏ lửng",
     ],
-    model: "Điều quyết định toàn bộ bài này là một tính chất của băm: nó một chiều. Ta chỉ có chuỗi băm SHA-256, không có mật khẩu thô, nên không thể băm lại bằng bcrypt hàng loạt — dù có muốn. Từ đó mọi lời giải hợp lý đều phải chờ người dùng nhập mật khẩu một lần, và câu hỏi thật là ta chịu đựng thế nào trong khoảng thời gian chuyển tiếp. Lời giải tôi chọn là `DelegatingPasswordEncoder`. Nó là một `PasswordEncoder` không tự băm mà uỷ cho các bộ mã hoá khác, chọn dựa trên tiền tố trong dấu ngoặc nhọn ở đầu chuỗi băm — `{bcrypt}` thì đi bcrypt, `{sha256}` thì đi bộ mã hoá cũ. Nghĩa là hệ thống đọc được đồng thời hai loại chuỗi băm mà không cần một nhánh `if` nào trong mã nghiệp vụ. Có một chi tiết cài đặt mà tôi thấy dễ làm sai và nó quan trọng: dữ liệu cũ **không có** tiền tố, và chuỗi không tiền tố sẽ được giao cho bộ mã hoá mặc định. Cách dễ nghĩ ra là đặt bộ mã hoá cũ làm mặc định để chuỗi cũ vẫn khớp — nhưng như vậy thì mật khẩu **mới** cũng bị băm bằng thuật toán cũ, và ta đứng yên tại chỗ trong khi tin rằng mình đang tiến. Cách đúng là đặt bcrypt làm mặc định rồi chạy một câu cập nhật để tiền tố hoá tường minh toàn bộ bản ghi cũ thành `{sha256}...`. Đó là một phép biến đổi chuỗi thuần, không cần biết mật khẩu, nên nó làm được ngay cho cả 400.000 bản ghi. Phần thứ hai là di trú dần: khi một người dùng đăng nhập thành công và chuỗi băm của họ còn là loại cũ, ta đã có mật khẩu thô trong tay ở đúng thời điểm đó — băm lại bằng bcrypt và ghi đè. Người dùng không thấy gì cả, và mỗi lần đăng nhập là một bản ghi được nâng cấp. Điều cuối tôi luôn kèm theo, vì nó là chỗ những cuộc di trú kiểu này chết: phải đo và phải có mốc kết thúc. Đếm số bản ghi còn tiền tố cũ theo tuần; những người dùng không đăng nhập trong, chẳng hạn, sáu tháng sẽ không tự nâng cấp, nên phải có một mốc mà sau đó ta cưỡng chế đặt lại mật khẩu cho phần còn lại. Không có mốc đó thì ta không di trú, ta chỉ thêm một lược đồ nữa để duy trì — và những bản ghi yếu nhất, thuộc về người dùng ít hoạt động nhất, sẽ tồn tại vô hạn.",
+    model: "Câu hỏi đầu tiên tôi đặt không phải \"dùng class nào\" mà \"nguồn danh tính thật của tổ chức nằm ở đâu\". Nếu công ty đã có LDAP hoặc Active Directory thì mọi lựa chọn dựa trên bảng trong database đều sai hướng, vì chúng tạo ra một nguồn danh tính thứ hai, và hai nguồn danh tính sẽ lệch nhau trong vòng vài tháng — người nghỉ việc bị khoá ở một nơi mà vẫn đăng nhập được ở nơi kia. Giả sử đề bài nói rõ là không có, chỉ có PostgreSQL, thì tôi loại ngay `InMemoryUserDetailsManager`: user nằm trong bộ nhớ, mất khi khởi động lại, và không chia sẻ được giữa các instance. Nó tốt cho test và ví dụ, không tốt cho thứ đang chạy thật. Còn lại hai lựa chọn, và tôi phân biệt bằng một câu hỏi: bảng user đã tồn tại chưa? Nếu đây là dịch vụ hoàn toàn mới và tôi được tự do đặt schema, tôi chọn `JdbcUserDetailsManager`. Lợi thế mà sách nêu rất thực tế: nó dùng thẳng JDBC nên không buộc tầng bảo mật phụ thuộc vào ORM tôi đang dùng, và tôi được sẵn phần quản lý user. Nếu bảng user đã tồn tại với cấu trúc riêng — và ở một ứng dụng nội bộ thì gần như luôn thế — tôi viết `UserDetailsService` của mình. Lý do là cân nhắc về sự khớp: `JdbcUserDetailsManager` mong đợi một schema nhất định, và ép schema sẵn có vào khuôn đó, hoặc cấu hình lại từng câu truy vấn, tốn công hơn là viết một phương thức đọc từ repository đã có. Thêm một cân nhắc về phạm vi: nếu ứng dụng chỉ cần đăng nhập chứ không quản lý user trong chính nó — chẳng hạn user được tạo từ một hệ thống nhân sự khác — thì tôi cố tình chọn `UserDetailsService` chứ không phải `UserDetailsManager`, để không hiện thực những hành vi mà ứng dụng không dùng. Đó cũng chính là lý do hai contract này bị tách đôi. Tôi sẽ chọn phương án tự viết cho tình huống đề bài, và đánh dấu một việc phải làm ngay: đo truy vấn tìm user, vì nó chạy trên mọi request có xác thực.",
     redFlags: [
-      "Đề nghị băm lại toàn bộ mật khẩu ngay, không nhận ra băm là một chiều",
-      "Đặt bộ mã hoá cũ làm mặc định của `DelegatingPasswordEncoder` — mật khẩu mới cũng thành yếu",
-      "Buộc toàn bộ 400.000 người đổi mật khẩu, trái yêu cầu",
-      "Không băm lại khi người dùng đăng nhập thành công, nên không có tiến độ nào",
-      "Không đặt mốc kết thúc cho cuộc di trú",
+      "Chọn theo thói quen mà không hỏi nguồn danh tính của tổ chức nằm ở đâu",
+      "Không phân biệt được `UserDetailsService` và `UserDetailsManager`",
+      "Liệt kê cả ba lựa chọn rồi không chốt phương án nào",
+      "Cho rằng `InMemoryUserDetailsManager` dùng được ở production nếu nạp user lúc khởi động",
     ],
     probes: [
-      "Bạn xử lý những bản ghi cũ không có tiền tố như thế nào?",
-      "Bạn đo tiến độ di trú bằng con số nào?",
-      "Người dùng hai năm không đăng nhập thì cuối cùng xử lý ra sao?",
+      "Ứng dụng chỉ đăng nhập chứ không tạo/sửa user thì bạn hiện thực contract nào, vì sao?",
+      "Nếu phải đọc user từ hai nguồn — bảng nội bộ và một API nhân sự — bạn đặt việc gộp đó ở đâu?",
+      "Truy vấn tìm user chạy trên mọi request có xác thực; bạn làm gì để nó không thành nút thắt?",
     ],
-    refs: ["springsec-04"],
+    refs: ["springsec-03", "springsec-02"],
   },
   {
     id: "springsec-iq04",
     field: "spring-security",
     topic: "ssec-auth",
     level: 4,
-    minutes: 13,
+    minutes: 14,
     incident: {
-      symptom: "Một ứng dụng nội bộ dùng `UserDetailsService` tự viết, truy vấn bảng `users` theo tên đăng nhập. Sau khi phát hành bản có tính năng \"đăng nhập bằng email\", đội bảo mật phát hiện có thể đăng nhập vào tài khoản quản trị bằng một mật khẩu **bất kỳ**. Lỗi chỉ xảy ra với 3 tài khoản, và cả 3 đều là tài khoản được tạo từ thời hệ thống cũ.",
-      scale: "12.000 tài khoản, 3 tài khoản bị ảnh hưởng — trong đó 2 có quyền quản trị. Truy vết log cho thấy chưa ai ngoài đội bảo mật khai thác được. Bản có lỗi đã chạy 11 ngày.",
-      constraints: "Không được tắt đăng nhập của toàn hệ thống. Phải xác định chắc chắn còn tài khoản nào cùng dạng hay không. Phải giải thích được vì sao kiểm thử tự động không bắt được lỗi này.",
-      },
-    question: "\"Mật khẩu bất kỳ cũng vào được\" chỉ tới nguyên nhân nào? Nêu chẩn đoán, cách khoanh vùng, và vì sao kiểm thử không bắt được.",
+      symptom: "Sau khi một đội thêm xử lý nền cho tính năng xuất báo cáo, log bắt đầu xuất hiện lỗi rải rác: một số tác vụ nền ném `AuthenticationCredentialsNotFoundException`, số khác ghi tên người thực hiện là rỗng trong bảng nhật ký. Endpoint gọi tác vụ thì vẫn trả 200 bình thường. Lỗi không tái hiện được trên máy lập trình viên, và trên môi trường thật thì lúc có lúc không.",
+      scale: "Ứng dụng nội bộ, khoảng 800 người dùng, 4 instance sau load balancer. Tính năng xuất báo cáo được gọi vài trăm lần mỗi ngày; ước tính 30–40% lượt bị lỗi hoặc ghi nhật ký sai.",
+      constraints: "Bảng nhật ký dùng cho kiểm toán nội bộ nên các bản ghi thiếu tên người thực hiện phải được truy lại. Không được tắt tính năng xuất báo cáo. Đội chỉ có một cửa sổ phát hành mỗi tuần.",
+    },
+    question: "Bạn được giao xử lý sự cố này. Trình bày cách bạn khoanh vùng nguyên nhân, cách sửa, và cách bạn ngăn nó tái diễn.",
     mustCover: [
-      "\"Mật khẩu nào cũng đúng\" là dấu hiệu rất hẹp: việc **so khớp mật khẩu bị bỏ qua hoặc luôn trả `true`**",
-      "Giả thuyết mạnh nhất: 3 bản ghi cũ có chuỗi băm mang tiền tố `{noop}`, hoặc không băm",
-      "`NoOpPasswordEncoder` giữ mật khẩu ở dạng thô và so khớp bằng phép so sánh chuỗi — nó chỉ dành cho ví dụ",
-      "Với `DelegatingPasswordEncoder`, một bản ghi `{noop}` khiến **chính bản ghi đó** được so khớp bằng thuật toán rỗng",
-      "Nên lỗ hổng nằm ở **dữ liệu**, không ở mã — và đó là lý do nó chỉ ảnh hưởng 3 tài khoản",
-      "Khoanh vùng ngay: truy vấn bảng tìm mọi chuỗi băm không mang tiền tố mong đợi, hoặc mang `{noop}`",
-      "Đó là một câu truy vấn, không cần đăng nhập của ai, nên thoả ràng buộc không tắt hệ thống",
-      "Xử lý ngay: vô hiệu hoá 3 tài khoản đó và buộc đặt lại mật khẩu, ưu tiên 2 tài khoản quản trị",
-      "Vì sao kiểm thử không bắt: kiểm thử dùng người dùng **giả lập** hoặc dữ liệu tạo mới, nên nó không bao giờ chạm vào bản ghi cũ",
-      "Bài học cấu trúc: thêm một **bất biến trên dữ liệu** — không bản ghi nào được mang tiền tố yếu — kiểm ở cả di trú và lúc khởi động",
-      "Và bỏ `NoOpPasswordEncoder` khỏi map của `DelegatingPasswordEncoder` để lớp lỗi này không thể tái diễn",
+      "Nhận ra triệu chứng chập chờn trỏ tới việc security context không đi cùng sang thread khác",
+      "Chiến lược mặc định gắn security context vào thread xử lý request, nên thread mới không thấy nó",
+      "Chế độ kế thừa chỉ áp dụng cho **thread do Spring quản lý**; thread tự tạo vẫn trắng tay",
+      "Cách sửa đúng là bọc tác vụ bằng `DelegatingSecurityContextRunnable` / `...Callable`, hoặc bọc executor bằng `DelegatingSecurityContextExecutorService`",
+      "Giải thích được vì sao lỗi không tái hiện trên máy lập trình viên (khác cấu hình thread pool, tải thấp, pool tái dùng thread còn sót context)",
+      "Việc thread pool **tái dùng** thread có thể khiến tác vụ đọc nhầm context của một người dùng khác — đây là lỗ hổng, không chỉ là bug",
+      "Kế hoạch truy lại các bản ghi nhật ký thiếu tên người thực hiện",
+      "Ngăn tái diễn: một test chạy tác vụ qua executor và khẳng định danh tính được truyền đúng",
     ],
-    model: "\"Mật khẩu bất kỳ cũng vào được\" là một triệu chứng hẹp đến mức nó gần như nêu luôn nguyên nhân: bước so khớp mật khẩu không thực sự so khớp gì. Trong Spring Security, đường phổ biến nhất dẫn tới đó là `NoOpPasswordEncoder` — nó giữ mật khẩu ở dạng thô và \"so khớp\" bằng một phép so sánh chuỗi. Nếu bản ghi lưu chuỗi rỗng, hoặc nếu mã ở đâu đó coi mật khẩu trống là khớp, thì mọi mật khẩu đều qua. Chi tiết \"chỉ 3 tài khoản, cả 3 từ hệ thống cũ\" chỉnh giả thuyết cho tôi rất nhiều: nếu lỗi nằm trong mã thì nó sẽ ảnh hưởng toàn bộ, nên lỗ hổng nằm ở **dữ liệu** — 3 bản ghi đó có chuỗi băm mang tiền tố `{noop}` hoặc không có tiền tố hợp lệ, và `DelegatingPasswordEncoder` trung thành làm đúng điều tiền tố yêu cầu: uỷ cho bộ mã hoá rỗng. Tôi coi đây là một tính chất đáng nhớ của thiết kế đó: tiền tố nằm trong dữ liệu, nên một bản ghi có thể tự hạ cấp thuật toán của chính nó, và mã hoàn toàn không sai. Khoanh vùng thì nhanh và thoả được ràng buộc không tắt hệ thống: một câu truy vấn trên bảng tìm mọi chuỗi băm không bắt đầu bằng tiền tố mong đợi, cộng với mọi chuỗi mang `{noop}` hay rỗng. Nó không cần ai đăng nhập và cho câu trả lời dứt khoát về việc còn tài khoản nào cùng dạng. Xử lý ngay theo thứ tự rủi ro: vô hiệu hoá 3 tài khoản, ưu tiên 2 tài khoản quản trị, và buộc đặt lại mật khẩu qua một kênh đã xác thực. Song song, dù log cho thấy chưa ai khai thác, tôi vẫn coi 11 ngày là một cửa sổ phải điều tra: rà log đăng nhập của 3 tài khoản đó trong toàn bộ khoảng thời gian, và vì hai trong số đó là quản trị thì phải rà cả những hành động đã thực hiện dưới danh nghĩa chúng. Câu hỏi về kiểm thử là phần tôi thấy giá trị nhất. Kiểm thử bảo mật thường dùng người dùng giả lập — ta khai một người dùng có vai trò cho trước rồi kiểm phân quyền — hoặc dùng dữ liệu được tạo mới trong chính bài kiểm thử. Cả hai cách đều không bao giờ chạm vào bản ghi cũ trong cơ sở dữ liệu thật, nên một khiếm khuyết chỉ tồn tại trong dữ liệu di trú thì không có bài kiểm thử nào nhìn thấy. Đó không phải lỗi của đội viết kiểm thử; đó là giới hạn của việc kiểm thử mã khi lỗ hổng nằm ở dữ liệu. Nên biện pháp cấu trúc tôi đề xuất không phải thêm bài kiểm thử mà là thêm một **bất biến trên dữ liệu**: không bản ghi nào được mang tiền tố yếu, kiểm ở cuối mỗi lần di trú và kiểm lại lúc ứng dụng khởi động, và ứng dụng từ chối khởi động nếu vi phạm. Kèm theo đó, tôi bỏ `NoOpPasswordEncoder` khỏi map của `DelegatingPasswordEncoder` hoàn toàn — nếu thuật toán rỗng không có trong map thì một bản ghi `{noop}` sẽ **thất bại** thay vì cho qua, và lớp lỗi này chuyển từ \"mở cửa im lặng\" sang \"báo lỗi ồn ào\", đúng hướng ta muốn với mọi sai sót về bảo mật.",
+    model: "Điều đầu tiên tôi bám vào là hình dạng của triệu chứng chứ không phải thông báo lỗi: nó chập chờn, và nó bắt đầu đúng lúc có xử lý nền. Hai dấu hiệu đó gộp lại gần như luôn chỉ về một thứ — trạng thái gắn với thread không đi theo sang thread khác. Ở Spring Security, `SecurityContext` mặc định được giữ theo thread xử lý request. Khi endpoint đẩy việc sang một thread khác, thread đó không có context, nên mọi thứ đọc danh tính từ đó đều rỗng: chỗ nào gọi thẳng thì ghi tên rỗng vào nhật ký, chỗ nào đi qua một kiểm tra phân quyền thì ném lỗi thiếu thông tin xác thực. Điều đó cũng khớp với việc endpoint vẫn trả 200: request chính đã xác thực xong xuôi, phần hỏng nằm ở nhánh chạy nền. Để khẳng định trước khi sửa, tôi log id thread cùng với danh tính đọc được ở hai chỗ — trong controller và trong tác vụ nền — trên vài request. Thấy hai id thread khác nhau và danh tính chỉ có ở chỗ đầu là đủ kết luận. Về cách sửa, có một lối đi sai mà tôi muốn nói trước vì nó rất hay được chọn: đổi sang chế độ kế thừa context cho thread con. Nó chỉ áp dụng cho những thread do Spring quản lý; framework không sao chép context sang những thread mà nó không biết tới, nên nếu đội đang tự tạo executor thì đổi chế độ chẳng giải quyết gì, chỉ làm lỗi hiếm đi và khó tìm hơn. Cách đúng là dùng đúng những lớp tiện ích sinh ra cho việc này: bọc tác vụ bằng `DelegatingSecurityContextRunnable` hoặc `DelegatingSecurityContextCallable`, hoặc gọn hơn, bọc chính executor bằng `DelegatingSecurityContextExecutorService` để mọi tác vụ nộp vào đều mang context theo. Tôi chọn bọc executor, vì bọc từng tác vụ thì người viết tác vụ tiếp theo sẽ quên. Còn một điều tôi muốn nêu rõ với đội, vì nó biến chuyện này từ bug thành vấn đề bảo mật: thread pool tái dùng thread. Một thread từng phục vụ người dùng A mà không được dọn context có thể khiến tác vụ của người dùng B đọc ra danh tính của A. Điều đó khớp với chi tiết \"lúc có lúc không\" và giải thích vì sao trên máy lập trình viên, tải thấp và pool khác cấu hình, không ai thấy gì. Nên tôi không chỉ đi tìm bản ghi rỗng, tôi đi tìm cả bản ghi **sai người** — đối chiếu bảng nhật ký với log truy cập của endpoint theo mốc thời gian để phát hiện những lượt mà người ghi nhật ký không phải người gọi. Việc truy lại thì làm theo cùng cách đó: ghép bản ghi nhật ký với request tương ứng theo thời gian và mã báo cáo, điền lại tên, và đánh dấu những bản ghi không ghép được thay vì đoán. Để ngăn tái diễn, tôi thêm một test nộp tác vụ qua executor rồi khẳng định danh tính đọc được bên trong tác vụ đúng bằng danh tính bên ngoài — test này sẽ đỏ ngay nếu ai đó tạo một executor trần. Và tôi bổ sung một ghi chú vào hướng dẫn nội bộ: mọi executor trong ứng dụng phải là bản đã bọc, không có ngoại lệ.",
     redFlags: [
-      "Đi tìm lỗi trong mã đăng nhập bằng email mà không xét dữ liệu",
-      "Kết luận đây là tấn công và tập trung điều tra kẻ xâm nhập",
-      "Sửa 3 bản ghi rồi coi là xong, không rà toàn bảng",
-      "Giữ `NoOpPasswordEncoder` trong map \"để tương thích\"",
-      "Nói kiểm thử bắt được nếu viết nhiều hơn — bỏ qua việc lỗ hổng nằm ở dữ liệu",
-      "Không rà hành động đã thực hiện dưới danh nghĩa 2 tài khoản quản trị trong 11 ngày",
+      "Kết luận ngay là lỗi cấu hình phân quyền mà không giải thích được vì sao chập chờn",
+      "Sửa bằng cách đổi sang chế độ kế thừa context mà không kiểm xem thread có do Spring quản lý không",
+      "Sửa bằng cách truyền tên người dùng qua tham số ở một chỗ, bỏ qua những chỗ khác",
+      "Bỏ qua khả năng tác vụ đọc nhầm danh tính người khác do thread pool tái dùng thread",
+      "Không có kế hoạch nào cho các bản ghi nhật ký đã sai",
     ],
     probes: [
-      "Câu truy vấn khoanh vùng của bạn tìm chính xác điều kiện gì?",
-      "Vì sao bỏ `NoOpPasswordEncoder` khỏi map lại là biện pháp cấu trúc?",
-      "Bất biến dữ liệu của bạn chạy ở những thời điểm nào?",
+      "Vì sao lỗi không tái hiện trên máy lập trình viên?",
+      "Nếu đội dùng `@Async` của Spring thay vì executor tự tạo thì câu trả lời có khác không?",
+      "Bạn viết test thế nào để nó đỏ khi ai đó thêm một executor trần vào tháng sau?",
     ],
-    refs: ["springsec-04", "springsec-03"],
+    refs: ["springsec-06", "springsec-11"],
   },
 
   // ===== ssec-filter (springsec-iq05–springsec-iq08) =====
@@ -200,89 +207,89 @@ public class ReportController {
     topic: "ssec-filter",
     level: 1,
     minutes: 5,
-    question: "Chuỗi bộ lọc HTTP của Spring Security là gì, và có những cách nào để đưa một bộ lọc của mình vào đó?",
+    question: "Giải thích tầng đầu tiên của kiến trúc Spring Security cho một đồng nghiệp mới. Bạn có thể can thiệp vào nó theo những cách nào, và cách nào có cái bẫy riêng?",
     mustCover: [
-      "Bộ lọc trong Spring Security là **bộ lọc HTTP tiêu chuẩn** — ta cài `Filter` và ghi đè `doFilter`",
-      "`doFilter` nhận request, response và **`FilterChain`**; muốn request đi tiếp thì phải gọi `FilterChain`",
-      "Chuỗi là một tập bộ lọc chạy theo **thứ tự xác định**, mỗi bộ lọc có một chỉ số",
-      "Chuỗi **không cố định**: nó dài hay ngắn tuỳ cấu hình — gọi `httpBasic()` mới thêm `BasicAuthenticationFilter`",
-      "Ba cách chèn: đặt bộ lọc **trước**, **sau**, hoặc **tại vị trí** của một bộ lọc đã biết",
-      "Nhiều bộ lọc có thể cùng một vị trí, và khi đó **thứ tự gọi giữa chúng không được định nghĩa**",
-      "Nên không được dựa vào thứ tự giữa hai bộ lọc cùng vị trí",
-      "Chọn vị trí là một quyết định có ý nghĩa: đặt trước bộ lọc xác thực thì logic chạy khi **chưa** có người dùng",
+      "Tầng đầu tiên chặn HTTP request là một **filter chain** — một chuỗi filter có thứ tự",
+      "Bản thân việc xác thực và phân quyền cũng do các filter trong chuỗi này thực hiện",
+      "Ba cách can thiệp: thêm filter **trước**, **sau**, hoặc **tại vị trí** của một filter có sẵn",
+      "Nhiều filter đặt tại cùng một vị trí thì **thứ tự thực thi giữa chúng là không xác định**",
+      "Đặt filter trước hay sau filter xác thực quyết định việc filter đó có đọc được danh tính hay không",
+      "Spring Security đã cung cấp sẵn nhiều hiện thực filter, nên nên xem trước khi tự viết",
     ],
-    model: "Bộ lọc ở đây không phải khái niệm riêng của Spring Security — chúng là bộ lọc HTTP tiêu chuẩn, ta cài giao diện `Filter` và ghi đè `doFilter`. `doFilter` nhận ba thứ: request, response, và `FilterChain`; chi tiết dễ quên nhất là request chỉ đi tiếp khi ta **gọi** `FilterChain` — không gọi thì ta đã chặn request lại, và đó vừa là cách chặn hợp lệ vừa là chỗ dễ gây lỗi nếu bỏ sót một nhánh. Chuỗi bộ lọc là một tập bộ lọc chạy theo thứ tự xác định, mỗi bộ lọc có một chỉ số hay \"thứ tự\". Điều tôi muốn nhấn là chuỗi không cố định: nó được dựng theo cấu hình của ta. Chẳng hạn `BasicAuthenticationFilter` chỉ có mặt nếu ta gọi `httpBasic()`; `CsrfFilter` và `CorsFilter` cũng vậy. Nên khi một hành vi không xảy ra, câu hỏi đầu tiên là bộ lọc tương ứng có nằm trong chuỗi hay không. Về cách chèn bộ lọc của mình, có ba cách và chúng khác nhau về ý nghĩa: đặt **trước** một bộ lọc đã biết, đặt **sau**, hoặc đặt **tại** vị trí của nó. Chọn vị trí là một quyết định thật, không phải chi tiết kỹ thuật. Đặt trước bộ lọc xác thực nghĩa là logic của ta chạy khi chưa có người dùng nào được xác thực — đúng cho việc kiểm tra định dạng request, vì ta muốn loại request sai dạng trước khi tốn công truy vấn cơ sở dữ liệu để xác thực. Đặt sau bộ lọc xác thực thì ta đã có `SecurityContext`, nên đó là chỗ cho việc ghi nhật ký ai đăng nhập hay thông báo cho hệ thống khác. Còn một điều cần biết để không bị bối rối: hai bộ lọc có thể cùng một vị trí, và khi đó thứ tự gọi giữa chúng **không** được định nghĩa. Nên nếu logic của tôi phụ thuộc vào việc chạy trước hay sau một bộ lọc khác, tôi phải diễn đạt điều đó bằng vị trí tương đối, chứ không được đặt cùng chỗ rồi hy vọng.",
+    model: "Tôi bắt đầu bằng hình dung: request HTTP không đi thẳng vào controller, nó phải đi qua một chuỗi filter trước đã, và đó chính là chỗ Spring Security sống. Điều này quan trọng vì nhiều người nghĩ framework chặn ở tầng controller — không phải, đến lúc controller chạy thì mọi quyết định về xác thực và phân quyền đã xong từ lâu. Bản thân việc xác thực cũng là một filter trong chuỗi, việc kiểm tra CSRF cũng là một filter, xử lý CORS cũng vậy. Hiểu như thế thì việc tuỳ chỉnh trở nên tự nhiên: muốn thêm hành vi thì thêm filter của mình vào chuỗi. Có ba cách: đặt trước một filter có sẵn, đặt sau nó, hoặc đặt tại vị trí của nó. Việc chọn cách nào không phải chuyện thẩm mỹ mà quyết định filter của tôi nhìn thấy gì. Đặt trước filter xác thực thì lúc filter của tôi chạy, chưa ai biết người gọi là ai — phù hợp cho việc như ghi log request thô hay chặn theo địa chỉ IP. Đặt sau thì tôi đọc được danh tính đã xác thực — phù hợp cho việc ghi nhật ký kiểm toán. Cái bẫy đáng nhớ nhất nằm ở cách thứ ba: nếu có nhiều filter cùng đặt tại một vị trí, thứ tự thực thi giữa chúng là không xác định. Nên đừng bao giờ viết hai filter mà cái này ngầm giả định chạy sau cái kia rồi đặt chung một chỗ; nó sẽ chạy đúng trên máy bạn và sai ở đâu đó khác. Điều cuối tôi sẽ nói với đồng nghiệp mới: trước khi viết filter, xem danh sách filter mà framework đã cho sẵn đã — phần lớn nhu cầu thông thường đã có người làm rồi.",
     redFlags: [
-      "Quên rằng phải gọi `FilterChain` để request đi tiếp",
-      "Cho rằng chuỗi bộ lọc là cố định, giống nhau ở mọi ứng dụng",
-      "Đặt hai bộ lọc cùng vị trí rồi dựa vào thứ tự giữa chúng",
-      "Không phân biệt được ý nghĩa của trước và sau bộ lọc xác thực",
+      "Nghĩ Spring Security chặn request ở tầng controller hoặc bằng interceptor của Spring MVC",
+      "Không biết rằng nhiều filter cùng vị trí thì thứ tự không xác định",
+      "Không thấy sự khác nhau giữa đặt trước và đặt sau filter xác thực",
+      "Cho rằng phải tự viết filter cho mọi nhu cầu",
     ],
     probes: [
-      "Vì sao kiểm tra định dạng request nên đặt trước bộ lọc xác thực?",
-      "Bộ lọc của bạn muốn đọc người dùng hiện tại thì phải đặt ở đâu?",
-      "Chuỗi bộ lọc của một ứng dụng thay đổi theo điều gì?",
+      "Muốn ghi log tên người dùng của mọi request thì đặt filter ở đâu trong chuỗi?",
+      "Làm sao để xem thứ tự filter thật sự của ứng dụng đang chạy?",
+      "\"Đặt tại vị trí của\" một filter có nghĩa là thay thế nó không?",
     ],
-    refs: ["springsec-05"],
+    refs: ["springsec-05", "springsec-02"],
   },
   {
     id: "springsec-iq06",
     field: "spring-security",
     topic: "ssec-filter",
     level: 2,
-    minutes: 9,
+    minutes: 7,
     code: {
       lang: "java",
-      text: `public class TenantHeaderFilter implements Filter {
+      text: `// Yêu cầu: gắn một mã truy vết vào mọi request để tra log,
+// và ghi lại ai đã gọi endpoint nào.
+public class TracingFilter implements Filter {
+
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
             throws IOException, ServletException {
-        var request  = (HttpServletRequest) req;
-        var response = (HttpServletResponse) res;
 
-        String tenant = request.getHeader("X-Tenant-Id");
-        if (tenant != null && tenantRegistry.isKnown(tenant)) {
-            TenantContext.set(tenant);                       // (1)
-            chain.doFilter(request, response);
-        } else {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);   // (2)
-        }
+        String traceId = UUID.randomUUID().toString();
+        MDC.put("traceId", traceId);
+
+        Authentication auth = SecurityContextHolder.getContext()
+                                                   .getAuthentication();
+        log.info("request của user {}", auth.getName());   // (1)
+
+        chain.doFilter(req, res);                           // (2)
     }
 }
 
-// Cấu hình:
-http.addFilterAfter(new TenantHeaderFilter(),
-                    BasicAuthenticationFilter.class);        // (3)
+@Configuration
+public class SecurityConfig {
 
-// Ba hiện tượng trong môi trường thực tế:
-// A. Sau một đợt tải, request của khách thuê A đôi khi đọc dữ liệu của khách thuê B.
-// B. Request thiếu header vẫn làm ứng dụng truy vấn bảng users (thấy trong log DB).
-// C. Request thiếu header nhận 400 với thân rỗng, client không biết thiếu gì.`,
+    @Bean
+    SecurityFilterChain chain(HttpSecurity http) throws Exception {
+        http.addFilterBefore(new TracingFilter(),
+                             BasicAuthenticationFilter.class);  // (3)
+        http.httpBasic(Customizer.withDefaults());
+        http.authorizeHttpRequests(c -> c.anyRequest().authenticated());
+        return http.build();
+    }
+}`,
     },
-    question: "Ba hiện tượng, ba nguyên nhân khác nhau. Giải thích từng cái rồi sửa cả bộ lọc lẫn cấu hình.",
+    question: "Filter này được viết để gắn mã truy vết và ghi nhật ký người gọi. Nó biên dịch được và chạy được, nhưng có ba vấn đề. Tìm chúng và sửa lại.",
     mustCover: [
-      "Hiện tượng A: dòng (1) đặt giá trị vào một biến theo thread nhưng **không bao giờ xoá**",
-      "Thread được **tái sử dụng** từ pool của servlet container, nên giá trị cũ còn lại cho request sau",
-      "Nên request thiếu header — hoặc request của khách thuê khác trước khi kịp ghi đè — đọc được giá trị của người trước",
-      "Sửa A: bọc trong `try/finally` và **xoá** giá trị ở `finally`, không phải ở cuối nhánh thành công",
-      "Hiện tượng B: dòng (3) đặt bộ lọc **sau** bộ lọc xác thực, nên xác thực đã chạy trước khi ta kiểm header",
-      "Sửa B: đặt bộ lọc **trước** bộ lọc xác thực, vì kiểm định dạng request không cần biết người dùng",
-      "Hiện tượng C: dòng (2) đặt status nhưng không ghi gì vào thân response",
-      "Sửa C: ghi một thông điệp nêu rõ header nào thiếu hoặc không hợp lệ — nhưng **không** tiết lộ danh sách khách thuê hợp lệ",
-      "Và phân biệt hai trường hợp: thiếu header là 400; header có nhưng không thuộc quyền của người dùng là **403**",
+      "(3) filter đang được đặt **trước** filter xác thực, nên tại thời điểm nó chạy chưa có ai được xác thực",
+      "(1) vì thế `getAuthentication()` trả về `null` (hoặc một danh tính ẩn danh) và dòng log ném `NullPointerException`",
+      "Sửa bằng cách chuyển sang `addFilterAfter(...)` nếu muốn đọc danh tính, hoặc tách làm hai filter cho hai việc",
+      "(2) `MDC` không được dọn — phải đặt `chain.doFilter` trong `try` và xoá trong `finally`",
+      "Thread pool tái dùng thread nên mã truy vết cũ sẽ dính sang request sau nếu không dọn",
+      "Nên kế thừa `OncePerRequestFilter` thay vì hiện thực `Filter` trần, để filter không chạy lại khi request được forward",
     ],
-    model: "Ba hiện tượng, ba nguyên nhân độc lập, và tôi thấy hiện tượng A là nghiêm trọng nhất nên nói trước. Dòng (1) đặt giá trị khách thuê vào một biến theo thread nhưng không có chỗ nào xoá nó. Servlet container tái sử dụng thread từ pool, nên khi một thread phục vụ request tiếp theo, giá trị của request trước vẫn còn đó. Với request thiếu header thì nhánh `else` chạy và ta trả 400 — nhưng nếu mã nào khác chạy trên thread đó lại đọc `TenantContext`, nó đọc được khách thuê của người trước. Và ngay cả trên đường thành công, việc để lại giá trị cũ là một quả bom chờ. Đây là dạng rò rỉ dữ liệu giữa các khách thuê, tức lỗi tệ nhất một hệ thống nhiều khách thuê có thể mắc, và nó thưa nên rất khó bắt. Sửa thì phải bọc `try/finally` và xoá ở `finally`, không phải ở cuối nhánh thành công — vì nếu một ngoại lệ được ném ra từ phần chuỗi phía sau thì đường dọn dẹp bị bỏ qua, và đúng những request lỗi lại là những request để lại rác. Hiện tượng B là lỗi về vị trí: dòng (3) đặt bộ lọc sau `BasicAuthenticationFilter`, nên khi ta mới kiểm header thì việc xác thực đã chạy xong — kể cả truy vấn bảng `users`. Việc kiểm định dạng request không cần biết người dùng là ai, nên nó phải chạy **trước** xác thực; đổi sang chèn trước là đủ, và nó cũng làm ứng dụng khó bị làm mệt bằng request rác hơn. Hiện tượng C nhỏ hơn nhưng ảnh hưởng mọi đội tích hợp: dòng (2) đặt status mà không ghi gì vào thân, nên client nhận 400 trống và không biết sai ở đâu. Tôi sẽ ghi một thông điệp nêu rõ thiếu hay không hợp lệ ở header nào — nhưng có một ranh giới phải giữ: không liệt kê các khách thuê hợp lệ, vì đó là thông tin giúp dò. Và khi sửa chỗ này tôi sẽ tách hai trường hợp mà mã hiện tại gộp làm một: header thiếu hoặc sai dạng là lỗi của request, trả 400; còn header hợp lệ nhưng người dùng không có quyền với khách thuê đó là vấn đề **phân quyền**, phải trả 403 — và quan trọng hơn, việc kiểm đó không thể nằm ở bộ lọc trước xác thực, vì lúc đó ta chưa biết người dùng. Nên thiết kế đúng là hai lớp: một bộ lọc trước xác thực kiểm dạng, và một lớp sau xác thực kiểm quyền với khách thuê.",
+    model: "Ba vấn đề, và cái nặng nhất là chỗ (3) kéo theo chỗ (1). Filter đang được đặt **trước** filter xác thực HTTP Basic. Nghĩa là khi nó chạy, chưa ai xác thực gì cả, nên `getAuthentication()` trả về `null` — hoặc một danh tính ẩn danh, tuỳ cấu hình — và dòng log ngay dưới ném `NullPointerException`. Cái khó chịu là lỗi này xảy ra trong filter chain, trước khi bất cứ xử lý lỗi nào của ứng dụng kịp can thiệp, nên client nhận một lỗi 500 trần trụi. Đây chính là minh hoạ cho việc chọn vị trí filter không phải chuyện thẩm mỹ: nó quyết định filter nhìn thấy gì. Cách sửa phụ thuộc vào ý định. Nếu chỉ cần ghi nhật ký người gọi thì chuyển sang `addFilterAfter` để filter chạy sau khi xác thực xong. Nhưng ở đây filter đang làm hai việc có yêu cầu vị trí trái ngược nhau: mã truy vết phải có từ đầu để log của chính quá trình xác thực cũng mang mã đó, còn tên người dùng thì chỉ có sau khi xác thực. Nên lựa chọn tôi thấy sạch hơn là tách làm hai filter — một đặt sớm để gắn mã truy vết, một đặt sau filter xác thực để ghi danh tính. Vấn đề thứ hai ở chỗ (2): `MDC` được đặt nhưng không bao giờ được dọn. Vì thread được tái dùng giữa các request, mã truy vết của request cũ sẽ dính lại và xuất hiện trong log của request sau — đúng loại lỗi khiến việc tra log trở nên còn tệ hơn là không có mã truy vết. Phải bọc `chain.doFilter` trong `try` và gọi `MDC.remove` trong `finally`, để cả khi có exception thì vẫn dọn. Vấn đề thứ ba nằm ở khai báo class: hiện thực `Filter` trần nghĩa là filter có thể chạy nhiều lần cho cùng một request khi request được forward nội bộ — và thế là một request sinh ra hai mã truy vết. Kế thừa `OncePerRequestFilter` là cách framework giải quyết sẵn chuyện này, và đó là lớp cha nên dùng cho hầu hết filter tự viết.",
     redFlags: [
-      "Xoá `TenantContext` ở cuối nhánh thành công thay vì trong `finally`",
-      "Đổi biến theo thread thành một field của bộ lọc — bộ lọc là một instance dùng chung, còn tệ hơn",
-      "Giữ bộ lọc sau bộ lọc xác thực vì \"nó vẫn chạy\"",
-      "Ghi ra danh sách khách thuê hợp lệ trong thông điệp lỗi",
-      "Gộp \"thiếu header\" và \"không có quyền với khách thuê\" vào cùng một status",
+      "Chỉ thấy lỗi `null` mà không chỉ ra gốc là vị trí filter trong chuỗi",
+      "Sửa bằng cách thêm kiểm tra `if (auth != null)` rồi coi như xong",
+      "Không nhận ra `MDC` bị rò rỉ giữa các request qua thread được tái dùng",
+      "Không biết `OncePerRequestFilter` tồn tại hoặc không giải thích được nó giải quyết gì",
     ],
     probes: [
-      "Vì sao xoá trong `finally` mới đủ?",
-      "Nếu không gọi `chain.doFilter` thì điều gì xảy ra với request?",
-      "Kiểm quyền với khách thuê đặt ở đâu, và vì sao không đặt ở bộ lọc này?",
+      "Nếu bạn cần cả mã truy vết từ sớm lẫn tên người dùng, bạn bố trí thế nào?",
+      "Filter chạy hai lần cho một request xảy ra trong tình huống nào?",
+      "Vì sao phải dọn `MDC` trong `finally` chứ không phải sau `doFilter`?",
     ],
     refs: ["springsec-05", "springsec-06"],
   },
@@ -291,89 +298,83 @@ http.addFilterAfter(new TenantHeaderFilter(),
     field: "spring-security",
     topic: "ssec-filter",
     level: 3,
-    minutes: 10,
-    question: "Cần thêm một bước xác thực bằng mã một lần. Viết một bộ lọc, viết một `AuthenticationProvider`, hay dùng dịch vụ ngoài?",
+    minutes: 9,
+    question: "Hệ thống cần chấp nhận thêm một cách nhận diện người gọi: các dịch vụ nội bộ sẽ gửi một khoá bí mật trong header thay vì đăng nhập. Bạn cài đặt việc này ở đâu trong kiến trúc, và vì sao không phải ở những chỗ còn lại?",
     tradeoffs: [
       {
-        option: "`AuthenticationProvider` tự viết",
-        when: "Khi bước thêm vào **là một cách xác thực** — nó nhận thông tin và quyết định danh tính. Nó nằm đúng chỗ kiến trúc dành cho logic xác thực, nên `SecurityContext`, phân quyền và kiểm thử đều hoạt động như bình thường.",
+        option: "Viết một `AuthenticationProvider` mới (kèm một filter mỏng dựng `Authentication` từ header)",
+        when: "Lựa chọn mặc định. Logic nhận diện nằm đúng chỗ kiến trúc dành cho nó, nên kết quả đi vào `SecurityContext` như mọi cách xác thực khác và toàn bộ phân quyền hiện có — cả ở endpoint lẫn ở method — hoạt động không cần sửa. Đổi lại phải viết hai mảnh nhỏ thay vì một.",
       },
       {
-        option: "Bộ lọc tự viết",
-        when: "Khi việc cần làm **không phải** xác thực: kiểm định dạng request, ghi nhật ký, chặn theo tần suất, đọc một header. Chèn trước hay sau bộ lọc xác thực tuỳ việc đó cần biết người dùng hay không.",
+        option: "Một `Filter` tự viết làm hết: đọc header, tra khoá, rồi tự đặt vào `SecurityContext`",
+        when: "Chấp nhận được khi đây là một ngoại lệ thật sự hẹp và tạm thời. Nhanh, một tệp duy nhất. Nhưng logic nhận diện nằm ngoài chỗ kiến trúc dành cho nó, nên cách xác thực thứ ba sau này sẽ lại đẻ ra một filter nữa, và không còn chỗ nào nhìn thấy toàn cảnh.",
       },
       {
-        option: "Dịch vụ nhận diện bên ngoài",
-        when: "Khi ta không muốn tự giữ và tự bảo vệ yếu tố thứ hai — mã một lần đòi kênh gửi, chống dò, giới hạn số lần thử, đồng bộ thời gian. Đổi lại là một phụ thuộc ngoài và một luồng OAuth 2 phải hiểu.",
+        option: "Kiểm khoá trong controller hoặc trong một interceptor của Spring MVC",
+        when: "Gần như luôn sai. Đến lúc controller chạy thì các filter bảo mật đã quyết định xong — request không có danh tính hợp lệ đã bị từ chối trước đó. Nghĩa là để cách này hoạt động, bạn buộc phải mở `permitAll()` cho các endpoint liên quan, và thế là mất luôn mọi quy tắc phân quyền của Spring Security trên chính những endpoint nhạy cảm nhất.",
+      },
+      {
+        option: "Không tự làm: dùng OAuth 2 client credentials giữa các dịch vụ",
+        when: "Khi số dịch vụ nội bộ còn tăng, hoặc khi cần thu hồi quyền của một dịch vụ mà không phát hành lại tất cả. Khoá tĩnh trong header không có hạn dùng, không thu hồi được lẻ, và thường bị chép vào biến môi trường ở nhiều nơi. Đây là câu trả lời đúng về lâu dài dù tốn công dựng hơn.",
       },
     ],
     mustCover: [
-      "Câu hỏi phân định: việc này **là xác thực** hay chỉ là logic quanh xác thực?",
-      "Mã một lần là một bước quyết định danh tính, nên nó thuộc về `AuthenticationProvider`",
-      "Viết nó thành bộ lọc thì ta đặt logic xác thực ngoài chỗ kiến trúc dành cho nó",
-      "Hệ quả cụ thể: ta phải tự đặt `SecurityContext`, tự xử lý lỗi, và mất phần hỗ trợ kiểm thử sẵn có",
-      "Ngược lại, bộ lọc là đúng chỗ cho kiểm định dạng, ghi nhật ký, chặn theo tần suất — những việc **không** quyết định danh tính",
-      "Nhưng phần khó nhất của mã một lần không nằm ở chỗ viết nó ở đâu",
-      "Nó nằm ở **giới hạn số lần thử**, thời gian sống của mã, và kênh gửi — vì mã 6 số dò được rất nhanh nếu không giới hạn",
-      "Nên nếu không tự tin làm đủ những thứ đó, dùng dịch vụ ngoài là quyết định đúng, không phải né việc",
-      "Và dù chọn cách nào, bước thứ hai phải **không thể bỏ qua** — không có đường nào vào hệ thống mà không qua nó",
+      "Đặt logic nhận diện vào `AuthenticationProvider` — nơi kiến trúc dành cho việc đó",
+      "Cần một filter mỏng để dựng đối tượng `Authentication` từ header rồi giao cho `AuthenticationManager`",
+      "Lợi ích quyết định: kết quả vào `SecurityContext` nên mọi quy tắc phân quyền hiện có dùng lại được nguyên vẹn",
+      "`supports()` phân biệt kiểu `Authentication` nên hai cách xác thực cùng tồn tại được",
+      "Giải thích vì sao kiểm trong controller là sai: filter bảo mật đã chạy xong trước controller",
+      "Nêu được giới hạn của khoá tĩnh (không hạn dùng, khó thu hồi lẻ) và khi nào nên chuyển sang OAuth 2",
     ],
-    model: "Câu hỏi tôi dùng để phân định là: việc này **là** xác thực, hay nó chỉ là logic đứng quanh xác thực? Kiểm tra một mã một lần là việc nhận thông tin từ người dùng và quyết định danh tính, nên nó là xác thực, và chỗ kiến trúc dành cho nó là một `AuthenticationProvider`. Viết nó ở đó không chỉ là cho đúng chỗ — nó mua được những thứ cụ thể: `AuthenticationManager` gọi nó theo luồng chuẩn, `SecurityContext` được đặt cho ta, lỗi xác thực trả về đúng status, và phần hỗ trợ kiểm thử của framework hoạt động. Nếu tôi nhồi logic đó vào một bộ lọc thì tôi phải tự làm lại từng thứ trong danh sách trên, và mỗi thứ tôi làm lại là một chỗ có thể sai. Bộ lọc thì đúng cho họ việc khác: kiểm định dạng request, ghi nhật ký sự kiện xác thực, chặn theo tần suất, đọc một header định tuyến — chúng không quyết định danh tính, và với chúng thì `AuthenticationProvider` là chỗ sai. Nhưng tôi muốn nói thẳng phần quan trọng nhất, vì nó không nằm trong câu hỏi: chỗ đặt mã không phải phần khó của xác thực hai yếu tố. Phần khó là giới hạn số lần thử, thời gian sống của mã, kênh gửi, và chống dò. Một mã sáu số chỉ có một triệu khả năng; nếu ta không giới hạn số lần thử cho mỗi người dùng và mỗi khoảng thời gian thì bước thứ hai gần như không thêm sức mạnh nào, mà chỉ thêm một bước cho người dùng. Cộng thêm việc gửi mã cần một kênh, và kênh đó có thể hỏng, chậm hoặc bị chiếm. Nên nếu đội không có đủ thời gian làm đúng những thứ đó, tôi coi việc dùng một dịch vụ nhận diện bên ngoài là quyết định kỹ thuật đúng, không phải né việc — ta đổi một phụ thuộc và một luồng OAuth 2 phải hiểu, để lấy một phần bảo mật đã được làm cẩn thận hơn ta có thể làm trong một quý. Và điều cuối, đúng với cả ba phương án: bước thứ hai chỉ có giá trị nếu **không thể bỏ qua**. Tôi sẽ kiểm rằng không có đường nào vào hệ thống mà không đi qua nó — không có endpoint nào cấp phiên đầy đủ ngay sau bước thứ nhất, không có luồng \"đăng nhập bằng token cũ\" nào lách được — vì một bước bảo mật có đường đi vòng thì bằng không.",
+    model: "Tôi bắt đầu từ nguyên tắc: đây là một cách **xác thực** mới, nên nó phải nằm ở chỗ kiến trúc dành cho việc xác thực. Cụ thể là một `AuthenticationProvider`, cộng thêm một filter mỏng làm đúng một việc — đọc header, dựng một đối tượng `Authentication` chưa xác thực rồi đưa cho `AuthenticationManager`. Manager sẽ chọn provider dựa trên `supports()`, và vì thế cách xác thực bằng khoá này sống song song với cách đăng nhập hiện có mà không cái nào biết tới cái nào. Lý do tôi chọn thế không phải vì nó đúng bài, mà vì một lợi ích rất cụ thể: khi provider trả về, kết quả đi vào `SecurityContext` giống hệt mọi cách xác thực khác. Nghĩa là toàn bộ cấu hình phân quyền đã có — quy tắc ở endpoint, các annotation ở tầng method — chạy y nguyên cho các dịch vụ nội bộ, không phải viết lại dòng nào. Tôi gán cho dịch vụ nội bộ một tập authority riêng và thế là xong. Phương án viết một filter tự làm hết thì nhanh hơn, và tôi không nói nó luôn sai — cho một ngoại lệ hẹp, tạm thời, nó chấp nhận được. Nhưng nó đặt logic nhận diện ra ngoài chỗ dành cho nó, nên khi có cách xác thực thứ ba, người sau lại thêm một filter nữa, và cuối cùng không ai chỉ ra được ứng dụng chấp nhận những cách xác thực nào. Phương án kiểm trong controller thì tôi loại dứt khoát, vì nó hiểu sai thứ tự thi hành. Đến lúc controller chạy thì các filter bảo mật đã quyết định xong từ lâu; request không có danh tính hợp lệ đã bị chặn rồi. Để việc kiểm trong controller có cơ hội chạy, ta buộc phải mở các endpoint đó bằng `permitAll()` — và như thế là tự tay gỡ bỏ mọi quy tắc phân quyền khỏi đúng những endpoint nhạy cảm nhất, đổi lấy một lần kiểm tra thủ công mà người viết endpoint tiếp theo sẽ quên. Điều cuối tôi muốn nêu ngay trong buổi thiết kế, không đợi đến khi hỏng: một khoá bí mật tĩnh trong header không có hạn dùng và không thu hồi lẻ được. Rò một khoá là phải xoay khoá cho tất cả. Nếu số dịch vụ nội bộ còn tăng, tôi đề xuất đi thẳng tới client credentials của OAuth 2 — mỗi dịch vụ một danh tính riêng, token có hạn, thu hồi được từng cái. Tốn công dựng hơn, nhưng là thứ ta sẽ phải làm dù sớm hay muộn.",
     redFlags: [
-      "Viết logic xác thực vào bộ lọc rồi tự đặt `SecurityContext`",
-      "Dùng `AuthenticationProvider` cho việc ghi nhật ký hay kiểm định dạng",
-      "Không nói gì tới giới hạn số lần thử",
-      "Không kiểm xem có đường nào vào hệ thống mà bỏ qua bước thứ hai",
-      "Cho mã một lần thời gian sống dài để \"người dùng đỡ vội\"",
+      "Chọn kiểm khoá trong controller hoặc interceptor mà không thấy vấn đề thứ tự thi hành",
+      "Viết filter tự đặt `SecurityContext` mà không biết vì sao `AuthenticationProvider` tồn tại",
+      "Không nhận ra lợi ích lớn nhất là dùng lại được toàn bộ cấu hình phân quyền",
+      "Không nói gì về vòng đời và việc thu hồi khoá bí mật",
     ],
     probes: [
-      "`AuthenticationProvider` cho bạn những gì mà bộ lọc không cho?",
-      "Bạn giới hạn số lần thử theo chiều nào — người dùng, IP, hay cả hai?",
-      "Bạn tìm đường đi vòng qua bước thứ hai bằng cách nào?",
+      "Hai cách xác thực cùng tồn tại thì `AuthenticationManager` chọn provider bằng gì?",
+      "Bạn gán quyền cho một dịch vụ nội bộ thế nào để phân biệt với người dùng thật?",
+      "Nếu một khoá bị rò, quy trình xoay khoá của bạn là gì?",
     ],
-    refs: ["springsec-05", "springsec-06"],
+    refs: ["springsec-05", "springsec-06", "springsec-16"],
   },
   {
     id: "springsec-iq08",
     field: "spring-security",
     topic: "ssec-filter",
     level: 4,
-    minutes: 13,
+    minutes: 12,
     incident: {
-      symptom: "Một bộ lọc tự viết ghi nhật ký mọi lần xác thực thất bại để đội bảo mật theo dõi dò mật khẩu. Sau 6 tuần, đội bảo mật báo nhật ký \"gần như trống\" dù bảng đếm của hệ thống cho thấy 240.000 lần xác thực thất bại trong kỳ. Bộ lọc được chèn bằng `addFilterAt` tại vị trí của `BasicAuthenticationFilter`.",
-      scale: "240.000 lần thất bại được đếm, 1.900 lần được ghi nhật ký — khoảng 0,8%. Trong 6 tuần đó có một đợt dò mật khẩu kéo dài 4 ngày nhắm vào 80 tài khoản mà không ai phát hiện.",
-      constraints: "Không đổi được hệ thống thu gom nhật ký. Phải giải thích được con số 0,8%. Phải bảo đảm không bỏ sót sự kiện nào sau khi sửa, và chứng minh được điều đó.",
-      },
-    question: "0,8% là tỉ lệ của cái gì? Chỉ ra cơ chế, vì sao không vị trí nào trong chuỗi chữa được nó, và sau khi sửa bạn đối chiếu với con số nào.",
+      symptom: "Một API công khai bắt đầu trả 403 rải rác cho những request lẽ ra hợp lệ. Tỉ lệ lỗi khác nhau rõ rệt giữa các instance: một instance gần như không lỗi, một instance lỗi khoảng một phần ba số request. Khởi động lại instance đang lỗi thì tỉ lệ đổi, có khi hết hẳn vài ngày rồi quay lại. Bản phát hành gần nhất có thêm một filter kiểm giới hạn tần suất gọi.",
+      scale: "API phục vụ khoảng 2 triệu request mỗi ngày trên 6 instance. Khoảng 4% tổng số request bị ảnh hưởng, tập trung vào hai instance.",
+      constraints: "Đây là API mà đối tác bên ngoài gọi, nên không thể yêu cầu họ thử lại. Đội đã quay lui một lần và sự cố biến mất, nhưng tính năng giới hạn tần suất là bắt buộc theo yêu cầu vận hành nên phải đưa lại vào.",
+    },
+    question: "Sự cố này có một đặc điểm khiến nó khác với lỗi cấu hình thông thường. Hãy nói bạn đọc ra điều gì từ đó, rồi trình bày cách khoanh vùng và sửa.",
     mustCover: [
-      "Manh mối: 0,8% không phải \"đôi khi lỗi\" mà là \"gần như **không bao giờ** chạy\"",
-      "`addFilterAt` đặt bộ lọc **cùng vị trí** với `BasicAuthenticationFilter`, và khi cùng vị trí thì **thứ tự không được định nghĩa**",
-      "Nên bộ lọc của ta chỉ chạy trong ít trường hợp nó tình cờ được gọi trước — 0,8% chính là tỉ lệ tình cờ đó",
-      "Và khi `BasicAuthenticationFilter` chạy trước rồi từ chối request, chuỗi dừng, nên bộ lọc của ta không bao giờ được gọi",
-      "Lỗi sâu hơn: `addFilterAt` **không thay thế** bộ lọc kia, nó chỉ thêm vào cùng chỗ — người viết có thể đã tưởng ngược lại",
-      "Sửa cơ học: không dùng `addFilterAt`; đặt bộ lọc ở vị trí **xác định** so với bộ lọc xác thực",
-      "Nhưng sửa đúng hơn: **bộ lọc là chỗ sai** để nghe sự kiện xác thực thất bại",
-      "Vì một bộ lọc đứng trước thì chưa biết kết quả, còn đứng sau thì request đã bị chặn và không tới nó",
-      "Chỗ đúng là cơ chế **sự kiện xác thực** của framework, hoặc một điểm mở rộng được gọi đúng khi xác thực thất bại",
-      "Chứng minh không bỏ sót: đối chiếu số nhật ký với bảng đếm sẵn có và đòi **khớp**, đặt cảnh báo khi lệch",
-      "Và điều tra ngược đợt dò 4 ngày: 80 tài khoản đó phải được kiểm xem có tài khoản nào bị chiếm không",
-      "Bài học: một cơ chế quan sát **không được quan sát** thì không phải cơ chế quan sát",
+      "Đặc điểm quyết định: tỉ lệ lỗi **khác nhau giữa các instance** và đổi sau khi khởi động lại — trỏ tới thứ tự thi hành không xác định, không phải cấu hình sai",
+      "Cấu hình giống nhau trên mọi instance thì lỗi phụ thuộc instance không thể do giá trị cấu hình",
+      "Nguyên nhân: filter mới được đặt **tại cùng vị trí** với một filter có sẵn, mà thứ tự giữa các filter cùng vị trí là không xác định",
+      "Hệ quả cụ thể: filter giới hạn tần suất khi chạy trước filter xác thực thì đếm theo một khoá sai (hoặc từ chối trước khi biết người gọi là ai)",
+      "Cách khẳng định: in danh sách filter theo thứ tự thật trên từng instance và so sánh",
+      "Cách sửa: dùng `addFilterBefore` / `addFilterAfter` để ghim thứ tự thay vì đặt cùng vị trí",
+      "Ngăn tái diễn: một test khẳng định thứ tự filter, vì cấu hình đúng trên máy này không bảo đảm đúng ở nơi khác",
     ],
-    model: "0,8% là con số nói lên gần hết. Nếu bộ lọc chạy nhưng đôi khi lỗi, ta sẽ thấy một tỉ lệ như 90% hay 99%; 0,8% nghĩa là nó gần như không bao giờ chạy, và thứ chạy 0,8% thời gian thường là một cuộc đua. `addFilterAt` đặt bộ lọc của ta **cùng vị trí** với `BasicAuthenticationFilter`, và với hai bộ lọc cùng vị trí thì thứ tự gọi giữa chúng không được định nghĩa. Khi bộ lọc của ta tình cờ được gọi trước, nó chạy — nhưng lúc đó việc xác thực còn chưa diễn ra nên nó cũng chẳng có kết quả nào để ghi; khi `BasicAuthenticationFilter` được gọi trước và request thất bại xác thực, nó trả 401 và chuỗi dừng lại, nên bộ lọc của ta không bao giờ được gọi. Nói cách khác cơ chế này sai theo cả hai nhánh, và 0,8% là tỉ lệ ngẫu nhiên của nhánh thứ nhất. Tôi cũng nghi rằng người viết đã hiểu `addFilterAt` là \"thay thế bộ lọc kia\" — cái tên gợi ý như vậy — trong khi nó chỉ thêm vào cùng chỗ; nếu nó thực sự thay thế thì xác thực Basic đã ngừng hoạt động hoàn toàn và lỗi sẽ bị phát hiện ngay ngày đầu. Sửa phần cơ học thì đơn giản: bỏ `addFilterAt`, đặt bộ lọc ở một vị trí xác định so với bộ lọc xác thực. Nhưng tôi sẽ không dừng ở đó, vì sửa vị trí không sửa được vấn đề gốc: bộ lọc là chỗ sai để nghe một sự kiện \"xác thực thất bại\". Đứng trước bộ lọc xác thực thì ta chưa biết kết quả; đứng sau thì với request thất bại ta không được gọi, vì chuỗi đã dừng. Không có vị trí nào trong chuỗi cho ta đúng thứ ta cần, nên đây là lỗi chọn cơ chế, không phải lỗi cấu hình. Chỗ đúng là cơ chế sự kiện xác thực của framework — nó được phát ra đúng lúc xác thực thành công hay thất bại, bất kể request bị chặn ở đâu — và tôi ghi nhật ký từ đó. Về việc chứng minh lần này không bỏ sót, và tôi cho đây là phần quan trọng nhất của bài học: lỗi này sống được 6 tuần vì không ai so nhật ký với bất cứ thứ gì. Hệ thống đã có bảng đếm số lần xác thực thất bại, nên tôi đối chiếu số bản ghi nhật ký với bảng đếm đó và đòi hai con số khớp nhau, rồi đặt cảnh báo khi chúng lệch quá một ngưỡng nhỏ. Như vậy cơ chế quan sát tự nó được quan sát — và nguyên tắc tôi rút ra là: một cơ chế quan sát không được quan sát thì không phải cơ chế quan sát, nó chỉ là một niềm tin. Việc tôi làm song song, không đợi sửa xong: đợt dò 4 ngày nhắm vào 80 tài khoản phải được điều tra ngược từ dữ liệu còn lại — bảng đếm, nhật ký truy cập, nhật ký đăng nhập thành công trong cùng khoảng — để xác định có tài khoản nào bị chiếm hay không. Sửa cơ chế ghi nhật ký không trả lời được câu hỏi đó, và nó là câu hỏi cấp bách hơn.",
+    model: "Đặc điểm tôi bám vào ngay là: cùng một bản build, cùng một cấu hình, nhưng tỉ lệ lỗi khác nhau giữa các instance và đổi sau mỗi lần khởi động lại. Điều đó gần như loại trừ hoàn toàn nhóm nguyên nhân \"cấu hình sai\", vì cấu hình sai thì sai đều ở mọi nơi. Khi hành vi phụ thuộc vào từng lần khởi động, thứ đang khác nhau phải là một thứ được quyết định lúc khởi động và không được định nghĩa chặt. Đặt cạnh chi tiết \"bản phát hành gần nhất có thêm một filter\", tôi nghĩ ngay tới thứ tự filter trong chuỗi. Spring Security cho phép đặt một filter tại cùng vị trí với một filter có sẵn, và khi có nhiều filter ở cùng vị trí thì thứ tự thực thi giữa chúng là không xác định — nó có thể khác nhau giữa các lần khởi động. Đó chính xác là hình dạng triệu chứng đang thấy. Về mặt hậu quả thì rất dễ hình dung: nếu filter giới hạn tần suất chạy **sau** filter xác thực, nó biết người gọi là ai và đếm theo đúng đối tác; nếu nó chạy **trước**, nó chưa biết gì và buộc phải đếm theo một khoá thô hơn — thường là địa chỉ IP. Nhiều đối tác đi chung một cổng NAT là gộp hết vào một bộ đếm, và thế là những request hoàn toàn hợp lệ bị từ chối. Instance nào bốc được thứ tự bất lợi thì lỗi nhiều, instance khác thì không. Để khẳng định trước khi sửa, tôi in ra danh sách filter theo đúng thứ tự thật trên từng instance — bật log gỡ lỗi của Spring Security lúc khởi động là đủ — rồi so sánh hai instance có tỉ lệ lỗi khác nhau. Nếu thứ tự khác nhau thì không cần bàn thêm. Cách sửa thì đơn giản một khi đã biết nguyên nhân: bỏ cách đặt tại vị trí, dùng `addFilterAfter` để ghim filter giới hạn tần suất chạy sau filter xác thực. Thứ tự lúc đó là tất định, và bộ đếm có danh tính thật để đếm. Tôi cũng xem lại chính logic đếm: khi chưa xác thực được thì nên chọn một hành vi rõ ràng và cố ý, chứ không để nó rơi vào một nhánh mặc định nào đó. Về phía đối tác, tôi rà log để lấy danh sách các lượt bị từ chối oan và chủ động báo cho những đối tác bị ảnh hưởng nặng, vì họ không thử lại được. Để ngăn tái diễn, tôi thêm một test khẳng định thứ tự các filter trong chuỗi — lấy chuỗi filter đã dựng và so với thứ tự mong đợi. Loại lỗi này không bao giờ lộ ra trên máy lập trình viên, nên phải có một thứ tự động canh nó. Và tôi ghi lại trong hướng dẫn nội bộ: không đặt filter tại cùng vị trí với filter khác, luôn ghim bằng trước hoặc sau.",
     redFlags: [
-      "Chỉ đổi `addFilterAt` thành `addFilterAfter` rồi coi là xong",
-      "Kết luận hệ thống thu gom nhật ký mất dữ liệu",
-      "Cho rằng `addFilterAt` thay thế bộ lọc kia",
-      "Không nhận ra không vị trí nào trong chuỗi cho được sự kiện cần ghi",
-      "Không đối chiếu nhật ký với bảng đếm sau khi sửa",
-      "Bỏ qua việc điều tra 80 tài khoản trong đợt dò",
+      "Đi tìm lỗi trong logic giới hạn tần suất mà không giải thích được vì sao lỗi khác nhau giữa các instance",
+      "Kết luận do cấu hình lệch giữa các môi trường dù cùng một bản build",
+      "Sửa bằng cách nới ngưỡng giới hạn tần suất cho hết lỗi",
+      "Không biết rằng thứ tự giữa các filter cùng vị trí là không xác định",
+      "Không có cách nào canh thứ tự filter sau khi sửa",
     ],
     probes: [
-      "Vì sao đặt bộ lọc sau bộ lọc xác thực cũng không ghi được request thất bại?",
-      "Bạn chứng minh không bỏ sót bằng con số nào, đối chiếu với cái gì?",
-      "Với đợt dò đã qua, bạn còn dữ liệu nào để điều tra?",
+      "Bạn xem thứ tự filter thật của một instance đang chạy bằng cách nào?",
+      "Nếu filter giới hạn tần suất buộc phải chạy trước xác thực, bạn đếm theo khoá gì?",
+      "Test khẳng định thứ tự filter của bạn trông thế nào?",
     ],
-    refs: ["springsec-05"],
+    refs: ["springsec-05", "springsec-08"],
   },
 
   // ===== ssec-authz (springsec-iq09–springsec-iq12) =====
@@ -383,188 +384,177 @@ http.addFilterAfter(new TenantHeaderFilter(),
     topic: "ssec-authz",
     level: 1,
     minutes: 5,
-    question: "Phân biệt quyền hạn và vai trò trong Spring Security. Ở tầng cài đặt, cái gì thực sự phân biệt hai khái niệm đó?",
+    question: "Trong Spring Security có hai khái niệm rất hay bị dùng lẫn lộn khi mô tả quyền của người dùng. Phân biệt chúng, và nói xem một endpoint mở cho tất cả có thể trả về 401 trong tình huống nào.",
     mustCover: [
-      "**Quyền hạn** là đặc quyền chi tiết — đọc, ghi, xoá; ta viết quy tắc dựa trên tên ta tự đặt",
-      "**Vai trò** là một \"phù hiệu\" bao quát hơn, gộp một nhóm đặc quyền",
-      "Ở tầng cài đặt, cả hai đều được biểu diễn bằng **cùng một** giao ước `GrantedAuthority`",
-      "Điều duy nhất phân biệt chúng là **tiền tố `ROLE_`** ở đầu tên",
-      "Nên khi khai một vai trò, tên bắt buộc bắt đầu bằng `ROLE_`",
-      "Nhưng khi viết quy tắc thì `hasRole(\"ADMIN\")` **không** kèm tiền tố — framework tự thêm",
-      "Còn `hasAuthority()` thì so khớp tên **đúng nguyên văn**",
-      "Sự bất đối xứng đó là chỗ sai phổ biến nhất: khai `ROLE_ADMIN` rồi viết `hasAuthority(\"ADMIN\")` sẽ không bao giờ khớp",
+      "Role thực chất **cũng là một authority**, chỉ khác ở chỗ nó mang tiền tố `ROLE_`",
+      "`hasRole(\"ADMIN\")` tự thêm tiền tố, nên authority phải được khai là `ROLE_ADMIN`",
+      "`hasAuthority(\"ROLE_ADMIN\")` và `hasRole(\"ADMIN\")` là tương đương",
+      "Role dùng để mô tả **nhóm người**, authority mịn dùng để mô tả **hành động cụ thể**",
+      "Authorization luôn chạy **sau** authentication, không bao giờ trước",
+      "Vì thế request kèm credential sai chết ở bước xác thực và không bao giờ chạm tới quy tắc `permitAll()` — trả 401",
+      "401 nghĩa là \"không biết bạn là ai\", 403 nghĩa là \"biết rồi nhưng không đủ quyền\"",
     ],
-    model: "Về mặt khái niệm, quyền hạn là đặc quyền chi tiết — quyền đọc, quyền ghi, quyền xoá — và ta viết quy tắc phân quyền dựa trên những tên ta tự đặt cho chúng. Vai trò thì bao quát hơn: nó giống một phù hiệu định danh người dùng và gộp cả một nhóm đặc quyền. Chọn giữa hai cách phụ thuộc vào việc ứng dụng có luôn cấp cùng một nhóm quyền cho cùng một loại người dùng hay không: nếu có, dùng vai trò thì gọn hơn, và khi đó ta thường không cần định nghĩa quyền hạn riêng nữa. Nhưng phần thú vị của câu hỏi là ở tầng cài đặt, và ở đó câu trả lời gọn đến mức đáng nhớ: cả quyền hạn và vai trò đều được biểu diễn bằng **cùng một** giao ước `GrantedAuthority`. Không có kiểu riêng cho vai trò. Điều duy nhất phân biệt chúng là quy ước đặt tên: tên của một vai trò bắt buộc bắt đầu bằng tiền tố `ROLE_`. Nghĩa là \"vai trò\" thực chất là một quyền hạn có tên theo một quy ước nhất định — và đó là lý do tôi luôn nói rằng nếu nắm được `GrantedAuthority` thì cả hai khái niệm đều không còn gì bí ẩn. Có một bất đối xứng phải nhớ vì nó là chỗ sai phổ biến nhất trong chủ đề này: khi khai người dùng, tôi phải ghi đủ tiền tố — `ROLE_ADMIN`; nhưng khi viết quy tắc thì `hasRole(\"ADMIN\")` **không** kèm tiền tố, vì framework tự thêm vào. Ngược lại, `hasAuthority()` so khớp tên đúng nguyên văn, không thêm gì. Nên cặp sai kinh điển là khai `ROLE_ADMIN` rồi viết `hasAuthority(\"ADMIN\")`: nó không bao giờ khớp, và nó không báo lỗi — người dùng chỉ nhận 403 và ta đi tìm nguyên nhân ở chỗ khác. Ngược lại cũng đáng ngại hơn: một quy tắc dùng `hasRole` cho thứ được khai là quyền hạn cũng lặng lẽ không khớp. Đây là kiểu lỗi mà hai chữ đọc gần giống nhau lại có hành vi khác nhau, nên tôi thường chọn một trong hai cách trong toàn bộ một ứng dụng thay vì trộn cả hai.",
+    model: "Hai khái niệm đó là authority và role, và điều quan trọng nhất cần nói ngay là chúng không phải hai cơ chế: role thực chất cũng là một authority, chỉ khác ở chỗ theo quy ước nó mang tiền tố `ROLE_`. Framework biết quy ước đó, nên `hasRole(\"ADMIN\")` sẽ tự thêm tiền tố vào trước khi so khớp. Đây là nguồn gốc của cái bẫy kinh điển: người ta khai authority của user là chuỗi `ADMIN` rồi cấu hình `hasRole(\"ADMIN\")`, và không khớp — vì framework đang đi tìm `ROLE_ADMIN`. Chiều ngược lại cũng sai theo cùng một cách: khai `ROLE_ADMIN` rồi gọi `hasRole(\"ROLE_ADMIN\")` thành ra đi tìm `ROLE_ROLE_ADMIN`. Mẹo nhớ là `hasAuthority` so khớp nguyên văn, còn `hasRole` thêm tiền tố giúp bạn. Về mặt mô hình hoá thì tôi dùng chúng cho hai mục đích khác nhau. Role mô tả nhóm người — quản trị viên, kế toán, khách. Authority mịn mô tả hành động cụ thể — đọc báo cáo, duyệt đơn, xoá bản ghi. Hệ thống nhỏ thì role là đủ; hệ thống mà quyền hạn cắt ngang các nhóm thì nên mô hình theo authority, vì thêm một hành động mới không phải đẻ thêm một role mới. Câu hỏi thứ hai chạm đúng vào một điều nhiều người hiểu sai. `permitAll()` không có nghĩa là \"bỏ qua bảo mật cho endpoint này\". Thứ tự trong Spring Security là cố định: xác thực trước, phân quyền sau. Nếu request gửi kèm thông tin đăng nhập sai, nó chết ngay ở bước xác thực và không bao giờ đi tới bước phân quyền — nên endpoint dù có `permitAll()` vẫn trả 401. Nói cách khác, `permitAll()` chỉ nói \"ai cũng được vào\", nó không nói \"credential sai cũng không sao\". Cách phân biệt hai mã trạng thái tôi dùng là: 401 nghĩa là ứng dụng không biết bạn là ai, 403 nghĩa là nó biết rồi nhưng bạn không đủ quyền.",
     redFlags: [
-      "Cho rằng vai trò có một kiểu riêng, khác `GrantedAuthority`",
-      "Khai vai trò mà thiếu tiền tố `ROLE_`",
-      "Viết `hasRole(\"ROLE_ADMIN\")` — tiền tố bị thêm hai lần",
-      "Không biết `hasAuthority()` so khớp nguyên văn",
+      "Cho rằng role và authority là hai cơ chế tách biệt trong framework",
+      "Không biết `hasRole` tự thêm tiền tố `ROLE_`",
+      "Cho rằng `permitAll()` khiến endpoint bỏ qua hoàn toàn Spring Security",
+      "Dùng lẫn 401 và 403, hoặc nói 403 khi chưa xác thực",
     ],
     probes: [
-      "Khai `ROLE_ADMIN` rồi viết `hasAuthority(\"ADMIN\")` thì người dùng nhận status gì?",
-      "Khi nào bạn chọn quyền hạn thay vì vai trò?",
-      "Vì sao lỗi này khó phát hiện?",
+      "Khai authority là chuỗi `ADMIN` rồi cấu hình `hasRole(\"ADMIN\")` thì chuyện gì xảy ra?",
+      "Khi nào bạn mô hình quyền bằng authority mịn thay vì bằng role?",
+      "`denyAll()` dùng cho tình huống nào trong thực tế?",
     ],
-    refs: ["springsec-07", "springsec-03"],
+    refs: ["springsec-07", "springsec-08"],
   },
   {
     id: "springsec-iq10",
     field: "spring-security",
     topic: "ssec-authz",
     level: 2,
-    minutes: 10,
+    minutes: 9,
     code: {
       lang: "java",
-      text: `@Bean
-public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.httpBasic(Customizer.withDefaults());
-    http.authorizeHttpRequests(c -> c
-        .requestMatchers("/api/**").authenticated()          // (1)
-        .requestMatchers("/api/admin/**").hasRole("ADMIN")   // (2)
-        .requestMatchers("/health").permitAll()
-        .anyRequest().authenticated()
-    );
-    return http.build();
+      text: `@Configuration
+public class MethodSecurityConfig {                         // (1)
+    // ... không có annotation nào khác ở đây
 }
 
 @Service
-public class AccountService {
-    @PostAuthorize("returnObject.ownerId == authentication.name")   // (3)
-    @Transactional
-    public Account closeAccount(long id) {
-        Account a = repo.findById(id);
-        a.setStatus(CLOSED);          // (4) thay đổi dữ liệu
-        repo.save(a);
-        return a;
-    }
-}
+public class DocumentService {
 
-// Hai báo cáo:
-// A. Người dùng thường gọi được /api/admin/users và nhận 200.
-// B. Người dùng đóng được tài khoản của NGƯỜI KHÁC: họ nhận 403,
-//    nhưng tài khoản đó đã bị chuyển sang CLOSED trong database.`,
+    private final DocumentRepository repo;
+    private final AuditService audit;
+
+    public Document openForCurrentUser(long id) {
+        audit.record("mở tài liệu " + id);
+        return loadDocument(id);                            // (2)
+    }
+
+    @PostAuthorize("returnObject.owner == authentication.name")
+    public Document loadDocument(long id) {
+        return repo.findById(id).orElseThrow();
+    }
+
+    @PostAuthorize("returnObject.owner == authentication.name")
+    public Document archiveDocument(long id) {              // (3)
+        Document d = repo.findById(id).orElseThrow();
+        d.setArchived(true);
+        repo.save(d);
+        return d;
+    }
+}`,
     },
-    question: "Giải thích cả hai lỗ hổng. Vì sao `@Transactional` ở dòng (3) không cứu được trường hợp B? Sửa cả hai.",
+    question: "Đoạn code này định bảo vệ tài liệu để mỗi người chỉ xem được tài liệu của mình. Có ba chỗ khiến việc bảo vệ không đạt mục đích. Chỉ ra và sửa.",
     mustCover: [
-      "Lỗ hổng A: quy tắc phân quyền được đánh giá **theo thứ tự khai**, và quy tắc đầu khớp sẽ thắng",
-      "`/api/**` ở dòng (1) khớp luôn cả `/api/admin/users`, nên dòng (2) **không bao giờ** được xét",
-      "Sửa A: khai quy tắc **cụ thể trước, tổng quát sau** — `/api/admin/**` phải đứng trên `/api/**`",
-      "Đây là lỗi im lặng: không có cảnh báo nào cho một quy tắc không bao giờ với tới được",
-      "Lỗ hổng B: `@PostAuthorize` chỉ kiểm **sau khi** phương thức chạy xong",
-      "Nên dòng (4) đã thay đổi dữ liệu trước khi quy tắc được đánh giá",
-      "`@Transactional` **không** cứu được, vì ngoại lệ của hậu uỷ quyền được ném **sau khi** transaction đã commit",
-      "Đó là một tính chất của cơ chế, không phải một lỗi cấu hình — nên không có cách nào chỉnh để nó rollback",
-      "Sửa B: dùng **`@PreAuthorize`** và kiểm quyền sở hữu **trước** khi chạy, bằng một truy vấn chủ sở hữu",
-      "Nguyên tắc rút ra: `@PostAuthorize` chỉ dùng cho phương thức **chỉ đọc**",
-      "Và lỗ hổng B nghiêm trọng hơn A: A là mất bảo mật, B là mất bảo mật **cộng** mất toàn vẹn dữ liệu",
+      "(1) thiếu `@EnableMethodSecurity` — không bật thì các annotation nằm đó mà **không có tác dụng gì**, và không có lỗi nào được báo",
+      "(2) đây là lời gọi nội bộ trong cùng class nên không đi qua proxy Spring AOP, quy tắc không được áp",
+      "Sửa (2) bằng cách tách `loadDocument` sang một bean khác, hoặc để người gọi bên ngoài gọi thẳng nó",
+      "(3) `@PostAuthorize` chạy **sau** khi method đã thực thi, mà method này đã ghi vào database",
+      "Việc chặn giá trị trả về ở (3) không hoàn tác được thay đổi đã ghi — tài liệu vẫn bị lưu trữ",
+      "`@PostAuthorize` chỉ an toàn với method chỉ đọc; method có tác dụng phụ phải dùng `@PreAuthorize`",
+      "Nêu được rằng cả ba lỗi đều **im lặng** — code chạy bình thường, không có dấu hiệu gì",
     ],
-    model: "Hai lỗ hổng độc lập và tôi xếp B nghiêm trọng hơn, nên sẽ nói kỹ hơn về nó. Lỗ hổng A là chuyện thứ tự: các quy tắc phân quyền được đánh giá theo thứ tự khai, và quy tắc **đầu tiên** khớp với request là quy tắc được áp dụng. Dòng (1) khai `/api/**`, mà mẫu đó khớp luôn cả `/api/admin/users`, nên dòng (2) không bao giờ được xét tới — nó là mã chết. Sửa thì đảo thứ tự: quy tắc cụ thể phải đứng trước quy tắc tổng quát, tức `/api/admin/**` lên trên `/api/**`. Điều khiến lỗi này đáng chú ý là nó hoàn toàn im lặng: không có cảnh báo nào cho một quy tắc bị che, và mã đọc lên rất thuyết phục vì cả hai dòng đều có mặt. Đây là lý do tôi luôn viết một bài kiểm thử cho mỗi quy tắc chứ không chỉ đọc cấu hình. Lỗ hổng B thì thuộc về bản chất của hậu uỷ quyền. `@PostAuthorize` kiểm quy tắc **sau khi** phương thức đã chạy xong, vì có những điều kiện chỉ đánh giá được trên kết quả trả về. Nhưng phương thức này không chỉ đọc — dòng (4) đổi trạng thái tài khoản sang `CLOSED` và lưu. Nên đến lúc quy tắc được đánh giá và từ chối, thiệt hại đã xảy ra rồi: người gọi nhận 403 và tin rằng mình bị chặn, còn tài khoản của người khác đã bị đóng. Về `@Transactional`, và đây là điểm tôi muốn nói chính xác: nó không cứu được, và không phải vì cấu hình sai. Ngoại lệ do hậu uỷ quyền ném ra xuất hiện **sau khi** bộ quản lý transaction đã commit, nên không còn transaction nào để rollback. Đó là một tính chất của trình tự các lớp chặn, nên không có tham số nào chỉnh được — cách duy nhất là đừng đặt mình vào tình huống đó. Sửa B là chuyển sang `@PreAuthorize` và kiểm quyền sở hữu trước khi chạy. Điều này đòi một thay đổi nhỏ trong thiết kế, vì `@PostAuthorize` được chọn ban đầu chính bởi ta chưa biết chủ sở hữu trước khi đọc bản ghi: nên tôi thêm một truy vấn chỉ lấy chủ sở hữu theo id và kiểm nó trong biểu thức của `@PreAuthorize`, hoặc ép quyền sở hữu vào chính câu cập nhật bằng một điều kiện trên chủ sở hữu để một người dùng không thể đóng tài khoản họ không sở hữu, bất kể lớp nào gọi. Tôi ưa cách thứ hai hơn vì nó đặt bảo đảm ở chỗ không ai lách được. Nguyên tắc tôi rút ra và sẽ đưa vào danh mục review: `@PostAuthorize` chỉ dùng cho phương thức chỉ đọc. Nếu một phương thức thay đổi dữ liệu thì việc kiểm quyền phải xảy ra trước khi nó chạy, không có ngoại lệ.",
+    model: "Ba chỗ, và điểm chung đáng sợ của chúng là không chỗ nào báo lỗi cả — code chạy trơn tru, test đường đi thuận lợi xanh, và việc bảo vệ thì không tồn tại. Chỗ (1) là gốc: thiếu `@EnableMethodSecurity`. Method security mặc định bị tắt. Không bật thì mọi annotation `@PreAuthorize`, `@PostAuthorize` trong toàn ứng dụng chỉ là chú thích trang trí — framework không đọc tới chúng, và không có cảnh báo nào cho bạn biết. Đây là loại lỗi hay đi qua được cả code review vì annotation nằm sờ sờ ra đó, nhìn rất yên tâm. Chỗ (2) là cái bẫy proxy. Method security được thi hành qua proxy Spring AOP: bean được bọc, và quy tắc chỉ được kiểm khi lời gọi đi **qua** lớp bọc đó. Ở đây `openForCurrentUser` gọi `loadDocument` bằng lời gọi nội bộ trong cùng một đối tượng, nên nó đi thẳng, không qua proxy, và `@PostAuthorize` không bao giờ chạy. Nghĩa là ai gọi `openForCurrentUser` cũng mở được tài liệu của người khác. Cách sửa là tách `loadDocument` sang một bean riêng để lời gọi phải đi qua proxy — tôi thích cách này hơn là các mẹo tự tiêm chính mình, vì tách ra thì ranh giới rõ và người đọc sau hiểu ngay. Chỗ (3) là lỗi về ngữ nghĩa của annotation. `@PostAuthorize` chạy sau khi method đã thực thi xong, và ở đây method đã kịp ghi vào database trước khi bị kiểm. Framework sẽ chặn giá trị trả về và ném lỗi cho người gọi, nhưng thay đổi đã nằm trong database rồi — tài liệu của người khác đã bị đánh dấu lưu trữ. Người gọi nhận 403 và tin rằng mình đã bị chặn, trong khi hành động đã xảy ra. Nguyên tắc tôi rút ra: `@PostAuthorize` chỉ dùng cho method chỉ đọc, đúng những trường hợp mà ta buộc phải thấy kết quả rồi mới quyết định được. Method có tác dụng phụ thì phải kiểm trước bằng `@PreAuthorize` — ở đây là nạp chủ sở hữu rồi kiểm trước khi chạm vào dữ liệu. Nếu quyết định phụ thuộc vào chính dữ liệu, tôi tách thành hai bước: một method chỉ đọc có `@PostAuthorize`, rồi mới gọi method ghi có `@PreAuthorize`.",
     redFlags: [
-      "Thêm `rollbackFor` hay đổi cấu hình transaction để \"hoàn tác\" hậu uỷ quyền",
-      "Giữ `@PostAuthorize` rồi thêm mã hoàn tác thủ công trong nhánh lỗi",
-      "Chỉ sửa thứ tự quy tắc và bỏ qua lỗ hổng B",
-      "Đổi `/api/**` thành `/api/*` mà không kiểm lại các đường dẫn sâu hơn",
-      "Không nhận ra dòng (2) là mã chết",
+      "Chỉ thấy lỗi self-invocation mà bỏ qua việc method security chưa được bật",
+      "Cho rằng thiếu `@EnableMethodSecurity` sẽ khiến ứng dụng báo lỗi lúc khởi động",
+      "Không thấy vấn đề ở `@PostAuthorize` trên method có ghi dữ liệu",
+      "Sửa self-invocation bằng cách bỏ annotation và kiểm tra thủ công trong thân method",
     ],
     probes: [
-      "Vì sao không cấu hình nào làm hậu uỷ quyền rollback được transaction?",
-      "Bạn kiểm quyền sở hữu trước khi chạy bằng cách nào mà không đọc cả bản ghi?",
-      "Bạn viết bài kiểm thử nào để lỗi thứ tự quy tắc không tái diễn?",
+      "Vì sao lời gọi trong cùng một class lại không kích hoạt kiểm tra?",
+      "Nếu quyết định cho phép phụ thuộc vào chính dữ liệu vừa đọc, bạn bố trí hai method thế nào?",
+      "Bạn viết test nào để bắt được việc quên bật method security?",
     ],
-    refs: ["springsec-08", "springsec-11"],
+    refs: ["springsec-11", "springsec-12"],
   },
   {
     id: "springsec-iq11",
     field: "spring-security",
     topic: "ssec-authz",
     level: 3,
-    minutes: 11,
-    question: "Quy tắc \"người dùng chỉ xem được dữ liệu của mình\" nên đặt ở đâu: phân quyền endpoint, bảo mật phương thức, hay trong câu truy vấn?",
+    minutes: 10,
+    question: "Một endpoint trả về danh sách đơn hàng, nhưng mỗi người chỉ được thấy đơn của chính mình. Có mấy chỗ trong hệ thống đặt được luật đó. Chọn chỗ bạn muốn, và nói rõ bạn từ chối những chỗ kia vì lý do gì.",
     tradeoffs: [
       {
-        option: "Trong câu truy vấn",
-        when: "Lựa chọn mạnh nhất cho quyền sở hữu dữ liệu: điều kiện chủ sở hữu nằm trong chính câu truy vấn, nên **không đường nào** lấy được dữ liệu của người khác — kể cả một endpoint mới ai đó thêm vào tuần sau.",
+        option: "Lọc ngay trong truy vấn ở tầng dữ liệu",
+        when: "Lựa chọn mặc định cho danh sách. Database chỉ trả về đúng phần được phép, nên phân trang đúng, bộ đếm đúng, và khối lượng dữ liệu đi qua mạng đúng bằng cái cần. Đổi lại, luật nằm rải trong các truy vấn nên phải có kỷ luật để không ai viết một truy vấn mới mà quên mất điều kiện.",
       },
       {
-        option: "Bảo mật phương thức (`@PreAuthorize`)",
-        when: "Khi quy tắc phụ thuộc vào **tham số** và cần áp ở một lớp sâu hơn endpoint. Nó gần chỗ nghiệp vụ và đọc ra ý định. Nhưng nó dựa trên proxy, nên lời gọi nội bộ không được áp.",
+        option: "`@PostFilter` trên method trả về danh sách",
+        when: "Chỉ hợp khi tập dữ liệu nhỏ, có giới hạn trên rõ ràng và không phân trang. Ưu điểm là luật hiện ngay trên chữ ký method, ai đọc cũng thấy. Với repository của Spring Data thì sách nói thẳng đây là lựa chọn tồi: toàn bộ bản ghi được nạp từ database rồi mới vứt bớt trong bộ nhớ.",
       },
       {
-        option: "Phân quyền endpoint",
-        when: "Đúng cho câu hỏi thô — ai được **vào** đường dẫn này. Nó không biết gì về dữ liệu, nên nó không trả lời được \"bản ghi này của ai\".",
+        option: "`@PreAuthorize` kiểm quyền truy cập ở mức method",
+        when: "Đúng cho câu hỏi \"có được gọi hay không\", tức là truy cập một đơn hàng cụ thể theo id. Nhưng nó không giải được bài toán danh sách, vì ở đây câu hỏi không phải có được gọi hay không mà là được thấy những phần tử nào.",
+      },
+      {
+        option: "Lọc ở tầng controller hoặc ở giao diện",
+        when: "Không bao giờ đủ một mình. Lọc ở giao diện thì dữ liệu đã rời khỏi máy chủ; lọc ở controller thì luật đứng ngoài tầng chứa nghiệp vụ và sẽ bị bỏ sót khi có người gọi thứ hai — một job nền, một endpoint xuất Excel.",
       },
     ],
     mustCover: [
-      "Phải tách hai loại quy tắc: **ai vào được endpoint** và **bản ghi này thuộc về ai**",
-      "Phân quyền endpoint chỉ trả lời loại thứ nhất — nó không thấy dữ liệu",
-      "Quyền sở hữu là loại thứ hai, nên nó không thể được bảo đảm ở tầng endpoint",
-      "`@PreAuthorize` đọc được tham số nên nó biểu diễn được quy tắc sở hữu, và nó ở gần nghiệp vụ",
-      "Nhưng nó dựa trên **proxy**, nên lời gọi nội bộ trong cùng class **không** được áp — một lỗ im lặng",
-      "Đặt điều kiện chủ sở hữu vào **câu truy vấn** là bảo đảm mạnh nhất: không có đường vòng",
-      "Vì nó không phụ thuộc vào việc ai nhớ thêm annotation ở endpoint mới",
-      "Đổi lại: quy tắc bảo mật nằm rải trong tầng truy cập dữ liệu, khó đọc thành một bức tranh tổng thể",
-      "Lựa chọn của tôi: **cả hai tầng** — truy vấn là chỗ bảo đảm, `@PreAuthorize` là chỗ tuyên bố ý định",
-      "Và phải nhất quán một chuyện: không bao giờ dùng `@PostAuthorize` cho phương thức thay đổi dữ liệu",
+      "Phân biệt hai câu hỏi khác nhau: **có được gọi không** (authorization) và **được thấy phần tử nào** (filtering)",
+      "Với danh sách, lọc ở tầng dữ liệu là mặc định vì nó giữ đúng phân trang và bộ đếm",
+      "`@PostFilter` nạp toàn bộ bản ghi rồi mới loại bớt trong bộ nhớ — vấn đề hiệu năng thật sự, không phải lý thuyết",
+      "`@PostFilter` phá vỡ phân trang: trang 20 phần tử có thể còn 3 sau khi lọc",
+      "`@PreAuthorize` phù hợp cho truy cập một bản ghi theo id, không phù hợp cho danh sách",
+      "Lọc ở controller hoặc giao diện không đủ vì sẽ có người gọi thứ hai không đi qua đó",
+      "Nêu được cách giữ kỷ luật khi luật nằm trong truy vấn (một chỗ dựng điều kiện, test cho từng truy vấn)",
     ],
-    model: "Điều đầu tiên tôi làm là tách câu hỏi thành hai loại quy tắc khác nhau, vì chúng thường bị gộp: \"ai được vào endpoint này\" và \"bản ghi này thuộc về ai\". Phân quyền endpoint chỉ trả lời được loại thứ nhất — nó nhìn thấy đường dẫn, phương thức HTTP và quyền hạn của người dùng, nhưng nó không thấy dữ liệu, nên nó không thể biết bản ghi số 4.812 là của ai. Vì thế quyền sở hữu dữ liệu về nguyên tắc không thể bảo đảm ở tầng đó, và tôi nêu điều này trước vì nó loại một phương án ra khỏi cuộc. Còn lại hai chỗ. `@PreAuthorize` đọc được tham số của phương thức, nên nó biểu diễn được quy tắc \"tham số này phải trùng với người dùng đang đăng nhập\", và nó nằm gần nghiệp vụ nên mã đọc ra ý định rất rõ. Điểm yếu của nó là cơ chế: bảo mật phương thức hoạt động bằng một aspect, tức bằng proxy, nên một lời gọi từ bên trong cùng class không đi qua proxy và quy tắc không được áp — hoàn toàn im lặng, không cảnh báo nào. Với một quy tắc phân quyền thì \"đôi khi không được áp\" là điều tôi không chấp nhận được. Đặt điều kiện chủ sở hữu vào chính câu truy vấn cho bảo đảm mạnh nhất: nếu mọi truy vấn đọc bản ghi đều mang điều kiện chủ sở hữu, thì không có đường nào lấy được dữ liệu của người khác — kể cả một endpoint mới mà ai đó thêm vào tuần sau và quên annotation, kể cả một lời gọi nội bộ. Đó là lập luận quyết định với tôi: bảo đảm không được phụ thuộc vào việc người sau **nhớ** làm gì. Cái giá phải nói rõ là quy tắc bảo mật khi đó nằm rải trong tầng truy cập dữ liệu, nên không ai đọc được một bức tranh tổng thể về chính sách phân quyền, và một truy vấn viết tay mới vẫn có thể thiếu điều kiện. Nên lựa chọn của tôi là cả hai tầng, với vai trò rõ ràng cho từng tầng: câu truy vấn là chỗ **bảo đảm**, vì nó không bỏ sót đường nào; `@PreAuthorize` là chỗ **tuyên bố ý định**, vì nó làm quy tắc hiện ra ở nơi người ta đọc mã nghiệp vụ, và nó chặn sớm nên ta không tốn một truy vấn cho request chắc chắn bị từ chối. Còn phân quyền endpoint tôi giữ cho đúng việc của nó: chặn theo vai trò ở ranh giới, và đặt `anyRequest().authenticated()` làm mặc định để một endpoint mới không vô tình mở. Cuối cùng, một quy tắc tôi giữ tuyệt đối bất kể chọn tầng nào: không dùng `@PostAuthorize` cho phương thức thay đổi dữ liệu, vì nó kiểm sau khi thay đổi đã xảy ra và transaction đã commit.",
+    model: "Tôi tách bài toán làm hai câu hỏi khác nhau, vì Spring Security cũng có hai công cụ khác nhau cho chúng. Câu hỏi thứ nhất là có được gọi hay không — đó là authorization, và công cụ là `@PreAuthorize`. Câu hỏi thứ hai là được thấy những phần tử nào trong một tập — đó là filtering, và công cụ là `@PreFilter`/`@PostFilter`. Đề bài này là loại thứ hai, nên `@PreAuthorize` bị loại ngay: nó trả lời đúng cho trường hợp lấy một đơn hàng theo id, nhưng với danh sách thì nó chỉ nói được \"anh có quyền xem danh sách\" chứ không nói được danh sách gồm những gì. Còn lại hai ứng viên thật. `@PostFilter` hấp dẫn vì luật hiện ngay trên chữ ký method — ai đọc code cũng thấy, không phải lần vào truy vấn. Nhưng nó có hai vấn đề mà tôi không vượt qua được trong tình huống danh sách. Thứ nhất là hiệu năng, và đây chính là điều sách cảnh báo về việc dùng nó với repository của Spring Data: database trả về toàn bộ bản ghi, rồi ứng dụng vứt bớt trong bộ nhớ. Với bảng đơn hàng thì lượng bị vứt lớn hơn lượng giữ lại rất nhiều lần. Thứ hai, và tôi thấy còn nặng hơn: nó phá vỡ phân trang. Bạn xin 20 bản ghi, database trả 20, lọc xong còn 3 — người dùng thấy một trang gần như rỗng và bộ đếm tổng thì sai hoàn toàn. Không có cách nào vá chuyện đó mà vẫn giữ `@PostFilter`. Nên tôi chọn lọc ngay trong truy vấn: điều kiện chủ sở hữu đi vào câu truy vấn, database chỉ trả đúng phần được phép, phân trang và bộ đếm tự khắc đúng, và lượng dữ liệu đi qua mạng đúng bằng cái cần. Cái giá phải trả là luật không còn hiện trên chữ ký method nữa mà nằm trong các truy vấn, nên tôi phải bù lại bằng kỷ luật: dựng điều kiện chủ sở hữu ở đúng một chỗ dùng chung thay vì chép vào từng truy vấn, và có một test cho mỗi truy vấn trả danh sách, khẳng định nó không trả về bản ghi của người khác. Test đó rẻ và nó bắt được đúng cái lỗi mà cách này dễ mắc — một người viết truy vấn mới và quên điều kiện. Cuối cùng, lọc ở controller hoặc ở giao diện thì tôi không coi là một lựa chọn: sớm muộn sẽ có người gọi thứ hai không đi qua chỗ đó, một job nền hay một endpoint xuất Excel, và luật biến mất mà không ai biết. Tôi vẫn giữ `@PreAuthorize` cho endpoint lấy một đơn theo id — hai công cụ cho hai câu hỏi, không thay nhau được.",
     redFlags: [
-      "Dựa hoàn toàn vào phân quyền endpoint cho quy tắc sở hữu dữ liệu",
-      "Dùng `@PreAuthorize` mà không nói tới giới hạn proxy",
-      "Đặt điều kiện chủ sở hữu chỉ ở tầng nghiệp vụ, còn truy vấn lấy mọi bản ghi",
-      "Dùng `@PostAuthorize` cho phương thức có thay đổi dữ liệu",
-      "Không đặt quy tắc mặc định cho các endpoint chưa khai",
+      "Chọn `@PostFilter` cho danh sách lớn mà không nói gì tới hiệu năng",
+      "Không nhận ra `@PostFilter` phá vỡ phân trang và bộ đếm",
+      "Dùng `@PreAuthorize` để giải bài toán lọc danh sách",
+      "Cho rằng lọc ở giao diện là đủ vì người dùng không thấy phần còn lại",
+      "Không nói gì về cách giữ cho luật không bị quên khi nó nằm trong truy vấn",
     ],
     probes: [
-      "Một đồng nghiệp thêm endpoint mới và quên annotation — mỗi phương án hành xử thế nào?",
-      "Bạn bảo đảm mọi truy vấn đều mang điều kiện chủ sở hữu bằng cách nào?",
-      "Vì sao vẫn nên có `@PreAuthorize` khi truy vấn đã an toàn?",
+      "`@PreFilter` và `@PostFilter` tham chiếu từng phần tử bằng tên gì trong biểu thức?",
+      "Nếu bắt buộc phải dùng `@PostFilter`, bạn xử lý phân trang ra sao?",
+      "Có tình huống nào `@PreFilter` là lựa chọn đúng không?",
     ],
-    refs: ["springsec-11", "springsec-08"],
+    refs: ["springsec-11", "springsec-12", "springsec-07"],
   },
   {
     id: "springsec-iq12",
     field: "spring-security",
     topic: "ssec-authz",
     level: 4,
-    minutes: 14,
+    minutes: 15,
     incident: {
-      symptom: "Một API nội bộ có endpoint `GET /api/invoices/{id}`. Kiểm toán phát hiện trong 5 tháng có 61.000 lượt truy cập hoá đơn mà người gọi **không** phải chủ sở hữu. Cấu hình phân quyền có `.requestMatchers(\"/api/invoices/**\").hasAuthority(\"INVOICE_READ\")` và mọi người dùng đều có quyền `INVOICE_READ`. Không có kiểm tra chủ sở hữu ở bất kỳ đâu.",
-      scale: "61.000 lượt trên 4,3 triệu lượt gọi. 340 người dùng khác nhau đã truy cập hoá đơn không thuộc về mình; phần lớn có vẻ do dò id tuần tự. 19 khách hàng doanh nghiệp bị ảnh hưởng, trong đó dữ liệu là giá hợp đồng.",
-      constraints: "Không được ngừng API — 6 hệ thống nội bộ phụ thuộc vào nó. Phải xác định chính xác dữ liệu của khách hàng nào đã bị đọc. Bộ phận pháp chế cần biết trong 48 giờ liệu có phải thông báo cho khách hàng hay không.",
-      },
-    question: "Pháp chế cần biết trong 48 giờ: dữ liệu của khách hàng nào **đã** bị đọc — không phải có thể bị đọc. Bạn làm gì trước?",
+      symptom: "Một khách hàng báo rằng khi đổi số trên thanh địa chỉ, họ xem được hoá đơn của công ty khác. Đội kiểm tra code và thấy method lấy hoá đơn có `@PreAuthorize` với biểu thức đúng, được viết từ sáu tháng trước. Giao diện không có lỗi gì và vẫn chỉ hiển thị hoá đơn của chính khách hàng. Trên môi trường kiểm thử, gọi thẳng API bằng tài khoản khác cũng lấy được hoá đơn.",
+      scale: "Hệ thống SaaS cho khoảng 400 doanh nghiệp, mỗi doanh nghiệp vài chục người dùng. API hoá đơn được gọi khoảng 50.000 lượt mỗi ngày. Chưa rõ có bao nhiêu lượt truy cập chéo đã thật sự xảy ra.",
+      constraints: "Đây là dữ liệu tài chính, có nghĩa vụ báo cáo nếu xác định có rò rỉ thật. Không được để hệ thống ngừng phục vụ. Đội nghi ngờ lỗi đã tồn tại từ lâu nhưng không có cách nào biết chắc.",
+    },
+    question: "Một quy tắc phân quyền viết đúng nhưng không có hiệu lực. Trình bày cách bạn xác định chính xác vì sao, cách chặn máu ngay, và cách xác định phạm vi thiệt hại đã xảy ra.",
     mustCover: [
-      "Chẩn đoán: cấu hình kiểm **có quyền đọc hoá đơn hay không**, không kiểm **hoá đơn này của ai**",
-      "Hai câu hỏi đó khác nhau về bản chất, và tầng endpoint chỉ trả lời được câu thứ nhất",
-      "Nên đây không phải lỗi cài đặt mà là **thiếu hẳn một lớp kiểm tra** — lớp tham chiếu đối tượng",
-      "Dấu hiệu \"dò id tuần tự\" khớp với id tăng dần: id đoán được biến lỗ hổng thành khai thác dễ",
-      "Trong 48 giờ, ưu tiên 1 là **chặn máu** mà không ngừng API: thêm điều kiện chủ sở hữu vào truy vấn",
-      "Ưu tiên 2 là **xác định phạm vi**: đối chiếu nhật ký truy cập với bảng chủ sở hữu để ra danh sách chính xác",
-      "Đó là việc phân tích dữ liệu, làm được song song với việc sửa, và nó là thứ pháp chế cần",
-      "Phải phân biệt \"có thể đã bị đọc\" với \"đã bị đọc\" — nhật ký cho câu trả lời thật, không cần suy đoán",
-      "Sửa cấu trúc: điều kiện chủ sở hữu nằm trong **câu truy vấn**, nên không endpoint nào lách được",
-      "Thêm một bài kiểm thử cho mỗi endpoint: người dùng A đọc bản ghi của B phải nhận 404 hoặc 403",
-      "Trả **404** thay vì 403 cho bản ghi không thuộc về người gọi — 403 tiết lộ rằng id đó tồn tại",
-      "Dài hạn: id khó đoán, và giới hạn tần suất để việc dò không còn rẻ",
-      "Và nêu rõ: quyền `INVOICE_READ` cấp cho mọi người dùng nghĩa là nó không phân biệt gì — nó nên được xem lại",
+      "Nhận ra vấn đề không nằm ở biểu thức mà ở chỗ quy tắc **không được thi hành**",
+      "Ba nguyên nhân cần loại trừ theo thứ tự: chưa bật method security, lời gọi nội bộ không qua proxy, hoặc bean không phải bean Spring",
+      "Cách kiểm nhanh và dứt điểm: viết một test gọi method với tài khoản không đủ quyền và xem có bị chặn không",
+      "Chặn máu trước: thêm điều kiện chủ sở hữu vào chính truy vấn, không chờ sửa xong tầng phân quyền",
+      "Sửa gốc: bật method security và/hoặc tách bean để lời gọi đi qua proxy",
+      "Xác định phạm vi bằng log truy cập: đối chiếu định danh người gọi với chủ sở hữu của hoá đơn được trả về",
+      "Nếu log không đủ để kết luận thì nói rõ là không đủ, thay vì đoán — đây là dữ liệu tài chính có nghĩa vụ báo cáo",
+      "Rà soát toàn bộ các annotation phân quyền khác trong ứng dụng, vì nếu chưa bật thì **tất cả** đều đang vô hiệu",
     ],
-    model: "Chẩn đoán thì không có gì bí ẩn và tôi muốn phát biểu nó chính xác: cấu hình kiểm rằng người gọi **có quyền đọc hoá đơn**, còn điều cần kiểm là **hoá đơn này có thuộc về người gọi**. Hai câu hỏi đó khác nhau về bản chất, và tầng phân quyền endpoint chỉ trả lời được câu thứ nhất vì nó không nhìn thấy dữ liệu. Nên đây không phải một quy tắc viết sai mà là **thiếu hẳn một lớp kiểm tra** — lớp kiểm tham chiếu đối tượng. Việc mọi người dùng đều có `INVOICE_READ` làm rõ thêm: một quyền hạn mà ai cũng có thì không phân biệt được gì, nên cấu hình hiện tại về thực chất tương đương với \"người dùng nào đã đăng nhập cũng đọc được mọi hoá đơn\". Chi tiết \"dò id tuần tự\" là phần biến một lỗ hổng thành một cuộc rò rỉ quy mô lớn: khi id tăng dần thì người ta chỉ cần đổi một con số, nên không cần kỹ năng gì. Về 48 giờ, tôi chạy hai luồng song song vì chúng không phụ thuộc nhau. Luồng thứ nhất là chặn máu mà không ngừng API, vì ràng buộc không cho ngừng và 6 hệ thống đang phụ thuộc: thêm điều kiện chủ sở hữu vào chính câu truy vấn đọc hoá đơn. Đó là một thay đổi nhỏ, ở một chỗ, và nó chặn mọi đường — kể cả những endpoint tôi chưa kịp rà. Tôi chọn nó thay vì thêm annotation vào từng endpoint đúng vì lý do đó. Một quyết định cần nói rõ khi làm việc này: với bản ghi không thuộc về người gọi, tôi trả **404** chứ không phải 403 — vì 403 xác nhận rằng id đó tồn tại, và với id tuần tự thì đó chính là thông tin kẻ dò cần. Luồng thứ hai là xác định phạm vi, và nó là thứ pháp chế cần trong 48 giờ. Tôi không suy đoán \"có thể đã bị đọc\"; tôi đối chiếu nhật ký truy cập — từng lượt gọi với người gọi và id hoá đơn — với bảng chủ sở hữu, và ra một danh sách chính xác: hoá đơn nào, của khách hàng nào, bị ai đọc, lúc nào. Phân biệt giữa \"có thể\" và \"đã\" rất quan trọng ở đây, vì nghĩa vụ thông báo và mức độ tổn hại phụ thuộc vào danh sách thật, và dữ liệu là giá hợp đồng nên sai sót về phạm vi rất tốn kém. Tôi cũng tách riêng những trường hợp có dấu hiệu dò hệ thống — một người gọi đi qua nhiều id liên tiếp — khỏi những trường hợp có thể là nhầm lẫn, vì hai nhóm đó cần xử lý khác nhau về mặt nhân sự và pháp lý. Về việc sửa để lớp lỗ hổng không tái diễn, tôi không tin vào việc rà một lần. Điều kiện chủ sở hữu phải nằm trong tầng truy cập dữ liệu để nó là mặc định chứ không phải một bước ai cũng phải nhớ; và cho mỗi endpoint trả về dữ liệu thuộc về người dùng, tôi thêm một bài kiểm thử rất đơn giản — người dùng A đọc bản ghi của người dùng B phải không nhận được dữ liệu. Bài kiểm thử đó rẻ, và nó là thứ duy nhất khiến lớp lỗi này không quay lại qua một endpoint mới. Dài hạn tôi đề xuất hai việc nữa: chuyển sang id khó đoán để việc dò không còn cơ học, và giới hạn tần suất để nếu ai đó vẫn dò thì việc đó vừa chậm vừa nhìn thấy được. Và tôi sẽ nêu ra việc xem lại chính quyền `INVOICE_READ`: một quyền cấp cho tất cả mọi người là dấu hiệu mô hình phân quyền chưa được nghĩ xong, và sự cố này là cơ hội để nghĩ lại nó.",
+    model: "Điều đầu tiên tôi tách bạch: biểu thức đúng và quy tắc có hiệu lực là hai chuyện khác nhau. Đội đã kiểm tra chuyện thứ nhất và thấy ổn, nên tôi dành toàn bộ sự chú ý cho chuyện thứ hai — quy tắc này có thật sự được thi hành không. Có ba nguyên nhân làm một annotation phân quyền trở thành vô hiệu mà không báo lỗi, và tôi loại trừ theo thứ tự từ rộng tới hẹp. Rộng nhất: method security chưa được bật. Mặc định nó tắt, và nếu thiếu `@EnableMethodSecurity` thì mọi annotation trong toàn ứng dụng đều chỉ là chú thích — không có cảnh báo, không có lỗi khởi động. Nếu đúng là nguyên nhân này thì phạm vi sự cố rộng hơn hẳn một endpoint, và đó là điều tôi phải biết ngay. Thứ hai: lời gọi nội bộ. Method security chạy qua proxy, nên nếu method có annotation được gọi từ một method khác trong cùng class, lời gọi đi thẳng không qua proxy và quy tắc không chạy. Thứ ba, ít gặp hơn: đối tượng chứa method không phải là bean do Spring quản lý, nên chẳng có proxy nào. Cách phân biệt tôi không đi bằng mắt mà bằng một test: gọi method đó bằng một tài khoản chắc chắn không đủ quyền và xem có bị chặn không. Test đỏ hay xanh cho tôi câu trả lời trong vài phút, và nó ở lại làm hàng rào về sau. Sau đó, chỉ cần nhìn xem annotation khác trong ứng dụng có hoạt động không là tách được nguyên nhân một với hai. Về thứ tự hành động, tôi chặn máu trước khi sửa gốc. Việc chặn máu là thêm điều kiện chủ sở hữu vào chính truy vấn lấy hoá đơn — một thay đổi nhỏ, hiểu được ngay, không phụ thuộc vào việc tầng phân quyền có chạy hay không, và triển khai được trong ngày. Tôi không chờ đến khi hiểu hết mọi thứ mới đóng lỗ hổng. Sau đó mới sửa gốc: bật method security nếu đó là nguyên nhân, hoặc tách bean để lời gọi đi qua proxy. Và nếu nguyên nhân là chưa bật, tôi phải coi việc bật lên là một thay đổi có rủi ro — hàng loạt quy tắc lâu nay ngủ yên sẽ đồng loạt có hiệu lực, và rất có thể vài luồng hợp lệ sẽ bị chặn vì biểu thức viết sai mà lâu nay không ai phát hiện. Nên tôi rà toàn bộ annotation trong ứng dụng trước, chạy bộ test đầy đủ, và phát hành có theo dõi. Phần khó nhất là xác định thiệt hại đã xảy ra. Tôi lấy log truy cập của endpoint hoá đơn và đối chiếu định danh người gọi với chủ sở hữu của hoá đơn được trả về; mọi lượt hai giá trị đó lệch nhau là một lượt truy cập chéo. Nếu log không ghi đủ — chẳng hạn không ghi mã hoá đơn, hoặc chỉ giữ 30 ngày trong khi lỗi đã tồn tại sáu tháng — thì tôi nói thẳng rằng không thể kết luận phạm vi từ dữ liệu hiện có, và đưa ra ước lượng kèm đúng giới hạn của nó. Với dữ liệu tài chính và nghĩa vụ báo cáo, một con số đoán bừa còn tệ hơn là thừa nhận không biết. Cuối cùng, tôi bổ sung log đủ để lần sau trả lời được câu hỏi này, và thêm vào bộ test một nhóm kiểm tra truy cập chéo cho từng tài nguyên thuộc về một khách hàng cụ thể.",
     redFlags: [
-      "Thêm `@PreAuthorize` vào từng endpoint rồi coi là đã chặn hết",
-      "Trả 403 cho bản ghi không thuộc về người gọi, tiết lộ id tồn tại",
-      "Suy đoán phạm vi ảnh hưởng thay vì đối chiếu nhật ký",
-      "Ngừng API để \"an toàn\", trái ràng buộc",
-      "Chỉ đổi sang id khó đoán và coi đó là biện pháp bảo mật",
-      "Không tách nhóm dò hệ thống khỏi nhóm truy cập lẻ",
-      "Không đặt câu hỏi về việc mọi người dùng đều có `INVOICE_READ`",
+      "Đi sửa biểu thức trong annotation dù đã xác định biểu thức đúng",
+      "Không nghĩ tới khả năng method security chưa được bật cho toàn ứng dụng",
+      "Bật method security ngay trên production mà không rà các quy tắc khác đang ngủ",
+      "Sửa gốc trước rồi mới nghĩ tới việc chặn lỗ hổng",
+      "Đưa ra con số thiệt hại mà không kiểm xem log có đủ dữ liệu để kết luận không",
     ],
     probes: [
-      "Vì sao 404 tốt hơn 403 ở đây, và nó có nhược điểm gì?",
-      "Bạn dựng danh sách khách hàng bị ảnh hưởng từ những nguồn dữ liệu nào?",
-      "Vì sao đặt điều kiện chủ sở hữu ở truy vấn mạnh hơn đặt ở từng endpoint?",
+      "Test của bạn để phân biệt \"chưa bật\" với \"lời gọi nội bộ\" trông thế nào?",
+      "Bật method security trên một hệ thống đang chạy có rủi ro gì?",
+      "Log cần ghi những trường nào để lần sau trả lời được câu hỏi phạm vi?",
     ],
-    refs: ["springsec-08", "springsec-11", "springsec-07"],
+    refs: ["springsec-11", "springsec-07", "springsec-18"],
   },
 
   // ===== ssec-csrf (springsec-iq13–springsec-iq16) =====
@@ -573,30 +563,27 @@ public class AccountService {
     field: "spring-security",
     topic: "ssec-csrf",
     level: 1,
-    minutes: 6,
-    question: "CSRF và CORS đều liên quan tới nguồn gốc chéo, nhưng chúng làm hai việc trái ngược nhau. Giải thích từng cái.",
+    minutes: 5,
+    question: "Hai cơ chế hay bị tắt đi cho nhanh là bảo vệ CSRF và cấu hình CORS. Giải thích từng cái bảo vệ chống điều gì, và nói xem điều kiện thật sự để một API cần tới bảo vệ CSRF là gì.",
     mustCover: [
-      "**CSRF** là một dạng tấn công: trang web lạ khiến trình duyệt của người dùng **đã đăng nhập** gửi request thay đổi dữ liệu tới ứng dụng của ta",
-      "Nó hoạt động được vì trình duyệt tự gửi kèm phiên của người dùng — server tin đó là người dùng",
-      "Chống CSRF là một **giới hạn ta thêm vào**: chỉ frontend của chính ứng dụng mới thực hiện được thao tác thay đổi dữ liệu",
-      "Cách làm: một token sinh khi tải trang, và mọi request thay đổi dữ liệu phải mang token đó",
-      "`CsrfFilter` cho GET, HEAD, TRACE, OPTIONS đi qua; các method còn lại phải có token, không thì **403**",
-      "**CORS** thì ngược lại: nó **nới lỏng** một giới hạn mà trình duyệt vốn áp",
-      "Trình duyệt mặc định cấm gọi liên nguồn; CORS là cách server nói \"tôi cho phép nguồn này\"",
-      "Điều quan trọng nhất: CORS **không** phải cơ chế phân quyền — endpoint vẫn có thể được thực thi dù CORS chặn response",
-      "Nên đừng bao giờ dựa vào CORS để bảo vệ endpoint; nó chỉ chặn **trình duyệt** đọc response",
+      "CSRF là tấn công lừa trình duyệt của người đã đăng nhập gửi request thay mặt họ tới một ứng dụng khác",
+      "Bảo vệ CSRF mặc định **được bật** trong Spring Security, và điểm vào của nó là một filter",
+      "Điều kiện cần bảo vệ CSRF không phải \"REST hay không\" mà là trình duyệt có **tự động đính kèm** thông tin xác thực không",
+      "API dùng cookie session thì cần; API dùng token trong header `Authorization` thì không, vì trình duyệt không tự gắn header đó",
+      "CORS là cơ chế của **trình duyệt**: mặc định trình duyệt cấm gọi chéo nguồn gốc, CORS là cách cho phép có chọn lọc",
+      "Vì là quy ước của trình duyệt nên CORS không bảo vệ API khỏi các client không phải trình duyệt",
     ],
-    model: "Chúng đi ngược chiều nhau và tôi thấy nói rõ điều đó là cách nhớ chắc nhất. CSRF là một dạng tấn công. Người dùng đã đăng nhập vào ứng dụng của ta, rồi họ mở một trang web khác — trong ví dụ điển hình là một liên kết trong thư. Trang đó chứa mã âm thầm gửi request tới backend của ta, và vì trình duyệt tự động gửi kèm phiên của người dùng, server tin rằng chính người dùng đang yêu cầu. Kẻ tấn công không cần biết mật khẩu; họ chỉ cần người dùng đang đăng nhập và mở một trang. Chống CSRF là một giới hạn **ta thêm vào**: mục tiêu là chỉ frontend của chính ứng dụng mới thực hiện được thao tác thay đổi dữ liệu. Cơ chế dựa trên một quan sát đơn giản — trước khi làm gì thay đổi dữ liệu, người dùng phải tải trang bằng một request GET ít nhất một lần. Lúc đó ứng dụng sinh một token, và từ đó nó chỉ chấp nhận request thay đổi dữ liệu nếu request mang token ấy. Biết được token là bằng chứng request phát ra từ trang do chính server cung cấp. `CsrfFilter` cho GET, HEAD, TRACE và OPTIONS đi qua không cần token; với mọi method còn lại, thiếu token hay token sai thì nó trả 403. Từ đó ra một quy tắc hệ quả rất quan trọng: **không bao giờ** dùng GET cho thao tác thay đổi dữ liệu, vì GET không đòi token nên nó ở ngoài toàn bộ lớp bảo vệ này. CORS thì hoàn toàn khác về ý định: nó nới lỏng một giới hạn mà trình duyệt vốn đã áp. Theo mặc định trình duyệt không cho một trang ở nguồn này gọi tài nguyên ở nguồn khác; CORS là cách server nói \"tôi cho phép nguồn này, với những method và header này\", thông qua các header phản hồi. Và đây là ngộ nhận tôi thấy nhiều nhất, nên tôi luôn nói ra: CORS không phải cơ chế phân quyền. Khi một lời gọi liên nguồn vi phạm chính sách, trong nhiều trường hợp endpoint ở backend **vẫn được thực thi** — trình duyệt chỉ từ chối cho trang đọc response. Đôi khi trình duyệt gửi một request thăm dò bằng OPTIONS trước, và nếu request thăm dò bị từ chối thì request thật không được gửi; nhưng nó bỏ qua bước thăm dò với GET, POST hoặc OPTIONS dùng header cơ bản. Nên kết luận thực dụng: CORS bảo vệ người dùng trong trình duyệt, không bảo vệ endpoint của ta — bảo vệ endpoint là việc của xác thực và phân quyền.",
+    model: "Hai cơ chế này hay bị gộp vào một câu \"tắt đi cho đỡ vướng\", nhưng chúng giải quyết hai chuyện hoàn toàn khác nhau và đều không nên tắt theo quán tính. CSRF là tấn công mà kẻ tấn công lừa trình duyệt của một người đang đăng nhập gửi một request tới ứng dụng của bạn thay mặt họ. Điểm mấu chốt là kẻ tấn công không cần đọc được gì và không cần biết mật khẩu — họ chỉ cần khiến trình duyệt gửi request, còn trình duyệt thì tự động đính kèm cookie phiên vào, và ứng dụng của bạn thấy một request hợp lệ từ người dùng thật. Spring Security bật bảo vệ này mặc định, và nó được thi hành bằng một filter trong chuỗi: request làm thay đổi trạng thái phải mang kèm một token mà kẻ tấn công không đoán được. Điều tôi muốn nói rõ nhất là điều kiện để cần bảo vệ CSRF, vì đây là chỗ hay bị lập luận sai. Người ta hay nói \"API của tôi là REST nên không cần CSRF\". Chữ REST không liên quan gì. Điều kiện thật sự là: trình duyệt có tự động đính kèm thông tin xác thực vào request hay không. Nếu ứng dụng dùng cookie phiên thì có — và API đó cần bảo vệ CSRF dù nó REST đến đâu. Nếu client tự gắn token vào header `Authorization` thì không, vì trình duyệt không tự thêm header đó giúp kẻ tấn công. Nên câu hỏi đúng để tự hỏi là \"cái gì chứng minh danh tính trong request này, và ai gắn nó vào\". CORS thì là chuyện khác hẳn, và tôi thấy nó hay bị hiểu ngược. Mặc định trình duyệt **cấm** một trang ở nguồn gốc này đọc kết quả gọi tới nguồn gốc khác; CORS là cách máy chủ nói \"tôi cho phép nguồn gốc kia\". Tức là nó nới lỏng, không phải siết chặt. Hệ quả thực tế cần nhớ: đây là quy ước của trình duyệt, nên `curl` hay bất kỳ client nào không phải trình duyệt đều bỏ qua nó hoàn toàn. Cấu hình CORS chặt chẽ không bảo vệ API của bạn khỏi ai cả — nó chỉ quyết định trang web nào trong trình duyệt được phép gọi bạn.",
     redFlags: [
-      "Coi CORS là một lớp bảo vệ endpoint",
-      "Nói CSRF là giới hạn của trình duyệt thay vì một dạng tấn công",
-      "Không biết `CsrfFilter` bỏ qua GET, HEAD, TRACE, OPTIONS",
-      "Tin rằng vi phạm CORS luôn ngăn được endpoint thực thi",
+      "Nói \"API REST thì không cần CSRF\" mà không nêu điều kiện thật",
+      "Cho rằng CORS là một cơ chế bảo vệ API khỏi truy cập trái phép",
+      "Không biết bảo vệ CSRF mặc định đã được bật",
+      "Lẫn lộn CSRF với XSS",
     ],
     probes: [
-      "Vì sao \"không dùng GET để thay đổi dữ liệu\" lại là hệ quả của cách CSRF hoạt động?",
-      "Request thăm dò bằng OPTIONS xảy ra khi nào?",
-      "Cấu hình CORS cho phép mọi nguồn thì rủi ro cụ thể là gì?",
+      "Một SPA cùng domain dùng cookie phiên thì có cần bảo vệ CSRF không?",
+      "Vì sao CSRF hiếm khi nhắm vào request `GET`?",
+      "Request preflight `OPTIONS` xuất hiện khi nào?",
     ],
     refs: ["springsec-09", "springsec-10"],
   },
@@ -605,54 +592,59 @@ public class AccountService {
     field: "spring-security",
     topic: "ssec-csrf",
     level: 2,
-    minutes: 9,
+    minutes: 8,
     code: {
       lang: "java",
-      text: `@Bean
-public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.csrf(c -> c.disable());                       // (1)
-    http.cors(c -> {
-        CorsConfigurationSource source = request -> {
-            CorsConfiguration config = new CorsConfiguration();
-            config.setAllowedOrigins(List.of("*"));    // (2)
-            config.setAllowedHeaders(List.of("*"));
-            config.setAllowCredentials(true);          // (3)
-            return config;                             // (4) không khai method
-        };
-        c.configurationSource(source);
-    });
-    http.formLogin(Customizer.withDefaults());         // (5)
-    http.authorizeHttpRequests(c -> c.anyRequest().authenticated());
-    return http.build();
+      text: `@Configuration
+public class WebSecurityConfig {
+
+    @Bean
+    SecurityFilterChain chain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable());                      // (1)
+        http.cors(Customizer.withDefaults());
+        http.formLogin(Customizer.withDefaults());              // (2)
+        http.authorizeHttpRequests(c -> c
+                .requestMatchers("/api/**").authenticated()
+                .anyRequest().permitAll());
+        return http.build();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration c = new CorsConfiguration();
+        c.setAllowedOrigins(List.of("*"));                      // (3)
+        c.setAllowedMethods(List.of("*"));
+        c.setAllowCredentials(true);                            // (4)
+
+        UrlBasedCorsConfigurationSource s = new UrlBasedCorsConfigurationSource();
+        s.registerCorsConfiguration("/**", c);
+        return s;
+    }
 }`,
     },
-    question: "Cấu hình này được viết để \"cho frontend gọi được\". Nêu từng vấn đề, xếp theo mức nghiêm trọng, rồi viết lại.",
+    question: "Cấu hình này được viết để một giao diện chạy ở tên miền khác gọi được API. Nó có một lỗi bảo mật nghiêm trọng và một chỗ sẽ khiến trình duyệt từ chối thẳng. Chỉ ra cả hai, giải thích cơ chế, và viết lại cho đúng.",
     mustCover: [
-      "Vấn đề nghiêm trọng nhất: dòng (1) tắt chống CSRF trong khi dòng (5) dùng **đăng nhập bằng biểu mẫu**",
-      "Đăng nhập bằng biểu mẫu nghĩa là phiên nằm trong cookie, và cookie **tự được trình duyệt gửi kèm**",
-      "Đó là đúng điều kiện để CSRF khai thác được — nên tắt nó ở đây mở hẳn một lỗ hổng",
-      "Vấn đề thứ hai: dòng (2) và (3) cùng nhau — cho phép **mọi nguồn** cộng với **gửi kèm thông tin xác thực**",
-      "Tổ hợp đó nghĩa là bất kỳ trang web nào cũng gọi được API của ta với phiên của người dùng",
-      "Dòng (4) thiếu khai method, nên một `CorsConfiguration` trống **không cho phép method nào** — cấu hình sẽ từ chối mọi request",
-      "Nên nghịch lý: cấu hình vừa quá mở về nguồn vừa hoàn toàn không hoạt động về method",
-      "Viết lại: bật lại chống CSRF, hoặc nếu client là ứng dụng độc lập thì chuyển sang xác thực bằng **token** thay vì phiên cookie",
-      "Liệt kê **nguồn cụ thể** thay vì `*`, và khai method tường minh",
-      "`setAllowCredentials(true)` chỉ dùng khi thật cần và **không bao giờ** đi cùng `*`",
+      "(1) kết hợp với (2) là lỗ hổng: ứng dụng xác thực bằng phiên qua cookie mà lại tắt bảo vệ CSRF",
+      "Trình duyệt tự đính kèm cookie phiên, nên mọi endpoint làm thay đổi trạng thái đều bị tấn công thay mặt người dùng",
+      "(3) và (4) mâu thuẫn nhau: đặc tả CORS **cấm** dùng `*` cho nguồn gốc khi cho phép gửi kèm thông tin xác thực",
+      "Trình duyệt sẽ từ chối response, nên tính năng gọi chéo nguồn gốc không chạy — lỗi lộ ra ngay lúc chạy",
+      "Sửa (3) bằng danh sách nguồn gốc cụ thể thay vì ký tự đại diện",
+      "Sửa (1) bằng cách giữ bảo vệ CSRF, hoặc chuyển hẳn sang xác thực bằng token trong header rồi mới tắt được",
+      "Nhận xét rằng `setAllowedMethods(List.of(\"*\"))` cũng nên thu hẹp về đúng các method thật sự dùng",
     ],
-    model: "Tôi xếp theo mức nghiêm trọng vì ba vấn đề này không tương đương. Nghiêm trọng nhất là tổ hợp dòng (1) với dòng (5): cấu hình tắt chống CSRF trong khi vẫn dùng đăng nhập bằng biểu mẫu. Đăng nhập bằng biểu mẫu nghĩa là phiên được giữ trong cookie, và cookie thì trình duyệt tự gửi kèm cho mọi request tới miền đó — đó chính xác là điều kiện mà tấn công CSRF cần. Nên ở đây việc tắt không phải một lựa chọn đánh đổi mà là mở một lỗ hổng: một trang web bất kỳ có thể khiến trình duyệt của người dùng đang đăng nhập gửi request thay đổi dữ liệu, và server sẽ thực hiện. Tôi nhấn điều này vì tắt chống CSRF là thao tác rất phổ biến khi \"cho frontend gọi được\", và nó thường được làm mà không ai hỏi phiên đang nằm ở đâu. Nghiêm trọng thứ hai là dòng (2) cùng dòng (3): cho phép mọi nguồn, đồng thời cho phép gửi kèm thông tin xác thực. Từng cái đã đáng lo, nhưng tổ hợp thì nghĩa là bất kỳ trang web nào trên Internet cũng gọi được API của ta **với phiên của người dùng** — nó biến mọi endpoint thành công khai đối với mã của người khác chạy trong trình duyệt của người dùng ta. Với nguồn thì tôi không dùng `*` kể cả trong môi trường kiểm thử, vì môi trường kiểm thử và môi trường thực tế hay dùng chung hạ tầng hơn ta tưởng, và một cấu hình mở vô tình đi theo bản phát hành. Vấn đề thứ ba mang tính cơ học nhưng thú vị: dòng (4) trả về một `CorsConfiguration` không khai method nào. Một cấu hình trống thì **không cho phép** method nào cả, nên cấu hình này sẽ từ chối mọi request liên nguồn. Kết quả là một nghịch lý đáng nhớ: nó vừa quá mở về nguồn — trên giấy — vừa hoàn toàn không hoạt động trong thực tế, và người viết có thể sẽ đi tắt thêm thứ khác để \"cho nó chạy\". Viết lại thì tôi hỏi một câu trước: client là gì? Nếu đây là một ứng dụng web do cùng server phục vụ, tôi bật lại chống CSRF và đưa token vào các biểu mẫu cùng các lời gọi bất đồng bộ — đó là cơ chế hoạt động tốt nhất trong kiến trúc ấy nhờ tính đơn giản. Nếu client là một ứng dụng frontend độc lập hay ứng dụng di động, thì token CSRF vốn không phù hợp, và câu trả lời đúng không phải \"tắt CSRF\" mà là **đổi cách xác thực**: chuyển sang token thay vì phiên cookie, và khi đó không còn cookie tự gửi kèm nên lớp CSRF không còn là điều phải bù. Về CORS, tôi liệt kê nguồn cụ thể, khai method tường minh, chỉ mở những header thật cần, và chỉ đặt `setAllowCredentials(true)` nếu kiến trúc thực sự dùng cookie — và trong trường hợp đó thì nó tuyệt đối không đi cùng `*`.",
+    model: "Tôi tách hai vấn đề ra vì chúng khác hẳn nhau về mức nghiêm trọng. Lỗ hổng nằm ở sự kết hợp của (1) và (2), và phải nhìn cả hai mới thấy. Dòng (2) bật đăng nhập bằng form, nghĩa là ứng dụng xác thực người dùng bằng phiên và phiên đó được giữ bằng cookie. Dòng (1) tắt bảo vệ CSRF. Ghép lại là đúng kịch bản mà CSRF sinh ra để chống: trình duyệt tự động đính kèm cookie phiên vào mọi request gửi tới tên miền của bạn, kể cả request do một trang khác kích hoạt. Kẻ tấn công dựng một trang bất kỳ, đặt trên đó một form tự gửi tới endpoint đổi mật khẩu hoặc chuyển tiền của bạn, dụ người đang đăng nhập ghé vào — và request đi tới với phiên hợp lệ. Không có token CSRF để chặn, ứng dụng thực hiện hành động đó. Nên với cấu hình này, mọi endpoint làm thay đổi trạng thái đều đang hở. Cách sửa phụ thuộc vào việc muốn giữ kiểu xác thực nào. Nếu giữ đăng nhập bằng form và phiên, thì phải giữ bảo vệ CSRF, và phía giao diện phải đọc token rồi gửi kèm. Nếu muốn giao diện ở tên miền khác gọi API gọn hơn, tôi chuyển sang xác thực bằng token đặt trong header — lúc đó trình duyệt không tự gắn gì nữa, tấn công CSRF không còn đường, và việc tắt bảo vệ CSRF mới có cơ sở. Điều tôi muốn nhấn là thứ tự lập luận: tắt CSRF không phải nguyên nhân, nó là hệ quả của việc chọn cơ chế xác thực. Chọn cơ chế trước, rồi mới nói tới CSRF. Chỗ thứ hai, (3) và (4), thì không phải lỗ hổng mà là một cấu hình tự mâu thuẫn. Đặc tả CORS cấm dùng ký tự đại diện cho nguồn gốc khi đồng thời cho phép gửi kèm thông tin xác thực — nếu cho phép cả hai thì bất kỳ trang nào trên internet cũng đọc được dữ liệu của người đang đăng nhập, nên trình duyệt chặn thẳng. Kết quả thực tế là trình duyệt từ chối response và tính năng gọi chéo nguồn gốc đơn giản là không chạy; đây là loại lỗi lộ ra ngay lần thử đầu tiên. Cách sửa là liệt kê nguồn gốc cụ thể thay cho ký tự đại diện. Nhân tiện tôi cũng thu hẹp danh sách method về đúng những cái thật sự dùng — không phải vì nó nguy hiểm, mà vì một cấu hình nói rõ ý định thì người sau đọc mới biết hệ thống định cho phép cái gì.",
     redFlags: [
-      "Giữ `csrf().disable()` và coi đó là chuyện bình thường của API",
-      "Đổi `*` thành danh sách nguồn nhưng vẫn để CSRF tắt với phiên cookie",
-      "Không phát hiện việc thiếu khai method làm cấu hình từ chối mọi request",
-      "Giữ `allowCredentials(true)` cùng với mọi nguồn",
-      "Bật lại CSRF cho một client di động mà không đổi cách xác thực",
+      "Chỉ nói \"không nên tắt CSRF\" mà không chỉ ra đăng nhập bằng phiên mới là thứ khiến nó nguy hiểm",
+      "Không biết ký tự đại diện và việc cho phép gửi kèm thông tin xác thực loại trừ nhau",
+      "Cho rằng cấu hình CORS rộng là lỗ hổng cho mọi loại client",
+      "Sửa bằng cách bật lại CSRF mà không nói phía giao diện phải làm gì",
     ],
     probes: [
-      "Vì sao \"mọi nguồn\" cộng \"gửi kèm thông tin xác thực\" tệ hơn từng cái riêng lẻ?",
-      "Client là ứng dụng di động thì bạn chọn cơ chế nào, vì sao?",
-      "Cấu hình thiếu khai method biểu hiện ra sao khi chạy?",
+      "Nếu chuyển sang xác thực bằng token trong header, bạn còn cần bảo vệ CSRF không?",
+      "Vì sao đặc tả lại cấm dùng ký tự đại diện cùng với thông tin xác thực?",
+      "Cấu hình CORS rộng có làm API dễ bị tấn công bởi một script chạy ngoài trình duyệt không?",
     ],
-    refs: ["springsec-09", "springsec-10"],
+    refs: ["springsec-09", "springsec-10", "springsec-06"],
   },
   {
     id: "springsec-iq15",
@@ -660,46 +652,47 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     topic: "ssec-csrf",
     level: 3,
     minutes: 10,
-    question: "Kiến trúc nào thì cần token CSRF, kiến trúc nào thì không? Và khi \"không cần\", thứ gì thay thế nó?",
+    question: "Bạn đang chốt cách một giao diện đơn trang giữ trạng thái đăng nhập khi gọi API. Lựa chọn ở bước này kéo theo hệ quả cho cả bảo vệ CSRF lẫn cách triển khai nhiều instance. Trình bày các phương án và chốt một cái.",
     tradeoffs: [
       {
-        option: "Ứng dụng web do cùng server render — **cần** token CSRF",
-        when: "Phiên nằm trong cookie và trình duyệt tự gửi kèm, nên tấn công CSRF khai thác được. Token là cơ chế đơn giản và phù hợp nhất ở đây; framework lo phần lớn việc, kể cả cho biểu mẫu đăng nhập.",
+        option: "Cookie phiên + giữ bảo vệ CSRF, giao diện cùng nguồn gốc với API",
+        when: "Lựa chọn mặc định khi giao diện và API phục vụ từ cùng một nguồn gốc. Cookie đánh dấu chỉ dành cho HTTP nên script không đọc được, nghĩa là một lỗ hổng chèn script không lấy được phiên. Đổi lại phải xử lý token CSRF ở phía giao diện, và phải giải bài toán lưu token khi chạy nhiều instance.",
       },
       {
-        option: "Frontend độc lập hoặc ứng dụng di động — token CSRF **không phù hợp**",
-        when: "Client không được server render nên không có chỗ tự nhiên để nhận token. Lời giải đúng là đổi cách xác thực: dùng **token mang trong header** thay vì phiên cookie, và khi ấy không còn thông tin nào tự gửi kèm.",
+        option: "Token trong header `Authorization`, lưu ở bộ nhớ của trang",
+        when: "Khi giao diện nằm ở nguồn gốc khác, hoặc khi có cả ứng dụng di động dùng chung API. Trình duyệt không tự đính kèm header nên tấn công CSRF không còn đường, và máy chủ không giữ trạng thái phiên nên thêm instance là chuyện tầm thường. Đổi lại token nằm trong tầm với của script, nên một lỗ hổng chèn script là mất token, và việc thu hồi sớm cần thêm cơ chế.",
       },
       {
-        option: "Giữ cookie mà bỏ token CSRF — dựa vào thuộc tính cookie",
-        when: "Có tác dụng, và là một lớp tốt để cộng thêm. Nhưng nó là cơ chế của **trình duyệt**, nên nó phụ thuộc vào phiên bản trình duyệt của người dùng — tôi không dùng nó làm lớp duy nhất.",
+        option: "Token lưu trong `localStorage`",
+        when: "Tiện nhất để viết và tệ nhất về bảo mật trong ba lựa chọn: token sống qua cả lần đóng tab và bất kỳ script nào chạy trên trang đều đọc được. Chỉ chấp nhận cho công cụ nội bộ có phạm vi rủi ro nhỏ.",
+      },
+      {
+        option: "Cookie phiên + `CsrfTokenRepository` tùy chỉnh",
+        when: "Khi đã chọn phiên nhưng chạy nhiều instance sau bộ cân bằng tải không có phiên dính. Thay vì tắt bảo vệ CSRF cho hết lỗi, thay chỗ lưu token sang nơi mọi instance đọc được. Đây là câu trả lời đúng cho tình huống mà người ta hay tắt CSRF nhất.",
       },
     ],
     mustCover: [
-      "Câu hỏi phân định không phải \"API hay web\" mà **thông tin xác thực có tự được gửi kèm hay không**",
-      "Cookie tự được trình duyệt gửi kèm → CSRF khai thác được → cần token",
-      "Token mang trong header **không** tự được gửi kèm, vì mã của trang lạ phải tự thêm nó và nó không đọc được token của ta",
-      "Nên chuyển sang xác thực bằng token là một cách **loại bỏ** lớp vấn đề, không phải bỏ qua nó",
-      "\"Tắt CSRF cho API\" chỉ đúng khi API **không** dùng phiên cookie — nếu còn cookie thì đó là một lỗ hổng",
-      "Nhưng token mang trong header đổi lấy một vấn đề khác: nó phải được **lưu ở đâu đó** trong trình duyệt",
-      "Lưu ở nơi mã JavaScript đọc được thì một lỗ XSS sẽ lấy được token — nên rủi ro dịch chỗ, không mất đi",
-      "Thuộc tính cookie giới hạn việc gửi kèm liên nguồn là lớp bổ sung tốt, nhưng phụ thuộc trình duyệt người dùng",
-      "Và quy tắc đúng với mọi kiến trúc: **không dùng GET cho thao tác thay đổi dữ liệu**",
+      "Nêu được rằng lựa chọn cơ chế giữ đăng nhập **quyết định** việc có cần bảo vệ CSRF hay không",
+      "Cookie được trình duyệt tự đính kèm → cần bảo vệ CSRF; header do client tự gắn → không cần",
+      "Đánh đổi thật sự là giữa rủi ro CSRF và rủi ro chèn script (token nằm trong tầm với của script)",
+      "Cookie đánh dấu chỉ dành cho HTTP thì script không đọc được, đó là ưu thế thật của phương án phiên",
+      "Nêu bài toán nhiều instance: phiên và token CSRF phải dùng chung được giữa các instance",
+      "Biết rằng có thể thay `CsrfTokenRepository` thay vì tắt bảo vệ CSRF",
+      "Chốt một phương án kèm điều kiện, không liệt kê rồi bỏ lửng",
     ],
-    model: "Tôi không phân định bằng \"đây là API hay ứng dụng web\", vì cách đặt đó dẫn tới kết luận sai rất thường xuyên. Câu hỏi đúng là: thông tin xác thực có **tự được gửi kèm** với mọi request hay không? Nếu phiên nằm trong cookie thì có — trình duyệt gửi kèm cookie cho mọi request tới miền đó, bất kể request phát ra từ trang nào. Đó chính là điều kiện mà CSRF khai thác, và khi điều kiện đó có mặt thì ta cần token CSRF, dù ứng dụng tự gọi mình là API. Ngược lại, nếu thông tin xác thực là một token mà client phải **tự đặt vào header**, thì mã của một trang lạ không thể gửi request hợp lệ: nó buộc phải biết token, và nó không đọc được token của ta. Nên chuyển sang xác thực bằng token không phải là bỏ qua CSRF mà là loại bỏ điều kiện làm nó khả thi — một lời giải mạnh hơn hẳn việc thêm một lớp kiểm tra. Từ đó, câu \"tắt CSRF cho API\" mà tôi nghe rất nhiều chỉ đúng có điều kiện: đúng khi API không dùng phiên cookie, và là một lỗ hổng khi nó vẫn dùng. Với ứng dụng web do cùng server render thì token CSRF là cơ chế phù hợp nhất, chủ yếu nhờ tính đơn giản: framework sinh token, đưa nó vào thuộc tính của request, và ta chỉ cần gắn nó vào biểu mẫu cùng các lời gọi bất đồng bộ. Với frontend độc lập hay ứng dụng di động thì token CSRF không có chỗ tự nhiên để sống, vì client không do server render — và đó là dấu hiệu nên đổi kiến trúc xác thực chứ không phải cố nhét cơ chế cũ vào. Nhưng tôi muốn nói rõ cái giá của hướng token, vì nó hay bị trình bày như lời giải không có nhược điểm: token phải được lưu ở đâu đó trong trình duyệt, và nếu nó nằm ở nơi mã JavaScript đọc được thì một lỗ XSS sẽ lấy được nó. Nghĩa là ta không xoá rủi ro, ta dịch nó từ CSRF sang XSS — và XSS thì khó phòng toàn diện hơn. Đó là lý do tôi không coi \"dùng token nên không cần nghĩ về CSRF\" là một câu trả lời đủ. Lớp thứ ba đáng nhắc là các thuộc tính của cookie giới hạn việc gửi kèm trong bối cảnh liên nguồn: nó có tác dụng thật và tôi luôn bật, nhưng nó là cơ chế của trình duyệt nên hiệu lực phụ thuộc vào trình duyệt người dùng đang chạy — tôi dùng nó như lớp bổ sung, không bao giờ làm lớp duy nhất. Cuối cùng, một quy tắc đúng với cả ba kiến trúc và tôi không bao giờ nhượng bộ: không dùng GET cho thao tác thay đổi dữ liệu. GET không đòi token CSRF, nên một endpoint GET thay đổi dữ liệu nằm ngoài toàn bộ lớp bảo vệ này bất kể ta cấu hình cẩn thận đến đâu.",
+    model: "Tôi bắt đầu từ chỗ mà nhiều người bỏ qua: câu hỏi \"có cần bảo vệ CSRF không\" không phải là một quyết định độc lập, nó là hệ quả của cách ta giữ trạng thái đăng nhập. Nên tôi quyết định cái kia trước. Có hai họ phương án. Họ thứ nhất là cookie phiên. Ưu điểm lớn nhất, và tôi cho là hay bị đánh giá thấp, là cookie có thể đánh dấu chỉ dành cho HTTP — script trên trang không đọc được nó. Nghĩa là nếu ứng dụng dính một lỗ hổng chèn script, kẻ tấn công vẫn không lấy được phiên mang đi nơi khác. Nhược điểm là vì trình duyệt tự đính kèm cookie, ta rơi thẳng vào vùng CSRF và bắt buộc phải giữ bảo vệ, kèm việc giao diện phải gửi token theo. Họ thứ hai là token đặt trong header. Trình duyệt không tự gắn header giúp ai cả, nên CSRF hết đường — nhưng để gắn được header thì script phải cầm được token, và cái gì script cầm được thì một lỗ hổng chèn script cũng lấy được. Nên đánh đổi thật sự ở đây không phải \"tiện hay không tiện\" mà là đổi rủi ro CSRF lấy rủi ro chèn script. Nói được câu đó thì phần còn lại dễ. Trong họ thứ hai, tôi loại `localStorage`: token sống qua cả lần đóng tab và mọi script đều đọc được, tiện nhất nhưng tệ nhất. Giữ token trong bộ nhớ của trang thì thu hẹp cửa sổ rủi ro đáng kể. Quyết định của tôi phụ thuộc vào một câu hỏi duy nhất: giao diện có cùng nguồn gốc với API không, và có client nào khác ngoài trình duyệt không. Nếu giao diện phục vụ từ cùng nguồn gốc và chỉ có trình duyệt, tôi chọn cookie phiên và giữ nguyên bảo vệ CSRF — vì lợi ích cookie không đọc được bằng script là thật, và cái giá chỉ là một lần dựng luồng token ở giao diện. Nếu có ứng dụng di động dùng chung API, hoặc giao diện nằm ở nguồn gốc khác, tôi chọn token trong header, vì phương án phiên lúc đó kéo theo cả một đống việc về cookie liên nguồn gốc mà không đáng. Còn một việc tôi muốn nêu trước vì nó là lý do phổ biến nhất khiến người ta tắt CSRF: khi chạy nhiều instance sau bộ cân bằng tải không có phiên dính, token CSRF lưu trong phiên của instance này thì instance kia không thấy, và lỗi xuất hiện ngẫu nhiên. Phản ứng quen thuộc là tắt bảo vệ cho hết lỗi. Cách đúng là thay `CsrfTokenRepository` bằng một hiện thực lưu token ở nơi mọi instance đọc được. Giữ được cơ chế bảo vệ, chỉ đổi chỗ cất token.",
     redFlags: [
-      "Phân định bằng \"API thì không cần CSRF\" mà không hỏi phiên nằm ở đâu",
-      "Tắt CSRF trong khi vẫn dùng phiên cookie",
-      "Trình bày token trong header như lời giải không có nhược điểm",
-      "Dựa duy nhất vào thuộc tính cookie",
-      "Không nêu quy tắc về GET",
+      "Chọn token trong header chỉ vì \"stateless\" mà không nói gì tới rủi ro chèn script",
+      "Chọn `localStorage` mà không nêu nhược điểm",
+      "Không liên hệ được lựa chọn cơ chế đăng nhập với nhu cầu bảo vệ CSRF",
+      "Giải bài toán nhiều instance bằng cách tắt bảo vệ CSRF",
     ],
     probes: [
-      "Chuyển sang token trong header thì rủi ro dịch sang đâu?",
-      "Bạn lưu token ở chỗ nào trong trình duyệt, và vì sao?",
-      "Một ứng dụng vừa có web render phía server vừa có ứng dụng di động thì bạn làm thế nào?",
+      "Cookie đánh dấu chỉ dành cho HTTP bảo vệ khỏi loại tấn công nào, và không bảo vệ khỏi loại nào?",
+      "Với nhiều instance và phiên không dính, bạn thay contract nào trong cơ chế CSRF?",
+      "Nếu có cả ứng dụng di động lẫn giao diện web thì câu trả lời của bạn đổi thế nào?",
     ],
-    refs: ["springsec-09", "springsec-13"],
+    refs: ["springsec-09", "springsec-10", "springsec-06"],
   },
   {
     id: "springsec-iq16",
@@ -708,42 +701,35 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     level: 4,
     minutes: 13,
     incident: {
-      symptom: "Một cổng quản trị nội bộ dùng đăng nhập bằng biểu mẫu, phiên trong cookie. Ba tuần trước, đội frontend tách giao diện ra một miền riêng và để API chạy được đã thêm cấu hình CORS cho miền mới **và** tắt chống CSRF. Sáng nay, 47 tài khoản người dùng bị đổi quyền thành quản trị. Log cho thấy các request đến từ phiên hợp lệ của 4 nhân viên khác nhau, rải trong 2 giờ, và cả 4 đều nói không làm gì cả.",
-      scale: "47 tài khoản bị nâng quyền, trong đó 6 đã được dùng để tải dữ liệu khách hàng. 4 nhân viên bị lợi dụng phiên đều thuộc bộ phận chăm sóc khách hàng và đều đã mở một liên kết trong một thư nội bộ giả mạo sáng nay.",
-      constraints: "Không được ngừng cổng quản trị — bộ phận chăm sóc khách hàng đang dùng. Phải hạ quyền 47 tài khoản và xác định 6 tài khoản đã tải gì. Phải trả lời được vì sao cấu hình CORS \"đã giới hạn miền\" mà tấn công vẫn xảy ra.",
-      },
-    question: "Nêu chẩn đoán. Và trả lời trực tiếp: vì sao việc giới hạn miền trong CORS không ngăn được cuộc tấn công này?",
+      symptom: "Sau khi phát hành giao diện mới, người dùng báo rằng thao tác lưu biểu mẫu thỉnh thoảng thất bại với lỗi 403, nhưng bấm lại lần hai thì thành công. Lỗi tăng vào giờ cao điểm. Một lập trình viên đã gửi bản vá tắt bảo vệ CSRF cho các đường dẫn bắt đầu bằng `/api`, kèm ghi chú rằng như thế là chuẩn cho REST và chờ được duyệt.",
+      scale: "Ứng dụng nội bộ cho khoảng 3.000 nhân viên, 8 instance sau bộ cân bằng tải. Khoảng 6% thao tác lưu bị lỗi vào giờ cao điểm, gần như không có lỗi vào buổi tối.",
+      constraints: "Ứng dụng xác thực bằng đăng nhập form và phiên qua cookie; đổi sang cơ chế khác là việc của quý sau, không làm trong tuần này. Bản vá đang chờ duyệt và đội đang chịu áp lực phải cho qua.",
+    },
+    question: "Bản vá đang chờ duyệt sẽ làm lỗi biến mất. Cho biết bạn duyệt hay không và vì sao, rồi trình bày cách bạn thật sự xử lý sự cố này.",
     mustCover: [
-      "Chẩn đoán: đây là tấn công CSRF, và điều kiện cho nó là phiên trong **cookie** cộng với việc chống CSRF bị **tắt**",
-      "Dấu hiệu khớp hoàn toàn: request đến từ phiên hợp lệ, người dùng không hay biết, và họ đều đã mở một liên kết",
-      "Log **không sai** — request thật đến từ phiên của họ; trang lạ chỉ khiến trình duyệt gửi nó",
-      "Trả lời câu hỏi trung tâm: CORS **không** ngăn được vì nó không phải cơ chế phân quyền",
-      "Trình duyệt chặn trang lạ **đọc response**, nhưng request vẫn được gửi và backend vẫn **thực thi**",
-      "Với một cuộc tấn công đổi quyền, kẻ tấn công **không cần đọc response** — họ chỉ cần thao tác xảy ra",
-      "Nên CORS bảo vệ dữ liệu khỏi bị đọc liên nguồn, còn CSRF bảo vệ **thao tác** khỏi bị gọi liên nguồn — hai việc khác nhau",
-      "Và với một số dạng request, trình duyệt còn không gửi request thăm dò, nên không có chỗ nào để CORS chặn trước",
-      "Xử lý ngay: bật lại chống CSRF; nó không cần ngừng cổng và chặn đúng cơ chế",
-      "Đồng thời vô hiệu hoá phiên đang hoạt động của 4 nhân viên, vì phiên bị lợi dụng vẫn còn giá trị",
-      "Hạ quyền 47 tài khoản, và tách riêng 6 tài khoản đã tải dữ liệu để điều tra phạm vi",
-      "Sửa đúng cho kiến trúc mới: frontend ở miền riêng thì nên chuyển sang xác thực bằng **token trong header**",
-      "Vì khi đó không còn cookie tự gửi kèm, và CSRF không còn là điều kiện phải bù",
-      "Bài học: \"để API chạy được\" đã dẫn tới việc tắt một lớp bảo mật mà không ai định giá — cần một cổng chặn cho loại thay đổi này",
+      "Từ chối bản vá: ứng dụng xác thực bằng phiên qua cookie nên tắt bảo vệ CSRF là mở lỗ hổng thật",
+      "Chỉ ra lập luận sai trong ghi chú: điều kiện không phải \"REST hay không\" mà là ai đính kèm thông tin xác thực",
+      "Đọc đúng triệu chứng: lỗi rải rác, tăng theo tải, thử lại thì được → trỏ tới token không dùng chung được giữa các instance",
+      "Token CSRF mặc định lưu trong phiên; nhiều instance không có phiên dính thì instance nhận request không có token để đối chiếu",
+      "Cách khẳng định: ghim một người dùng vào một instance và xem lỗi có biến mất không, hoặc đối chiếu log theo instance",
+      "Cách sửa đúng: thay `CsrfTokenRepository` sang nơi dùng chung được, hoặc bật phiên dính như biện pháp tạm",
+      "Nói rõ rằng bản vá kia làm mất triệu chứng chứ không sửa nguyên nhân, và để lại lỗ hổng",
+      "Đề xuất đường dài: chuyển sang token trong header thì mới có cơ sở để bỏ bảo vệ CSRF",
     ],
-    model: "Chẩn đoán thì các dấu hiệu khớp đến mức không cần giả thuyết thứ hai: request đến từ phiên hợp lệ của người dùng thật, người dùng không hay biết, và cả bốn người đều đã mở một liên kết sáng nay. Đó là hình dạng chuẩn của một cuộc tấn công CSRF. Điều kiện để nó xảy ra có hai phần và cả hai đều có mặt: phiên nằm trong cookie, nên trình duyệt tự gửi kèm cho mọi request tới miền đó; và chống CSRF đã bị tắt ba tuần trước, nên không có token nào để kiểm. Một chi tiết tôi muốn làm rõ ngay vì nó ảnh hưởng tới cách xử lý con người: log không sai và bốn nhân viên đó không nói dối. Request thật sự đến từ phiên của họ; trang lạ chỉ khiến trình duyệt của họ gửi nó đi. Bây giờ câu hỏi trung tâm, và tôi trả lời thẳng: giới hạn miền trong CORS không ngăn được cuộc tấn công này vì CORS không phải cơ chế phân quyền. Khi một trang ở nguồn không được phép gọi API của ta, trình duyệt chặn **trang đó đọc response** — nhưng request đã được gửi và backend đã thực thi nó. Với một cuộc tấn công đổi quyền, kẻ tấn công không cần đọc response chút nào; họ chỉ cần thao tác xảy ra, và nó đã xảy ra. Nói cách khác CORS bảo vệ **dữ liệu** khỏi bị đọc liên nguồn, còn chống CSRF bảo vệ **thao tác** khỏi bị gọi liên nguồn. Đội frontend đã cấu hình đúng một cơ chế và tắt đúng cơ chế còn lại, và hai cơ chế đó không thay thế nhau được. Tôi sẽ thêm một chi tiết cơ học để câu trả lời trọn vẹn: trình duyệt chỉ gửi request thăm dò bằng OPTIONS với một số dạng request, và nó **bỏ qua** bước đó với những request đơn giản dùng header cơ bản — nên với đúng những request kiểu ấy, không có thời điểm nào để CORS can thiệp trước khi backend thực thi. Xử lý theo thứ tự. Việc đầu tiên là bật lại chống CSRF: nó chặn đúng cơ chế đang bị khai thác, và nó không cần ngừng cổng nên thoả ràng buộc — giao diện ở miền riêng sẽ hỏng phần gọi ghi cho tới khi đội frontend gắn token, nhưng đó là đánh đổi tôi chấp nhận và nói rõ, vì phương án còn lại là để lỗ hổng mở. Gần như đồng thời, tôi vô hiệu hoá mọi phiên đang hoạt động của bốn nhân viên đó: phiên bị lợi dụng vẫn còn giá trị, nên chừng nào nó còn sống thì cuộc tấn công còn lặp được. Rồi hạ quyền 47 tài khoản, và tách riêng 6 tài khoản đã tải dữ liệu khách hàng thành một luồng điều tra riêng — đối chiếu nhật ký tải để biết chính xác dữ liệu nào đã ra ngoài, vì đó là câu hỏi mà bộ phận pháp chế và khách hàng cần, và nó không được trả lời bằng suy đoán. Về cách sửa đúng cho kiến trúc mới, bật lại CSRF chỉ là biện pháp chặn máu. Khi frontend đã tách ra miền riêng thì token CSRF không còn là cơ chế phù hợp, vì client không do server render nên không có chỗ tự nhiên nhận token. Hướng đúng là chuyển sang xác thực bằng token mang trong header: khi ấy không còn thông tin nào tự được gửi kèm, nên CSRF không còn là điều kiện phải bù — ta loại bỏ lớp vấn đề thay vì thêm một lớp kiểm tra. Tôi sẽ nêu rõ cái giá kèm theo, rằng rủi ro dịch sang XSS và token phải được lưu cẩn thận, chứ không trình bày nó như lời giải miễn phí. Bài học tổ chức là phần tôi muốn ghi lại rõ nhất: ba tuần trước có một thay đổi mang nhãn \"để API chạy được\", và nó đã tắt một lớp bảo mật mà không ai định giá việc tắt đó. Nên tôi đề nghị một cổng chặn cụ thể: mọi thay đổi làm yếu một cấu hình bảo mật — tắt CSRF, mở rộng nguồn CORS, hạ yêu cầu xác thực — phải được đánh dấu và được một người thứ hai duyệt, với lý do viết ra. Không phải để làm chậm đội, mà vì đây đúng là loại thay đổi mà người thực hiện không có đủ bối cảnh để tự đánh giá hậu quả.",
+    model: "Tôi không duyệt bản vá, và lý do không phải là nguyên tắc chung mà là một sự thật cụ thể của hệ thống này: nó xác thực bằng đăng nhập form và giữ phiên bằng cookie. Trình duyệt tự đính kèm cookie phiên vào mọi request gửi tới tên miền này, kể cả request do một trang khác kích hoạt. Tắt bảo vệ CSRF trong hoàn cảnh đó là mở đúng cánh cửa mà cơ chế này sinh ra để đóng — và mở cho toàn bộ nhóm đường dẫn làm thay đổi dữ liệu. Ghi chú trong bản vá cũng cho thấy một lập luận sai mà tôi muốn nói rõ với người viết, vì nó sẽ còn quay lại: chữ REST không quyết định gì cả. Điều quyết định là ai đính kèm thông tin xác thực vào request. Client tự gắn token vào header thì không cần bảo vệ CSRF; trình duyệt tự gắn cookie thì cần, bất kể API được thiết kế theo phong cách nào. Sau đó tôi quay lại triệu chứng, vì bản vá đang chữa triệu chứng chứ chưa ai tìm nguyên nhân. Ba chi tiết đi cùng nhau: lỗi rải rác chứ không phải luôn luôn, tăng theo tải, và thử lại thì thành công. Hình dạng đó không giống một cấu hình sai — cấu hình sai thì sai đều. Nó giống một request rơi vào đúng chỗ không có dữ liệu nó cần. Với tám instance sau bộ cân bằng tải, điều đó có nghĩa rất cụ thể: token CSRF mặc định được lưu trong phiên, phiên lại nằm ở instance đã phục vụ lần trước, nên khi request tiếp theo rơi sang instance khác thì instance đó không có gì để đối chiếu và trả 403. Giờ cao điểm nhiều instance bận hơn, request bị phân tán nhiều hơn, tỉ lệ lỗi tăng — khớp hoàn toàn. Thử lại đôi khi rơi trúng instance cũ nên thành công, và điều đó càng củng cố giả thuyết chứ không bác bỏ nó. Để khẳng định, tôi ghim tạm một nhóm người dùng vào một instance và xem lỗi có biến mất trong nhóm đó không; hoặc gọn hơn, đối chiếu log 403 với instance xử lý và so với instance đã cấp token. Cách sửa đúng là giữ nguyên bảo vệ CSRF và đổi chỗ cất token: thay `CsrfTokenRepository` bằng một hiện thực lưu token ở nơi mọi instance đọc được. Nếu cần chặn lỗi ngay trong hôm nay thì bật phiên dính ở bộ cân bằng tải như biện pháp tạm — nó chữa được triệu chứng mà không mở lỗ hổng nào, và tôi nói rõ đó là tạm thời kèm hạn hoàn thành cho cách sửa thật. Về đường dài, tôi đồng ý với lập trình viên kia ở một điểm: hệ thống này sẽ dễ thở hơn nếu chuyển sang token đặt trong header. Nhưng thứ tự phải đúng — chuyển cơ chế xác thực trước, rồi việc bỏ bảo vệ CSRF mới có cơ sở. Làm ngược lại là bỏ hàng rào trước khi có cái thay thế.",
     redFlags: [
-      "Kết luận bốn nhân viên đó có lỗi hoặc nói dối",
-      "Coi log là sai",
-      "Thắt chặt cấu hình CORS và coi đó là biện pháp chống CSRF",
-      "Bật lại CSRF mà không vô hiệu hoá các phiên đang bị lợi dụng",
-      "Hạ quyền 47 tài khoản rồi coi là xong, không điều tra 6 tài khoản đã tải dữ liệu",
-      "Đề nghị chuyển sang token mà không nêu rủi ro dịch sang XSS",
+      "Duyệt bản vá vì \"API REST thì không cần CSRF\"",
+      "Từ chối bản vá bằng nguyên tắc chung mà không đọc ra nguyên nhân thật của lỗi 403",
+      "Không liên hệ được lỗi rải rác tăng theo tải với việc token nằm trong phiên",
+      "Đề xuất đổi cơ chế xác thực ngay trong tuần dù ràng buộc đã nói rõ là không",
+      "Coi phiên dính là cách sửa cuối cùng chứ không phải biện pháp tạm",
     ],
     probes: [
-      "Vì sao kẻ tấn công không cần đọc response vẫn đạt mục đích?",
-      "Vì sao phải vô hiệu hoá phiên đang hoạt động, chứ không chỉ đổi mật khẩu?",
-      "Cổng chặn cho \"thay đổi làm yếu cấu hình bảo mật\" của bạn trông như thế nào?",
+      "Bạn khẳng định giả thuyết bằng quan sát nào trước khi sửa?",
+      "Phiên dính chữa được triệu chứng — vì sao bạn vẫn coi nó là tạm thời?",
+      "Sau khi chuyển sang token trong header, còn thứ gì cần kiểm trước khi bỏ bảo vệ CSRF?",
     ],
-    refs: ["springsec-09", "springsec-10"],
+    refs: ["springsec-09", "springsec-06", "springsec-10"],
   },
 
   // ===== ssec-oauth (springsec-iq17–springsec-iq20) =====
@@ -753,31 +739,30 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     topic: "ssec-oauth",
     level: 1,
     minutes: 6,
-    question: "Kể bốn thực thể trong một hệ thống OAuth 2 và trách nhiệm của từng cái. OpenID Connect thêm gì vào đó?",
+    question: "Mô tả một hệ thống OAuth 2 cho người chưa từng làm: có những bên nào tham gia, ai giữ vai gì, và hai cách đóng gói thông tin vào thẻ ra vào khác nhau ở chỗ nào.",
     mustCover: [
-      "**Người dùng** — người sử dụng ứng dụng; không phải hệ thống OAuth 2 nào cũng có người dùng",
-      "**Client** — ứng dụng gọi tới backend để lấy dữ liệu hay chức năng; có thể là web, di động, hoặc một dịch vụ backend",
-      "**Máy chủ tài nguyên** — backend phân quyền và phục vụ các request từ client",
-      "**Máy chủ uỷ quyền** — nơi xác thực người dùng và **giữ an toàn thông tin đăng nhập**",
-      "Luồng: client xin token từ máy chủ uỷ quyền, rồi gắn token khi gọi máy chủ tài nguyên",
-      "Điểm cốt lõi của OAuth 2 là **tách trách nhiệm xác thực** ra khỏi nơi giữ tài nguyên",
-      "Nhờ vậy nhiều ứng dụng dùng chung một nơi xác thực, và không ứng dụng nào phải tự giữ mật khẩu",
-      "Access token có **thời gian sống ngắn**, thường vài phút — nên token bị lộ chỉ dùng được trong khoảng ngắn",
-      "OAuth 2 là đặc tả về **uỷ quyền**; OpenID Connect là một giao thức dựng trên nó, bổ sung phần **định danh** người dùng",
+      "**User** — con người muốn thực hiện một việc gì đó",
+      "**Client** — ứng dụng cần được cho phép để truy cập tài nguyên, có thể hành động thay mặt user",
+      "**Resource server** — backend giữ tài nguyên và cần biết có nên cho phép request này không",
+      "**Authorization server** — nơi quản lý chi tiết user và client, xác thực họ, và cấp phát token",
+      "Token là thẻ ra vào mà client lấy từ authorization server để được phép gọi resource server",
+      "**Opaque token** không chứa thông tin, nên resource server phải gọi introspection để kiểm chứng",
+      "**Non-opaque token** (thường là JWT) chứa sẵn thông tin nên kiểm chứng được tại chỗ",
+      "JWT được **ký chứ không mã hoá** — ai cầm cũng đọc được payload",
     ],
-    model: "Bốn thực thể, và tôi thấy cách nhớ chắc nhất là gắn mỗi cái với một trách nhiệm duy nhất. Người dùng là người sử dụng ứng dụng — và điều đáng biết là không phải hệ thống OAuth 2 nào cũng có người dùng; khi client là một dịch vụ backend gọi một dịch vụ backend khác thì không có ai đăng nhập cả. Client là ứng dụng gọi tới backend để lấy dữ liệu hoặc chức năng; nó có thể là ứng dụng web, ứng dụng di động, ứng dụng máy tính, hay chính một dịch vụ backend. Máy chủ tài nguyên là backend giữ tài nguyên: nó nhận request từ client, phân quyền và phục vụ. Máy chủ uỷ quyền là nơi xác thực người dùng và giữ an toàn thông tin đăng nhập. Luồng thì ngắn: người dùng làm một thao tác trên client; client biết nó không gọi được backend mà không có token, nên nó xin máy chủ uỷ quyền cấp một access token; nó gắn token vào request tới máy chủ tài nguyên; máy chủ tài nguyên kiểm token, và nếu hợp lệ thì phục vụ. Điều tôi muốn nhấn là **vì sao** kiến trúc này có giá trị, chứ không chỉ nó gồm những gì: cốt lõi của OAuth 2 là tách trách nhiệm xác thực ra khỏi nơi giữ tài nguyên. Hệ quả rất thực dụng — nhiều ứng dụng dùng chung một nơi xác thực nên người dùng chỉ đăng nhập một lần; không ứng dụng nào trong số đó phải tự lưu và tự bảo vệ mật khẩu; và người dùng không phải tạo thêm một bộ thông tin đăng nhập cho mỗi ứng dụng nhỏ họ dùng. Một tính chất của token cũng nên nói kèm: access token có thời gian sống ngắn, thường vài phút, rồi client phải xin cái mới. Đó là một lựa chọn có chủ ý — token là thứ được truyền qua mạng nên nó có nguy cơ bị chặn bắt, và thời gian sống ngắn giới hạn thiệt hại của việc bị lộ. Về OpenID Connect, sự phân biệt khá gọn: OAuth 2 là đặc tả về uỷ quyền — nó nói về việc client được phép làm gì. Nó không nói cho ta biết người dùng **là ai** theo một cách chuẩn hoá. OpenID Connect là một giao thức dựng trên OAuth 2 và bổ sung đúng phần đó, tức phần định danh người dùng. Nên khi ta cần đăng nhập bằng một tài khoản có sẵn và cần biết thông tin về người đăng nhập, thứ ta dùng thực chất là OpenID Connect.",
+    model: "Tôi hay dùng hình ảnh khách sạn để mở đầu vì nó đúng một cách đáng ngạc nhiên. Có bốn vai. User là con người muốn làm gì đó — là khách. Client là ứng dụng cần được cho phép để làm việc đó, thường là thay mặt user; nó giống người lễ tân đi lấy thẻ hộ bạn. Resource server là backend giữ tài nguyên và phải quyết định có cho request này đi tiếp không — là cái cửa phòng. Còn authorization server là nơi quản lý chi tiết của cả user lẫn client, xác thực họ, và cấp ra tấm thẻ — là quầy lễ tân. Điều tôi muốn nhấn ngay là phân biệt user với client, vì đây là chỗ hay lẫn. Client là **ứng dụng**, user là **người**. Một client có thể hành động thay mặt user, hoặc hành động nhân danh chính nó khi không có người nào liên quan — đó là lý do có nhiều luồng lấy token khác nhau. Token chính là tấm thẻ: client lấy nó từ authorization server rồi mang theo mỗi lần gọi resource server. Và có hai cách đóng gói tấm thẻ đó. Loại thứ nhất là opaque — token không chứa thông tin gì, chỉ là một chuỗi không nói lên điều gì. Resource server cầm nó thì không tự biết được gì cả, nên mỗi lần nhận request nó phải gọi ngược lại authorization server để hỏi \"token này còn hợp lệ không, và nó thuộc về ai\" — thao tác đó gọi là introspection. Loại thứ hai là non-opaque, phổ biến nhất là JWT: bản thân token chứa sẵn thông tin về user và client, và có chữ ký để resource server kiểm chứng ngay tại chỗ mà không cần gọi ai. Đánh đổi thì rõ: opaque tốn một lượt gọi mạng cho mỗi request nhưng authorization server luôn có tiếng nói cuối cùng; JWT nhanh hơn nhiều nhưng resource server tự quyết dựa trên thứ nó cầm trong tay. Một chi tiết rất hay bị hiểu sai mà tôi luôn nói ra: JWT được **ký**, không phải được mã hoá. Ai cầm token cũng đọc được nội dung bên trong, chữ ký chỉ bảo đảm nội dung đó không bị sửa. Nên đừng bao giờ nhét dữ liệu nhạy cảm vào token.",
     redFlags: [
-      "Gộp máy chủ uỷ quyền và máy chủ tài nguyên thành một vai trò",
-      "Nói OAuth 2 là một giao thức xác thực",
-      "Cho rằng luôn phải có người dùng trong hệ thống OAuth 2",
-      "Không biết access token có thời gian sống ngắn",
+      "Lẫn lộn user với client, coi client là người dùng",
+      "Cho rằng JWT được mã hoá nên nhét được dữ liệu nhạy cảm vào",
+      "Không giải thích được vì sao opaque token cần introspection",
+      "Không phân biệt được vai của authorization server và resource server",
     ],
     probes: [
-      "Khi nào hệ thống OAuth 2 không có người dùng?",
-      "Vì sao access token sống ngắn, và điều đó tạo ra nhu cầu gì?",
-      "OpenID Connect bổ sung chính xác điều gì mà OAuth 2 không có?",
+      "Với opaque token, resource server phải làm gì trên mỗi request và cái giá là gì?",
+      "Vì sao lại có luồng lấy token không liên quan tới user nào?",
+      "OpenID Connect thêm gì vào bức tranh này?",
     ],
-    refs: ["springsec-13"],
+    refs: ["springsec-13", "springsec-15"],
   },
   {
     id: "springsec-iq18",
@@ -787,69 +772,59 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     minutes: 9,
     code: {
       lang: "java",
-      text: `// Máy chủ uỷ quyền nhúng các claim này vào JWT:
-// { "sub": "u-8841", "roles": ["USER"], "tenant": "acme", "plan": "pro" }
-
-@RestController
-public class OrderController {
-
-    @GetMapping("/orders")
-    public List<Order> orders(@AuthenticationPrincipal Jwt jwt) {
-        String tenant = jwt.getClaimAsString("tenant");
-        return repo.findByTenant(tenant);
-    }
-
-    @PostMapping("/orders/{id}/refund")
-    public void refund(@PathVariable long id,
-                       @AuthenticationPrincipal Jwt jwt) {
-        List<String> roles = jwt.getClaimAsStringList("roles");   // (1)
-        if (roles.contains("USER")) {                             // (2)
-            refundService.refund(id);
-        }
-    }
-
-    @GetMapping("/admin/stats")
-    public Stats stats(@AuthenticationPrincipal Jwt jwt) {
-        if ("pro".equals(jwt.getClaimAsString("plan"))) {         // (3)
-            return statsService.compute();
-        }
-        throw new AccessDeniedException("cần gói pro");
-    }
+      text: `// ===== Ở authorization server =====
+@Bean
+RegisteredClientRepository clients() {
+    RegisteredClient c = RegisteredClient.withId(UUID.randomUUID().toString())
+            .clientId("portal")
+            .clientSecret("{noop}secret")
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)  // (1)
+            .redirectUri("https://portal.example.com/callback")
+            .scope("read")
+            .build();
+    return new InMemoryRegisteredClientRepository(c);
 }
 
-// Sự việc: một người dùng đã bị thu hồi toàn bộ quyền lúc 09:12
-// vẫn hoàn tiền thành công một đơn hàng lúc 09:19.`,
+@Bean
+JWKSource<SecurityContext> jwkSource() {
+    RSAKey key = generateRsaKey();                  // (2) sinh cặp khoá mới mỗi lần
+    JWKSet set = new JWKSet(key);
+    return (selector, ctx) -> selector.select(set);
+}
+
+// ===== Ở resource server (hệ thống đã bật thu hồi token) =====
+@Bean
+SecurityFilterChain chain(HttpSecurity http) throws Exception {
+    http.oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));   // (3)
+    http.authorizeHttpRequests(c -> c.anyRequest().authenticated());
+    return http.build();
+}`,
     },
-    question: "Vì sao người dùng đã bị thu hồi quyền vẫn hoàn tiền được? Và nêu các vấn đề khác trong cách controller này dùng JWT.",
+    question: "Ba chỗ đánh số trong cấu hình OAuth 2 này đều có vấn đề, mỗi chỗ một kiểu. Chỉ ra từng cái, nói hậu quả người dùng sẽ thấy, và sửa.",
     mustCover: [
-      "Nguyên nhân sự việc: JWT là token **tự chứa**, nên máy chủ tài nguyên kiểm nó bằng **chữ ký**, không gọi lại máy chủ uỷ quyền",
-      "Vì thế quyền đã thu hồi ở máy chủ uỷ quyền **không** có hiệu lực với token đã cấp",
-      "Token vẫn hợp lệ tới khi **hết hạn** — 7 phút là hoàn toàn nằm trong thời gian sống thông thường",
-      "Đây không phải lỗi cài đặt mà là **tính chất** của token tự chứa: không thu hồi được ngay",
-      "Muốn thu hồi ngay thì phải dùng **thẩm định token** (introspection), tức máy chủ tài nguyên hỏi máy chủ uỷ quyền mỗi lần",
-      "Hoặc thu hẹp thời gian sống của token để cửa sổ rủi ro nhỏ lại — giảm nhẹ, không giải quyết",
-      "Vấn đề thứ hai, dòng (2): kiểm quyền viết tay trong controller bằng `if` thay vì dùng phân quyền của framework",
-      "Nên quy tắc rải trong mã, không ai đọc được tổng thể, và thiếu một `if` là một lỗ hổng im lặng",
-      "Vấn đề thứ ba, dòng (3): dùng claim `plan` — một thuộc tính **thương mại** — làm điều kiện phân quyền",
-      "Gói dịch vụ thay đổi theo hợp đồng, nên nó không nên nằm cùng chỗ với quyền hạn",
-      "Vấn đề thứ tư, dòng (1): không xử lý trường hợp claim **thiếu** — `roles` thiếu thì `getClaimAsStringList` cho `null` và ném lỗi",
-      "Và `refund` không kiểm chủ sở hữu hay khách thuê của đơn hàng — một người dùng hoàn được tiền đơn của khách thuê khác",
+      "(1) một client đăng ký cả luồng phụ thuộc user lẫn luồng độc lập với user — sách khuyên tách thành hai client riêng",
+      "(1) hệ quả: client tự lấy được token nhân danh chính nó, làm mờ ranh giới ai đang thao tác trong nhật ký",
+      "(2) sinh cặp khoá mới mỗi lần khởi động khiến **mọi token đã cấp** không kiểm chứng được nữa",
+      "(2) hệ quả người dùng thấy: bị đăng xuất hàng loạt sau mỗi lần phát hành; và nhiều instance thì mỗi instance ký bằng khoá khác nhau",
+      "(2) sửa bằng cách nạp cặp khoá từ kho khoá bên ngoài, dùng chung cho mọi instance",
+      "(3) hệ thống đã bật thu hồi token mà resource server lại kiểm chứng tại chỗ",
+      "(3) hệ quả: token đã thu hồi vẫn dùng được cho tới khi hết hạn, vì chữ ký vẫn hợp lệ",
+      "(3) sửa bằng cách chuyển sang introspection để authorization server có tiếng nói cuối cùng",
     ],
-    model: "Câu hỏi chính có một câu trả lời rõ và nó không phải lỗi của ai: JWT là token tự chứa, nên máy chủ tài nguyên xác thực nó bằng cách kiểm chữ ký chứ không gọi lại máy chủ uỷ quyền. Nghĩa là quyền đã bị thu hồi lúc 09:12 chỉ tồn tại ở máy chủ uỷ quyền; token đã cấp trước đó vẫn mang các claim cũ và vẫn có chữ ký hợp lệ, nên nó vẫn được chấp nhận tới khi hết hạn. Bảy phút hoàn toàn nằm trong thời gian sống thông thường của một access token, nên đây là hành vi đúng theo thiết kế, không phải khiếm khuyết cài đặt. Tôi nói rõ điều đó vì cách phản ứng phụ thuộc vào việc hiểu đúng: không có tham số nào chỉnh để token tự chứa trở nên thu hồi được. Nếu nghiệp vụ đòi thu hồi có hiệu lực ngay — và với thao tác hoàn tiền thì tôi cho là đòi — thì phải đổi cơ chế xác thực token sang **thẩm định**: máy chủ tài nguyên gửi token sang máy chủ uỷ quyền để hỏi nó còn hiệu lực không và lấy thông tin kèm theo. Cái giá là một lời gọi mạng cho mỗi request, cộng với việc máy chủ tài nguyên trở thành một client của máy chủ uỷ quyền nên nó cần thông tin đăng nhập riêng. Một lựa chọn nhẹ hơn là thu hẹp thời gian sống của token, nhưng tôi sẽ gọi đúng tên nó: giảm nhẹ cửa sổ rủi ro, không giải quyết. Còn một cách thực dụng mà tôi thường chọn khi không muốn thẩm định cho mọi endpoint: dùng JWT cho phần lớn request, và thẩm định **chỉ cho những thao tác nhạy cảm** như hoàn tiền — đổi chi phí mạng ở đúng chỗ nó xứng đáng. Các vấn đề khác trong controller này thì đáng nói vì chúng thuộc cùng một họ: nó lấy quyết định bảo mật từ nội dung token bằng mã viết tay. Dòng (2) kiểm quyền bằng một `if` trong controller, nên quy tắc phân quyền rải rác trong mã nghiệp vụ, không ai đọc được bức tranh tổng thể, và một endpoint mới thiếu `if` là một lỗ hổng không ai thấy — đó chính xác là việc mà phân quyền của framework làm được với một biểu thức khai báo. Dòng (3) tệ theo cách khác: nó dùng claim `plan` làm điều kiện phân quyền. Gói dịch vụ là một thuộc tính thương mại, nó đổi theo hợp đồng và do bộ phận khác quyết định; trộn nó vào cùng chỗ với quyền hạn nghĩa là một thay đổi hợp đồng có thể lặng lẽ mở hoặc đóng quyền truy cập. Dòng (1) là một khiếm khuyết nhỏ hơn nhưng sẽ gây sự cố: nó không xử lý trường hợp claim thiếu, nên một token do một máy chủ uỷ quyền khác cấp, hay một cấu hình đổi tên claim, sẽ làm endpoint ném lỗi thay vì từ chối gọn gàng. Và điều tôi muốn nêu cuối cùng vì nó là lỗ hổng nghiêm trọng nhất trong cả đoạn mã: `refund` không kiểm gì về **đơn hàng** — không chủ sở hữu, không khách thuê. Endpoint `/orders` thì lọc theo khách thuê rất cẩn thận, nhưng `refund` nhận một id bất kỳ, nên một người dùng hoàn được tiền cho đơn hàng của khách thuê khác chỉ bằng cách đổi con số. Đó là cùng lớp lỗi với sự việc đang điều tra nhưng có hậu quả tài chính trực tiếp, nên tôi sẽ đưa nó lên đầu danh sách sửa.",
+    model: "Ba lỗi, ba mức độ khác nhau, tôi đi từ nhẹ tới nặng. Chỗ (1) là lỗi về thiết kế danh tính. Client này đăng ký cả luồng authorization code — luồng có user thật đứng sau — lẫn luồng client credentials, là luồng client hành động nhân danh chính nó. Sách khuyên tách hẳn thành hai client, và lý do rất thực tế: với một client dùng cả hai, bạn không còn phân biệt được trong nhật ký rằng một hành động là do người dùng thực hiện hay do chính ứng dụng tự chạy. Khi cần điều tra một thao tác đáng ngờ, đó đúng là câu hỏi bạn cần trả lời. Tách hai client thì mỗi bên có danh tính riêng, quyền riêng, và thu hồi được riêng. Chỗ (2) là lỗi sẽ nổ ngay. Cặp khoá được sinh mới mỗi lần khởi động, mà đây chính là cặp khoá dùng để ký token. Nghĩa là mỗi lần phát hành, mọi token đã cấp trước đó đều không kiểm chứng được nữa — resource server lấy khoá công khai mới về và thấy chữ ký cũ không khớp. Người dùng sẽ thấy mình bị đăng xuất hàng loạt sau mỗi lần triển khai, và không ai hiểu vì sao. Tệ hơn nữa nếu authorization server chạy nhiều instance: mỗi instance ký bằng một khoá khác nhau, nên token do instance này cấp thì instance kia không nhận, và lỗi trở thành ngẫu nhiên. Cách sửa là nạp cặp khoá từ một kho khoá bên ngoài, dùng chung cho mọi instance, và xoay khoá theo quy trình có kiểm soát chứ không phải ngẫu nhiên theo vòng đời tiến trình. Chỗ (3) là lỗ hổng, và nó chỉ lộ ra khi đọc kỹ dòng ghi chú rằng hệ thống đã bật thu hồi token. Resource server đang cấu hình kiểm chứng JWT tại chỗ — nó nhận token, kiểm chữ ký, thấy hợp lệ thì cho qua. Nhưng chữ ký của một token đã bị thu hồi thì vẫn hợp lệ: thu hồi là trạng thái nằm ở authorization server, không nằm trong token. Nên tính năng thu hồi coi như không tồn tại, và token của một tài khoản vừa bị khoá vẫn dùng được cho tới khi hết hạn. Đây đúng là điều cần nhớ khi bật thu hồi: resource server phải introspect mọi token, kể cả token non-opaque, để authorization server có tiếng nói cuối cùng. Cách sửa là chuyển sang cấu hình introspection. Cái giá là mỗi request tốn thêm một lượt gọi mạng — đó là cái giá của việc thu hồi được, và cần nói rõ khi thiết kế chứ không phát hiện ra sau.",
     redFlags: [
-      "Kết luận máy chủ uỷ quyền thu hồi quyền không thành công",
-      "Đề nghị lưu danh sách token đã thu hồi ở máy chủ tài nguyên mà không nói tới việc nó phải được đồng bộ",
-      "Chỉ giảm thời gian sống của token và coi đó là lời giải",
-      "Giữ các `if` kiểm quyền trong controller",
-      "Không phát hiện `refund` thiếu kiểm chủ sở hữu và khách thuê",
-      "Coi claim `plan` là một quyền hạn hợp lệ",
+      "Bỏ qua chỗ (3) vì cấu hình trông đúng chuẩn",
+      "Không thấy vấn đề sinh khoá mới mỗi lần khởi động, hoặc chỉ coi là bất tiện chứ không phải lỗi",
+      "Cho rằng đăng ký nhiều grant type cho một client là bình thường",
+      "Đề xuất rút ngắn thời hạn token thay cho introspection mà không nêu đó chỉ là giảm thiểu",
     ],
     probes: [
-      "Bạn dùng thẩm định cho mọi endpoint hay chỉ một số, và căn cứ vào đâu?",
-      "Claim thiếu thì endpoint nên hành xử thế nào?",
-      "Vì sao trộn thuộc tính thương mại vào phân quyền là rủi ro?",
+      "Nếu không muốn introspect mọi request, có cách nào giảm cửa sổ rủi ro của token đã thu hồi?",
+      "Xoay khoá ký token trên hệ thống đang chạy cần lưu ý gì để không đăng xuất hàng loạt?",
+      "Hai client tách riêng thì bạn cấp quyền cho chúng khác nhau thế nào?",
     ],
-    refs: ["springsec-15", "springsec-13"],
+    refs: ["springsec-14", "springsec-15", "springsec-13"],
   },
   {
     id: "springsec-iq19",
@@ -857,92 +832,87 @@ public class OrderController {
     topic: "ssec-oauth",
     level: 3,
     minutes: 11,
-    question: "Máy chủ tài nguyên của bạn xác thực token bằng JWT hay bằng thẩm định? Lập luận theo yêu cầu thu hồi và độ nhạy của dữ liệu.",
+    question: "Bạn đang thiết kế tầng token cho một hệ thống nhiều dịch vụ. Yêu cầu vận hành nói rằng khoá một tài khoản thì quyền truy cập phải mất hiệu lực trong vòng một phút. Cân nhắc các phương án đóng gói và kiểm chứng token, rồi chốt.",
     tradeoffs: [
       {
-        option: "JWT — kiểm chữ ký tại chỗ",
-        when: "Mặc định cho phần lớn hệ thống. Không có lời gọi mạng nào cho mỗi request, nên máy chủ tài nguyên vẫn phục vụ được khi máy chủ uỷ quyền gặp sự cố. Đổi lại: **không thu hồi được ngay**, và dữ liệu trong token ai lấy được token cũng đọc được.",
+        option: "JWT kiểm chứng tại chỗ, thời hạn dài",
+        when: "Nhanh nhất và đơn giản nhất về vận hành: resource server không phụ thuộc vào authorization server lúc chạy. Nhưng nó không đáp ứng được yêu cầu một phút — token đã cấp vẫn hợp lệ tới khi hết hạn, vì trạng thái thu hồi không nằm trong token. Chỉ chọn khi yêu cầu thu hồi không tồn tại.",
       },
       {
-        option: "Thẩm định — hỏi máy chủ uỷ quyền mỗi lần",
-        when: "Khi cần thu hồi có hiệu lực ngay, hoặc khi token là loại đục. Đổi lại: một lời gọi mạng cho mỗi request, máy chủ uỷ quyền trở thành **điểm phụ thuộc bắt buộc**, và máy chủ tài nguyên cần thông tin đăng nhập riêng.",
+        option: "JWT thời hạn rất ngắn + refresh token",
+        when: "Đáp ứng yêu cầu bằng cách thu hẹp cửa sổ thay vì thu hồi thật: access token sống dưới một phút, và việc khoá tài khoản chặn ở bước làm mới. Giữ được ưu thế kiểm chứng tại chỗ, đổi lại lưu lượng tới authorization server tăng theo tần suất làm mới và luồng client phức tạp hơn.",
       },
       {
-        option: "Kết hợp — JWT làm mặc định, thẩm định cho thao tác nhạy cảm",
-        when: "Khi chỉ một phần nhỏ thao tác thực sự đòi thu hồi tức thì — chuyển tiền, hoàn tiền, thay đổi quyền. Trả chi phí mạng đúng chỗ nó xứng đáng.",
+        option: "Opaque token + introspection trên mọi request",
+        when: "Đáp ứng yêu cầu một cách trực tiếp và không có cửa sổ trễ: authorization server có tiếng nói cuối cùng ở từng request. Cái giá là một lượt gọi mạng cho mỗi request và authorization server trở thành điểm chết chung của hệ thống. Cần bộ đệm kết quả introspection trong vài giây để chịu tải.",
+      },
+      {
+        option: "JWT + introspection (bắt buộc khi đã bật thu hồi)",
+        when: "Khi hệ thống đã phát hành JWT rộng rãi và không thể đổi định dạng, nhưng vẫn cần thu hồi. Đây chính là điều sách nhấn: bật thu hồi thì resource server phải introspect cả token non-opaque. Kết quả là gánh chi phí của cả hai cách mà chỉ được lợi ích của một — nên coi là phương án chuyển tiếp, không phải đích đến.",
       },
     ],
     mustCover: [
-      "Trục thứ nhất: thu hồi **có cần hiệu lực ngay** hay chấp nhận trễ tới khi token hết hạn?",
-      "JWT tự chứa nên máy chủ tài nguyên không hỏi ai — đó là ưu điểm về hiệu năng và cũng là giới hạn về thu hồi",
-      "Thu hồi với JWT chỉ có hiệu lực khi token hết hạn, nên **thời gian sống token trở thành một quyết định bảo mật**",
-      "Trục thứ hai: dữ liệu trong token — JWT mang dữ liệu qua mạng, ai lấy được token đều **đọc được** nội dung",
-      "Nên không nhồi dữ liệu nhạy cảm vào token; nếu buộc phải mang dữ liệu nhạy cảm thì token đục cộng thẩm định là phương án đúng",
-      "Trục thứ ba, về vận hành: thẩm định làm máy chủ uỷ quyền thành **điểm phụ thuộc bắt buộc** trên mọi request",
-      "Nếu nó chậm thì máy chủ tài nguyên chậm theo; nếu nó chết thì máy chủ tài nguyên **không phục vụ được gì**",
-      "Với JWT thì máy chủ uỷ quyền chết chỉ làm **không cấp được token mới**, các token đang dùng vẫn hoạt động",
-      "Đó là một khác biệt lớn về khả năng chịu lỗi và tôi luôn nêu nó ra",
-      "Với JWT cần cấu hình **URI khoá công khai**: máy chủ uỷ quyền ký bằng khoá bí mật, máy chủ tài nguyên kiểm bằng khoá công khai",
-      "Lựa chọn của tôi: JWT làm mặc định, thẩm định cho nhóm nhỏ thao tác đòi thu hồi tức thì",
-      "Và với JWT phải có sẵn một đường thu hồi khẩn cấp — vì \"chờ token hết hạn\" không phải câu trả lời trong một sự cố",
+      "Nhận ra yêu cầu một phút là yêu cầu về **thu hồi**, và đó là thứ quyết định toàn bộ lựa chọn",
+      "JWT kiểm chứng tại chỗ không thu hồi được, vì trạng thái thu hồi không nằm trong token",
+      "Khi đã bật thu hồi thì resource server phải introspect **cả token non-opaque**",
+      "Phương án thời hạn ngắn là thu hẹp cửa sổ chứ không phải thu hồi thật — nói rõ sự khác nhau",
+      "Introspection biến authorization server thành điểm chết chung, cần bộ đệm và kế hoạch chịu tải",
+      "Chốt một phương án và gắn nó với chính con số trong yêu cầu",
+      "Nêu được cách đo/kiểm chứng rằng yêu cầu một phút thật sự được đáp ứng",
     ],
-    model: "Tôi phân định bằng ba trục, và chúng cho câu trả lời khác nhau nên đáng tách rời. Trục thứ nhất là thu hồi: thu hồi có cần hiệu lực ngay hay chấp nhận trễ? Với JWT, máy chủ tài nguyên kiểm chữ ký tại chỗ và không hỏi ai, nên việc thu hồi ở máy chủ uỷ quyền chỉ có hiệu lực khi token hết hạn. Hệ quả đáng nói là thời gian sống của token biến thành một quyết định bảo mật chứ không phải một tham số tiện dụng: đặt 15 phút nghĩa là chấp nhận rằng một tài khoản bị khoá vẫn hoạt động tới 15 phút. Với phần lớn hệ thống thì điều đó chấp nhận được; với thao tác chuyển tiền thì không. Trục thứ hai là dữ liệu trong token. JWT mang dữ liệu và client truyền nó qua mạng, nên bất kỳ ai lấy được token đều đọc được nội dung bên trong — không phải sửa được, chữ ký lo việc đó, nhưng đọc được. Nên tôi tránh nhồi dữ liệu nhạy cảm vào token; và nếu hệ thống buộc phải mang nhiều dữ liệu hoặc dữ liệu nhạy cảm thì token đục cộng với thẩm định là phương án đúng, vì khi đó token chỉ là một cái chìa và dữ liệu không rời khỏi máy chủ uỷ quyền. Trục thứ ba là vận hành, và tôi thấy nó bị bỏ quên nhiều nhất trong các cuộc thảo luận về chủ đề này. Thẩm định nghĩa là mỗi request tới máy chủ tài nguyên sinh ra một lời gọi tới máy chủ uỷ quyền, nên máy chủ uỷ quyền trở thành điểm phụ thuộc bắt buộc: nó chậm thì ta chậm theo, và nó chết thì ta **không phục vụ được gì**. Với JWT thì máy chủ uỷ quyền chết chỉ có nghĩa là không cấp được token mới; mọi token đang lưu hành vẫn hoạt động, nên hệ thống suy giảm dần chứ không sập. Đó là một khác biệt lớn về khả năng chịu lỗi và nó thường là lập luận quyết định. Về cài đặt, với JWT tôi cần cấu hình URI khoá công khai mà máy chủ uỷ quyền công bố — nó ký token bằng khoá bí mật, máy chủ tài nguyên kiểm bằng khoá công khai; với thẩm định thì cần URI thẩm định, và thêm một chi tiết dễ quên là máy chủ tài nguyên khi đó tự trở thành một client của máy chủ uỷ quyền nên nó cần thông tin đăng nhập riêng. Lựa chọn của tôi trong hầu hết trường hợp là kết hợp: JWT làm mặc định cho toàn bộ lưu lượng, và thẩm định cho nhóm nhỏ thao tác thực sự đòi thu hồi tức thì — chuyển tiền, hoàn tiền, thay đổi quyền. Cách đó trả chi phí mạng đúng chỗ nó xứng đáng, thay vì trả cho mọi request hay không trả ở đâu cả. Và dù chọn gì, với JWT tôi luôn dựng sẵn một đường thu hồi khẩn cấp — chẳng hạn một danh sách chặn được các máy chủ tài nguyên tham khảo, hoặc một khả năng đổi khoá ký để vô hiệu hoá toàn bộ token đang lưu hành. Lý do đơn giản: trong một sự cố thật, \"chờ token hết hạn\" không phải một câu trả lời ta muốn đưa ra.",
+    model: "Điều đầu tiên tôi làm là dịch yêu cầu vận hành sang ngôn ngữ kỹ thuật: \"khoá tài khoản thì quyền mất hiệu lực trong một phút\" chính là một yêu cầu về thu hồi, và nó quyết định gần như toàn bộ phần còn lại. Nên tôi loại ngay phương án JWT thời hạn dài kiểm chứng tại chỗ, dù nó là phương án rẻ nhất về vận hành. Lý do rất dứt khoát: trạng thái thu hồi nằm ở authorization server chứ không nằm trong token, nên một token đã cấp vẫn có chữ ký hợp lệ và vẫn được chấp nhận cho tới khi hết hạn. Đặt thời hạn một giờ nghĩa là chấp nhận một giờ trễ — vi phạm yêu cầu. Còn lại hai hướng thật. Hướng thứ nhất là giữ JWT nhưng rút thời hạn xuống dưới một phút và dựa vào refresh token: khi tài khoản bị khoá, lần làm mới tiếp theo bị từ chối và quyền truy cập tắt trong vòng một chu kỳ. Ưu điểm là resource server vẫn kiểm chứng tại chỗ, không phụ thuộc vào authorization server lúc chạy, nên đường đi thông thường vẫn nhanh. Nhưng tôi muốn nói thẳng một điều: đây là thu hẹp cửa sổ, không phải thu hồi. Trong cửa sổ đó token vẫn dùng được, và nếu ai đó hỏi \"có chắc chắn không\" thì câu trả lời trung thực là không, chỉ là đủ ngắn. Ngoài ra, thời hạn càng ngắn thì lưu lượng làm mới càng cao, nên authorization server vẫn chịu tải, chỉ là theo một nhịp khác. Hướng thứ hai là opaque token và introspection trên mọi request. Đây là câu trả lời trực tiếp cho yêu cầu: authorization server có tiếng nói cuối cùng ở từng request, không có cửa sổ trễ nào. Cái giá cũng rất rõ và tôi không giấu: một lượt gọi mạng thêm cho mỗi request, và authorization server trở thành điểm chết chung — nó sập thì cả hệ thống đứng. Nên nếu chọn hướng này, tôi kèm ngay hai việc: bộ đệm kết quả introspection trong khoảng vài giây ở phía resource server, và authorization server phải được coi là hạ tầng bậc một về mặt dự phòng. Bộ đệm vài giây vẫn nằm trong ngân sách một phút, nên nó không phá yêu cầu. Quyết định của tôi: chọn introspection, vì yêu cầu nói là một phút chứ không phải \"khoảng một phút\", và tôi không muốn phải giải thích một cửa sổ trễ với đội vận hành khi có sự cố thật. Còn nếu sau này đo ra rằng chi phí introspection không chịu nổi, đường lui là chuyển sang JWT thời hạn cực ngắn, và lúc đó phải nói rõ với bên đưa yêu cầu rằng bảo đảm đã đổi từ \"chắc chắn\" sang \"trong vòng\". Một điều cuối: dù chọn hướng nào tôi cũng viết một bài kiểm tra tự động chạy định kỳ — khoá một tài khoản thử, rồi gọi resource server và đo bao lâu thì bị từ chối. Yêu cầu có con số thì phải có phép đo, không thì vài tháng sau không ai biết nó còn đúng không.",
     redFlags: [
-      "Chọn thẩm định cho mọi endpoint mà không nói tới việc nó tạo điểm phụ thuộc bắt buộc",
-      "Chọn JWT mà không nói tới giới hạn thu hồi",
-      "Cho rằng JWT bảo mật vì được mã hoá — nó chỉ được ký",
-      "Nhồi dữ liệu nhạy cảm vào claim",
-      "Không có đường thu hồi khẩn cấp khi dùng JWT",
+      "Chọn JWT thời hạn dài mà không đối chiếu với yêu cầu thu hồi",
+      "Cho rằng rút ngắn thời hạn token là tương đương với thu hồi",
+      "Không biết rằng bật thu hồi thì token non-opaque cũng phải introspect",
+      "Chọn introspection mà không nói gì tới tải và tính sẵn sàng của authorization server",
+      "Không nêu cách kiểm chứng rằng yêu cầu thật sự được đáp ứng",
     ],
     probes: [
-      "Máy chủ uỷ quyền chết — mỗi phương án hành xử thế nào?",
-      "Bạn đặt thời gian sống token bao nhiêu, và căn cứ vào đâu?",
-      "Đường thu hồi khẩn cấp của bạn hoạt động ra sao?",
+      "Bộ đệm introspection bao lâu thì vẫn nằm trong ngân sách một phút?",
+      "Authorization server sập thì hệ thống của bạn hành xử thế nào?",
+      "Nếu bên đưa yêu cầu chấp nhận năm phút thay vì một phút, câu trả lời của bạn đổi không?",
     ],
-    refs: ["springsec-15", "springsec-13"],
+    refs: ["springsec-13", "springsec-14", "springsec-15"],
   },
   {
     id: "springsec-iq20",
     field: "spring-security",
     topic: "ssec-oauth",
     level: 4,
-    minutes: 14,
+    minutes: 15,
     incident: {
-      symptom: "Hệ thống gồm một máy chủ uỷ quyền và 9 máy chủ tài nguyên, dùng JWT. Lúc 02:40, khoá ký của máy chủ uỷ quyền được luân chuyển theo lịch định kỳ. Từ 02:41, **8 trong 9** máy chủ tài nguyên trả 401 cho mọi request. Máy chủ tài nguyên thứ 9 hoạt động bình thường. Đội vận hành khôi phục khoá cũ lúc 03:25 và mọi thứ trở lại bình thường.",
-      scale: "Ngừng phục vụ 45 phút lúc thấp điểm, khoảng 14.000 request lỗi. Đây là lần luân chuyển khoá thứ ba; hai lần trước không có sự cố. Máy chủ tài nguyên thứ 9 được một đội khác viết và triển khai 4 tháng trước.",
-      constraints: "Khoá ký vẫn phải được luân chuyển — đó là yêu cầu tuân thủ, mỗi 90 ngày. Không được khôi phục khoá cũ lần sau. Phải giải thích được vì sao máy chủ tài nguyên thứ 9 không bị ảnh hưởng, và vì sao hai lần luân chuyển trước không có sự cố.",
-      },
-    question: "\"8 trong 9\" và \"hai lần trước không sao\" nói gì? Nêu chẩn đoán, và thiết kế để luân chuyển khoá không gây ngừng phục vụ.",
+      symptom: "Một nhân viên bị chấm dứt hợp đồng lúc 9 giờ sáng; đội vận hành khoá tài khoản và thu hồi token ngay trong vòng năm phút, có ghi nhận trong nhật ký của authorization server. Đến 11 giờ trưa, nhật ký truy cập của một dịch vụ nội bộ cho thấy vẫn có request thành công mang danh tính tài khoản đó. Một dịch vụ khác thì đã từ chối đúng như mong đợi từ 9 giờ 05.",
+      scale: "Kiến trúc nhiều dịch vụ: một authorization server, 9 dịch vụ đóng vai resource server, do 4 đội khác nhau vận hành. Không có tài liệu tập trung về cách từng dịch vụ cấu hình việc kiểm chứng token.",
+      constraints: "Sự việc liên quan tới nhân sự nên phải trả lời được chính xác tài khoản đó đã truy cập những gì sau 9 giờ. Không được thay đổi đồng loạt cấu hình của 9 dịch vụ trong một lần phát hành vì rủi ro gián đoạn.",
+    },
+    question: "Hai dịch vụ cùng nhận một token nhưng xử sự khác nhau. Trình bày cách bạn giải thích sự khác biệt đó, việc bạn làm ngay trong hôm nay, và cách bạn đóng lại khoảng hở này trên cả hệ thống.",
     mustCover: [
-      "Máy chủ tài nguyên kiểm JWT bằng **khoá công khai** lấy từ URI mà máy chủ uỷ quyền công bố",
-      "Chẩn đoán: 8 máy chủ đó **giữ khoá công khai trong bộ đệm** và không lấy lại sau khi khoá đổi",
-      "Nên chúng kiểm token mới bằng khoá cũ → chữ ký không khớp → 401 cho mọi request",
-      "Máy chủ thứ 9 không bị ảnh hưởng vì nó lấy lại khoá theo **định danh khoá trong header token**, hoặc bộ đệm của nó hết hạn nhanh",
-      "\"Hai lần trước không sao\" là manh mối mạnh: rất có thể hai lần đó **đi kèm một lần triển khai**, nên tiến trình khởi động lại và lấy khoá mới",
-      "Nghĩa là hai lần thành công trước là **tình cờ**, không phải bằng chứng quy trình đúng — đó là điều quan trọng nhất phải nói ra",
-      "Khôi phục khoá cũ đã chữa được triệu chứng, nhưng nó xác nhận chẩn đoán chứ không sửa gì",
-      "Thiết kế đúng, phần cốt lõi: luân chuyển khoá phải có **giai đoạn hai khoá cùng hiệu lực**",
-      "Máy chủ uỷ quyền công bố cả khoá cũ và khoá mới, ký token mới bằng khoá mới, và chỉ bỏ khoá cũ sau khi mọi token cũ đã hết hạn",
-      "Máy chủ tài nguyên phải chọn khoá theo **định danh khoá trong header của token**, không giả định chỉ có một khoá",
-      "Và phải lấy lại tập khoá khi gặp một định danh khoá lạ, thay vì từ chối ngay",
-      "Kiểm chứng trước khi làm thật: diễn tập luân chuyển ở môi trường thử **mà không triển khai gì**, để không lặp lại sự tình cờ",
-      "Bài học rộng hơn: một quy trình chỉ thành công khi tình cờ đi kèm việc khác thì nó chưa được kiểm chứng",
+      "Sự khác biệt nằm ở **cách từng resource server kiểm chứng token**, không phải ở token hay ở authorization server",
+      "Dịch vụ từ chối đúng hạn đang dùng introspection; dịch vụ còn lại kiểm chứng JWT tại chỗ",
+      "Chữ ký của token đã thu hồi vẫn hợp lệ — trạng thái thu hồi chỉ authorization server mới biết",
+      "Việc làm ngay: xác định phạm vi truy cập của tài khoản sau 9 giờ trên **cả 9 dịch vụ**, không chỉ dịch vụ đã phát hiện",
+      "Chặn máu ngay ở tầng ứng dụng cho dịch vụ đang hở (chặn theo định danh) thay vì chờ sửa cấu hình token",
+      "Kiểm kê cấu hình kiểm chứng token của cả 9 dịch vụ — vấn đề gốc là không ai biết dịch vụ nào đang làm gì",
+      "Chuyển dần sang introspection theo đợt, không đổi đồng loạt, đúng ràng buộc đã nêu",
+      "Ngăn tái diễn bằng một phép thử định kỳ: thu hồi một token thử rồi gọi lần lượt từng dịch vụ",
+      "Nêu rõ giới hạn của kết luận nếu nhật ký của một số dịch vụ không đủ chi tiết",
     ],
-    model: "Bắt đầu từ cơ chế: máy chủ tài nguyên xác thực JWT bằng khoá công khai, lấy từ một URI mà máy chủ uỷ quyền công bố. Máy chủ uỷ quyền ký bằng khoá bí mật, máy chủ tài nguyên kiểm bằng khoá công khai tương ứng. Nếu khoá ký đổi mà máy chủ tài nguyên vẫn dùng khoá công khai cũ, thì mọi token mới đều không khớp chữ ký, và cách duy nhất nó có thể phản ứng là từ chối — 401 cho mọi request, đúng như quan sát. Nên chẩn đoán của tôi là 8 máy chủ đó giữ khoá công khai trong bộ đệm và không lấy lại sau khi khoá thay đổi. Việc khôi phục khoá cũ chữa được triệu chứng lúc 03:25 cũng là bằng chứng ủng hộ: nó làm các khoá trong bộ đệm khớp lại. Nhưng tôi nói rõ rằng đó là xác nhận chẩn đoán, không phải một cách sửa — và với yêu cầu tuân thủ 90 ngày thì nó cũng không dùng lại được. Hai chi tiết còn lại của đề bài đều là manh mối và tôi thấy chúng là phần giá trị nhất. Máy chủ thứ 9 không bị ảnh hưởng, và nó do một đội khác viết gần đây — giải thích khả dĩ nhất là nó chọn khoá theo định danh khoá nằm trong header của token và lấy lại tập khoá khi gặp một định danh lạ, hoặc đơn giản là bộ đệm khoá của nó có thời gian sống ngắn. Dù là cách nào, nó cho tôi một mẫu hình đúng đang tồn tại ngay trong hệ thống, nên tôi không phải thiết kế từ đầu mà đi xem nó làm gì rồi áp cho tám cái còn lại. Chi tiết \"hai lần luân chuyển trước không có sự cố\" thì tôi đọc theo hướng ngược với trực giác thông thường: nó không phải bằng chứng rằng quy trình từng đúng. Giả thuyết của tôi là hai lần đó trùng với một đợt triển khai — luân chuyển khoá theo lịch quý hay được xếp cạnh việc phát hành — nên các tiến trình khởi động lại và lấy khoá mới một cách tình cờ. Việc này kiểm chứng được: đối chiếu thời điểm hai lần luân chuyển trước với lịch triển khai. Nếu đúng thì kết luận phải nói thẳng ra, vì nó là bài học quan trọng nhất của sự cố: quy trình này chưa bao giờ đúng, nó chỉ chưa bao giờ bị thử một mình. Về thiết kế để luân chuyển khoá không gây ngừng phục vụ, phần cốt lõi là bỏ giả định rằng có đúng một khoá tại một thời điểm. Luân chuyển phải có một giai đoạn hai khoá cùng hiệu lực: máy chủ uỷ quyền công bố cả khoá cũ và khoá mới trong tập khoá công khai, bắt đầu ký token mới bằng khoá mới, và chỉ loại khoá cũ khỏi tập sau khi mọi token được ký bằng nó đã hết hạn — với token sống vài phút thì giai đoạn đó rất ngắn, nhưng nó phải tồn tại. Phía máy chủ tài nguyên, mỗi JWT mang định danh khoá trong header, nên nó phải dùng đúng định danh đó để chọn khoá thay vì giả định chỉ có một; và khi gặp một định danh không có trong bộ đệm, nó phải lấy lại tập khoá **rồi mới** quyết định, chứ không từ chối ngay. Hai thay đổi đó cùng nhau làm việc luân chuyển trở thành vô hại, và chúng cũng loại luôn nhu cầu phối hợp thời điểm giữa đội hạ tầng và chín đội ứng dụng. Cuối cùng, về cách tôi kiểm chứng trước lần luân chuyển tới, và điều này trực tiếp trả lời bài học vừa rút ra: diễn tập một lần luân chuyển ở môi trường thử mà **không** triển khai gì cùng lúc, rồi quan sát chín máy chủ tài nguyên có tiếp tục phục vụ hay không. Nếu tôi chỉ sửa mã và chờ tới lần luân chuyển thật, tôi lại không biết mình đã sửa xong hay chỉ gặp may thêm một lần nữa.",
+    model: "Điều đầu tiên tôi nói với mọi người trong phòng là: token không có lỗi, authorization server cũng không có lỗi — nó đã thu hồi đúng và có ghi nhận. Sự khác biệt nằm hoàn toàn ở phía nhận, tức là cách từng resource server chọn kiểm chứng token. Dịch vụ từ chối đúng từ 9 giờ 05 gần như chắc chắn đang gọi introspection: mỗi request nó hỏi lại authorization server, và authorization server nói token này đã bị thu hồi. Dịch vụ còn lại đang kiểm chứng JWT tại chỗ: nó nhận token, kiểm chữ ký, thấy hợp lệ và cho qua. Mà chữ ký của một token đã thu hồi thì vẫn hợp lệ — thu hồi là một trạng thái nằm ở authorization server, không phải thứ được viết vào trong token. Đây chính là điều cần nhớ khi bật thu hồi: đã dùng thu hồi thì resource server phải introspect, kể cả với token non-opaque. Một dịch vụ làm đúng, tám dịch vụ còn lại thì chưa ai biết. Trong hôm nay tôi làm ba việc, theo thứ tự. Thứ nhất là xác định phạm vi, vì đây là việc gấp nhất và dữ liệu thì mất dần theo thời gian lưu nhật ký: tôi lấy định danh của tài khoản đó và rà nhật ký truy cập của **cả chín** dịch vụ từ 9 giờ, không chỉ dịch vụ vừa phát hiện. Rất có thể còn dịch vụ khác cũng đang hở mà chưa ai nhìn tới. Nếu nhật ký của dịch vụ nào không ghi đủ định danh người gọi thì tôi ghi nhận rõ là không kết luận được cho dịch vụ đó, thay vì suy đoán — với việc liên quan tới nhân sự, một kết luận sai còn tệ hơn là một khoảng trống được thừa nhận. Thứ hai là chặn máu, và tôi không chờ sửa tầng token: tôi thêm một danh sách chặn theo định danh ngay ở tầng ứng dụng của các dịch vụ đang hở. Đó là giải pháp thô, nhưng nó đóng cửa trong vòng vài giờ và không đụng tới cách kiểm chứng token. Thứ ba là kiểm kê: đi hỏi từng đội trong bốn đội xem dịch vụ của họ cấu hình kiểm chứng token kiểu gì, và ghi lại thành một bảng. Việc không có bảng đó mới là vấn đề gốc — sự cố hôm nay chỉ là triệu chứng của chuyện không ai biết chín dịch vụ đang làm gì. Về việc đóng lại khoảng hở trên toàn hệ thống, ràng buộc đã nói rõ là không đổi đồng loạt, và tôi cũng không muốn thế: chuyển sang introspection nghĩa là thêm một lượt gọi mạng cho mỗi request và biến authorization server thành điểm chết chung, nên nó cần được đo tải trước. Tôi làm theo đợt, bắt đầu từ dịch vụ giữ dữ liệu nhạy cảm nhất, mỗi đợt kèm theo dõi độ trễ và tỉ lệ lỗi, và bổ sung bộ đệm kết quả introspection vài giây để chịu tải. Cuối cùng là phần ngăn tái diễn, và tôi cho đây là phần quan trọng nhất: tôi dựng một phép thử tự động chạy hằng ngày — lấy một token thử, thu hồi nó, rồi gọi lần lượt cả chín dịch vụ và khẳng định tất cả đều từ chối trong ngân sách thời gian đã cam kết. Phép thử đó biến một giả định ngầm thành một thứ đo được, và nó sẽ báo đỏ ngay ngày mà một đội nào đó vô tình đổi cấu hình về kiểm chứng tại chỗ.",
     redFlags: [
-      "Khôi phục khoá cũ như biện pháp lâu dài, hoặc đề nghị ngừng luân chuyển",
-      "Coi hai lần luân chuyển trước là bằng chứng quy trình đúng",
-      "Đề nghị khởi động lại toàn bộ máy chủ tài nguyên sau mỗi lần luân chuyển như lời giải chính",
-      "Không xét vì sao máy chủ thứ 9 không bị ảnh hưởng",
-      "Tắt việc kiểm chữ ký để \"tránh vấn đề khoá\"",
-      "Sửa mã rồi chờ lần luân chuyển thật để biết kết quả",
+      "Đổ lỗi cho authorization server dù nhật ký cho thấy nó đã thu hồi đúng",
+      "Chỉ sửa dịch vụ đã phát hiện, không rà tám dịch vụ còn lại",
+      "Chờ chuyển xong sang introspection rồi mới chặn truy cập của tài khoản",
+      "Đổi cấu hình cả chín dịch vụ trong một lần phát hành dù ràng buộc đã cấm",
+      "Kết luận phạm vi truy cập mà không kiểm xem nhật ký có đủ chi tiết không",
+      "Không để lại phép thử nào canh chừng việc này về sau",
     ],
     probes: [
-      "Giai đoạn hai khoá cùng hiệu lực cần kéo dài bao lâu, suy từ đâu?",
-      "Máy chủ tài nguyên gặp định danh khoá lạ thì nên làm gì, và làm sao để việc đó không bị lợi dụng?",
-      "Bạn kiểm chứng giả thuyết về hai lần luân chuyển trước bằng dữ liệu nào?",
+      "Vì sao chữ ký của một token đã thu hồi vẫn hợp lệ?",
+      "Chuyển sang introspection làm tăng rủi ro gì, và bạn giảm nó thế nào?",
+      "Phép thử hằng ngày của bạn sẽ đỏ trong những tình huống nào?",
     ],
-    refs: ["springsec-15", "springsec-13"],
+    refs: ["springsec-15", "springsec-14", "springsec-13"],
   },
 
   // ===== ssec-reactive (springsec-iq21–springsec-iq24) =====
@@ -952,29 +922,27 @@ public class OrderController {
     topic: "ssec-reactive",
     level: 1,
     minutes: 5,
-    question: "Cấu hình bảo mật cho ứng dụng phản ứng khác gì so với ứng dụng thường? Nêu những chỗ khác tên và chỗ khác bản chất.",
+    question: "Bạn chuyển một dịch vụ sang stack reactive. Những thành phần bảo mật quen thuộc đổi thành gì, và có một thói quen cũ chắc chắn sẽ hỏng — đó là gì?",
     mustCover: [
-      "Khác tên: `UserDetailsService` → **`ReactiveUserDetailsService`**, cùng mục đích là chỉ cách lấy thông tin người dùng",
-      "Khác tên: `SecurityFilterChain` → **`SecurityWebFilterChain`**, dựng bằng **`ServerHttpSecurity`**",
-      "Khác tên: `authorizeHttpRequests()` → **`authorizeExchange()`**",
-      "Có bảo mật phương thức bản phản ứng, tương tự bảo mật phương thức toàn cục",
-      "Khác bản chất quan trọng nhất: mô hình **một thread cho một request không còn đúng**",
-      "Nên `SecurityContextHolder` dựa trên `ThreadLocal` **không** áp dụng được — danh tính không đi theo thread",
-      "Trong ứng dụng phản ứng, ngữ cảnh bảo mật đi theo **chuỗi xử lý**, không theo thread",
-      "Hệ quả thực dụng: mọi mẹo về `MODE_INHERITABLETHREADLOCAL` hay sao context sang thread khác đều không còn nghĩa",
-      "Máy chủ mặc định cũng khác: Spring Boot cấu hình **Netty** thay vì Tomcat",
+      "`UserDetailsService` đổi thành **`ReactiveUserDetailsService`**, cùng mục đích: nói cho ứng dụng biết cách lấy chi tiết user",
+      "Cấu hình đổi từ `SecurityFilterChain` sang **`SecurityWebFilterChain`**, dựng bằng builder `ServerHttpSecurity`",
+      "Tên phương thức đổi theo thuật ngữ reactive: `authorizeHttpRequests()` thành **`authorizeExchange()`**",
+      "Thói quen hỏng: đọc security context qua `SecurityContextHolder`, vì nó dựa vào `ThreadLocal`",
+      "Trong mô hình reactive, một request không gắn chặt với một thread nên `ThreadLocal` không dùng được",
+      "Thay bằng **`ReactiveSecurityContextHolder`**, và nó trả về một kiểu reactive chứ không phải giá trị trực tiếp",
+      "Có method security cho reactive, tương tự bên non-reactive",
     ],
-    model: "Tôi chia câu trả lời làm hai phần vì phần khác tên thì dễ và phần khác bản chất mới đáng nói. Về tên: `UserDetailsService` trở thành `ReactiveUserDetailsService`, mục đích y nguyên — nó chỉ cho ứng dụng biết cách lấy thông tin người dùng. Cấu hình phân quyền endpoint dựng một `SecurityWebFilterChain` bằng builder `ServerHttpSecurity` thay vì `SecurityFilterChain` với `HttpSecurity`. Tên các phương thức phần lớn giống nhau, với một số chỗ đổi theo thuật ngữ phản ứng — rõ nhất là `authorizeHttpRequests()` thành `authorizeExchange()`. Và có bản phản ứng của bảo mật phương thức, cho phép đặt quy tắc ở bất kỳ lớp nào, tương tự bảo mật phương thức toàn cục bên phía không phản ứng. Nếu chỉ có vậy thì đây là bài tập đổi tên. Nhưng có một khác biệt về bản chất và nó là thứ tôi muốn nói kỹ: trong ứng dụng servlet truyền thống, mỗi request được gắn với một thread, và toàn bộ cách quản lý `SecurityContext` dựa trên điều đó — `SecurityContextHolder` mặc định giữ context trong một `ThreadLocal`, nên \"người dùng hiện tại\" nghĩa là \"người dùng của thread này\". Mô hình phản ứng không có tính chất đó: một request được xử lý bởi nhiều thread khác nhau theo từng chặng, và một thread phục vụ nhiều request. Nên `ThreadLocal` không còn là chỗ đúng để giữ danh tính, và trong ứng dụng phản ứng ngữ cảnh bảo mật đi theo **chuỗi xử lý** chứ không theo thread. Hệ quả thực dụng khá lớn và tôi thấy nó là chỗ người ta mang kiến thức cũ sang rồi mắc lỗi: toàn bộ những mẹo bên phía servlet — đổi chiến lược sang `MODE_INHERITABLETHREADLOCAL`, bọc tác vụ để sao context sang thread khác — đều không còn nghĩa gì ở đây. Đọc danh tính bằng cách gọi một phương thức tĩnh trên `SecurityContextHolder` cũng vậy; nó phải được lấy từ chuỗi xử lý. Một chi tiết nhỏ nữa nhưng hữu ích khi đọc log lúc khởi động: Spring Boot không cấu hình Tomcat cho ứng dụng phản ứng mà cấu hình Netty.",
+    model: "Điều làm tôi yên tâm khi chuyển sang reactive là phần lớn kiến thức cũ vẫn dùng được — các khái niệm không đổi, chủ yếu là đổi tên và đổi kiểu trả về. Việc quản lý user vẫn là nói cho ứng dụng biết cách lấy chi tiết user, chỉ là qua `ReactiveUserDetailsService` thay vì `UserDetailsService`. Cấu hình vẫn là dựng một chuỗi filter và đưa vào context, chỉ là `SecurityWebFilterChain` dựng bằng builder `ServerHttpSecurity` thay vì `SecurityFilterChain` với `HttpSecurity`. Tên các phương thức cấu hình phân quyền thì gần như giữ nguyên, chỉ vài chỗ đổi theo thuật ngữ reactive — rõ nhất là `authorizeHttpRequests()` bên kia thành `authorizeExchange()` bên này, vì trong thế giới reactive đơn vị làm việc được gọi là exchange chứ không phải request. Phân quyền ở mức method cũng có, tương tự bên non-reactive. Còn thói quen chắc chắn hỏng thì chỉ có một, nhưng nó hỏng rất êm: gọi `SecurityContextHolder.getContext()` để lấy người dùng hiện tại. Cách đó dựa vào `ThreadLocal`, mà `ThreadLocal` chỉ hoạt động khi một request được xử lý trọn vẹn trên một thread. Mô hình reactive thì cố tình không như vậy — một chuỗi xử lý có thể chạy trên nhiều thread khác nhau, và thread nào xử lý đoạn nào là do bộ lập lịch quyết định. Nên `ThreadLocal` mất chỗ dựa. Thay thế là `ReactiveSecurityContextHolder`, và điểm khác biệt quan trọng không chỉ là đổi tên: nó trả về một kiểu reactive chứ không phải giá trị trực tiếp, nên ta phải ghép nó vào chuỗi xử lý bằng các toán tử. Từ đó dẫn tới cái bẫy đi kèm mà tôi luôn nhắc: đừng gọi `block()` để lấy giá trị ra cho nhanh. Nó chặn một thread của vòng lặp sự kiện, và trong mô hình reactive số thread đó rất ít, nên chỉ vài lời gọi như vậy là đủ làm cả dịch vụ đứng dưới tải.",
     redFlags: [
-      "Cho rằng chỉ cần đổi tên các phương thức là xong",
-      "Dùng `SecurityContextHolder` theo kiểu `ThreadLocal` trong ứng dụng phản ứng",
-      "Nói mô hình một thread một request vẫn đúng",
-      "Không biết `authorizeExchange()` là tên tương đương",
+      "Cho rằng `SecurityContextHolder` vẫn dùng được bình thường trong code reactive",
+      "Không biết `authorizeExchange()` là bản tương ứng của `authorizeHttpRequests()`",
+      "Đề xuất `block()` để lấy người dùng hiện tại",
+      "Nghĩ rằng reactive cần một mô hình bảo mật hoàn toàn khác",
     ],
     probes: [
-      "Vì sao `ThreadLocal` không phù hợp trong mô hình phản ứng?",
-      "Bạn đọc người dùng hiện tại trong một chuỗi phản ứng bằng cách nào?",
-      "Ứng dụng phản ứng có còn khái niệm chuỗi bộ lọc không?",
+      "Vì sao `ThreadLocal` không dùng được trong mô hình reactive?",
+      "Hậu quả cụ thể của một lời gọi `block()` trong chuỗi xử lý là gì?",
+      "Trộn cả hai bộ dependency web và webflux trong một project thì ứng dụng chạy theo stack nào?",
     ],
     refs: ["springsec-17", "springsec-06"],
   },
@@ -983,162 +951,150 @@ public class OrderController {
     field: "spring-security",
     topic: "ssec-reactive",
     level: 2,
-    minutes: 9,
+    minutes: 8,
     code: {
       lang: "java",
-      text: `@SpringBootTest
-@AutoConfigureMockMvc
-class InvoiceControllerTests {
+      text: `@RestController
+public class ReportController {
 
-    @Autowired MockMvc mvc;
+    private final ReportService reports;
 
-    @Test
-    @WithMockUser(username = "mary", roles = "USER")        // (1)
-    void userCanReadOwnInvoice() throws Exception {
-        mvc.perform(get("/api/invoices/1"))
-           .andExpect(status().isOk());
+    @GetMapping("/reports")
+    public Flux<Report> myReports() {
+        Authentication auth = SecurityContextHolder.getContext()
+                                                   .getAuthentication();   // (1)
+        String username = auth.getName();
+        return reports.findByOwner(username);
     }
 
-    @Test
-    @WithMockUser(username = "mary", roles = "USER")
-    void userCannotReadOthersInvoice() throws Exception {
-        mvc.perform(get("/api/invoices/2"))                 // hoá đơn của john
-           .andExpect(status().isOk());                     // (2) test này ĐANG XANH
-    }
-
-    @Test
-    void adminCanDeleteInvoice() throws Exception {
-        mvc.perform(delete("/api/invoices/1")
-                .with(user("admin").roles("ADMIN")))
-           .andExpect(status().isForbidden());               // (3) cũng đang xanh
+    @GetMapping("/reports/summary")
+    public Mono<Summary> summary() {
+        String username = ReactiveSecurityContextHolder.getContext()
+                .map(ctx -> ctx.getAuthentication().getName())
+                .block();                                                   // (2)
+        return reports.summaryFor(username);
     }
 }
 
-// Bộ test 128 bài, tất cả đều xanh. Nhưng hai lỗ hổng đã lọt lên môi trường thực tế.`,
+@Bean
+SecurityWebFilterChain chain(ServerHttpSecurity http) {
+    return http
+            .authorizeExchange(c -> c.anyExchange().authenticated())
+            .csrf(csrf -> csrf.disable())                                   // (3)
+            .build();
+}`,
     },
-    question: "Bộ kiểm thử này xanh mà vẫn để lọt lỗ hổng. Chỉ ra từng vấn đề và viết lại theo cách bắt được lỗi.",
+    question: "Hai endpoint này cùng cần biết người gọi là ai, và cả hai đều làm sai theo hai kiểu khác nhau. Chỉ ra từng cái, nói rõ triệu chứng sẽ thấy ở môi trường thật, rồi viết lại. Cũng nhận xét về dòng thứ ba.",
     mustCover: [
-      "Vấn đề ở dòng (2): bài kiểm thử **khẳng định hành vi sai** — nó đòi 200 cho việc đọc hoá đơn của người khác",
-      "Nên nó xanh đúng như viết, và nó **khoá** lỗ hổng lại: ai sửa cho đúng sẽ làm test đỏ",
-      "Đó là dạng nguy hiểm nhất: tên bài kiểm thử nói một điều, khẳng định nói điều trái ngược",
-      "Vấn đề ở dòng (3): tên nói quản trị **xoá được**, nhưng khẳng định là **403**",
-      "Nó cũng xanh, và nó ghi nhận rằng chức năng của quản trị đang hỏng như thể đó là điều mong đợi",
-      "Sửa hai chỗ: khẳng định phải khớp với **yêu cầu**, không khớp với hành vi hiện tại",
-      "Vấn đề sâu hơn: `@WithMockUser` chỉ tạo người dùng **giả lập** với vai trò cho trước",
-      "Nó không dùng `UserDetailsService` thật, nên nó **không** kiểm được luồng xác thực hay dữ liệu người dùng thật",
-      "Nên nó là công cụ đúng cho việc kiểm **phân quyền**, và là công cụ sai để tin rằng xác thực hoạt động",
-      "Cách tổ chức đúng: vài bài kiểm thử cho luồng xác thực, rồi nhiều bài cho từng quy tắc phân quyền",
-      "Với ứng dụng phản ứng thì thay `MockMvc` bằng **`WebTestClient`**",
-      "Và bài học chính: một bộ kiểm thử toàn xanh chỉ chứng minh mã khớp với những gì đã viết ra, không chứng minh nó đúng",
+      "(1) `SecurityContextHolder` dựa vào `ThreadLocal` nên trong chuỗi reactive nó trả về context rỗng",
+      "(1) triệu chứng: `NullPointerException` hoặc danh tính rỗng, và có thể **lúc được lúc không** tuỳ thread nào chạy",
+      "(2) `block()` chặn một thread của vòng lặp sự kiện — số thread này rất ít nên dịch vụ đứng dưới tải",
+      "(2) triệu chứng: chạy tốt khi thử một mình, độ trễ tăng vọt hoặc treo khi có đồng thời",
+      "Cách viết đúng: lấy context bằng `ReactiveSecurityContextHolder` rồi **ghép vào chuỗi** bằng `flatMap`/`flatMapMany`, không tách ra ngoài",
+      "(3) tắt bảo vệ CSRF phải là quyết định có cơ sở, phụ thuộc cách xác thực chứ không phải mặc định khi chuyển sang reactive",
+      "Nêu được rằng cả hai lỗi đều không lộ ra trong test đơn giản một luồng",
     ],
-    model: "Hai vấn đề đầu là cùng một lỗi và nó là lỗi nguy hiểm nhất một bộ kiểm thử có thể mắc: khẳng định được viết theo hành vi **hiện tại** chứ không theo **yêu cầu**. Ở dòng (2), tên bài kiểm thử nói rõ người dùng không được đọc hoá đơn của người khác, nhưng khẳng định lại đòi 200. Nó xanh, đúng như nó được viết. Và tác hại lớn hơn việc không bắt được lỗi: nó **khoá** lỗ hổng lại, vì người nào sửa cho đúng sẽ thấy test đỏ và có thể kết luận rằng mình đã làm sai. Dòng (3) cùng dạng nhưng ở chiều ngược: tên nói quản trị xoá được hoá đơn, khẳng định lại là 403. Nó ghi nhận một chức năng đang hỏng như thể đó là điều mong đợi, nên chẳng ai phát hiện rằng quản trị không xoá được gì. Tôi đoán cả hai được viết theo thói quen chạy test, xem nó đỏ, rồi sửa khẳng định cho khớp kết quả thực tế — đó là cách nhanh nhất để có một bộ kiểm thử toàn xanh mà không kiểm được gì. Sửa thì đơn giản về mã nhưng cần nói rõ nguyên tắc: khẳng định phải khớp với yêu cầu. Việc đọc hoá đơn của người khác phải trả 404 — tôi chọn 404 thay vì 403 để không tiết lộ rằng id đó tồn tại — và việc quản trị xoá hoá đơn phải trả thành công. Cả hai bài sẽ đỏ ngay, và đó chính là giá trị: hai bài đỏ đó là hai lỗ hổng đang có trong môi trường thực tế. Có một vấn đề sâu hơn trong cách bộ kiểm thử này được xây dựng. `@WithMockUser` tạo một người dùng giả lập với vai trò ta khai; nó không đi qua `UserDetailsService` thật, không đi qua `PasswordEncoder`, không chạm vào dữ liệu người dùng thật. Điều đó khiến nó là công cụ rất tốt cho việc kiểm **phân quyền** — nhanh, và ta khai được chính xác vai trò cần thử — nhưng nó hoàn toàn không nói gì về việc luồng **xác thực** có hoạt động không. Nếu cả 128 bài đều dùng người dùng giả lập thì bộ kiểm thử này chưa từng xác thực ai, và một khiếm khuyết trong `UserDetailsService` hay trong dữ liệu người dùng sẽ đi qua nó mà không bị chạm. Cách tổ chức tôi dùng là tách hai nhóm: một số ít bài kiểm thử luồng xác thực thật từ đầu đến cuối, rồi nhiều bài kiểm phân quyền cho từng endpoint và từng phương thức bằng người dùng giả lập. Số kịch bản xác thực vốn ít hơn số quy tắc phân quyền rất nhiều, nên cách chia này vừa đúng về phạm vi vừa giữ thời gian chạy thấp. Và nếu đây là ứng dụng phản ứng thì `MockMvc` không phải công cụ đúng — bản tương đương là `WebTestClient`. Bài học tôi muốn ghi lại từ trường hợp này: một bộ kiểm thử toàn xanh chỉ chứng minh mã khớp với những gì đã được viết ra trong các khẳng định. Nó không chứng minh mã đúng, và khi các khẳng định được sao từ hành vi hiện tại thì nó không chứng minh gì cả.",
+    model: "Hai endpoint, hai lỗi khác nhau, và điểm chung là cả hai đều chạy được trên máy lập trình viên. Endpoint thứ nhất dùng `SecurityContextHolder`, thứ dựa vào `ThreadLocal`. Trong mô hình reactive, một chuỗi xử lý không bị buộc vào một thread, nên ở thời điểm dòng đó chạy, thread đang thực thi có thể không phải thread đã thiết lập context. Kết quả là context rỗng, `getAuthentication()` trả `null`, và dòng dưới ném `NullPointerException`. Triệu chứng đáng chú ý ở môi trường thật là nó có thể lúc được lúc không, vì việc thread nào chạy đoạn nào phụ thuộc vào bộ lập lịch và tải — nên bug này rất dễ bị bỏ qua trong kiểm thử rồi bùng lên ở production. Endpoint thứ hai thì dùng đúng `ReactiveSecurityContextHolder` nhưng lại gọi `block()` để rút giá trị ra. Cái này không sai về mặt logic, code chạy đúng và test một luồng sẽ xanh. Vấn đề là nó chặn một thread của vòng lặp sự kiện, mà trong mô hình reactive số thread đó rất ít — thường chỉ vài cái theo số lõi. Mỗi request chặn một thread thì chỉ cần vài request đồng thời là hết thread, và cả dịch vụ đứng lại. Triệu chứng là độ trễ tăng vọt hoặc dịch vụ treo dưới tải, trong khi thử thủ công thì mọi thứ hoàn hảo — đúng loại sự cố chỉ xuất hiện ở production. Cách viết đúng cho cả hai là giống nhau về nguyên tắc: không rút danh tính ra khỏi chuỗi, mà ghép chuỗi lấy danh tính vào chuỗi xử lý. Lấy context từ `ReactiveSecurityContextHolder`, lấy ra tên người dùng bằng `map`, rồi dùng `flatMap` để nối sang lời gọi service — với endpoint trả về nhiều phần tử thì dùng `flatMapMany`. Toàn bộ vẫn là một chuỗi, không có chỗ nào chặn. Có một cách viết gọn hơn đáng nhắc: tiêm thẳng danh tính vào tham số của phương thức controller và để framework lo phần lấy context. Khi nào dùng được thì nó sạch hơn hẳn và loại bỏ luôn cơ hội mắc cả hai lỗi trên. Về dòng thứ ba, tôi không gọi là lỗi mà là một quyết định chưa có cơ sở. Việc có cần bảo vệ CSRF hay không phụ thuộc vào cách ứng dụng xác thực — nếu nó dùng cookie phiên thì tắt là mở lỗ hổng, còn nếu dùng token trong header thì tắt là hợp lý. Điều tôi phản đối là tắt nó như một bước mặc định khi chuyển sang reactive, vì chuyện chuyển stack không liên quan gì tới câu hỏi ai đính kèm thông tin xác thực vào request.",
     redFlags: [
-      "Xem 128 bài xanh là bằng chứng cấu hình bảo mật đúng",
-      "Sửa khẳng định theo kết quả chạy thực tế để test xanh lại",
-      "Tin rằng `@WithMockUser` kiểm được cả luồng xác thực",
-      "Trả 403 cho hoá đơn không thuộc về người gọi mà không xét việc tiết lộ id tồn tại",
-      "Dùng `MockMvc` cho ứng dụng phản ứng",
+      "Chỉ thấy lỗi ở endpoint thứ nhất, coi `block()` là chấp nhận được vì code chạy đúng",
+      "Sửa endpoint thứ nhất bằng cách thêm kiểm tra `null`",
+      "Không giải thích được vì sao lỗi thứ nhất có thể chập chờn",
+      "Coi việc tắt bảo vệ CSRF là bước bắt buộc khi sang reactive",
     ],
     probes: [
-      "Vì sao một bài kiểm thử khẳng định sai còn tệ hơn không có bài nào?",
-      "Bạn kiểm luồng xác thực thật bằng cách nào, và bao nhiêu bài là đủ?",
-      "Bạn phát hiện những bài kiểm thử kiểu này trong một bộ 128 bài ra sao?",
+      "Vì sao `block()` nguy hiểm hơn nhiều trong reactive so với trong stack servlet?",
+      "Có cách nào lấy người dùng hiện tại mà không phải chạm tới context không?",
+      "Bạn viết test thế nào để bắt được lời gọi chặn luồng?",
     ],
-    refs: ["springsec-18"],
+    refs: ["springsec-17", "springsec-06", "springsec-09"],
   },
   {
     id: "springsec-iq23",
     field: "spring-security",
     topic: "ssec-reactive",
     level: 3,
-    minutes: 10,
-    question: "Bạn kiểm thử cấu hình bảo mật ở tầng nào: người dùng giả lập, luồng xác thực đầy đủ, hay bảo mật cấp phương thức?",
+    minutes: 11,
+    question: "Đội bạn có 40 endpoint và một tầng service đã gắn quy tắc phân quyền, nhưng chưa có bài kiểm thử nào cho phần bảo mật. Bạn có hai ngày. Lập kế hoạch: viết loại test nào, bao nhiêu, và bỏ qua cái gì.",
     tradeoffs: [
       {
-        option: "Người dùng giả lập, kiểm theo endpoint",
-        when: "Nơi phần lớn công sức nên đổ vào. Số quy tắc phân quyền rất lớn, và mỗi bài chạy nhanh vì bỏ qua xác thực. Nhưng nó **không** nói gì về việc xác thực có hoạt động.",
+        option: "Nhiều test phân quyền với người dùng giả, ít test xác thực",
+        when: "Lựa chọn mặc định, và đúng thứ tự ưu tiên mà sách khuyên. Số luồng xác thực trong một ứng dụng chỉ có vài cái, còn số tổ hợp phân quyền thì nhân lên theo số endpoint và số quyền. Người dùng giả bỏ qua bước đăng nhập nên test chạy nhanh, và cái đang cần khoá lại là các quy tắc phân quyền.",
       },
       {
-        option: "Luồng xác thực đầy đủ",
-        when: "Cần, nhưng chỉ vài bài. Số kịch bản xác thực ít hơn hẳn số quy tắc phân quyền, và mỗi bài đắt hơn. Đây là chỗ duy nhất kiểm được `UserDetailsService`, `PasswordEncoder` và dữ liệu người dùng thật.",
+        option: "Test xác thực đầy đủ cho mọi endpoint",
+        when: "Lãng phí trong hai ngày: mỗi test phải đi qua toàn bộ luồng đăng nhập để kiểm lại cùng một thứ. Chỉ giữ vài test cho chính luồng đăng nhập, đăng xuất và trường hợp sai thông tin.",
       },
       {
-        option: "Bảo mật cấp phương thức",
-        when: "Khi quy tắc nằm ở tầng nghiệp vụ và phụ thuộc tham số hay kết quả — kiểm nó ở tầng endpoint thì ta không phân biệt được quy tắc nào đã từ chối.",
+        option: "Test ở mức method thay vì mức endpoint",
+        when: "Khi quy tắc thật nằm ở tầng service. Test ở mức method chỉ đúng vào chỗ có luật, chạy nhanh hơn, và bắt được cả lỗi lời gọi nội bộ không qua proxy. Nhưng nó không kiểm được cấu hình ở mức endpoint, nên không thay thế được hoàn toàn.",
+      },
+      {
+        option: "Người dùng giả lấy từ nguồn user thật thay vì khai trực tiếp",
+        when: "Khi quyền của user được tính toán từ dữ liệu chứ không phải gán cứng — chẳng hạn quyền suy ra từ phòng ban. Test sát thực tế hơn vì nó đi qua đúng logic dựng quyền, đổi lại chậm hơn và phụ thuộc dữ liệu mẫu.",
       },
     ],
     mustCover: [
-      "Nguyên tắc phân bổ: **tách kiểm phân quyền khỏi kiểm xác thực** và đầu tư khác nhau cho hai loại",
-      "Số quy tắc phân quyền lớn, nên chúng cần nhiều bài, và mỗi bài phải nhanh — dùng người dùng giả lập",
-      "Số kịch bản xác thực nhỏ, nên vài bài đầy đủ là đủ, và chúng đắt hơn nên không nên nhân lên",
-      "Cách chia đó vừa đúng về phạm vi kiểm, vừa giữ thời gian chạy của toàn bộ bộ kiểm thử thấp",
-      "Nhưng người dùng giả lập có một điểm mù phải nói rõ: nó dùng dữ liệu **ta khai trong bài kiểm thử**",
-      "Nên khiếm khuyết nằm trong **dữ liệu thật** — bản ghi cũ, chuỗi băm sai định dạng — không bài nào thấy",
-      "Vì thế với những bất biến về dữ liệu, kiểm thử không phải công cụ đúng; phải kiểm ở di trú hoặc lúc khởi động",
-      "Bảo mật cấp phương thức cần được kiểm **tại phương thức**, không chỉ qua endpoint",
-      "Vì qua endpoint thì một 403 không cho biết quy tắc nào đã từ chối, nên bài kiểm thử không định vị được lỗi",
-      "Và với quy tắc phụ thuộc quyền sở hữu, phải có bài kiểm thử **chéo**: người dùng A truy cập dữ liệu của B",
-      "Đó là lớp bài kiểm thử rẻ nhất và bị bỏ sót thường xuyên nhất",
+      "Ưu tiên rõ ràng: **ít** test xác thực, **nhiều** test phân quyền — vì số tổ hợp phân quyền lớn hơn nhiều",
+      "Người dùng giả cho phép bỏ qua bước đăng nhập nên bộ test chạy nhanh và viết được nhiều",
+      "Mỗi endpoint nhạy cảm cần ít nhất hai ca: một người được phép và một người không được phép",
+      "Phải có ca **không có danh tính** để phân biệt 401 với 403",
+      "Test ở mức method cần thiết khi quy tắc nằm ở tầng service, và nó bắt được lỗi lời gọi nội bộ",
+      "Chọn đúng công cụ theo stack: một bộ cho ứng dụng servlet, một bộ cho ứng dụng reactive",
+      "Nói rõ cái bỏ qua và vì sao — hai ngày thì phải cắt cái gì đó",
+      "Ưu tiên endpoint theo mức nhạy cảm của dữ liệu, không phủ đều",
     ],
-    model: "Nguyên tắc tôi dùng để phân bổ công sức là tách hai loại quy tắc ra và đầu tư khác nhau cho từng loại. Quy tắc phân quyền thì rất nhiều — mỗi endpoint, mỗi method HTTP, mỗi vai trò là một trường hợp — nên chúng cần số lượng bài kiểm thử lớn, và vì số lượng lớn thì mỗi bài phải nhanh. Người dùng giả lập là công cụ đúng cho việc đó: nó bỏ qua toàn bộ bước xác thực, cho tôi khai chính xác vai trò cần thử, và chạy rất nhanh. Ngược lại, số kịch bản xác thực ít hơn hẳn — đăng nhập đúng, sai mật khẩu, tài khoản bị khoá, tài khoản hết hạn — nên vài bài đầy đủ là đủ, và vì mỗi bài đắt hơn thì càng không nên nhân chúng lên cho từng endpoint. Cách chia này vừa đúng về phạm vi vừa giữ thời gian chạy thấp, và nó là lý do tôi không thấy \"kiểm mọi thứ qua luồng đầy đủ\" là lựa chọn tốt dù nghe có vẻ chắc chắn hơn. Nhưng tôi muốn nêu rõ điểm mù của hướng người dùng giả lập, vì nó là chỗ tôi từng thấy lỗ hổng lọt qua: người dùng giả lập dùng dữ liệu ta khai ngay trong bài kiểm thử, nên không bài nào chạm vào dữ liệu người dùng thật. Một khiếm khuyết nằm trong dữ liệu — một bản ghi cũ từ đợt di trú, một chuỗi băm sai định dạng, một người dùng không có quyền hạn nào — sẽ đi qua toàn bộ bộ kiểm thử mà không bị phát hiện. Đây là giới hạn của việc kiểm thử mã khi vấn đề nằm ở dữ liệu, không phải chuyện viết thêm bài. Nên với những bất biến về dữ liệu, tôi không dùng kiểm thử mà kiểm ở cuối mỗi lần di trú và kiểm lại lúc ứng dụng khởi động. Về bảo mật cấp phương thức, tôi kiểm nó tại chính phương thức chứ không chỉ qua endpoint. Lý do thực dụng: nếu tôi chỉ gọi endpoint và nhận 403 thì tôi không biết quy tắc nào đã từ chối — quy tắc ở endpoint, hay quy tắc ở phương thức, hay điều kiện quyền sở hữu — nên bài kiểm thử báo có vấn đề mà không định vị được. Kiểm tại phương thức cho tôi câu trả lời chính xác, và nó cũng bắt được trường hợp quy tắc ở phương thức không được áp vì lời gọi nội bộ không đi qua proxy. Còn một lớp bài kiểm thử mà tôi coi là quan trọng nhất trên mỗi đơn vị công sức: bài kiểm thử **chéo** — người dùng A truy cập dữ liệu của người dùng B phải không nhận được gì. Nó rẻ, viết trong vài dòng, và nó bắt đúng lớp lỗ hổng hay gây rò rỉ dữ liệu nhất trong thực tế. Nó cũng là lớp bị bỏ sót thường xuyên nhất, vì bài kiểm thử tự nhiên nhất người ta viết là \"người dùng đọc được dữ liệu của mình\", và bài đó xanh dù quy tắc sở hữu hoàn toàn không tồn tại.",
+    model: "Với hai ngày, điều quan trọng nhất là chọn đúng thứ để khoá lại, và tôi chọn theo nguyên tắc mà sách nêu rất gọn: cần ít test xác thực và nhiều test phân quyền. Lý do là số học. Luồng xác thực trong ứng dụng chỉ có vài cái — đăng nhập đúng, đăng nhập sai, đăng xuất, có thể thêm hết hạn phiên. Còn phân quyền thì nhân lên theo số endpoint và số vai, ở đây là bốn mươi endpoint nhân với số quyền, nên đó mới là chỗ dễ sai và dễ sai âm thầm. Ngoài ra test xác thực đắt hơn nhiều vì phải đi qua cả luồng đăng nhập thật; nếu mỗi test phân quyền cũng phải đăng nhập trước thì bộ test sẽ chậm tới mức không ai chạy. Vì thế tôi dùng người dùng giả: khai thẳng một danh tính có sẵn quyền cần thiết rồi gọi endpoint, bỏ qua hoàn toàn bước đăng nhập. Kế hoạch cụ thể của tôi trong hai ngày như sau. Đầu tiên tôi xếp bốn mươi endpoint theo mức nhạy cảm của dữ liệu và không cố phủ đều — dăm bảy endpoint chạm vào dữ liệu tài chính hay dữ liệu cá nhân được phủ trước và phủ kỹ, những endpoint chỉ đọc dữ liệu tham chiếu thì để sau cùng. Với mỗi endpoint được chọn, tôi viết tối thiểu ba ca: một người dùng có quyền và phải được vào, một người dùng đã đăng nhập nhưng thiếu quyền và phải nhận 403, và một request không kèm danh tính nào phải nhận 401. Ca thứ ba hay bị bỏ và tôi luôn giữ, vì nó là ca duy nhất phân biệt được hai tình huống rất khác nhau: hệ thống không biết bạn là ai, và hệ thống biết rồi nhưng không cho. Song song đó tôi thêm một nhóm test ở mức method cho tầng service, vì đề bài nói quy tắc đã được gắn ở đó. Nhóm này quan trọng hơn vẻ ngoài của nó: nó là thứ duy nhất bắt được lỗi quy tắc không được thi hành vì lời gọi đi trong cùng một class và không qua proxy — loại lỗi mà test qua endpoint sẽ không thấy nếu endpoint đó tình cờ gọi đúng đường. Về công cụ thì tôi chọn theo stack: dịch vụ servlet dùng bộ công cụ mô phỏng request quen thuộc, dịch vụ reactive dùng bộ công cụ tương ứng của nó — dùng nhầm thì test không phản ánh đúng thứ đang chạy. Còn cái tôi bỏ qua, và tôi nói rõ chứ không giấu: tôi không viết test xác thực cho từng endpoint, chỉ giữ vài ca cho chính luồng đăng nhập; tôi không dựng một danh tính tuỳ chỉnh phức tạp trừ khi quyền được tính từ dữ liệu; và tôi để lại hơn một nửa số endpoint ít nhạy cảm cho đợt sau. Đổi lại tôi bàn giao kèm một danh sách những gì chưa được phủ, để nó là một khoảng trống đã biết chứ không phải một giả định sai rằng bảo mật đã có test.",
     redFlags: [
-      "Dùng luồng xác thực đầy đủ cho mọi bài kiểm thử phân quyền",
-      "Chỉ dùng người dùng giả lập và tin rằng xác thực đã được kiểm",
-      "Không có bài kiểm thử chéo giữa hai người dùng",
-      "Kiểm bảo mật cấp phương thức chỉ qua endpoint",
-      "Tin rằng kiểm thử bắt được khiếm khuyết nằm trong dữ liệu",
+      "Chia đều test cho cả bốn mươi endpoint mà không ưu tiên theo mức nhạy cảm",
+      "Viết test đi qua luồng đăng nhập thật cho mọi ca phân quyền",
+      "Bỏ qua ca request không kèm danh tính",
+      "Không có test nào ở mức method dù quy tắc nằm ở tầng service",
+      "Không nói rõ cái gì bị bỏ lại sau hai ngày",
     ],
     probes: [
-      "Bao nhiêu bài cho luồng xác thực là đủ, và chúng bao những kịch bản nào?",
-      "Bài kiểm thử chéo của bạn khẳng định status nào, vì sao?",
-      "Bất biến về dữ liệu người dùng thì bạn kiểm ở đâu, nếu không phải trong kiểm thử?",
+      "Ca nào phân biệt được 401 với 403, và vì sao nó đáng giữ?",
+      "Test nào bắt được lỗi quy tắc không chạy do lời gọi nội bộ?",
+      "Khi quyền được tính từ dữ liệu, người dùng giả khai cứng có còn đáng tin không?",
     ],
-    refs: ["springsec-18", "springsec-11"],
+    refs: ["springsec-18", "springsec-11", "springsec-17"],
   },
   {
     id: "springsec-iq24",
     field: "spring-security",
     topic: "ssec-reactive",
     level: 4,
-    minutes: 14,
+    minutes: 16,
     incident: {
-      symptom: "Một dịch vụ phản ứng mới được viết lại từ một dịch vụ servlet. Sau khi phát hành, đội hỗ trợ báo rằng nhật ký kiểm toán ghi **sai người thực hiện**: khoảng 3% bản ghi gán hành động cho một người dùng khác. Mã ghi kiểm toán được sao nguyên từ dịch vụ cũ và đọc người dùng hiện tại bằng một phương thức tĩnh trên `SecurityContextHolder`.",
-      scale: "2,1 triệu bản ghi kiểm toán trong 6 tuần, khoảng 63.000 bản ghi nghi sai. Nhật ký kiểm toán được dùng cho tranh chấp với khách hàng và cho báo cáo tuân thủ. Phân quyền vẫn hoạt động đúng — không có lỗ hổng truy cập nào được báo.",
-      constraints: "Không quay lại bản servlet — việc viết lại đã giải một bài toán khả năng chịu tải. Phải xác định được bản ghi nào đáng tin và bản ghi nào không. Phải trả lời được vì sao phân quyền đúng mà kiểm toán sai.",
-      },
-    question: "Vì sao 3% và vì sao phân quyền vẫn đúng? Nêu chẩn đoán, cách phân loại 2,1 triệu bản ghi, và cách sửa.",
+      symptom: "Một đợt tái cấu trúc gộp hai cấu hình bảo mật làm một. Toàn bộ 300 bài kiểm thử đều xanh và bản phát hành được duyệt. Ba tuần sau, một kỹ sư phát hiện endpoint xuất dữ liệu khách hàng gọi được mà không cần đăng nhập. Xem lại thì trong lần gộp đó, một quy tắc đã bị đặt sau một quy tắc bao trùm hơn nên không bao giờ được áp dụng.",
+      scale: "Ứng dụng phục vụ khoảng 60.000 khách hàng. Endpoint xuất dữ liệu trả về danh sách khách hàng theo lô. Nhật ký truy cập được giữ 90 ngày.",
+      constraints: "Nếu xác định có truy cập trái phép thì phải thông báo cho khách hàng theo quy định nội bộ. Đội muốn hiểu vì sao 300 bài kiểm thử không bắt được, trước khi viết thêm test mới.",
+    },
+    question: "Câu hỏi đội đặt ra đúng chỗ: vì sao một bộ kiểm thử đầy đủ lại không thấy gì. Trả lời câu đó, rồi trình bày cách xử lý và cách khiến lần sau không lặp lại.",
     mustCover: [
-      "Chẩn đoán: `SecurityContextHolder` giữ ngữ cảnh trong **`ThreadLocal`**, đúng cho mô hình một thread một request",
-      "Mô hình phản ứng **không** có tính chất đó: một request đi qua nhiều thread, một thread phục vụ nhiều request",
-      "Nên phương thức tĩnh đó đọc `ThreadLocal` của thread **đang chạy**, chứ không phải của request hiện tại",
-      "Thread được tái sử dụng, nên nó có thể còn giữ ngữ cảnh của một request **khác** — đó là nguồn của 3%",
-      "3% thấp vì phần lớn thời điểm `ThreadLocal` rỗng hoặc tình cờ đúng; nó là một cuộc đua, nên tỉ lệ phụ thuộc tải",
-      "Cảnh báo: tỉ lệ đó **không ổn định** — tải cao hơn có thể làm nó tăng, nên 3% không phải giới hạn",
-      "Vì sao phân quyền đúng: framework **không** lấy danh tính từ `ThreadLocal` mà từ **chuỗi xử lý**",
-      "Nên phần bảo mật hoạt động đúng; chỉ mã tự viết đọc sai chỗ — đó là lý do sự cố im lặng suốt 6 tuần",
-      "Sửa: lấy người dùng từ chuỗi xử lý phản ứng, hoặc **truyền danh tính làm tham số** vào hàm ghi kiểm toán",
-      "Tôi ưa cách truyền tham số: nó khiến không thể viết mã sai, thay vì phải nhớ dùng API đúng",
-      "Phân loại 2,1 triệu bản ghi: đối chiếu từng bản ghi kiểm toán với dữ liệu **độc lập** — nhật ký truy cập, chủ sở hữu bản ghi bị tác động",
-      "Nhiều hành động chỉ người sở hữu mới thực hiện được, nên quyền sở hữu cho ta kiểm chứng được phần lớn",
-      "Phải công bố rõ phần **không xác định được**, thay vì gộp nó vào phần đáng tin",
-      "Và với nhật ký dùng cho tuân thủ, phải thông báo cho bộ phận pháp chế — 6 tuần dữ liệu bị nghi ngờ là một sự kiện phải báo",
-      "Bài học: mã sao từ mô hình servlet sang mô hình phản ứng phải được rà theo danh sách, vì phần lớn lỗi loại này **im lặng**",
+      "Vì sao test không bắt: chúng kiểm **người được phép thì vào được**, chứ không kiểm **người không được phép thì bị chặn**",
+      "Test viết bằng người dùng giả luôn có danh tính, nên không có ca nào gọi endpoint mà **không kèm danh tính**",
+      "Đây là lỗ hổng phủ định: bộ test khẳng định điều đúng nhưng không khẳng định điều phải sai",
+      "Nguyên nhân kỹ thuật: thứ tự quy tắc — quy tắc khớp đầu tiên thắng, nên quy tắc bao trùm đặt trước làm quy tắc sau vô hiệu",
+      "Việc đầu tiên: chặn endpoint ngay, rồi mới điều tra",
+      "Xác định phạm vi từ nhật ký truy cập: lọc các lượt gọi endpoint đó không kèm danh tính trong ba tuần",
+      "Nêu giới hạn: nhật ký giữ 90 ngày là đủ cho cửa sổ ba tuần — nói rõ điều này thay vì bỏ qua",
+      "Sửa gốc: đặt lại thứ tự quy tắc và rà soát toàn bộ cấu hình sau khi gộp, không chỉ một dòng",
+      "Ngăn tái diễn: thêm ca phủ định cho mọi endpoint, và một test khẳng định endpoint không nằm trong danh sách công khai thì luôn bị từ chối khi không có danh tính",
     ],
-    model: "Chẩn đoán bắt đầu từ một sự khác biệt về mô hình. `SecurityContextHolder` mặc định giữ ngữ cảnh bảo mật trong một `ThreadLocal`, và điều đó hoàn toàn đúng trong ứng dụng servlet nơi mỗi request được gắn với đúng một thread — \"người dùng của thread này\" chính là \"người dùng của request này\". Mô hình phản ứng không có tính chất đó: một request đi qua nhiều thread theo từng chặng xử lý, và một thread phục vụ nhiều request khác nhau. Nên một phương thức tĩnh đọc `ThreadLocal` sẽ trả về ngữ cảnh của thread **đang chạy**, mà thread đó không có quan hệ nào bảo đảm với request hiện tại. Vì thread được tái sử dụng, nó có thể còn giữ ngữ cảnh của một request khác, và khi đó mã kiểm toán ghi tên người khác. Đó là nguồn của 3%. Con số 3% thấp vì phần lớn thời điểm `ThreadLocal` rỗng — và khi rỗng thì mã có lẽ ghi một giá trị mặc định hoặc bỏ qua — hoặc nó tình cờ chứa đúng người. Tôi muốn nêu rõ một điều về con số đó: nó là kết quả của một cuộc đua, nên nó **không ổn định**. Tải cao hơn, số thread khác đi, hay một thay đổi nhỏ trong chuỗi xử lý đều có thể làm tỉ lệ tăng. Nên 3% là giá trị quan sát được trong sáu tuần vừa rồi, không phải một giới hạn để dựa vào. Câu hỏi thứ hai của đề bài là phần tôi thấy quan trọng nhất: vì sao phân quyền vẫn đúng? Vì framework không lấy danh tính từ `ThreadLocal`. Trong ứng dụng phản ứng, ngữ cảnh bảo mật đi theo chuỗi xử lý, và các cơ chế phân quyền của Spring Security đọc nó từ đó — nên chúng luôn thấy đúng người dùng của request. Chỉ mã tự viết, sao nguyên từ dịch vụ cũ, là đọc sai chỗ. Điều đó giải thích trọn vẹn vì sao sự cố sống được sáu tuần mà không ai phát hiện: không có ai bị từ chối sai, không có lỗ hổng truy cập nào, không có ngoại lệ nào trong log. Hệ thống bảo mật hoạt động đúng, còn hệ thống ghi lại nó thì nói sai — và không có gì đối chiếu hai thứ đó với nhau. Về cách sửa, có hai hướng. Hướng trực tiếp là lấy người dùng từ chuỗi xử lý phản ứng thay vì từ phương thức tĩnh. Nó đúng, nhưng nó đòi mọi người phải nhớ dùng API đúng, và toàn bộ sự cố này bắt nguồn từ việc một người đã không nhớ. Hướng tôi ưa hơn là truyền danh tính làm **tham số** vào hàm ghi kiểm toán: lấy nó một lần ở ranh giới request rồi truyền xuống theo dữ liệu. Khi hàm ghi kiểm toán không thể được gọi mà thiếu người thực hiện, thì lỗi này không thể viết ra được nữa — tôi luôn ưu tiên làm cho mã sai trở nên không viết được, hơn là dựa vào việc nhớ. Phần khó nhất là phân loại 2,1 triệu bản ghi, và tôi sẽ không dùng suy đoán. Tôi đối chiếu từng bản ghi kiểm toán với những dữ liệu **độc lập** với nó: nhật ký truy cập ở tầng vào của hệ thống, thời điểm và phiên, và quan trọng nhất là quyền sở hữu của bản ghi bị tác động. Rất nhiều hành động trong một hệ thống chỉ người sở hữu mới thực hiện được — và phân quyền đã hoạt động đúng, nên nếu bản ghi kiểm toán nói người X sửa dữ liệu mà X không có quyền với dữ liệu đó, thì bản ghi đó sai, và ta biết chắc. Cách này cho tôi phân ba nhóm: xác nhận đúng, xác nhận sai, và không xác định được. Tôi sẽ công bố rõ nhóm thứ ba với đúng số lượng của nó thay vì gộp nó vào nhóm đáng tin — vì nhật ký này được dùng cho tranh chấp với khách hàng, nên một bản ghi \"không xác định được\" mà bị trình bày như bằng chứng là một rủi ro lớn hơn nhiều so với việc thừa nhận khoảng trống. Và vì nhật ký còn dùng cho báo cáo tuân thủ, tôi thông báo cho bộ phận pháp chế ngay: sáu tuần dữ liệu kiểm toán bị nghi ngờ là một sự kiện phải báo, không phải một việc kỹ thuật để sửa im lặng. Bài học tôi muốn ghi lại rộng hơn sự cố này: khi viết lại từ mô hình servlet sang mô hình phản ứng, mã được sao nguyên là chỗ nguy hiểm nhất, vì nó biên dịch được, chạy được, và phần lớn lỗi loại này **im lặng**. Nên tôi sẽ dựng một danh sách rà cụ thể cho lần viết lại tới — mọi chỗ đọc `SecurityContextHolder`, mọi chỗ dùng `ThreadLocal`, mọi chỗ giả định một request một thread — và rà theo danh sách đó thay vì tin vào việc mã \"đã chạy tốt ở dịch vụ cũ\".",
+    model: "Tôi trả lời câu hỏi của đội trước vì nó là câu hỏi đúng, và câu trả lời áp dụng cho rất nhiều bộ test chứ không riêng bộ này. Ba trăm bài kiểm thử kia gần như chắc chắn đều có dạng: dựng một người dùng giả có quyền, gọi endpoint, khẳng định nhận được kết quả đúng. Nghĩa là chúng kiểm chiều thuận — người được phép thì vào được. Không bài nào kiểm chiều nghịch — người không được phép thì phải bị chặn. Mà lỗ hổng lần này nằm đúng ở chiều nghịch: endpoint trở nên công khai, và một endpoint công khai thì vẫn trả đúng kết quả cho người dùng giả có quyền. Mọi test vẫn xanh, vì chúng không hỏi câu hỏi mà đáng ra phải hỏi. Nói cách khác, bộ test khẳng định những điều phải đúng nhưng không khẳng định những điều phải sai. Và vì mọi test đều chạy với một danh tính có sẵn, không bài nào từng gọi endpoint mà không kèm danh tính — đúng ca duy nhất lẽ ra phát hiện được vấn đề. Về nguyên nhân kỹ thuật thì đơn giản và rất dễ tái diễn khi gộp cấu hình: các quy tắc phân quyền được so khớp theo thứ tự và quy tắc khớp đầu tiên thắng. Khi gộp hai cấu hình, một quy tắc bao trùm từ tệp này lọt lên trước quy tắc cụ thể của tệp kia, và từ đó quy tắc cụ thể không bao giờ được chạm tới. Nó không gây lỗi, không cảnh báo, chỉ âm thầm đổi hành vi. Về xử lý, việc đầu tiên tôi làm là chặn endpoint đó ngay — trước khi hiểu hết, trước khi họp. Sau đó mới điều tra. Xác định phạm vi thì tôi lọc nhật ký truy cập của endpoint đó trong ba tuần và tìm những lượt gọi không kèm danh tính; nhật ký giữ chín mươi ngày nên cửa sổ ba tuần nằm gọn trong đó, và đây là một điểm may mắn mà tôi nói rõ ra, vì nếu ngược lại thì kết luận sẽ phải kèm một khoảng trống. Tôi cũng xem hình dạng truy cập chứ không chỉ đếm: một vài lượt lẻ từ địa chỉ nội bộ khác hẳn với một chuỗi gọi theo lô từ bên ngoài, và khác nhau đó quyết định việc có phải thông báo cho khách hàng hay không. Sửa gốc thì tôi không chỉ chữa một dòng. Lần gộp đó có thể đã làm vô hiệu nhiều hơn một quy tắc, nên tôi rà lại toàn bộ cấu hình sau gộp, đối chiếu với cấu hình của hai tệp trước đây, và kiểm từng quy tắc xem nó có còn được chạm tới không. Phần ngăn tái diễn mới là phần tôi đầu tư nhiều nhất, và nó phải trả lời đúng câu hỏi của đội. Tôi thêm ca phủ định cho mọi endpoint nhạy cảm: gọi mà không kèm danh tính và khẳng định bị từ chối, gọi bằng danh tính thiếu quyền và khẳng định bị từ chối. Quan trọng hơn, tôi viết một test ở mức danh sách: liệt kê tường minh những endpoint được phép công khai, rồi lặp qua **mọi** endpoint còn lại của ứng dụng và khẳng định chúng bị từ chối khi không có danh tính. Test đó có tính chất mà từng test lẻ không có — nó tự bao phủ cả những endpoint được thêm vào sau này, nên một endpoint mới vô tình để mở sẽ làm nó đỏ ngay mà không cần ai nhớ viết test. Và tôi đưa việc \"đọc lại thứ tự quy tắc\" thành một mục bắt buộc trong danh sách kiểm khi review mọi thay đổi chạm vào cấu hình bảo mật.",
     redFlags: [
-      "Kết luận nhật ký kiểm toán bị mất hoặc ghi trùng",
-      "Chấp nhận 3% như một tỉ lệ sai số ổn định",
-      "Sửa bằng cách đổi chiến lược `SecurityContextHolder`",
-      "Coi đây là lỗi nhỏ vì phân quyền vẫn đúng",
-      "Suy đoán phạm vi thay vì đối chiếu với dữ liệu độc lập",
-      "Gộp nhóm \"không xác định được\" vào nhóm đáng tin",
-      "Không thông báo cho pháp chế dù nhật ký dùng cho tuân thủ",
+      "Chỉ trả lời phần kỹ thuật về thứ tự quy tắc mà không giải thích vì sao test không bắt được",
+      "Kết luận rằng cần thêm test mà không nói rõ là thiếu ca phủ định",
+      "Điều tra xong mới chặn endpoint",
+      "Chỉ sửa đúng một quy tắc, không rà phần còn lại của lần gộp",
+      "Không kiểm xem thời gian lưu nhật ký có phủ hết cửa sổ sự cố không",
+      "Chỉ thêm test lẻ cho endpoint này, không có cơ chế tự bao phủ endpoint thêm mới",
     ],
     probes: [
-      "Vì sao tỉ lệ 3% không phải một con số đáng tin để dựa vào?",
-      "Quyền sở hữu bản ghi giúp bạn xác nhận được bao nhiêu phần, và phần còn lại thì sao?",
-      "Danh sách rà cho lần viết lại tới của bạn gồm những mục nào?",
+      "Test ở mức danh sách của bạn hoạt động thế nào khi có người thêm endpoint mới tuần sau?",
+      "Bạn phân biệt truy cập trái phép thật với lượt quét tự động bằng dấu hiệu nào?",
+      "Nếu nhật ký chỉ giữ 7 ngày, bạn báo cáo phạm vi ra sao?",
     ],
-    refs: ["springsec-17", "springsec-06"],
+    refs: ["springsec-18", "springsec-08", "springsec-07"],
   },
 ];

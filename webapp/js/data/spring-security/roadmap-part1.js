@@ -1,292 +1,283 @@
 // Lộ trình đọc Spring Security in Action — Phần 1 (Tuần 1–5).
 //
 // Nguồn: bản dịch tiếng Việt "Spring Security in Action", ấn bản 2 —
-// Laurențiu Spilcă, Manning 2024. Thư mục nguồn: sources/spring-security/
+// Laurentiu Spilca, Manning. Thư mục nguồn: sources/spring-security/
 //
 // Mỗi mục là KẾ HOẠCH ĐỌC trỏ vào sách, không chép lại nội dung sách.
 // GIỮ NGUYÊN id (ss-w<N> / ss-w<N>-<M>) — tiến độ localStorage lưu theo id này.
 //
-// Bản PDF gốc có một số dòng bị cắt cụt ở mép trang, được đánh dấu `[…]` ngay
-// trong tệp nguồn (xem cảnh báo đầu sources/spring-security/README.md).
+// Bản dịch hiện tại trích từ 17 PDF chương gốc và đủ nội dung — không còn chỗ
+// nào bị cắt cụt như bản trước. Sách bắt đầu ở chương 2; lộ trình vì thế cũng
+// mở màn bằng chương 2 thay vì một chương dẫn nhập.
 //
-// Số dấu (đã trừ dòng chú thích đầu tệp): ch1: 0 · ch2: 42 · ch3: 0 · ch4: 2 ·
-// ch5: 1 · ch6: 4 · ch7: 10 · ch8: 23. §2.2 là mục dính nhiều nhất trong tuần
-// 1–5 (và của cả chương 2 nói chung). Ở những chỗ đó, bài học chỉ khẳng định
-// phần văn bản còn nguyên vẹn — tiêu đề mục, danh sách gạch đầu dòng, đoạn mã —
-// và nói rõ với người học rằng mục đó đọc sẽ vấp.
+// Phân bổ 9 tuần / 17 chương: T1 ch2 · T2 ch3–4 · T3 ch5–6 · T4 ch7–8 ·
+// T5 ch9–10 · T6 ch11–12 · T7 ch13 · T8 ch14–16 · T9 ch17–18.
 
 export const springsecWeeksPart1 = [
   {
     id: "ss-w1",
     week: "Tuần 1",
-    title: "Nền tảng bảo mật & dự án đầu tiên",
-    goal: "Dựng được một ứng dụng Spring Boot có Spring Security, giải thích được điều gì xảy ra khi bạn chỉ thêm dependency mà chưa viết dòng cấu hình nào.",
-    practice: "Tạo dự án Spring Boot với `spring-boot-starter-security`, chạy lên, gọi thử một endpoint bằng `curl` không kèm thông tin xác thực rồi kèm thông tin xác thực mặc định, và đọc mật khẩu sinh ra trong log.",
+    title: "Project đầu tiên và bức tranh tổng thể",
+    goal: "Dựng được một ứng dụng Spring Boot có Spring Security, giải thích được điều gì xảy ra khi bạn chỉ thêm dependency mà chưa viết dòng cấu hình nào, và gọi tên được từng component trong luồng authentication.",
+    practice: "Tạo project Spring Boot với `spring-boot-starter-security`, chạy lên, gọi `/hello` bằng `curl` không kèm credential rồi kèm credential mặc định, đọc mật khẩu sinh ra trong log. Sau đó ghi đè lần lượt `UserDetailsService`, `PasswordEncoder` và quy tắc authorization, mỗi lần chỉ đổi một thứ và xem response đổi ra sao.",
     resources: [
-      { label: "SSIA 00 — Lời giới thiệu & về cuốn sách", href: "#/docs/springsec-00" },
-      { label: "SSIA 01 — Bảo mật ngày nay", href: "#/docs/springsec-01" },
       { label: "SSIA 02 — Xin chào, Spring Security", href: "#/docs/springsec-02" },
-      { label: "SSIA Phụ lục A — Liên kết tài liệu chính thức", href: "#/docs/springsec-pl-a" },
       { label: "docs.spring.io — Spring Security Reference", href: "https://docs.spring.io/spring-security/reference/" },
       { label: "🌱 Sang lĩnh vực Spring Start Here — lộ trình đọc 8 tuần", href: "#/roadmap/spring-start" },
     ],
     items: [
       {
         id: "ss-w1-1",
-        text: "Bảo mật phần mềm là gì, và vì sao một lỗ hổng lại đắt đến thế",
-        lesson: `**Mục tiêu.** Nói được bảo mật cấp ứng dụng bao gồm những gì, và lập luận được vì sao đầu tư sớm rẻ hơn khắc phục hậu quả.
+        text: "Dựng project đầu tiên và đọc hiểu cấu hình mặc định của Spring Boot",
+        lesson: `**Mục tiêu.** Chạy được project của §2.1, gọi endpoint \`/hello\` ở cả hai trạng thái có và không có credential, và đọc đúng thứ Spring Boot in ra console.
 
-**Đọc.** [§1.2 Bảo mật phần mềm là gì?](#/docs/springsec-01) rồi [§1.3 Tại sao bảo mật lại quan trọng?](#/docs/springsec-01) — đọc kỹ ba ví dụ giả định gần cuối §1.3. §1.1 và §1.4 chỉ cần lướt: chúng giới thiệu Spring Security và bố cục cuốn sách.
+**Đọc.** [§2.1 Khởi động project đầu tiên của bạn](#/docs/springsec-02) — gõ lại hai listing đầu (chỉ hai dependency, rồi \`HelloController\`), chạy hết các lệnh \`curl\` trong mục. Khối giải thích về HTTP Basic cho bạn thấy cờ \`-u\` của \`curl\` thực chất làm gì: nó dựng header \`Authorization\` chứ không phải một cơ chế riêng.
 
-**Bẫy.** Nghĩ "dữ liệu nhạy cảm" chỉ là chi tiết thẻ tín dụng. §1.2 xếp cả số điện thoại, địa chỉ email và số định danh cá nhân vào nhóm nhạy cảm — bất cứ thứ gì người dùng coi là riêng tư. Bẫy thứ hai: coi bảo mật là chuyện của tầng mạng hay tầng triển khai, không phải của bạn. Sách nói bảo mật được áp dụng theo nhiều lớp, và khi lo cho một lớp thì nguyên tắc tốt nhất là **giả định lớp phía trên nó hoàn toàn không tồn tại** — không được ỷ vào tường lửa để bỏ qua việc xác thực yêu cầu giữa hai dịch vụ nội bộ.
+**Bẫy.** Tưởng mật khẩu sinh tự động là cố định. Nó đổi sau mỗi lần khởi động, nên đừng chép nó vào script. Bẫy thứ hai, tinh vi hơn: thấy \`/hello\` trả 401 rồi kết luận "Spring Security chặn endpoint này". Không — mặc định nó chặn **mọi** endpoint; \`/hello\` không có gì đặc biệt.
 
-**Tự kiểm tra.** Theo ba ví dụ ở §1.3, loại tổn thất nào được sách nói là có thể còn tốn kém hơn cả thiệt hại tiền bạc trực tiếp? Và theo §1.2, dữ liệu "tĩnh" khác dữ liệu "đang truyền tải" ở chỗ nào?`,
+**Tự kiểm tra.** Không cấu hình gì, Spring Boot tạo sẵn cho bạn user tên gì? Gọi \`/hello\` không kèm credential thì nhận status nào, và header \`WWW-Authenticate\` trong response nói lên điều gì?`,
       },
       {
         id: "ss-w1-2",
-        text: "Dựng dự án Spring Security đầu tiên và đọc hiểu cấu hình mặc định",
-        lesson: `**Mục tiêu.** Chạy được dự án \`ssia-ch2-ex1\`, gọi endpoint \`/hello\` ở cả hai trạng thái có và không có thông tin xác thực, và đọc đúng thứ Spring Boot in ra console.
+        text: "Bức tranh tổng thể: ai gọi ai trong luồng authentication",
+        lesson: `**Mục tiêu.** Vẽ lại từ trí nhớ sơ đồ §2.2 và nói được trách nhiệm của từng mắt xích: authentication filter → \`AuthenticationManager\` → \`AuthenticationProvider\` → \`UserDetailsService\` + \`PasswordEncoder\` → \`SecurityContext\`.
 
-**Đọc.** [§2.1 Khởi động dự án đầu tiên](#/docs/springsec-02) — gõ lại Danh sách mã nguồn 2.1 (chỉ hai dependency) và 2.2 (\`HelloController\`), rồi chạy hết các lệnh \`curl\` trong mục. Khung "Gọi endpoint bằng phương thức xác thực HTTP Basic" cho bạn thấy cờ \`-u\` thực chất làm gì.
+**Đọc.** [§2.2 Bức tranh tổng thể về thiết kế class của Spring Security](#/docs/springsec-02). Đây là mục quan trọng nhất của cả chương: mọi chương sau chỉ là thay một mắt xích trong sơ đồ này. Đọc chậm, đối chiếu với hình trong mục.
 
-**Bẫy.** Tưởng mật khẩu sinh ra là cố định. Sách nói rõ mỗi lần khởi chạy ứng dụng lại sinh một mật khẩu mới và in ra console; tên đăng nhập mặc định là \`user\`. Bẫy thứ hai nằm ở mã trạng thái: gọi không kèm thông tin xác thực trả về **401 Unauthorized**, và sách có hẳn một ghi chú rằng cái tên này gây mơ hồ — 401 thường dùng cho xác thực thất bại, còn phân quyền thất bại mới là **403 Forbidden**.
+**Bẫy.** Nghĩ \`AuthenticationManager\` là nơi chứa logic xác thực. Nó không xác thực gì cả — nó chọn và gọi một \`AuthenticationProvider\`. Muốn đổi *cách* xác thực thì viết \`AuthenticationProvider\`, không phải \`AuthenticationManager\`. Bẫy thứ hai: gộp \`UserDetailsService\` với \`PasswordEncoder\` làm một trách nhiệm. Chúng tách rời có chủ ý — cái tìm user, cái so khớp mật khẩu.
 
-**Tự kiểm tra.** Vì sao mở \`/hello\` bằng trình duyệt lại hiện biểu mẫu đăng nhập chứ không phải hộp thoại HTTP Basic? Và chuỗi bạn đặt sau chữ \`Basic\` trong header \`Authorization\` được tạo ra bằng phép biến đổi nào?`,
+**Tự kiểm tra.** Nếu ứng dụng cần xác thực bằng mã một lần gửi qua SMS thay vì mật khẩu, bạn viết lại component nào trong sơ đồ? Sau khi xác thực xong, đối tượng \`Authentication\` được cất ở đâu để controller đọc được?`,
       },
       {
         id: "ss-w1-3",
-        text: "Thiết kế lớp: từ bộ lọc tới AuthenticationProvider và UserDetailsService",
-        lesson: `**Mục tiêu.** Kể đúng tên và thứ tự sáu thành phần tham gia luồng xác thực, và chỉ ra hai bean nào Spring Boot tự cấu hình sẵn cho bạn.
+        text: "Ghi đè cấu hình mặc định — bốn điểm can thiệp đầu tiên",
+        lesson: `**Mục tiêu.** Tự khai \`UserDetailsService\`, \`PasswordEncoder\`, quy tắc authorization mức endpoint và một \`AuthenticationProvider\` tối giản; chọn được một phong cách cấu hình và bám theo nó.
 
-**Đọc.** [§2.2 Bức tranh tổng thể về thiết kế lớp trong Spring Security](#/docs/springsec-02) — trọng tâm là danh sách sáu thành phần và hai bean được tự động cấu hình. Lưu ý trước: đây là mục dính nhiều dòng bị cắt cụt \`[…]\` nhất trong bản dịch, nên bám vào các gạch đầu dòng còn nguyên và đọc bù bằng Hình 3.1 ở chương sau. Khung "HTTP và HTTPS" ở cuối mục có thể để dành.
+**Đọc.** [§2.3.1 Tùy chỉnh việc quản lý user details](#/docs/springsec-02) → [§2.3.2 Áp dụng authorization ở mức endpoint](#/docs/springsec-02) → [§2.3.3 Cấu hình theo nhiều cách khác nhau](#/docs/springsec-02) → [§2.3.4 Định nghĩa logic authentication tùy chỉnh](#/docs/springsec-02) → [§2.3.5 Sử dụng nhiều configuration class](#/docs/springsec-02).
 
-**Bẫy.** Gộp \`AuthenticationProvider\` với \`UserDetailsService\` làm một. §2.2 tách bạch: bộ cung cấp xác thực **chịu trách nhiệm triển khai logic xác thực thực tế**, dịch vụ thông tin người dùng lo phần quản lý thông tin người dùng, còn bộ mã hoá mật khẩu là thứ bộ cung cấp xác thực gọi tới. Bẫy thứ hai: tin rằng \`UserDetailsService\` mặc định dùng được cho hệ thống thật — sách gọi bản triển khai mặc định đó chỉ là một bản thử nghiệm khái niệm.
+**Bẫy.** Dùng \`NoOpPasswordEncoder\` rồi quên gỡ. Sách dùng nó để ví dụ đọc được, và nói thẳng: không dành cho production. Bẫy thứ hai là cái §2.3.3 cảnh báo — trộn nhiều phong cách cấu hình trong cùng một ứng dụng. Chọn một cách, giữ nguyên cách đó; code trộn lẫn là code không ai đọc nổi sau ba tháng.
 
-**Tự kiểm tra.** Trong sáu thành phần §2.2 liệt kê, thành phần nào giữ dữ liệu xác thực sau khi quá trình xác thực kết thúc? Và hai nhiệm vụ mà \`PasswordEncoder\` đảm nhận là gì?`,
-      },
-      {
-        id: "ss-w1-4",
-        text: "Ghi đè cấu hình mặc định — ba thứ đầu tiên bạn luôn phải thay",
-        lesson: `**Mục tiêu.** Ghi đè được \`UserDetailsService\`, \`PasswordEncoder\` và quy tắc phân quyền endpoint, rồi giải thích được vì sao ba thứ này đi liền nhau.
-
-**Đọc.** [§2.3 Ghi đè cấu hình mặc định](#/docs/springsec-02) — làm §2.3.1 theo đúng chuỗi Danh sách mã nguồn 2.3 → 2.5, rồi §2.3.2 với 2.6 → 2.8. §2.3.3 cho thấy cùng một kết quả có hai đường đi (khai bean vào context, hay cấu hình ngay trong bean \`SecurityFilterChain\`). §2.3.4 và §2.3.5 chỉ cần lướt — Chương 6 sẽ quay lại đầy đủ.
-
-**Bẫy.** Khai \`UserDetailsService\` của mình rồi quên \`PasswordEncoder\`. Sách dựng đúng cái bẫy này rồi cho bạn xem vết lỗi: bean \`PasswordEncoder\` chỉ được tự cấu hình khi bạn còn dùng \`UserDetailsService\` mặc định, ghi đè một cái là phải khai cả cái kia, nếu không ứng dụng ném \`IllegalArgumentException: There is no PasswordEncoder mapped for the id "null"\`. Bẫy thứ hai: nghĩ khai bean là xong — một \`new InMemoryUserDetailsManager()\` rỗng thì không có người dùng nào, mà mật khẩu tự sinh cũng đã biến mất khỏi console.
-
-**Tự kiểm tra.** Giữa Danh sách mã nguồn 2.7 và 2.8, việc đổi \`authenticated()\` thành \`permitAll()\` làm thay đổi điều gì khi bạn gọi \`/hello\` không kèm thông tin xác thực? Và \`Customizer.withDefaults()\` thực chất trả về cái gì?`,
+**Tự kiểm tra.** \`InMemoryUserDetailsManager\` phù hợp cho loại ứng dụng nào và vì sao không dùng nó ở production? Khi bạn khai một bean \`UserDetailsService\` của riêng mình, mật khẩu tự sinh trong log còn xuất hiện nữa không — vì sao?`,
       },
     ],
   },
   {
     id: "ss-w2",
     week: "Tuần 2",
-    title: "Quản lý người dùng",
-    goal: "Mô tả được người dùng theo cách Spring Security hiểu, và tự quyết định lấy người dùng từ đâu — bộ nhớ, cơ sở dữ liệu SQL hay nguồn của riêng bạn.",
-    practice: "Lấy dự án tuần 1, thay `InMemoryUserDetailsManager` bằng một `UserDetailsService` bạn tự viết, rồi tách lớp thực thể JPA `User` khỏi lớp `SecurityUser` triển khai `UserDetails` như §3.2.5. Cuối tuần đổi sang `JdbcUserDetailsManager` với hai bảng `users` và `authorities`.",
+    title: "User và mật khẩu",
+    goal: "Mô tả được user theo cách Spring Security hiểu, cắm được nguồn user của riêng bạn vào luồng authentication, và chọn đúng `PasswordEncoder` kèm lý do.",
+    practice: "Viết một hiện thực `UserDetails` gắn với entity user của bạn, rồi một `UserDetailsService` đọc từ database. Sau đó đổi `PasswordEncoder` sang `BCryptPasswordEncoder`, và thử `DelegatingPasswordEncoder` với hai thuật toán để thấy tiền tố `{bcrypt}` trong cột mật khẩu.",
     resources: [
-      { label: "SSIA 03 — Quản lý người dùng", href: "#/docs/springsec-03" },
-      { label: "Nhắc lại luồng xác thực: SSIA 02 §2.2", href: "#/docs/springsec-02" },
-      { label: "docs.spring.io — Spring Security Reference", href: "https://docs.spring.io/spring-security/reference/" },
+      { label: "SSIA 03 — Quản lý user", href: "#/docs/springsec-03" },
+      { label: "SSIA 04 — Quản lý mật khẩu", href: "#/docs/springsec-04" },
+      { label: "SSIA 02 — Xin chào, Spring Security (ôn sơ đồ §2.2)", href: "#/docs/springsec-02" },
     ],
     items: [
       {
         id: "ss-w2-1",
-        text: "Các thành phần tham gia luồng xác thực",
-        lesson: `**Mục tiêu.** Vẽ lại được luồng xác thực từ bộ lọc tới ngữ cảnh bảo mật, và nói được \`UserDetailsService\` khác \`UserDetailsManager\` ở chỗ nào.
+        text: "`UserDetails` và `GrantedAuthority` — mô tả một user",
+        lesson: `**Mục tiêu.** Viết được một hiện thực \`UserDetails\` tối giản và giải thích được vì sao authority lại là một collection chứ không phải một chuỗi.
 
-**Đọc.** [§3.1 Triển khai xác thực trong Spring Security](#/docs/springsec-03) — mục ngắn, đọc trọn vẹn. Chú thích của Hình 3.1 và Hình 3.2 mới là phần đáng chép lại: chúng nói ai gọi ai. Chưa cần đụng tới mã nguồn ở mục này.
+**Đọc.** [§3.1 Hiện thực authentication trong Spring Security](#/docs/springsec-03) để định vị lại mình trong sơ đồ, rồi [§3.2.1 Mô tả user bằng contract \`UserDetails\`](#/docs/springsec-03) → [§3.2.2 Đi sâu vào contract \`GrantedAuthority\`](#/docs/springsec-03) → [§3.2.3 Viết một hiện thực tối giản](#/docs/springsec-03) → [§3.2.4 Dùng builder](#/docs/springsec-03) → [§3.2.5 Kết hợp nhiều trách nhiệm liên quan tới user](#/docs/springsec-03).
 
-**Bẫy.** Nghĩ \`UserDetailsManager\` là bản "xịn hơn" luôn nên dùng thay \`UserDetailsService\`. Sách nói: \`UserDetailsService\` **chỉ chịu trách nhiệm truy xuất người dùng theo tên đăng nhập**, và đó là hành động duy nhất framework cần để hoàn tất xác thực; \`UserDetailsManager\` mới bổ sung thêm hành vi thêm, sửa, xoá người dùng. Sách gọi việc tách đôi này là một ví dụ đẹp của nguyên lý phân tách interface — ứng dụng chỉ cần đăng nhập thì triển khai \`UserDetailsService\` là đủ, framework không ép bạn viết những thứ bạn không dùng.
+**Bẫy.** Trả về \`null\` từ \`getAuthorities()\` cho user "không có quyền gì". Hãy trả về collection rỗng — \`null\` sẽ nổ ở tầng authorization. Bẫy thứ hai là bốn phương thức \`isAccountNonExpired\`, \`isAccountNonLocked\`, \`isCredentialsNonExpired\`, \`isEnabled\`: hiện thực cẩu thả trả \`false\` một trong bốn cái sẽ khiến user đăng nhập hỏng mà thông báo lỗi không chỉ vào đúng chỗ.
 
-**Tự kiểm tra.** Trong luồng ở Hình 3.1, thành phần nào đón yêu cầu đầu tiên và nó chuyển giao nhiệm vụ xác thực cho ai? Và theo §3.1, cái gì được dùng để biểu diễn một người dùng cho cả hai giao ước trên?`,
+**Tự kiểm tra.** §3.2.5 bàn về việc gộp entity JPA và \`UserDetails\` vào một class — sách nói lợi và hại của cách đó là gì? Khi nào dùng builder \`User.withUsername(...)\` thay vì tự viết class?`,
       },
       {
         id: "ss-w2-2",
-        text: "UserDetails và GrantedAuthority — mô tả người dùng",
-        lesson: `**Mục tiêu.** Viết được một lớp triển khai \`UserDetails\`, và giải thích được vì sao tách nó khỏi lớp thực thể JPA lại sạch hơn.
+        text: "`UserDetailsService`, `UserDetailsManager` và `JdbcUserDetailsManager`",
+        lesson: `**Mục tiêu.** Phân biệt được hai contract và giải thích được vì sao chúng bị tách đôi; cấu hình được \`JdbcUserDetailsManager\` trên schema của chính bạn.
 
-**Đọc.** [§3.2 Mô tả người dùng](#/docs/springsec-03) — §3.2.1 cho bảy phương thức của \`UserDetails\`, §3.2.2 cho \`GrantedAuthority\`, rồi tự gõ Đoạn mã 3.2 ở §3.2.3. §3.2.4 giới thiệu lớp dựng \`User\`. §3.2.5 là mục đáng đọc chậm nhất: nó đặt cạnh nhau một lớp \`User\` gánh hai vai (Đoạn mã 3.9) và cặp \`User\` + \`SecurityUser\` (Đoạn mã 3.10, 3.11).
+**Đọc.** [§3.3.1 Hiểu contract \`UserDetailsService\`](#/docs/springsec-03) → [§3.3.2 Hiện thực contract \`UserDetailsService\`](#/docs/springsec-03) → [§3.3.3 Hiện thực contract \`UserDetailsManager\`](#/docs/springsec-03).
 
-**Bẫy.** Đọc \`isAccountNonExpired()\` và ba người anh em của nó theo nghĩa ngược. Sách có hẳn ghi chú rằng bốn cái tên cuối trong \`UserDetails\` bị chê là chưa khôn ngoan xét về mã nguồn sạch — trả về \`true\` nghĩa là tài khoản **không** hết hạn, tức là còn dùng được. Bẫy thứ hai: tạo người dùng không quyền hạn nào. §3.2.2 nói thẳng một người dùng phải có ít nhất một quyền hạn.
+**Bẫy.** Nhét việc tạo/sửa/xóa user vào \`UserDetailsService\`. Contract đó cố tình chỉ có **một** phương thức — tìm user theo username — vì đó là việc duy nhất framework cần để hoàn tất authentication. Ứng dụng nào cũng cần quản lý user thì mới dùng \`UserDetailsManager\`. Bẫy thứ hai: \`loadUserByUsername\` trả \`null\` khi không tìm thấy; contract yêu cầu ném \`UsernameNotFoundException\`.
 
-**Tự kiểm tra.** \`GrantedAuthority\` có mấy phương thức trừu tượng, và hệ quả của con số đó lên cách sách viết các ví dụ là gì? Và trong Đoạn mã 3.11, \`SecurityUser\` lấy dữ liệu từ đâu ra?`,
+**Tự kiểm tra.** Sách nêu lợi thế gì của \`JdbcUserDetailsManager\` so với một hiện thực dựa trên JPA? Kể tên ba hiện thực \`UserDetailsManager\` mà Spring Security cung cấp sẵn.`,
       },
       {
         id: "ss-w2-3",
-        text: "UserDetailsService và UserDetailsManager — tự quản lý người dùng",
-        lesson: `**Mục tiêu.** Chọn được giữa việc tự viết \`UserDetailsService\` và dùng \`JdbcUserDetailsManager\`, và biết phải chuẩn bị gì trong cơ sở dữ liệu.
+        text: "`PasswordEncoder` — hợp đồng hai chiều và cách chọn thuật toán",
+        lesson: `**Mục tiêu.** Nói được vì sao contract này phải có **hai** phương thức, và chọn được hiện thực phù hợp thay vì chọn theo thói quen.
 
-**Đọc.** [§3.3 Hướng dẫn Spring Security cách quản lý người dùng](#/docs/springsec-03) — §3.3.1 cho giao ước một phương thức, §3.3.2 cho ví dụ tự viết một \`UserDetailsService\` in-memory, §3.3.3 là mục dài nhất: đọc phần \`JdbcUserDetailsManager\` cùng hai câu lệnh tạo bảng \`users\` và \`authorities\` (Đoạn mã 3.16, 3.17). Phần \`LdapUserDetailsManager\` ở cuối chỉ cần lướt cho biết là có.
+**Đọc.** [§4.1.1 Contract \`PasswordEncoder\`](#/docs/springsec-04) → [§4.1.2 Hiện thực \`PasswordEncoder\` của riêng bạn](#/docs/springsec-04) → [§4.1.3 Lựa chọn trong số các hiện thực có sẵn](#/docs/springsec-04) → [§4.1.4 Nhiều chiến lược encode với \`DelegatingPasswordEncoder\`](#/docs/springsec-04).
 
-**Bẫy.** Trả về \`null\` từ \`loadUserByUsername()\` khi không tìm thấy người dùng. Giao ước khai \`throws UsernameNotFoundException\`, nhưng sách ghi chú rằng đây là một \`RuntimeException\` kế thừa từ \`AuthenticationException\`, nên mệnh đề \`throws\` chỉ mang tính tài liệu hoá — trình biên dịch sẽ không nhắc bạn. Bẫy thứ hai: nghĩ \`JdbcUserDetailsManager\` bắt bạn đặt tên bảng và cột theo đúng mặc định của nó; §3.3.3 chỉ ra bạn hoàn toàn có thể thay các câu truy vấn mà nó dùng.
+**Bẫy.** Nghĩ \`encode()\` là đủ. Băm là hàm một chiều, nên luôn phải có \`matches()\` đi kèm — và \`matches()\` không phải là "băm lại rồi so chuỗi" với mọi thuật toán, vì các thuật toán có salt sinh ra kết quả khác nhau mỗi lần. Bẫy thứ hai: đổi thuật toán băm trên hệ thống đang chạy mà không qua \`DelegatingPasswordEncoder\` — mọi mật khẩu cũ trong database lập tức không so khớp được nữa.
 
-**Tự kiểm tra.** \`UserDetailsManager\` thêm những phương thức nào so với \`UserDetailsService\`? Và trong hai bảng của ví dụ \`JdbcUserDetailsManager\`, bảng nào lưu quyền hạn và nó nối với người dùng qua cột nào?`,
+**Tự kiểm tra.** \`DelegatingPasswordEncoder\` nhận biết mật khẩu nào dùng thuật toán nào bằng cách nào? Nếu bạn phải chuyển dần từ một thuật toán yếu sang \`bcrypt\` mà không bắt user đặt lại mật khẩu, bạn làm thế nào?`,
+      },
+      {
+        id: "ss-w2-4",
+        text: "Spring Security Crypto module — key generator và encryptor",
+        lesson: `**Mục tiêu.** Phân biệt được hashing và encryption, và biết SSCM cho sẵn những tiện ích nào để không phải tự viết.
+
+**Đọc.** [§4.2.1 Sử dụng key generator](#/docs/springsec-04) → [§4.2.2 Encrypt và decrypt secret bằng encryptor](#/docs/springsec-04).
+
+**Bẫy.** Dùng encryptor cho mật khẩu user. Mật khẩu thì **băm**, không mã hoá — mã hoá có nghĩa là ai có khoá thì đọc lại được, đúng điều bạn không muốn với mật khẩu. Encryptor dành cho những bí mật mà ứng dụng cần đọc lại được (ví dụ token của bên thứ ba).
+
+**Tự kiểm tra.** Sách phân biệt \`BytesKeyGenerator\` và \`StringKeyGenerator\` ở chỗ nào? Một encryptor "text" và một encryptor "byte" khác nhau thế nào về đầu vào/đầu ra?`,
       },
     ],
   },
   {
     id: "ss-w3",
     week: "Tuần 3",
-    title: "Quản lý mật khẩu",
-    goal: "Chọn được bộ mã hoá mật khẩu phù hợp thay vì chép bừa một dòng từ mạng, và xử lý được tình huống phải đổi thuật toán trên hệ thống đang chạy.",
-    practice: "Thay `NoOpPasswordEncoder` trong dự án tuần 2 bằng `BCryptPasswordEncoder`, sinh lại chuỗi băm cho người dùng mẫu. Sau đó dựng một `DelegatingPasswordEncoder` chứa cả `noop` lẫn `bcrypt`, lưu song song hai kiểu chuỗi băm trong bảng `users` và kiểm chứng cả hai người dùng đều đăng nhập được.",
+    title: "Filter chain và hiện thực authentication",
+    goal: "Đọc được filter chain như một chuỗi có thứ tự, chèn được filter của riêng bạn đúng chỗ, và viết được một `AuthenticationProvider` hoàn chỉnh kèm hiểu biết về `SecurityContext`.",
+    practice: "Bật `logging.level.org.springframework.security=DEBUG` và đọc danh sách filter mà ứng dụng in ra lúc khởi động. Sau đó viết một filter ghi log mã request rồi chèn nó trước `BasicAuthenticationFilter`, và kiểm chứng thứ tự bằng log.",
     resources: [
-      { label: "SSIA 04 — Quản lý mật khẩu", href: "#/docs/springsec-04" },
-      { label: "Nhắc lại chỗ PasswordEncoder được gọi: SSIA 03 §3.1", href: "#/docs/springsec-03" },
-      { label: "SSIA Phụ lục B — Tài liệu đọc thêm", href: "#/docs/springsec-pl-b" },
-      { label: "docs.spring.io — Password Storage", href: "https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html" },
+      { label: "SSIA 05 — Bảo mật của web app bắt đầu từ filter", href: "#/docs/springsec-05" },
+      { label: "SSIA 06 — Hiện thực authentication", href: "#/docs/springsec-06" },
+      { label: "SSIA 03 — Quản lý user (ôn `UserDetailsService`)", href: "#/docs/springsec-03" },
     ],
     items: [
       {
         id: "ss-w3-1",
-        text: "Giao ước PasswordEncoder và các cài đặt có sẵn",
-        lesson: `**Mục tiêu.** Đọc được giao ước \`PasswordEncoder\` và chọn được một triển khai có sẵn thay vì tự viết lấy.
+        text: "Filter chain và ba cách chèn filter của bạn vào",
+        lesson: `**Mục tiêu.** Giải thích được filter chain nằm ở đâu trong kiến trúc, và chọn đúng một trong ba cách chèn: trước, sau, hay tại vị trí của một filter có sẵn.
 
-**Đọc.** [§4.1.1 Giao ước PasswordEncoder](#/docs/springsec-04) cho ba phương thức của interface. [§4.1.2 Tự triển khai PasswordEncoder của riêng bạn](#/docs/springsec-04) đọc nhanh, mục đích chỉ là thấy \`encode()\` và \`matches()\` phải khớp nhau (Đoạn mã 4.1 và 4.2). Rồi [§4.1.3 Lựa chọn từ các triển khai PasswordEncoder có sẵn](#/docs/springsec-04) — đây mới là mục cần đọc kỹ: năm triển khai và tham số khởi tạo của từng cái.
+**Đọc.** [§5.1 Hiện thực filter trong kiến trúc Spring Security](#/docs/springsec-05) → [§5.2 Thêm filter vào trước](#/docs/springsec-05) → [§5.3 Thêm filter vào sau](#/docs/springsec-05) → [§5.4 Thêm filter tại vị trí của một filter khác](#/docs/springsec-05).
 
-**Bẫy.** Ghi đè \`encode()\` mà quên \`matches()\` phải soi đúng kết quả của nó; sách nhấn rằng hai phương thức này luôn phải tương ứng nhau về mặt chức năng. Bẫy thứ hai là chọn nhầm triển khai: \`NoOpPasswordEncoder\` giữ nguyên mật khẩu ở dạng văn bản thô nên chỉ dùng cho ví dụ minh hoạ, còn \`StandardPasswordEncoder\` (SHA-256) đã bị khai tử và sách khuyên không dùng cho dự án mới.
+**Bẫy.** Cái sách nói thẳng ở phần tóm tắt: nhiều filter đặt **tại cùng một vị trí** thì thứ tự thực thi giữa chúng là **không xác định**. Đừng dựa vào thứ tự đó. Bẫy thứ hai: quên gọi \`filterChain.doFilter(request, response)\` trong filter của mình — request chết im lặng, không lỗi, không response.
 
-**Tự kiểm tra.** Trong ba phương thức của giao ước \`PasswordEncoder\`, phương thức nào đã có sẵn triển khai mặc định? Và với \`BCryptPasswordEncoder\`, con số bạn truyền vào phương thức khởi tạo liên hệ thế nào với số vòng lặp thực tế?`,
+**Tự kiểm tra.** Đặt một filter *sau* \`BasicAuthenticationFilter\` thì trong filter đó bạn đọc được gì mà đặt *trước* thì không? "Tại vị trí của" có nghĩa là thay thế filter cũ không?`,
       },
       {
         id: "ss-w3-2",
-        text: "DelegatingPasswordEncoder và bài toán nâng cấp thuật toán",
-        lesson: `**Mục tiêu.** Cấu hình được một \`DelegatingPasswordEncoder\`, và giải thích được nó gỡ bài toán đổi thuật toán giữa chừng bằng cách nào.
+        text: "Các hiện thực `Filter` mà Spring Security cho sẵn",
+        lesson: `**Mục tiêu.** Biết trước khi tự viết filter thì framework đã có sẵn cái gì, để không viết lại thứ đã có.
 
-**Đọc.** [§4.1.4 Nhiều chiến lược mã hóa với DelegatingPasswordEncoder](#/docs/springsec-04) — đọc kịch bản mở đầu (thuật toán cũ lộ lỗ hổng, người dùng cũ không đổi được mật khẩu), rồi Đoạn mã 4.4 và ghi chú về cặp ngoặc nhọn. Cuối mục là lối tắt \`PasswordEncoderFactories.createDelegatingPasswordEncoder()\`. Khung "Encoding so với encrypting so với hashing" nằm ngay sau đó, đọc luôn cho gọn.
+**Đọc.** [§5.5 Các hiện thực filter do Spring Security cung cấp](#/docs/springsec-05). Đọc kèm danh sách filter mà log DEBUG in ra ở phần thực hành — đối chiếu tên trong log với tên trong mục này.
 
-**Bẫy.** Nghĩ \`DelegatingPasswordEncoder\` tự mã hoá. Nó **không thực hiện thuật toán nào cả**: nó đọc tiền tố ở đầu chuỗi băm rồi uỷ quyền cho đúng triển khai tương ứng. Bẫy thứ hai: quên cặp ngoặc nhọn. Khoá trong \`Map\` là \`noop\`, \`bcrypt\`, \`scrypt\`, nhưng chuỗi băm lưu trong cơ sở dữ liệu phải viết là \`{noop}12345\` — sách nói rõ dấu \`{}\` là một phần của tiền tố và phải bao lấy tên khoá.
+**Bẫy.** Tự viết filter để làm việc mà một filter có sẵn đã làm (ghi log request, xử lý CORS, đọc CSRF token). Mỗi filter tự viết là một chỗ có thể sai thứ tự và một chỗ phải tự bảo trì.
 
-**Tự kiểm tra.** Trong Đoạn mã 4.4, tham số đầu tiên truyền cho \`new DelegatingPasswordEncoder(...)\` quyết định điều gì, và nó được dùng trong trường hợp nào? Và nhờ đâu mà mật khẩu cũ trong cơ sở dữ liệu vẫn đăng nhập được sau khi bạn đổi thuật toán cho người dùng mới?`,
+**Tự kiểm tra.** Trong log DEBUG lúc khởi động, filter nào đứng đầu chuỗi và filter nào đứng cuối? Vì sao \`OncePerRequestFilter\` lại là lớp cha đáng dùng cho filter tự viết?`,
       },
       {
         id: "ss-w3-3",
-        text: "Spring Security Crypto: bộ tạo khoá và bộ mã hoá",
-        lesson: `**Mục tiêu.** Biết mô-đun Spring Security Crypto cho sẵn những gì, để khỏi kéo thêm một thư viện mã hoá vào dự án.
+        text: "Viết `AuthenticationProvider` tùy chỉnh",
+        lesson: `**Mục tiêu.** Hiện thực đủ hai phương thức của contract và biết \`supports()\` quyết định điều gì.
 
-**Đọc.** [§4.2 Tận dụng tối đa mô-đun Spring Security Crypto](#/docs/springsec-04) — hai gạch đầu dòng ở đầu mục đã chia sẵn bản đồ. [§4.2.1 Sử dụng bộ tạo khóa](#/docs/springsec-04) cho \`StringKeyGenerator\`, \`BytesKeyGenerator\` và lớp nhà máy \`KeyGenerators\`; [§4.2.2 Mã hóa và giải mã dữ liệu nhạy cảm bằng bộ mã hóa](#/docs/springsec-04) cho \`TextEncryptor\`, \`BytesEncryptor\` và lớp nhà máy \`Encryptors\`. Các đoạn mã ở đây rất ngắn và đứng độc lập — gõ thử từng cái.
+**Đọc.** [§6.1.1 Biểu diễn request trong quá trình authentication](#/docs/springsec-06) → [§6.1.2 Hiện thực logic authentication tùy chỉnh](#/docs/springsec-06) → [§6.1.3 Áp dụng logic authentication tùy chỉnh](#/docs/springsec-06).
 
-**Bẫy.** Trộn lẫn bộ tạo khoá với bộ mã hoá. Sách phân vai ngay từ đầu §4.2: bộ tạo khoá tạo ra khoá cho thuật toán băm hoặc mã hoá, còn bộ mã hoá mới là thứ mã hoá và giải mã dữ liệu. Bẫy thứ hai: dùng \`KeyGenerators.secureRandom()\` ở chỗ cần một khoá ổn định — mỗi lần gọi \`generateKey()\` nó trả về một khoá khác; muốn cùng một giá trị khoá cho mọi lần gọi thì phải dùng \`KeyGenerators.shared()\`.
+**Bẫy.** Viết hết logic vào \`authenticate()\` — tự tìm user, tự so khớp mật khẩu. Sách nhấn mạnh ở tóm tắt: giữ trách nhiệm tách rời, provider **ủy quyền** việc tìm user cho \`UserDetailsService\` và việc kiểm chứng mật khẩu cho \`PasswordEncoder\`. Bẫy thứ hai: \`authenticate()\` trả về đối tượng \`Authentication\` vẫn còn mang mật khẩu thô.
 
-**Tự kiểm tra.** \`Encryptors.standard()\` và \`Encryptors.stronger()\` khác nhau ở điểm nào bên dưới lớp vỏ? Và \`Encryptors.text()\` với \`Encryptors.delux()\` lần lượt dựa trên bộ mã hoá byte nào?`,
+**Tự kiểm tra.** \`supports()\` trả \`false\` cho một kiểu \`Authentication\` thì chuyện gì xảy ra với request? Khi authentication thất bại, bạn trả \`null\` hay ném exception — và hai cách đó khác nhau ở đâu?`,
+      },
+      {
+        id: "ss-w3-4",
+        text: "`SecurityContext`, ba chiến lược lưu giữ, và HTTP Basic vs form login",
+        lesson: `**Mục tiêu.** Lấy được user hiện tại ở bất kỳ tầng nào, và biết chuyện gì xảy ra khi code của bạn tự tạo thread.
+
+**Đọc.** [§6.2.1 Chiến lược lưu giữ cho security context](#/docs/springsec-06) → [§6.2.2 cho lời gọi bất đồng bộ](#/docs/springsec-06) → [§6.2.3 cho ứng dụng standalone](#/docs/springsec-06) → [§6.2.4 \`DelegatingSecurityContextRunnable\`](#/docs/springsec-06) → [§6.2.5 \`DelegatingSecurityContextExecutorService\`](#/docs/springsec-06), rồi [§6.3.1 HTTP Basic](#/docs/springsec-06) và [§6.3.2 form-based login](#/docs/springsec-06).
+
+**Bẫy.** Cái sách cảnh báo rõ nhất: \`MODE_INHERITABLETHREADLOCAL\` chỉ áp dụng cho thread **do Spring quản lý**. Thread bạn tự \`new Thread(...)\` sẽ không có security context, và \`SecurityContextHolder.getContext().getAuthentication()\` trả về rỗng — đó là lúc cần \`DelegatingSecurityContextRunnable\` / \`...Callable\` / \`...ExecutorService\`.
+
+**Tự kiểm tra.** Ba chế độ \`MODE_THREADLOCAL\`, \`MODE_INHERITABLETHREADLOCAL\`, \`MODE_GLOBAL\` khác nhau ở phạm vi nào? Dùng chung \`formLogin()\` và \`httpBasic()\` trong một ứng dụng có được không, và khi đó request không kèm credential nhận về gì?`,
       },
     ],
   },
   {
     id: "ss-w4",
     week: "Tuần 4",
-    title: "Bộ lọc & phương thức xác thực",
-    goal: "Chèn được bộ lọc của bạn vào đúng chỗ trong chuỗi, và thay được logic xác thực mặc định bằng logic của riêng bạn.",
-    practice: "Viết một `Filter` kiểm tra header `Request-Id` và gắn nó trước `BasicAuthenticationFilter`; viết tiếp một bộ lọc ghi nhật ký gắn sau nó, rồi chuyển bộ lọc ghi nhật ký sang kế thừa `OncePerRequestFilter`. Sau đó viết một `AuthenticationProvider` riêng và in ra tên người dùng lấy từ `SecurityContext` trong controller.",
+    title: "Authorization ở mức endpoint",
+    goal: "Phân biệt dứt khoát authority và role, và chọn đúng matcher để áp quy tắc lên đúng tập request — không rộng hơn, không hẹp hơn.",
+    practice: "Trong một ứng dụng có ba endpoint, cấu hình: một endpoint mở cho tất cả, một chỉ cho authority `read`, một chỉ cho role `ADMIN`. Rồi viết `curl` cho cả bốn trường hợp (không credential, sai credential, đúng nhưng thiếu quyền, đủ quyền) và ghi lại status nhận được.",
     resources: [
-      { label: "SSIA 05 — Bảo mật ứng dụng web bắt đầu từ các bộ lọc", href: "#/docs/springsec-05" },
-      { label: "SSIA 06 — Triển khai các phương thức xác thực", href: "#/docs/springsec-06" },
-      { label: "Nhắc lại vai trò các thành phần: SSIA 02 §2.2", href: "#/docs/springsec-02" },
-      { label: "docs.spring.io — Architecture", href: "https://docs.spring.io/spring-security/reference/servlet/architecture.html" },
+      { label: "SSIA 07 — Authorization ở mức endpoint: hạn chế quyền truy cập", href: "#/docs/springsec-07" },
+      { label: "SSIA 08 — Authorization ở mức endpoint: áp dụng các hạn chế", href: "#/docs/springsec-08" },
     ],
     items: [
       {
         id: "ss-w4-1",
-        text: "Chuỗi bộ lọc và cách chèn bộ lọc của bạn vào đúng chỗ",
-        lesson: `**Mục tiêu.** Viết được một \`Filter\` và đặt nó vào đúng chỗ trong chuỗi bằng \`addFilterBefore()\`, \`addFilterAfter()\` hoặc \`addFilterAt()\`.
+        text: "Authority và role — hai thứ khác nhau, một cơ chế",
+        lesson: `**Mục tiêu.** Nói được role thực chất là gì dưới lớp vỏ, và vì sao \`hasRole("ADMIN")\` lại đi cùng authority \`ROLE_ADMIN\`.
 
-**Đọc.** [§5.1 Triển khai các bộ lọc trong kiến trúc Spring Security](#/docs/springsec-05) trước, để nắm ba tham số của \`doFilter()\` và ý niệm thứ tự. Rồi làm lần lượt [§5.2 Thêm một bộ lọc vào trước một bộ lọc hiện có trong chuỗi](#/docs/springsec-05), [§5.3 Thêm một bộ lọc vào sau một bộ lọc hiện có trong chuỗi](#/docs/springsec-05) và [§5.4 Thêm một bộ lọc tại vị trí của một bộ lọc khác trong chuỗi](#/docs/springsec-05) — mỗi mục là một dự án chạy được, đừng chỉ đọc.
+**Đọc.** [§7.1.1 Hạn chế truy cập dựa trên authority của user](#/docs/springsec-07) → [§7.1.2 Hạn chế truy cập dựa trên role của user](#/docs/springsec-07).
 
-**Bẫy.** Nghĩ "thêm tại vị trí" nghĩa là "thay thế". §5.1 cảnh báo bạn có thể có hai hay nhiều bộ lọc ở cùng một vị trí, và khi đó **thứ tự gọi chúng không được định nghĩa trước** — bộ lọc cũ vẫn nằm nguyên đó. Bẫy thứ hai: quên gọi \`filterChain.doFilter(request, response)\` ở nhánh hợp lệ. Không gọi thì yêu cầu dừng ngay tại bộ lọc của bạn — đó chính là cách Đoạn mã 5.2 chặn yêu cầu thiếu header \`Request-Id\` và trả về 400.
+**Bẫy.** Cái bẫy kinh điển: khai authority là \`"ADMIN"\` rồi cấu hình \`hasRole("ADMIN")\` — không khớp, vì role được lưu dưới dạng authority có tiền tố \`ROLE_\`. Hoặc ngược lại: khai \`"ROLE_ADMIN"\` rồi gọi \`hasRole("ROLE_ADMIN")\`, thành \`ROLE_ROLE_ADMIN\`. Đọc kỹ chỗ sách nói ai thêm tiền tố và thêm lúc nào.
 
-**Tự kiểm tra.** Trong ví dụ §5.2, vì sao bộ lọc kiểm tra header phải nằm **trước** \`BasicAuthenticationFilter\` chứ không phải sau? Và ở §5.4, ứng dụng trả về mã trạng thái nào khi giá trị header \`Authorization\` không khớp khoá tĩnh?`,
+**Tự kiểm tra.** \`hasAuthority("ROLE_ADMIN")\` và \`hasRole("ADMIN")\` có tương đương không? Khi nào bạn nên mô hình hoá bằng authority mịn thay vì bằng role?`,
       },
       {
         id: "ss-w4-2",
-        text: "Kế thừa lớp trừu tượng của Spring Security để viết bộ lọc",
-        lesson: `**Mục tiêu.** Biết khi nào nên kế thừa một lớp trừu tượng của Spring Security thay vì triển khai thẳng giao diện \`Filter\`.
+        text: "`permitAll()`, `denyAll()` và thứ tự authentication → authorization",
+        lesson: `**Mục tiêu.** Giải thích được vì sao một endpoint \`permitAll()\` vẫn có thể trả 401, và dùng \`denyAll()\` đúng mục đích.
 
-**Đọc.** [§5.5 Các triển khai bộ lọc do Spring Security cung cấp](#/docs/springsec-05) — mục ngắn, đọc trọn vẹn: \`GenericFilterBean\`, \`OncePerRequestFilter\`, Đoạn mã 5.9 (viết lại bộ lọc ghi nhật ký của §5.3), và ba gạch đầu dòng quan sát ở cuối. Chú ý gạch cuối cùng, về yêu cầu bất đồng bộ và yêu cầu điều phối lỗi.
+**Đọc.** [§7.1.3 Chặn quyền truy cập tới tất cả endpoint](#/docs/springsec-07) và đọc lại phần đầu chương về quan hệ authentication–authorization.
 
-**Bẫy.** Tin rằng một bộ lọc đã nằm trong chuỗi thì chạy đúng một lần cho mỗi yêu cầu. §5.5 nói thẳng: khi bạn thêm một bộ lọc vào chuỗi, **framework không đảm bảo nó chỉ được gọi duy nhất một lần** — đó chính là lý do \`OncePerRequestFilter\` tồn tại, và là lý do bộ lọc ghi nhật ký ở §5.3 có thể ghi trùng cùng một yêu cầu. Bẫy thứ hai là chọn nhầm lớp cha: kế thừa \`GenericFilterBean\` theo quán tính. Tác giả nói ông đã thấy quá nhiều lập trình viên làm vậy cho những tính năng chẳng đòi hỏi thêm gì, và khi được hỏi tại sao thì chính họ cũng không biết.
+**Bẫy.** Tưởng \`permitAll()\` nghĩa là "bỏ qua bảo mật cho endpoint này". Không phải. Authorization luôn chạy **sau** authentication, nên nếu request kèm credential sai, nó chết ở bước authentication và không bao giờ tới được quy tắc \`permitAll()\`. Bẫy thứ hai: dùng \`denyAll()\` cho endpoint "nội bộ" rồi ngạc nhiên vì chính service của mình cũng không gọi được — \`denyAll()\` chặn tất cả, không có ngoại lệ.
 
-**Tự kiểm tra.** Khi kế thừa \`OncePerRequestFilter\`, bạn ghi đè phương thức nào thay cho \`doFilter()\`? Và nếu muốn một bộ lọc đã nằm trong chuỗi bỏ qua một số yêu cầu nhất định, §5.5 chỉ bạn ghi đè phương thức nào?`,
+**Tự kiểm tra.** Gọi một endpoint \`permitAll()\` kèm mật khẩu sai thì nhận status nào, vì sao? 401 và 403 khác nhau thế nào về ý nghĩa?`,
       },
       {
         id: "ss-w4-3",
-        text: "AuthenticationProvider — viết logic xác thực của riêng bạn",
-        lesson: `**Mục tiêu.** Viết được một \`AuthenticationProvider\` cho cơ chế xác thực không dựa trên cặp tên đăng nhập và mật khẩu.
+        text: "Chọn request bằng `requestMatchers()` — theo path và theo HTTP method",
+        lesson: `**Mục tiêu.** Áp được quy tắc khác nhau cho các request khác nhau, và đọc được thứ tự các quy tắc trong cấu hình.
 
-**Đọc.** [§6.1 Tìm hiểu về AuthenticationProvider](#/docs/springsec-06) — §6.1.1 cho giao diện \`Authentication\` (sách chỉ yêu cầu nhớ ba phương thức, đừng ôm cả sáu), §6.1.2 cho hai phương thức của \`AuthenticationProvider\` và phép so sánh với ổ khoá cửa, §6.1.3 làm theo từng bước dự án \`ssia-ch6-ex1\`.
+**Đọc.** [§8.1 Dùng phương thức \`requestMatchers()\` để chọn endpoint](#/docs/springsec-08) → [§8.2 Chọn request để áp dụng hạn chế authorization](#/docs/springsec-08).
 
-**Bẫy.** Trả về một đối tượng \`Authentication\` chưa hoàn tất. Sách nêu rõ hai lối ra của \`authenticate()\`: thành công thì trả về một thực thể mà \`isAuthenticated()\` cho \`true\` và mang đầy đủ thông tin chi tiết; thất bại thì ném \`AuthenticationException\`. Bẫy thứ hai: bỏ qua \`supports()\` vì tưởng nó phụ — \`AuthenticationManager\` dựa vào nó để chọn bộ cung cấp, và nếu không bộ cung cấp nào nhận diện được đối tượng \`Authentication\`, hoặc tất cả đều từ chối, kết quả vẫn là một \`AuthenticationException\`.
+**Bẫy.** Thứ tự khai báo có ý nghĩa: quy tắc khớp **đầu tiên** thắng. Đặt \`anyRequest().permitAll()\` lên trên thì mọi quy tắc phía dưới thành vô nghĩa. Bẫy thứ hai: quên rằng \`GET /product\` và \`POST /product\` là hai request khác nhau — cấu hình theo path mà không kèm HTTP method sẽ mở cả hai.
 
-**Tự kiểm tra.** Phương thức nào của giao diện \`Authentication\` cho biết quá trình xác thực đã hoàn tất hay chưa? Và \`supports()\` trả về \`true\` đã đủ bảo đảm bộ cung cấp sẽ xác thực được yêu cầu đó chưa?`,
+**Tự kiểm tra.** Cùng một path nhưng muốn \`GET\` cho mọi user đã đăng nhập và \`DELETE\` chỉ cho admin thì viết thế nào? Nếu không có dòng \`anyRequest()\` nào thì những request không khớp quy tắc nào sẽ ra sao?`,
       },
       {
         id: "ss-w4-4",
-        text: "SecurityContext, chiến lược lưu giữ, HTTP Basic và form login",
-        lesson: `**Mục tiêu.** Lấy được người dùng đang đăng nhập trong controller, và biết phải đổi chiến lược nào khi công việc chạy sang luồng khác.
+        text: "Khi path expression không đủ: matcher bằng regex",
+        lesson: `**Mục tiêu.** Biết lúc nào phải bỏ path matcher để chuyển sang regex, và trả giá gì khi làm vậy.
 
-**Đọc.** [§6.2 Sử dụng SecurityContext](#/docs/springsec-06) — ba chiến lược ở đầu mục là phần cốt lõi; làm §6.2.1, rồi §6.2.2 nếu bạn có endpoint \`@Async\`. §6.2.3 tới §6.2.5 để dành cho lúc thực sự cần. Sau đó [§6.3 Tìm hiểu về xác thực HTTP Basic và đăng nhập bằng biểu mẫu](#/docs/springsec-06): §6.3.1 cho \`realmName()\` và \`authenticationEntryPoint()\`, §6.3.2 cho \`formLogin()\` và \`defaultSuccessUrl()\`.
+**Đọc.** [§8.3 Dùng biểu thức chính quy với request matcher](#/docs/springsec-08).
 
-**Bẫy.** Gọi \`SecurityContextHolder.getContext()\` bên trong một luồng do bạn tự tạo rồi ngạc nhiên vì không thấy gì. Chiến lược mặc định là \`MODE_THREADLOCAL\`: mỗi luồng giữ ngữ cảnh của riêng nó. \`MODE_INHERITABLETHREADLOCAL\` mới sao chép ngữ cảnh sang luồng tiếp theo cho lời gọi bất đồng bộ, còn \`MODE_GLOBAL\` cho cả ứng dụng dùng chung một ngữ cảnh duy nhất.
+**Bẫy.** Dùng regex khi path expression vẫn làm được — regex khó đọc, khó test, và một dấu \`.\` quên escape có thể mở rộng phạm vi khớp ra ngoài ý định. Sách đặt regex ở cuối chương là có lý do: đó là phương án khi các cách trước không đủ, không phải mặc định.
 
-**Tự kiểm tra.** Ngoài \`SecurityContextHolder.getContext()\`, sách còn chỉ cách nào ngắn hơn để lấy đối tượng \`Authentication\` trong một phương thức của controller? Và chỉ đổi \`httpBasic()\` thành \`formLogin()\` thì Spring Security tự cấu hình thêm những trang nào cho bạn?`,
+**Tự kiểm tra.** Nêu một yêu cầu authorization mà path expression không diễn đạt nổi nhưng regex thì được. Khi dùng regex matcher, bạn kiểm chứng nó đúng bằng cách nào trước khi lên production?`,
       },
     ],
   },
   {
     id: "ss-w5",
     week: "Tuần 5",
-    title: "Phân quyền cấp endpoint",
-    goal: "Viết được quy tắc phân quyền cho từng nhóm endpoint, và đọc được một cấu hình phân quyền dài mà không đoán mò thứ tự áp dụng.",
-    practice: "Dựng ứng dụng bốn endpoint `/a` (GET và POST), `/a/b`, `/a/b/c` như §8.2 và chạy hết các kịch bản trong mục, mỗi lần ghi lại mã trạng thái nhận được. Sau đó thử đảo `anyRequest()` lên trên một quy tắc cụ thể hơn và xem chuyện gì xảy ra.",
+    title: "CSRF và CORS",
+    goal: "Hiểu hai cơ chế thường bị tắt bừa nhất: giải thích được CSRF tấn công kiểu gì và Spring Security chặn nó ở đâu, và nói được CORS là nới lỏng chứ không phải siết chặt.",
+    practice: "Dựng một form HTML gửi POST tới ứng dụng của bạn: lần một không kèm CSRF token (xem nó bị chặn), lần hai có token. Sau đó viết một trang tĩnh chạy ở cổng khác gọi API bằng `fetch` để tự mình thấy lỗi CORS trong console trình duyệt, rồi sửa bằng cấu hình.",
     resources: [
-      { label: "SSIA 07 — Phân quyền cấp endpoint: giới hạn truy cập", href: "#/docs/springsec-07" },
-      { label: "SSIA 08 — Phân quyền cấp endpoint: áp dụng các giới hạn", href: "#/docs/springsec-08" },
-      { label: "Nhắc lại GrantedAuthority: SSIA 03 §3.2", href: "#/docs/springsec-03" },
-      { label: "docs.spring.io — Authorize HttpServletRequests", href: "https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html" },
+      { label: "SSIA 09 — Cấu hình bảo vệ CSRF", href: "#/docs/springsec-09" },
+      { label: "SSIA 10 — Cấu hình CORS", href: "#/docs/springsec-10" },
+      { label: "SSIA 05 — Filter chain (CSRF và CORS đều là filter)", href: "#/docs/springsec-05" },
     ],
     items: [
       {
         id: "ss-w5-1",
-        text: "Quyền hạn (authority) khác vai trò (role) ở đâu",
-        lesson: `**Mục tiêu.** Phân biệt được quyền hạn với vai trò ở cả mức khái niệm lẫn mức mã nguồn, và chọn đúng phương thức cấu hình cho từng loại.
+        text: "CSRF hoạt động thế nào và Spring Security chặn nó ở đâu",
+        lesson: `**Mục tiêu.** Kể lại được kịch bản tấn công CSRF bằng lời của bạn, và chỉ đúng vào filter chịu trách nhiệm chặn nó.
 
-**Đọc.** [§7.1 Giới hạn truy cập dựa trên quyền hạn và vai trò](#/docs/springsec-07) — §7.1.1 cho \`hasAuthority()\`, \`hasAnyAuthority()\` và \`access()\`; §7.1.2 cho \`hasRole()\`, \`hasAnyRole()\` và phép so sánh Đoạn mã 7.9 với Đoạn mã 7.11; §7.1.3 cho \`denyAll()\` cùng lý do tồn tại của nó. Khung "Tìm hiểu thêm về phương thức access()" cho bạn một ví dụ SpEL chặn truy cập theo giờ. Lưu ý trước: §7.1.1 là mục dính nhiều dòng bị cắt cụt \`[…]\` thứ ba toàn bản dịch (7 dấu, rơi chủ yếu vào chữ ký \`securityFilterChain(HttpSecurity http)\` của các đoạn mã), nên bám vào phần diễn giải văn xuôi quanh mỗi đoạn mã thay vì tin nguyên văn đoạn mã.
+**Đọc.** [§9.1 Bảo vệ CSRF hoạt động thế nào trong Spring Security](#/docs/springsec-09) → [§9.2 Dùng bảo vệ CSRF trong các tình huống thực tế](#/docs/springsec-09).
 
-**Bẫy.** Tiền tố \`ROLE_\`. Sách nói vai trò và quyền hạn dùng chung một khế ước \`GrantedAuthority\`, và ở tầng dưới **chính tiền tố \`ROLE_\` là dấu hiệu phân biệt hai thứ**. Từ đó sinh ra ba quy tắc rất dễ nhầm: khai bằng \`authorities()\` thì phải viết đủ \`ROLE_ADMIN\`; khai bằng \`roles()\` thì tuyệt đối không được kèm tiền tố, kèm vào là ném ngoại lệ; còn trong cấu hình thì gọi \`hasRole("ADMIN")\`, cũng không tiền tố.
+**Bẫy.** Tắt CSRF vì "API của tôi là REST nên không cần". Điều kiện thật sự không phải là REST hay không, mà là trình duyệt có tự động đính kèm thông tin xác thực (cookie session) vào request hay không. API dùng token trong header \`Authorization\` thì không bị CSRF; API dùng cookie session thì có, dù nó có "REST" đến đâu.
 
-**Tự kiểm tra.** Người dùng đã xác thực thành công nhưng thiếu vai trò được yêu cầu thì nhận mã trạng thái nào? Và sách xếp vai trò hay quyền hạn ở mức bao quát (coarse-grained) hơn?`,
+**Tự kiểm tra.** Vì sao CSRF chỉ nhắm vào các request làm thay đổi trạng thái chứ hiếm khi nhắm vào \`GET\`? Điểm vào của logic bảo vệ CSRF trong kiến trúc Spring Security là gì?`,
       },
       {
         id: "ss-w5-2",
-        text: "Dùng requestMatchers() để chọn đúng endpoint",
-        lesson: `**Mục tiêu.** Gắn được quy tắc phân quyền cho từng endpoint cụ thể, và viết cấu hình tường minh thay vì trông cậy vào hành vi mặc định.
+        text: "Tùy chỉnh bảo vệ CSRF qua ba contract",
+        lesson: `**Mục tiêu.** Biết ba điểm mở rộng và chọn đúng cái cần thay khi kiến trúc của bạn không hợp với mặc định.
 
-**Đọc.** [§8.1 Sử dụng phương thức requestMatchers() để lựa chọn endpoint](#/docs/springsec-08) — làm dự án hai endpoint \`/hello\` và \`/ciao\` với John (\`ADMIN\`) và Jane (\`MANAGER\`), chạy đủ bốn tổ hợp curl. Rồi thêm endpoint \`/hola\` (Đoạn mã 8.3) để thấy hành vi mặc định, và viết nó ra tường minh bằng Đoạn mã 8.4. Khung "Chưa xác thực so với Xác thực thất bại" ở cuối mục đọc kỹ.
+**Đọc.** [§9.3 Tùy chỉnh bảo vệ CSRF](#/docs/springsec-09). Ba contract cần nhớ: \`CsrfToken\` (bản thân token), \`CsrfTokenRepository\` (tạo, lưu, nạp token), \`CsrfTokenRequestHandler\` (đặt token lên request).
 
-**Bẫy.** Đặt \`anyRequest()\` lên trước các quy tắc cụ thể. Sách ghi chú thứ tự các quy tắc phải đi **từ cụ thể đến tổng quát**, nên \`anyRequest()\` không được gọi trước một bộ khớp cụ thể hơn. Bẫy thứ hai tinh vi hơn: một endpoint đã \`permitAll()\` vẫn có thể trả về 401 — gọi nó **không** kèm thông tin xác thực thì qua, nhưng gọi kèm thông tin xác thực **sai** thì ứng dụng vẫn chạy quá trình xác thực và trượt.
+**Bẫy.** Lưu CSRF token vào session mặc định rồi chạy nhiều instance sau load balancer không có session dính. Đó chính là lúc cần \`CsrfTokenRepository\` tùy chỉnh — lưu token ở nơi mọi instance đọc được, thay vì tắt CSRF cho xong.
 
-**Tự kiểm tra.** Sau khi bạn cấu hình \`/hello\` và \`/ciao\`, endpoint \`/hola\` mới thêm mặc định mở cho ai? Và làm sao viết điều đó ra một cách tường minh trong lớp cấu hình?`,
+**Tự kiểm tra.** Nếu frontend là một SPA gọi API cùng domain bằng cookie session, bạn cần thay contract nào trong ba cái trên? Token được sinh ra ở request nào và được kiểm ở request nào?`,
       },
       {
         id: "ss-w5-3",
-        text: "Chọn yêu cầu để áp hạn chế phân quyền",
-        lesson: `**Mục tiêu.** Chọn đúng biến thể \`requestMatchers()\` và viết đúng biểu thức đường dẫn cho cả một nhóm yêu cầu.
+        text: "CORS — nới lỏng có kiểm soát, bằng `@CrossOrigin` hoặc tập trung",
+        lesson: `**Mục tiêu.** Nói đúng bản chất: trình duyệt mặc định **cấm** cross-origin, và CORS là cách bạn cho phép có chọn lọc. Cấu hình được cả hai kiểu.
 
-**Đọc.** [§8.2 Lựa chọn các yêu cầu để áp dụng hạn chế phân quyền](#/docs/springsec-08) — dựng dự án \`ssia-ch8-ex2\` với bốn endpoint \`/a\` (GET và POST), \`/a/b\`, \`/a/b/c\`, rồi chạy hết các kịch bản cấu hình trong mục và ghi lại mã trạng thái mỗi lần. Kết lại bằng Bảng 8.1 ở cuối mục — bảng này đáng chép ra giấy dán cạnh màn hình. Lưu ý trước: §8.2 là mục dính nhiều dòng bị cắt cụt \`[…]\` nhiều thứ nhì toàn bản dịch (11 dấu, rải trên cả chữ ký phương thức lẫn chú thích cuối dòng như \`// Đối với các yêu…\`), nên đọc bù bằng Bảng 8.1 mỗi khi một đoạn mã hoặc chú thích bị hụt.
+**Đọc.** [§10.1 CORS hoạt động thế nào?](#/docs/springsec-10) → [§10.2 Áp dụng chính sách CORS bằng annotation \`@CrossOrigin\`](#/docs/springsec-10) → [§10.3 Áp dụng CORS bằng \`CorsConfigurer\`](#/docs/springsec-10).
 
-**Bẫy.** Lẫn \`*\` với \`**\`. Theo Bảng 8.1, \`/a/*\` thay cho **một** thành phần đường dẫn nên khớp \`/a/b\` nhưng không khớp \`/a/b/c\`; còn \`/a/**\` thay cho nhiều thành phần nên khớp cả \`/a\`, \`/a/b\` lẫn \`/a/b/c\`. Bẫy thứ hai: dùng biến thể \`requestMatchers(String... patterns)\` rồi ngầm hiểu nó chỉ áp cho GET — không kèm \`HttpMethod\` thì ràng buộc tự động áp cho **mọi** phương thức HTTP gọi tới đường dẫn đó.
+**Bẫy.** Nghĩ CORS là một cơ chế bảo mật phía server bảo vệ API của bạn. Nó là quy ước của **trình duyệt**; \`curl\` và mọi client không phải trình duyệt bỏ qua nó hoàn toàn. Nên cấu hình CORS rộng rãi không "mở toang" API — nhưng cũng đừng nhầm rằng CORS chặt sẽ bảo vệ được API. Bẫy thứ hai: rắc \`@CrossOrigin\` khắp controller rồi không ai biết chính sách thật của hệ thống là gì.
 
-**Tự kiểm tra.** Bạn muốn GET \`/a\` phải xác thực còn POST \`/a\` thì ai gọi cũng được — cần dùng biến thể \`requestMatchers()\` nào? Và theo Bảng 8.1, biểu thức \`/a/{param:regex}\` khớp trong trường hợp nào?`,
-      },
-      {
-        id: "ss-w5-4",
-        text: "Bộ khớp yêu cầu bằng biểu thức chính quy",
-        lesson: `**Mục tiêu.** Nhận ra lúc biểu thức đường dẫn hết đủ dùng, và viết được một bộ khớp regex cho quy tắc nhìn vào nhiều biến đường dẫn cùng lúc.
-
-**Đọc.** [§8.3 Sử dụng biểu thức chính quy với bộ khớp yêu cầu](#/docs/springsec-08) — bắt đầu từ ví dụ \`/email/{email:...}\` viết regex ngay bên trong biểu thức đường dẫn, rồi sang endpoint \`/video/{country}/{language}\` và Đoạn mã 8.13 (nguồn tự mâu thuẫn về tên dự án ví dụ ở đoạn này — §8.3 gán \`/video\` cho cả \`ssia-ch8-ex5\` lẫn \`ssia-ch8-ex6\` ở hai chỗ khác nhau, còn \`/email\` mới là ví dụ thực sự nằm trong \`ssia-ch8-ex6\`; đừng lấy tên dự án làm chuẩn). Chạy thử cả hai người dùng John và Jane trên vài tổ hợp quốc gia — ngôn ngữ.
-
-**Bẫy.** Dùng regex ở mọi chỗ vì nó mạnh hơn. Sách nói thẳng điểm yếu lớn nhất của regex là khó đọc, và phần lớn trường hợp biểu thức đường dẫn là đủ; chỉ chuyển sang regex khi quy tắc phải soi nhiều khuôn mẫu đường dẫn và nhiều biến đường dẫn cùng lúc. Bẫy thứ hai: tưởng yêu cầu không khớp bộ khớp sẽ rơi vào 404. Trong ví dụ \`/email/{email:...}\`, gọi với \`jane@example.net\` trả về **401 Unauthorized** — nó không khớp quy tắc \`permitAll()\` nên rơi xuống \`anyRequest().denyAll()\` đứng sau.
-
-**Tự kiểm tra.** Trong Đoạn mã 8.13, John chỉ có quyền \`read\` còn Jane có thêm \`premium\` — mỗi người gọi được nhóm đường dẫn nào? Và theo §8.3, hai loại yêu cầu nghiệp vụ nào khiến tác giả khuyên chuyển từ biểu thức đường dẫn sang bộ khớp regex?`,
+**Tự kiểm tra.** Vì sao sách khuyên cấu hình CORS tập trung bằng \`cors()\` của \`HttpSecurity\` thay vì rắc annotation? Request preflight \`OPTIONS\` xuất hiện khi nào?`,
       },
     ],
   },

@@ -142,14 +142,14 @@ export const fieldGuides = {
       "Biết dùng `curl` hoặc Postman để gửi request có header tuỳ ý.",
     ],
     steps: [
-      { id: "ss-1", title: "Đủ nền Spring", desc: "Tự đánh giá: viết được controller, bean, `@Configuration`, hiểu context. Chưa vững thì sang lĩnh vực Spring Start Here trước rồi quay lại tick bước này.", href: "#/docs/springsec-00", done: { kind: "manual" } },
-      { id: "ss-2", title: "Tuần 1–5: xác thực, người dùng, mật khẩu, filter, phân quyền endpoint", desc: "Nửa đầu là xương sống: UserDetailsService, PasswordEncoder, filter chain, authorizeHttpRequests. Mỗi mục có bẫy và câu tự kiểm tra.", href: "#/roadmap/springsec", done: { kind: "track", id: "springsec", pct: 50 } },
-      { id: "ss-3", title: "Tuần 6–9: CSRF/CORS, phân quyền phương thức, OAuth 2, reactive & test", desc: "Phần thường bị làm sai ở production. Riêng OAuth 2 / OIDC (tuần 8) nên dựng authorization server thật để thử.", href: "#/roadmap/springsec", done: { kind: "track", id: "springsec" } },
-      { id: "ss-4", title: "Đọc trọn bộ 21 tệp", desc: "Lời giới thiệu, 18 chương và 2 phụ lục. Track chỉ trỏ vào 17 chương; đọc nốt phần còn lại rồi đánh dấu đã đọc cho từng tệp.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
+      { id: "ss-1", title: "Đủ nền Spring", desc: "Tự đánh giá: viết được controller, bean, `@Configuration`, hiểu context. Chưa vững thì sang lĩnh vực Spring Start Here trước rồi quay lại tick bước này.", done: { kind: "manual" } },
+      { id: "ss-2", title: "Tuần 1–5: user, mật khẩu, filter chain, authorization endpoint, CSRF/CORS", desc: "Chương 2–10 là xương sống: UserDetailsService, PasswordEncoder, filter chain, authorizeHttpRequests. Mỗi mục có bẫy và câu tự kiểm tra.", href: "#/roadmap/springsec", done: { kind: "track", id: "springsec", pct: 50 } },
+      { id: "ss-3", title: "Tuần 6–9: method security, OAuth 2 / OIDC, reactive & kiểm thử", desc: "Chương 11–18 — phần thường bị làm sai ở production. Tuần 8 dựng đủ ba vai OAuth 2 (authorization server, resource server, client) bằng chính code của sách.", href: "#/roadmap/springsec", done: { kind: "track", id: "springsec" } },
+      { id: "ss-4", title: "Đọc trọn 17 chương", desc: "Chương 2–18, có đủ hình figure trích từ bản gốc. Lộ trình phủ hết 17 chương; đánh dấu đã đọc cho từng chương khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
       { id: "ss-5", title: "Một PR bảo mật ở dự án thật", desc: "Ví dụ: chuyển một service sang OAuth 2 resource server, hoặc thêm phân quyền cấp phương thức có test. Tự đánh dấu khi PR được review.", done: { kind: "manual" } },
     ],
     method: [
-      { title: "Chạy ví dụ của sách trong dự án của bạn", desc: "Không tạo 18 dự án mẫu; mang cấu hình của chương đang đọc vào một dự án duy nhất và xem nó phá gì." },
+      { title: "Chạy ví dụ của sách trong dự án của bạn", desc: "Không tạo 17 dự án mẫu; mang cấu hình của chương đang đọc vào một dự án duy nhất và xem nó phá gì." },
       { title: "Đọc filter chain bằng log DEBUG", desc: "Bật `logging.level.org.springframework.security=DEBUG` từ tuần 4 để thấy filter nào chạy, theo thứ tự nào." },
       { title: "Viết test cho mọi cấu hình", desc: "Chương kiểm thử ở tuần 9 nhưng nên dùng `@WithMockUser` và `MockMvc` từ tuần 5 — cấu hình bảo mật không có test là cấu hình sẽ vỡ khi refactor." },
     ],
@@ -559,10 +559,10 @@ export const trackGuides = {
     after: ["Ôn flashcards và trắc nghiệm của lĩnh vực.", "Viết ba chương trình nhỏ (shell, malloc, server TCP).", "Đọc lại bài 04 của Java Scalability để nối JVM với kernel."],
   },
   springsec: {
-    rhythm: "9 tuần, 3–4 mục mỗi tuần bám 17 chương chính; lời giới thiệu, chương 14 và hai phụ lục xuất hiện ở tài nguyên tuần. Mỗi mục: mục tiêu, đọc gì, bẫy, tự kiểm tra.",
+    rhythm: "9 tuần, 2–4 mục mỗi tuần, phủ đủ 17 chương (2–18) — không chương nào chỉ nằm ở tài nguyên tuần. Mỗi mục: mục tiêu, đọc gì, bẫy, tự kiểm tra.",
     before: ["Dự án Spring Boot có REST controller để áp cấu hình từng chương.", "Xong Spring Start Here hoặc tự tin về bean, context, `@Configuration`.", "Bật `logging.level.org.springframework.security=DEBUG` sẵn."],
     during: ["Mang cấu hình của chương vào dự án của bạn, không tạo dự án mới mỗi chương.", "Viết ít nhất một test `MockMvc` cho mỗi cấu hình từ tuần 5.", "Tuần 8 (OAuth 2): dựng authorization server thật (Spring Authorization Server hoặc Keycloak)."],
-    after: ["Đọc nốt chương 14 và hai phụ lục.", "Một PR bảo mật ở dự án thật.", "Quay lại lĩnh vực Senior Java giai đoạn 1 nếu đang theo lộ trình đó."],
+    after: ["Dựng lại đủ ba vai OAuth 2 của tuần 8 mà không nhìn sách.", "Một PR bảo mật ở dự án thật.", "Quay lại lĩnh vực Senior Java giai đoạn 1 nếu đang theo lộ trình đó."],
   },
   "sj-gd1": {
     rhythm: "26 tuần, mỗi khối 2 tuần có 5–7 việc cụ thể; mỗi việc là MỘT bước trong “Cách thực hiện” của tài liệu giai đoạn. Khối cuối “Nghiệm thu” là cổng sang giai đoạn 2.",

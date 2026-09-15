@@ -32,7 +32,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | `kafka` | `kafka/` | Bản dịch *Kafka: The Definitive Guide* 2e (O'Reilly) — chương 2–14, 47 ảnh, PDF |
 | `modern-concurrency` | `modern-concurrency/` | Bản dịch *Modern Concurrency in Java* (O'Reilly) — 8 chương, 19 ảnh, PDF |
 | `spring-start` | `spring-start/` | Bản dịch *Spring Start Here* (Spilcă, Manning 2021) — 15 chương + hướng dẫn học, 179 ảnh, PDF |
-| `spring-security` | `spring-security/` | Bản dịch *Spring Security in Action* 2e (Spilcă, Manning 2024) — 21 tệp |
+| `spring-security` | `spring-security/` | Bản dịch *Spring Security in Action* 2e (Spilca, Manning) — 17 chương (2–18), 142 ảnh, PDF |
 | `wgjd` | `wgjd/` | Bản dịch *The Well-Grounded Java Developer* 2e (Evans, Clark, Verburg — Manning) — 16 chương (1–8, 11–18), 93 ảnh, PDF |
 | `jcip` | `jcip/` | Bản dịch *Java Concurrency in Practice* (Goetz, Peierls, Bloch, Bowbeer, Holmes, Lea — Addison-Wesley 2006) — 13 chương (2–8, 10, 11, 13–16) + phụ lục A, 204 ảnh, PDF |
 | `ocnj` | `ocnj/` | Bản dịch *Optimizing Cloud Native Java* 2e (Evans, Gough, Newland — O'Reilly) — 15 chương, 116 ảnh, PDF |
