@@ -37,7 +37,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | `jcip` | `jcip/` | Bản dịch *Java Concurrency in Practice* (Goetz, Peierls, Bloch, Bowbeer, Holmes, Lea — Addison-Wesley 2006) — 13 chương (2–8, 10, 11, 13–16) + phụ lục A, 204 ảnh, PDF |
 | `ocnj` | `ocnj/` | Bản dịch *Optimizing Cloud Native Java* 2e (Evans, Gough, Newland — O'Reilly) — 15 chương, 116 ảnh, PDF |
 | `jpa` | `jpa/` | Bản dịch *Java Persistence with Spring Data and Hibernate* (Tudose — Manning) — 20 chương, 127 ảnh, PDF |
-| `senior-java` | `senior-java/` | Lộ trình Senior Java 24 tháng — 5 tài liệu |
+| `senior-java` | `senior-java/` | Lộ trình Senior Java 24 tháng — 6 tài liệu |
 
 Các bản dịch sách thương mại **không** phải giấy phép mở; chỉ *System Programming Coursebook* là CC BY 4.0.
 

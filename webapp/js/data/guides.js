@@ -175,6 +175,7 @@ export const fieldGuides = {
       "Từ giai đoạn 2: một VPS ≈ 5 USD/tháng; giai đoạn 3: ngân sách cloud 30–50 USD kèm budget alert.",
     ],
     steps: [
+      { id: "sj-0", title: "Đọc Hướng dẫn học với kho tài nguyên này", desc: "Phân hạng 14 lĩnh vực thành đọc trọn / đọc chọn / tra cứu để vừa 104 tuần, vòng học một tài liệu, nhịp tuần và lịch chứng chỉ. Đọc trước để không ôm hết 178 tuần sách.", href: "#/docs/sj-05", done: { kind: "doc", id: "sj-05" } },
       { id: "sj-1", title: "Đọc Tổng quan roadmap 24 tháng", desc: "Bức tranh bốn giai đoạn, nghi thức review hàng quý và quy tắc học xuyên suốt. Đánh dấu đã đọc trước khi bắt đầu tuần 1.", href: "#/docs/sj-00", done: { kind: "doc", id: "sj-00" } },
       { id: "sj-2", title: "Giai đoạn 1 — Java & Spring chuyên sâu (tháng 1–6)", desc: "Output: repo java-deep-dive ≥ 10 chủ đề, 2 case optimize có số liệu, pass mock interview. Khối “Nghiệm thu” cuối track là cổng sang giai đoạn 2.", href: "#/roadmap/sj-gd1", done: { kind: "track", id: "sj-gd1" } },
       { id: "sj-3", title: "Tự chấm ma trận năng lực lần 1", desc: "Sau giai đoạn 1, tick những tiêu chí bạn trình bày được không nhìn tài liệu — mục tiêu ≥ 25 % tổng số tiêu chí. Không tick theo cảm giác.", href: "#/tracker", done: { kind: "tracker", pct: 25 } },

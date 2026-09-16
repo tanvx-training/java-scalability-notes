@@ -1,4 +1,4 @@
-// Tài liệu lĩnh vực "Lộ trình Senior Java" — 5 tài liệu.
+// Tài liệu lĩnh vực "Lộ trình Senior Java" — 6 tài liệu.
 // Nguồn markdown: sources/senior-java/ — scripts/build-content.sh sao chép nguyên cây
 // vào webapp/content/, nên `file` luôn có dạng content/senior-java/… (bất biến #2c).
 // Thứ tự mảng là thứ tự đọc có chủ ý — không sắp xếp lại.
@@ -61,5 +61,16 @@ export const docs = [
     icon: "🌐",
     desc: "Kafka, outbox và idempotent consumer, Redis caching, resilience patterns, DDIA, design doc và luyện system design.",
     tags: ["Kafka", "Redis", "Resilience", "DDIA", "System Design"],
+  },
+  {
+    id: "sj-05",
+    field: "senior-java",
+    chapter: null,
+    part: null,
+    title: "Hướng dẫn học hiệu quả với kho tài nguyên này",
+    file: "content/senior-java/05-huong-dan-hoc-voi-kho-tai-nguyen.md",
+    icon: "📐",
+    desc: "Phân hạng A/B/C 14 lĩnh vực cho 104 tuần, vòng học một tài liệu, nhịp tuần 8–10 giờ, lộ trình 24 tháng ánh xạ vào đúng chương sách trong kho, chiến lược chứng chỉ CKAD/CKA/OCP/CCDAK và bằng chứng Senior theo mốc.",
+    tags: ["Phương pháp", "Kế hoạch", "Chứng chỉ", "Phỏng vấn"],
   },
 ];
