@@ -137,6 +137,13 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 2. Làm **một lần duy nhất**: vào **Settings → Pages → Build and deployment → Source** chọn **GitHub Actions**.
 3. App sẽ có tại `https://<username>.github.io/<repo>/`.
 
+### Triển khai lên server không có mạng
+
+Đóng gói thành một image Docker tự chứa, chép sang bằng file zip, server chỉ `docker load` rồi chạy:
+[`docs/deploy-offline.md`](./docs/deploy-offline.md). Lưu ý quan trọng nhất là **kiến trúc CPU đích** —
+máy build là arm64, server thường là x86_64, và sai chỗ này thì lỗi chỉ lộ ra lúc `docker run` trên
+chính máy không có internet để sửa.
+
 Tiến độ học (lộ trình, flashcards, điểm thi thử…) được lưu trong `localStorage` của trình duyệt — không cần backend.
 
 

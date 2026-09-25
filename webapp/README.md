@@ -57,6 +57,7 @@ Workflow `.github/workflows/deploy-pages.yml` chạy khi push `main`: build cont
 copy `webapp/` (bỏ `scripts/`) + content → deploy. Bật một lần: **Settings → Pages → Source: GitHub Actions**.
 
 Docker: `docker compose up --build` → http://localhost:9020 (`.dockerignore` loại PDF, `inbox/`, `docs/`).
+Đóng gói cho server không có mạng: [`docs/deploy-offline.md`](../docs/deploy-offline.md).
 
 ## Cấu trúc mã
 
