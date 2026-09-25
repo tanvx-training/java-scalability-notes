@@ -68,6 +68,7 @@ const EXPECTED = {
     // chương 1 (Introduction) không có bản dịch và không chứa Item nào.
     "docs:effective-java": 11,
     "roadmap-items:effective-java": 40,
+    "interview:effective-java": 24,
     // Lĩnh vực Kafka — 13 chương (2–14) Kafka: The Definitive Guide ấn bản 2.
     "docs:kafka": 13,
     "interview:kafka": 24,

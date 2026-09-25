@@ -210,6 +210,13 @@ export const INTERVIEW_TOPICS = {
   "ssec-oauth":     { label: "OAuth 2 và OpenID Connect",                                short: "OAuth 2",     field: "spring-security" },
   "ssec-reactive":  { label: "Bảo mật phản ứng và kiểm thử",                             short: "Reactive",    field: "spring-security" },
 
+  "ej-create":  { label: "Tạo và hủy đối tượng",                               short: "Tạo đối tượng", field: "effective-java" },
+  "ej-object":  { label: "equals/hashCode/compareTo và thiết kế class",        short: "Object & class", field: "effective-java" },
+  "ej-types":   { label: "Generics, enum và annotation",                       short: "Generics/enum", field: "effective-java" },
+  "ej-lambda":  { label: "Lambda và stream",                                   short: "Lambda/stream", field: "effective-java" },
+  "ej-api":     { label: "Thiết kế method, lập trình tổng quát và exception",  short: "API & lỗi",     field: "effective-java" },
+  "ej-conc":    { label: "Concurrency và serialization",                       short: "Concurrency",   field: "effective-java" },
+
   "spiq-c":         { label: "C, con trỏ và bộ cấp phát bộ nhớ",      short: "C & malloc",  field: "sysprog" },
   "spiq-process":   { label: "Tiến trình, fork và tín hiệu",          short: "Tiến trình",  field: "sysprog" },
   "spiq-thread":    { label: "Luồng và đồng bộ hoá",                  short: "Đồng bộ",     field: "sysprog" },
