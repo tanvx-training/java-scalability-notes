@@ -393,7 +393,8 @@ Viết mỗi bài học **sau khi đọc** đúng các Item đó trong `sources/
 ```js
 // node ej-roadmap-lint.mjs <file.js> <exportName> <tuầnĐầu> <tuầnCuối>
 import { pathToFileURL } from "node:url";
-const [file, name, from, to] = process.argv.slice(2);
+const [file, name] = process.argv.slice(2);
+const [from, to] = process.argv.slice(4).map(Number);
 const weeks = (await import(pathToFileURL(file)))[name];
 const CH = [[2,1,9],[3,10,14],[4,15,25],[5,26,33],[6,34,41],[7,42,48],[8,49,56],[9,57,68],[10,69,77],[11,78,84],[12,85,90]];
 const chOf = (n) => CH.find(([, a, b]) => n >= a && n <= b)[0];
