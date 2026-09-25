@@ -302,6 +302,38 @@ export const fieldGuides = {
     ],
   },
 
+  "effective-java": {
+    tagline: "Đọc Effective Java ấn bản 3 có kỷ luật — 90 Item trong 10 tuần, mỗi Item một đoạn code bạn tự gõ và một chỗ trong codebase để áp dụng.",
+    audience: "Java developer đã viết code production, dùng thành thạo collection, interface và generics ở mức gọi API; **lambda/stream nên xong Modern Java in Action trước** vì chương 7 giả định bạn đã quen chúng. Sách không dạy cú pháp — nó dạy chọn đúng giữa các cách viết đều compile được.",
+    hoursPerWeek: "5–6 giờ/tuần · 10 tuần",
+    prereqs: [
+      "JDK 17+ và một IDE; clone `jbloch/effective-java-3e-source-code` để chạy ví dụ.",
+      "Viết được class, interface, generic method; đọc được stream pipeline đơn giản.",
+      "Một codebase thật (cá nhân hoặc công ty) để tìm chỗ vi phạm từng Item.",
+    ],
+    steps: [
+      { id: "ej-1", title: "Đủ nền Java hiện đại", desc: "Tự đánh giá: viết được lambda, stream, Optional. Chưa vững thì đi lĩnh vực Modern Java in Action trước rồi quay lại tick bước này.", done: { kind: "manual" } },
+      // ej-2, ej-3 (bước trỏ track "ej") thêm ở Task 4 — track chưa tồn tại thì G3 báo đỏ.
+      { id: "ej-4", title: "Đọc trọn 11 chương", desc: "Chương 2–12, đủ 90 Item. Đánh dấu đã đọc từng chương khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
+      { id: "ej-5", title: "Dùng Effective Java trong code review thật", desc: "Viết ít nhất ba comment review ở dự án thật dẫn đúng số Item và lý do. Tự đánh dấu khi xong.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Một Item, một đoạn code", desc: "Gõ ví dụ \"sai\" của Item trước, chạy để thấy nó hỏng, rồi mới gõ bản đúng. Item nào không chạy được thì viết test chứng minh." },
+      { title: "Tìm vi phạm trong codebase của bạn", desc: "Sau mỗi chương, grep codebase tìm ít nhất một chỗ vi phạm (constructor 6 tham số, equals không hashCode, catch rỗng…). Ghi lại, chưa cần sửa." },
+      { title: "Nhớ bằng số Item", desc: "Khi review hay tranh luận, dẫn \"Item 18\" thay vì \"sách bảo\". Buộc bạn nhớ chính xác Item nói gì và ngoại lệ của nó." },
+    ],
+    pitfalls: [
+      "Áp Item như luật tuyệt đối — hầu hết Item bắt đầu bằng \"cân nhắc\" hoặc \"ưu tiên\", và sách nêu rõ khi nào không áp dụng.",
+      "Đọc lướt chương 3 vì \"IDE sinh equals/hashCode rồi\" — hợp đồng equals là nguồn bug khó tìm nhất trong collection.",
+      "Bỏ chương 12 vì \"không ai dùng Java serialization\" — Item 85 giải thích vì sao đó là lỗ hổng bảo mật, và nó vẫn nằm trong nhiều thư viện.",
+    ],
+    doneWhen: [
+      "Nhìn một class là nói được nó vi phạm Item nào, bằng số Item.",
+      "Viết được builder, bản sao phòng vệ, equals/hashCode đúng hợp đồng mà không tra.",
+      "Giải thích được PECS và chọn đúng `? extends` / `? super` cho một API mới.",
+    ],
+  },
+
   kafka: {
     tagline: "Đọc Kafka: The Definitive Guide ấn bản 2 (chương 2–14) trên cluster thật — producer, consumer, tin cậy, vận hành, stream.",
     audience: "Backend engineer đọc được code Java client, quen dòng lệnh Linux, và **dựng được một cluster Kafka một broker bằng Docker**. Chương 1 (khái niệm) không nằm trong bản dịch — nếu chưa biết topic/partition/offset là gì, đọc tài liệu chính thức 30 phút trước.",

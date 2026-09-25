@@ -91,6 +91,17 @@ export const FIELDS = {
     modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "dev.java", href: "https://dev.java/" },
   },
+  "effective-java": {
+    label: "Effective Java",
+    icon: "📘",
+    short: "EJ",
+    unit: "Ch.",
+    desc: "Bản dịch tiếng Việt Effective Java, ấn bản 3 (Joshua Bloch, Addison-Wesley 2018) — 90 Item về tạo đối tượng, equals/hashCode, thiết kế class và interface, generics, enum, lambda & stream, thiết kế method, exception, concurrency và serialization.",
+    certFilter: false,
+    // Mở dần theo dữ liệu: "roadmap" bật ở Task 4, "interview" ở Task 6 — khai sớm là #7/IQ6 báo đỏ.
+    modules: ["dashboard", "guide", "docs"],
+    externalRef: { label: "jbloch/effective-java-3e-source-code", href: "https://github.com/jbloch/effective-java-3e-source-code" },
+  },
   kafka: {
     label: "Kafka: The Definitive Guide",
     icon: "📨",
@@ -153,7 +164,7 @@ export const FIELDS = {
   },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.
