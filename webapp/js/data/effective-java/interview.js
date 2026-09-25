@@ -949,7 +949,7 @@ private boolean isInternal(Transfer t) {
     },
     question: "Bạn được giao xử lý. Giải thích nguyên nhân của từng triệu chứng, vì sao nó chỉ lộ ra bây giờ và chỉ ở những chi nhánh đó, bạn sửa code thế nào, và xử lý hậu quả ra sao.",
     mustCover: [
-      "`double` là dấu phẩy động nhị phân, **không biểu diễn chính xác 0,1** hay bất kỳ luỹ thừa âm nào của 10 — mọi phép tính tiền đều mang sai số, và một khoản đúng nửa cent có thể thành hơi nhỏ hơn nửa cent rồi bị làm tròn sai chiều; `Math.round` ở cuối vẫn trả `double` và không sửa được",
+      "`double` là dấu phẩy động nhị phân, **không biểu diễn chính xác 0,1** hay bất kỳ luỹ thừa âm nào của 10 — mọi phép tính tiền đều mang sai số, và một khoản đúng nửa cent có thể thành hơi nhỏ hơn nửa cent rồi bị làm tròn sai chiều; biểu thức `Math.round(balance * 100) / 100.0` ở cuối vẫn cho ra `double` và không sửa được",
       "Nguồn chính của vài cent là **quy tắc làm tròn**: từ khi phí thành 0,1%, mỗi phí có phần lẻ dưới cent; code cộng dồn phần lẻ rồi làm tròn tổng, còn hợp đồng làm tròn **từng phí** — sai về nghiệp vụ dù có dùng kiểu chính xác. Phí cố định 0,50 USD trước đây không có phần lẻ nên lỗi nằm im",
       "Tiền phải dùng `BigDecimal` (tạo từ `String`/giá trị DB, không từ `double`) hoặc `long` theo cent; `BigDecimal` cho chọn **chế độ làm tròn** — `setScale(2, RoundingMode.HALF_UP)` cho từng phí",
       "`==` trên hai `Integer` là **so sánh định danh**, gần như luôn sai",
@@ -1169,7 +1169,7 @@ public ResponseEntity<Void> importCart(InputStream body) throws Exception {
 // Bản vá đội đề xuất
 ObjectInputFilter filter = ObjectInputFilter.Config.createFilter(
         "!org.apache.commons.collections.functors.*;!org.codehaus.groovy.runtime.*");
-in.setObjectInputFilter(filter);`,
+in.setObjectInputFilter(filter);                              // đặt ngay sau khi tạo in, trước readObject()`,
     },
     incident: {
       symptom: "Sáng thứ Hai, 6 pod của `cart-service` đứng ở 100% CPU. Thread dump cho thấy hàng chục thread xử lý `/internal/cart-import` kẹt sâu trong `HashSet.readObject` → `HashMap.hash` → `AbstractSet.hashCode`, gọi đệ quy lặp lại; request gây ra chỉ nặng khoảng 6 KB. Log WAF ghi nhận nhiều payload chứa chuỗi `org.apache.commons.collections.functors.InvokerTransformer`. Trên một pod có một tiến trình `curl` lạ chạy dưới user của JVM. Kiểm tra cấu hình thì phát hiện endpoint \"nội bộ\" này bị lộ ra ingress công khai từ hai tuần trước.",

@@ -186,7 +186,7 @@ export const ejWeeksPart2 = [
     week: "Tuần 9",
     title: "Exception và concurrency",
     goal: "Dùng exception đúng vai: chỉ cho tình huống ngoại lệ, checked cho lỗi khôi phục được, runtime cho lỗi lập trình, exception chuẩn, translation theo mức trừu tượng, detail message ghi nhận thất bại, failure atomicity. Rồi viết code đồng thời đúng: đồng bộ hoá đủ nhưng không quá mức, executor và tiện ích `java.util.concurrent` thay thread thô và `wait`/`notify`, tài liệu hoá mức thread-safe, lazy init đúng idiom, không dựa vào bộ lập lịch.",
-    practice: "Trên JDK 17+, gõ lại `StopThread` bản hỏng của Item 78 (field `static boolean stopRequested` không `volatile`), chạy và quan sát nó không dừng sau một giây.Sửa theo hai cách của sách: cặp method `synchronized` cho cả đọc lẫn ghi, rồi field `volatile`; chạy lại để thấy chương trình thoát. Sau đó tìm (hoặc tự viết) một đoạn code chờ nhiều worker xong việc bằng `wait`/`notifyAll`, viết lại bằng `CountDownLatch` theo mẫu method `time` của Item 81, và đo khoảng thời gian bằng `System.nanoTime`.",
+    practice: "Trên JDK 17+, gõ lại `StopThread` bản hỏng của Item 78 (field `static boolean stopRequested` không `volatile`), chạy và quan sát nó không dừng sau một giây. Sửa theo hai cách của sách: cặp method `synchronized` cho cả đọc lẫn ghi, rồi field `volatile`; chạy lại để thấy chương trình thoát. Sau đó tìm (hoặc tự viết) một đoạn code chờ nhiều worker xong việc bằng `wait`/`notifyAll`, viết lại bằng `CountDownLatch` theo mẫu method `time` của Item 81, và đo khoảng thời gian bằng `System.nanoTime`.",
     resources: [
       { label: "EJ 10 — Exceptions", href: "#/docs/ej-10" },
       { label: "EJ 11 — Concurrency (Lập trình đồng thời)", href: "#/docs/ej-11" },
