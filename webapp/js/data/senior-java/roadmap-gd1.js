@@ -13,7 +13,7 @@ export const seniorJavaGd1 = [
     week: "Tuần 1–2",
     title: "Setup + Java 17–21",
     goal: "Dựng nền nếp học tập và cập nhật ngôn ngữ hiện đại.",
-    doneWhen: "Repo đã có commit đầu tiên với ≥ 4 demo tính năng mới; PR refactor ở công ty được merge; kể được không cần nhìn tài liệu 5 items tâm đắc nhất của Effective Java chương 1–3.",
+    doneWhen: "Repo đã có commit đầu tiên với ≥ 4 demo tính năng mới; PR refactor ở công ty được merge; kể được không cần nhìn tài liệu 5 items tâm đắc nhất của Effective Java chương 2–3.",
     resources: [
       { label: "Giai đoạn 1 — bản đầy đủ", href: "#/docs/sj-01" },
       { label: "Tổng quan roadmap 24 tháng", href: "#/docs/sj-00" },
@@ -38,8 +38,8 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       },
       {
         id: "sj-gd1-w1-3",
-        text: "Đọc Effective Java chương 1–3, tự viết lại ví dụ cho từng item",
-        lesson: `**Việc cần làm.** Đọc Effective Java chương 1–3. Cách đọc đúng: với mỗi item, gõ lại ví dụ trong sách rồi tự viết thêm một ví dụ khác của riêng mình. Ghi vào README mỗi item 2–3 dòng "khi nào áp dụng ở dự án của tôi".
+        text: "Đọc Effective Java chương 2–3, tự viết lại ví dụ cho từng item",
+        lesson: `**Việc cần làm.** Đọc Effective Java [chương 2](#/docs/ej-02) và [chương 3](#/docs/ej-03) (chương 1 chỉ là lời giới thiệu, không có Item). Cách đọc đúng: với mỗi item, gõ lại ví dụ trong sách rồi tự viết thêm một ví dụ khác của riêng mình. Ghi vào README mỗi item 2–3 dòng "khi nào áp dụng ở dự án của tôi".
 
 **Nguồn.** [Giai đoạn 1 — Tuần 1–2](#/docs/sj-01)`,
       },
@@ -53,7 +53,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w1-5",
         text: "Refactor 1 class công ty sang Builder, tạo PR tự review",
-        lesson: `**Việc cần làm.** Áp dụng tại công ty: chọn một class đang dùng constructor nhiều tham số, refactor sang Builder (Item 2 của Effective Java); thêm \`Objects.requireNonNull\` cho tham số bắt buộc; tự tạo PR và tự review lý do từng thay đổi.
+        lesson: `**Việc cần làm.** Áp dụng tại công ty: chọn một class đang dùng constructor nhiều tham số, refactor sang Builder ([Item 2 của Effective Java](#/docs/ej-02)); thêm \`Objects.requireNonNull\` cho tham số bắt buộc; tự tạo PR và tự review lý do từng thay đổi.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 1–2](#/docs/sj-01)`,
       },
@@ -131,7 +131,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w3-1",
         text: "Lab equals mà không override hashCode: chứng minh bug HashSet",
-        lesson: `**Việc cần làm.** Đọc các item Effective Java về equals/hashCode/compareTo. Lab nhanh: viết một class chỉ override \`equals\` mà không override \`hashCode\`, bỏ vào \`HashSet\`, rồi chứng minh bug bằng test (\`set.contains()\` trả về \`false\` với một object "bằng nhau"). Đây là demo thuyết phục nhất về hợp đồng equals-hashCode.
+        lesson: `**Việc cần làm.** Đọc các item Effective Java về equals/hashCode/compareTo ([chương 3](#/docs/ej-03)). Lab nhanh: viết một class chỉ override \`equals\` mà không override \`hashCode\`, bỏ vào \`HashSet\`, rồi chứng minh bug bằng test (\`set.contains()\` trả về \`false\` với một object "bằng nhau"). Đây là demo thuyết phục nhất về hợp đồng equals-hashCode.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 5–6](#/docs/sj-01)`,
       },
@@ -181,7 +181,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w4-1",
         text: "Lab PECS: copy(List<? super T> dst, List<? extends T> src)",
-        lesson: `**Việc cần làm.** Đọc phần generics của Effective Java. Lab PECS: viết method \`copy(List<? super T> dst, List<? extends T> src)\` rồi thử compile các trường hợp sai để thấy compiler chặn gì. Ghi lại quy tắc PECS bằng ví dụ của riêng mình.
+        lesson: `**Việc cần làm.** Đọc phần generics của Effective Java ([chương 5](#/docs/ej-05)). Lab PECS: viết method \`copy(List<? super T> dst, List<? extends T> src)\` rồi thử compile các trường hợp sai để thấy compiler chặn gì. Ghi lại quy tắc PECS bằng ví dụ của riêng mình.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 7–8](#/docs/sj-01)`,
       },
@@ -195,7 +195,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w4-3",
         text: "Đọc EJ về lambda/stream, đặc biệt item side-effect-free",
-        lesson: `**Việc cần làm.** Đọc phần lambda/stream của Effective Java, đặc biệt item "prefer side-effect-free functions in streams".
+        lesson: `**Việc cần làm.** Đọc phần lambda/stream của Effective Java ([chương 7](#/docs/ej-07)), đặc biệt item "prefer side-effect-free functions in streams".
 
 **Nguồn.** [Giai đoạn 1 — Tuần 7–8](#/docs/sj-01)`,
       },

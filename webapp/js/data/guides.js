@@ -190,7 +190,7 @@ export const fieldGuides = {
       { title: "Output trước, kiến thức sau", desc: "Mỗi giai đoạn định nghĩa bằng output bắt buộc (repo, PR, blog, chứng chỉ). Học thứ gì không đổ ra output là học lan man." },
       { title: "Cổng nghiệm thu là thật", desc: "Khối “Nghiệm thu” cuối mỗi track có 6–7 tiêu chí; chưa đủ ngưỡng thì chưa sang giai đoạn sau — thà chậm một tháng còn hơn kéo lỗ hổng đi hai năm." },
       { title: "Review hàng quý", desc: "Tài liệu tổng quan quy định nghi thức review mỗi quý: nhìn lại ma trận, điều chỉnh tốc độ, không đổi mục tiêu." },
-      { title: "Mượn lĩnh vực khác của app", desc: "Giai đoạn 1 mượn Modern Java in Action và Java Scalability; giai đoạn 3 mượn Kubernetes; giai đoạn 4 mượn Kafka và DDIA. Chip trong tuần đã nối sẵn." },
+      { title: "Mượn lĩnh vực khác của app", desc: "Giai đoạn 1 mượn Modern Java in Action, Effective Java và Java Scalability; giai đoạn 3 mượn Kubernetes; giai đoạn 4 mượn Kafka và DDIA. Chip trong tuần đã nối sẵn." },
     ],
     pitfalls: [
       "Tick ma trận theo cảm giác — ma trận chỉ có giá trị khi bạn tick sau khi trình bày được cho người khác.",
@@ -600,7 +600,7 @@ export const trackGuides = {
   },
   "sj-gd1": {
     rhythm: "26 tuần, mỗi khối 2 tuần có 5–7 việc cụ thể; mỗi việc là MỘT bước trong “Cách thực hiện” của tài liệu giai đoạn. Khối cuối “Nghiệm thu” là cổng sang giai đoạn 2.",
-    before: ["Tạo repo `java-deep-dive` theo việc đầu tiên của tuần 1.", "Chuẩn bị Effective Java và Java Concurrency in Practice.", "Xác định 2 điểm nóng hiệu năng ở dự án công ty làm case optimize."],
+    before: ["Tạo repo `java-deep-dive` theo việc đầu tiên của tuần 1.", "Effective Java và Java Concurrency in Practice đều có sẵn trong app — mở hai lĩnh vực đó song song.", "Xác định 2 điểm nóng hiệu năng ở dự án công ty làm case optimize."],
     during: ["Mỗi việc kết thúc bằng commit hoặc ghi chú Feynman — không có artifact thì chưa xong.", "Tuần 15–22 (Spring, @Transactional, JPA, SQL) mượn lĩnh vực Java Scalability bài 09–10.", "Không sang khối mới nếu khối cũ còn việc chưa tick."],
     after: ["Tự chấm ma trận năng lực lần đầu (mục tiêu ≥ 25 %).", "Đủ ≥ 5/6 tiêu chí nghiệm thu mới sang giai đoạn 2.", "Viết bài blog tổng kết 6 tháng."],
   },

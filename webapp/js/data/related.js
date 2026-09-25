@@ -101,4 +101,14 @@ export const related = {
   "jpa-16": ["springstart-10", "springsec-11"],               // Spring Data REST ↔ REST service viết tay; ↔ phân quyền cấp phương thức
   "jpa-17": ["ddia-03"],                                      // tham chiếu document ↔ mô hình document so với quan hệ
   "jpa-20": ["springstart-15"],                               // kiểm thử persistence ↔ kiểm thử ứng dụng Spring
+
+  // ---- Effective Java ↔ Modern Java (lambda, stream, Optional, default method),
+  //      JPA (equals/hashCode entity), JCiP (đồng bộ hoá), WGJD (đo hiệu năng), DDIA (encoding) ----
+  "ej-03": ["jpa-08", "jpa-10"],                    // hợp đồng equals/hashCode ↔ equality của value type trong Set; entity detached
+  "ej-04": ["mjia-13"],                             // Item 21 thiết kế interface cho hậu thế ↔ default method
+  "ej-07": ["mjia-03", "mjia-05", "mjia-07"],       // lambda; dùng stream; song song hoá stream
+  "ej-08": ["mjia-11"],                             // Item 55 Optional ↔ dùng Optional thay null
+  "ej-09": ["wgjd-07"],                             // Item 67 tối ưu thận trọng ↔ hiểu hiệu năng Java, đo trước
+  "ej-11": ["jcip-02", "jcip-03", "jcip-05"],       // đồng bộ hoá, visibility, tiện ích concurrency ↔ thread safety, sharing objects, building blocks
+  "ej-12": ["ddia-05"],                             // Item 85 tránh Java serialization ↔ encoding và tiến hoá schema
 };
