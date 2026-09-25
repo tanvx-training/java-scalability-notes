@@ -67,6 +67,7 @@ const EXPECTED = {
     // Lĩnh vực Effective Java — 11 chương (2–12) Effective Java ấn bản 3;
     // chương 1 (Introduction) không có bản dịch và không chứa Item nào.
     "docs:effective-java": 11,
+    "roadmap-items:effective-java": 40,
     // Lĩnh vực Kafka — 13 chương (2–14) Kafka: The Definitive Guide ấn bản 2.
     "docs:kafka": 13,
     "interview:kafka": 24,

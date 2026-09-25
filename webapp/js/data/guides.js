@@ -313,7 +313,8 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "ej-1", title: "Đủ nền Java hiện đại", desc: "Tự đánh giá: viết được lambda, stream, Optional. Chưa vững thì đi lĩnh vực Modern Java in Action trước rồi quay lại tick bước này.", done: { kind: "manual" } },
-      // ej-2, ej-3 (bước trỏ track "ej") thêm ở Task 4 — track chưa tồn tại thì G3 báo đỏ.
+      { id: "ej-2", title: "Tuần 1–5: tạo đối tượng, equals/hashCode, class & interface, generics, enum", desc: "Chương 2–6 — nửa sách định hình cách bạn thiết kế type. Mỗi mục có bẫy và câu tự kiểm tra.", href: "#/roadmap/ej", done: { kind: "track", id: "ej", pct: 50 } },
+      { id: "ej-3", title: "Tuần 6–10: lambda & stream, method, lập trình tổng quát, exception, concurrency, serialization", desc: "Chương 7–12 — phần API và độ bền khi chạy thật. Tuần 10 có mục tổng ôn đủ 90 Item.", href: "#/roadmap/ej", done: { kind: "track", id: "ej" } },
       { id: "ej-4", title: "Đọc trọn 11 chương", desc: "Chương 2–12, đủ 90 Item. Đánh dấu đã đọc từng chương khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
       { id: "ej-5", title: "Dùng Effective Java trong code review thật", desc: "Viết ít nhất ba comment review ở dự án thật dẫn đúng số Item và lý do. Tự đánh dấu khi xong.", done: { kind: "manual" } },
     ],
@@ -637,7 +638,13 @@ export const trackGuides = {
     rhythm: "12 tuần, 4 mục mỗi tuần bám 21 chương; mỗi tuần một bài tập gõ code. Đọc (30–40 phút) → gõ ví dụ → làm bài tập → tick.",
     before: ["JDK 17+ và IDE có gợi ý refactor sang stream.", "Một codebase để thử refactor.", "Repo `modern-java-notes` lưu bài tập mỗi tuần."],
     during: ["Viết hai phiên bản (for-loop và stream) cho bài tập của tuần.", "Tuần 5 (parallel) đo bằng JMH trước khi kết luận.", "Tuần 9–11 (bất đồng bộ, reactive) đọc chậm và chạy ví dụ có độ trễ giả."],
-    after: ["Một PR refactor thật được review.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: tick tuần 7–8 ở đó.", "Đọc Modern Concurrency in Java để tiếp phần bất đồng bộ."],
+    after: ["Một PR refactor thật được review.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: tick tuần 7–8 ở đó.", "Sang lĩnh vực Effective Java — chặng tiếp theo trên con đường Java Backend.", "Đọc Modern Concurrency in Java để tiếp phần bất đồng bộ."],
+  },
+  ej: {
+    rhythm: "10 tuần, 4 mục mỗi tuần, một chương mỗi tuần (tuần 9 gộp chương 10–11); đủ 90 Item. Mỗi mục: mục tiêu, đọc Item nào, bẫy, tự kiểm tra. Đọc (30–45 phút) → gõ ví dụ sai rồi ví dụ đúng → tick.",
+    before: ["JDK 17+ và clone `jbloch/effective-java-3e-source-code`.", "Xong Modern Java in Action hoặc tự tin với lambda/stream.", "Chọn một codebase thật làm nơi tìm vi phạm sau mỗi chương."],
+    during: ["Mỗi Item: gõ bản sai, chạy thấy hỏng, rồi mới gõ bản đúng.", "Cuối mỗi tuần ghi một vi phạm tìm được trong codebase, kèm số Item.", "Tuần 9 nặng nhất (chương 10–11): chia làm hai nửa tuần nếu cần."],
+    after: ["Bản đồ 90 Item một trang của riêng bạn (mục cuối tuần 10).", "Ba comment code review thật dẫn số Item.", "Sang lĩnh vực The Well-Grounded Java Developer — chặng tiếp theo trên con đường Java Backend."],
   },
   kafka: {
     rhythm: "11 tuần, 4 mục mỗi tuần bám chương 2–14; mỗi tuần một bài thực hành trên cluster của bạn. Đọc → làm trên cluster → trả lời tự kiểm tra → tick.",

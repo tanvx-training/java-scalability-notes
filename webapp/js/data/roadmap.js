@@ -2,7 +2,7 @@
 // Action, đọc sách CKA Study Guide, đọc sách Kubernetes: Up and Running, lập
 // trình hệ thống, đọc sách Spring Security in Action, đọc sách Modern
 // Concurrency in Java, đọc sách Designing Data-Intensive Applications, đọc
-// sách Modern Java in Action, đọc sách Kafka: The Definitive Guide, đọc
+// sách Modern Java in Action, đọc sách Effective Java, đọc sách Kafka: The Definitive Guide, đọc
 // sách Spring Start Here, đọc sách Java Concurrency in Practice, đọc sách
 // Optimizing Cloud Native Java, đọc sách Java Persistence with Spring Data
 // and Hibernate, và 4 giai
@@ -28,12 +28,13 @@
 //   jcip/roadmap-part{1,2}.js               (Tuần 1–5 / 6–10)       — 40 mục
 //   ocnj/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
 //   jpa/roadmap-part{1,2}.js                (Tuần 1–7 / 8–13)       — 52 mục
+//   effective-java/roadmap-part{1,2}.js     (Tuần 1–5 / 6–10)       — 40 mục
 //   senior-java/roadmap-gd{1,2,3,4}.js      (Tuần 1–26 mỗi giai đoạn) — 81 / 66 / 64 / 65 mục
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, oc-w1, jp-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, oc-w1-1, jp-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, oc-w1, jp-w1, ej-w1, sj-gd1-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, oc-w1-1, jp-w1-1, ej-w1-1, sj-gd1-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./kubernetes/roadmap-ckad-part1.js";
@@ -71,6 +72,8 @@ import { ocnjWeeksPart1 } from "./ocnj/roadmap-part1.js";
 import { ocnjWeeksPart2 } from "./ocnj/roadmap-part2.js";
 import { jpaWeeksPart1 } from "./jpa/roadmap-part1.js";
 import { jpaWeeksPart2 } from "./jpa/roadmap-part2.js";
+import { ejWeeksPart1 } from "./effective-java/roadmap-part1.js";
+import { ejWeeksPart2 } from "./effective-java/roadmap-part2.js";
 import { seniorJavaGd1 } from "./senior-java/roadmap-gd1.js";
 import { seniorJavaGd2 } from "./senior-java/roadmap-gd2.js";
 import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
@@ -257,6 +260,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 12 tuần bám theo bản dịch cuốn sách: mỗi mục nêu mục tiêu, chỉ đúng phần cần đọc, bẫy thường gặp và câu tự kiểm tra; mỗi tuần một bài tập gõ code.",
     prereq: "Yêu cầu: viết được Java ở mức thành thạo cú pháp trước Java 8 (class, interface, generics, collection). Không cần biết trước lambda hay stream.",
     weeks: [...mjiaWeeksPart1, ...mjiaWeeksPart2],
+  },
+  {
+    id: "ej",
+    field: "effective-java",
+    label: "Effective Java",
+    icon: "📘",
+    name: "Đọc Effective Java (ấn bản 3)",
+    durationWeeks: 10,
+    desc: "Kế hoạch đọc 10 tuần phủ đủ 90 Item: mỗi mục nêu mục tiêu, chỉ đúng Item cần đọc, bẫy thường gặp và câu tự kiểm tra.",
+    prereq: "Yêu cầu: viết Java production được, quen collection, interface, generics; lambda/stream nên học trước ở Modern Java in Action.",
+    weeks: [...ejWeeksPart1, ...ejWeeksPart2],
   },
   {
     id: "kafka",
