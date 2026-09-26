@@ -182,6 +182,13 @@ export const INTERVIEW_TOPICS = {
   "dd-distributed":  { label: "Rắc rối hệ phân tán và consensus",             short: "Hệ phân tán",  field: "ddia" },
   "dd-processing":   { label: "Batch và stream processing",                   short: "Processing",   field: "ddia" },
 
+  "pg-mvcc":   { label: "Isolation, MVCC và snapshot",          short: "MVCC",       field: "pg-internals" },
+  "pg-vacuum": { label: "Pruning, HOT, vacuum và freezing",     short: "Vacuum",     field: "pg-internals" },
+  "pg-wal":    { label: "Buffer cache và WAL",                  short: "WAL",        field: "pg-internals" },
+  "pg-lock":   { label: "Lock",                                 short: "Lock",       field: "pg-internals" },
+  "pg-plan":   { label: "Planner, thống kê, scan và join",      short: "Planner",    field: "pg-internals" },
+  "pg-index":  { label: "Các loại index",                       short: "Index",      field: "pg-internals" },
+
   "kf-producer":     { label: "Producer: ghi message",                               short: "Producer",   field: "kafka" },
   "kf-consumer":     { label: "Consumer: đọc và commit offset",                      short: "Consumer",   field: "kafka" },
   "kf-internals":    { label: "Cơ chế bên trong: controller, replication, lưu trữ",  short: "Bên trong",  field: "kafka" },

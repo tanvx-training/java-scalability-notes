@@ -81,6 +81,16 @@ export const FIELDS = {
     modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "dataintensive.net", href: "https://dataintensive.net/" },
   },
+  "pg-internals": {
+    label: "PostgreSQL 14 Internals",
+    icon: "🐘",
+    short: "PG",
+    unit: "Ch.",
+    desc: "Bản dịch tiếng Việt PostgreSQL 14 Internals (Egor Rogov, Postgres Professional 2023) — isolation và MVCC, vacuum và freezing, buffer cache và WAL, lock, planner và executor, thống kê, các phương thức join, sáu loại index (Hash, B-tree, GiST, SP-GiST, GIN, BRIN).",
+    certFilter: false,
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
+    externalRef: { label: "postgrespro.com — PostgreSQL 14 Internals", href: "https://postgrespro.com/community/books/internals" },
+  },
   "modern-java": {
     label: "Modern Java in Action",
     icon: "🌊",
@@ -163,7 +173,7 @@ export const FIELDS = {
   },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "pg-internals", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.

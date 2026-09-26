@@ -24,8 +24,8 @@ export const PATHS = {
   data: {
     label: "Data & Distributed",
     icon: "🗄️",
-    desc: "Lý thuyết hệ dữ liệu phân tán (DDIA) rồi một hệ thật để chạm tay (Kafka): replication, sharding, transaction, exactly-once, stream.",
-    fields: ["ddia", "kafka"],
+    desc: "Ba chặng: lý thuyết hệ dữ liệu phân tán (DDIA) → một CSDL thật từ bên trong (PostgreSQL: MVCC, vacuum, WAL, lock, planner, index) → một hệ stream để chạm tay (Kafka): replication, sharding, transaction, exactly-once, stream.",
+    fields: ["ddia", "pg-internals", "kafka"],
     foundation: [],
   },
 };

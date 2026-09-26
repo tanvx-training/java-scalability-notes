@@ -254,7 +254,7 @@ export const fieldGuides = {
     ],
     method: [
       { title: "Một chương một tuần, không nhanh hơn", desc: "DDIA dày ý hơn dày chữ. Đọc nhanh là quên nhanh; track cố tình một chương mỗi tuần." },
-      { title: "Gắn vào hệ của bạn", desc: "Mỗi khái niệm (LSM vs B-tree, leader-based replication, snapshot isolation) hãy hỏi: hệ tôi đang dùng chọn gì? Tra tài liệu Postgres/MySQL/Kafka để đối chiếu." },
+      { title: "Gắn vào hệ của bạn", desc: "Mỗi khái niệm (LSM vs B-tree, leader-based replication, snapshot isolation) hãy hỏi: hệ tôi đang dùng chọn gì? Đối chiếu với lĩnh vực PostgreSQL 14 Internals (chặng tiếp theo) hoặc tài liệu MySQL/Kafka." },
       { title: "Vẽ lại hình của sách", desc: "Đặc biệt chương 5–9: vẽ lại timeline replication lag, split-brain, linearizability bằng tay." },
       { title: "Đọc cùng nhóm nếu được", desc: "Một buổi 45 phút mỗi tuần với 2–3 người đọc cùng chương làm rõ nhiều hơn đọc lại lần hai." },
     ],
@@ -267,6 +267,39 @@ export const fieldGuides = {
       "Giải thích được cho đồng nghiệp vì sao hệ của bạn chọn isolation level hiện tại và rủi ro của nó.",
       "Thiết kế được replication + sharding cho một bài toán mới kèm phân tích đánh đổi.",
       "Đọc tài liệu một database mới là định vị được nó trên bản đồ DDIA trong 30 phút.",
+    ],
+  },
+
+  "pg-internals": {
+    tagline: "Đọc PostgreSQL 14 Internals có kỷ luật — 12 tuần từ MVCC tới sáu loại index, mỗi tuần chạy lại thí nghiệm của sách trên psql.",
+    audience: "Backend engineer hoặc DBA đã dùng PostgreSQL, viết được SQL có JOIN và biết transaction là gì; **nên xong DDIA chương 4 (lưu trữ) và chương 8 (transaction) trước** — sách này là bản cài đặt thật của những khái niệm đó. Không cần biết C.",
+    hoursPerWeek: "5–6 giờ/tuần · 12 tuần",
+    prereqs: [
+      "PostgreSQL 14 trở lên chạy local hoặc bằng Docker, kết nối được bằng `psql`.",
+      "Quyền tạo extension `pageinspect` và `pg_buffercache` trên database lab (sách dùng chúng liên tục).",
+      "Đọc được EXPLAIN ở mức cơ bản; biết Read Committed là mặc định.",
+    ],
+    steps: [
+      { id: "pg-1", title: "Dựng lab psql và tự đánh giá nền", desc: "PostgreSQL 14+ chạy được, tạo được extension pageinspect. Tự hỏi: giải thích được isolation level và index B-tree ở mức người dùng chưa? Chưa thì đọc DDIA chương 4 và 8 trước.", done: { kind: "manual" } },
+      { id: "pg-2", title: "Tuần 1–6: mở đầu, isolation và MVCC, vacuum, freezing, buffer cache, WAL", desc: "Nửa đầu là cách PostgreSQL lưu và bảo vệ dữ liệu. Mỗi tuần một thí nghiệm psql — làm trước khi tick.", href: "#/roadmap/pg", done: { kind: "track", id: "pg", pct: 50 } },
+      { id: "pg-3", title: "Tuần 7–12: lock, planner, thống kê, scan, join và sáu loại index", desc: "Nửa sau là cách truy vấn chạy và được tăng tốc. Tuần 12 có mục tổng ôn chọn index.", href: "#/roadmap/pg", done: { kind: "track", id: "pg" } },
+      { id: "pg-4", title: "Đọc trọn 31 tài liệu", desc: "Chương 1–29 cùng phần mở đầu và lời kết. Đánh dấu đã đọc từng chương khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
+      { id: "pg-5", title: "Giải thích một query chậm thật bằng kiến thức sách", desc: "Chạy EXPLAIN (ANALYZE, BUFFERS) cho một query chậm ở hệ thật; viết một trang giải thích plan: ước lượng lệch vì thống kê nào, phương thức truy cập và join nào, buffer hit/read. Tự đánh dấu khi xong.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Chạy lại mọi thí nghiệm", desc: "Sách viết quanh các câu lệnh psql có output. Gõ lại, so output của bạn với sách; khác nhau ở đâu thì đó là chỗ đáng hiểu nhất." },
+      { title: "Hai phiên psql cạnh nhau", desc: "Chương isolation, snapshot và lock chỉ hiểu thật khi mở hai (có khi ba) phiên và tự tay xen kẽ lệnh." },
+      { title: "Nối ngược về DDIA", desc: "Mỗi Phần của sách là bản cài đặt thật của một chương DDIA: Phần I ↔ transaction, Phần II ↔ lưu trữ và durability, Phần V ↔ index. Ghi một dòng đối chiếu sau mỗi tuần." },
+    ],
+    pitfalls: [
+      "Đọc lướt chương 3–4 (page, tuple, snapshot) vì \"chỉ là chi tiết\" — vacuum, freezing, HOT và index-only scan về sau đều dựa vào xmin/xmax và visibility.",
+      "Chỉnh tham số trên production ngay sau khi đọc — sách giải thích cơ chế, không phải công thức; đo trên lab trước.",
+      "Bỏ Phần V vì \"chỉ dùng B-tree\" — GIN cho jsonb/full-text và BRIN cho bảng log lớn là chỗ nhiều hệ đang trả giá.",
+    ],
+    doneWhen: [
+      "Giải thích được một bảng phình (bloat) bắt đầu từ transaction nào giữ horizon và vì sao autovacuum không dọn được.",
+      "Đọc EXPLAIN (ANALYZE, BUFFERS) là nói được ước lượng lệch do thống kê nào và vì sao planner chọn join đó.",
+      "Chọn đúng loại index (B-tree, GIN, GiST, BRIN…) cho một truy vấn mới và nêu được cái giá khi ghi.",
     ],
   },
 
@@ -632,7 +665,13 @@ export const trackGuides = {
     rhythm: "12 tuần, 4 mục mỗi tuần, một chương mỗi tuần; mỗi mục: mục tiêu, đọc phần nào, bẫy, tự kiểm tra. Cuối tuần viết một đoạn ngắn nối chương với hệ của bạn.",
     before: ["Chọn một hệ thật (của công ty hoặc dự án cá nhân) làm “ca nghiên cứu” xuyên suốt.", "Sổ tay hoặc file ghi chú theo chương.", "Chấp nhận tốc độ một chương mỗi tuần."],
     during: ["Đọc phần được chỉ; vẽ lại hình quan trọng bằng tay.", "Câu tự kiểm tra trả lời bằng ví dụ từ hệ của bạn.", "Tuần 8–9 khó nhất: đọc hai lần nếu cần, không bỏ."],
-    after: ["Viết design note cho hệ của bạn và xin review.", "Nếu đang theo Lộ trình Senior Java giai đoạn 4: tick tuần 9–14 ở đó.", "Đọc Kafka: The Definitive Guide chương 5–6 và 14 với nền vừa có."],
+    after: ["Viết design note cho hệ của bạn và xin review.", "Nếu đang theo Lộ trình Senior Java giai đoạn 4: tick tuần 9–14 ở đó.", "Sang lĩnh vực PostgreSQL 14 Internals — chặng tiếp theo trên con đường Data, nơi isolation, lưu trữ và index của DDIA được xem trong một CSDL thật.", "Đọc Kafka: The Definitive Guide chương 5–6 và 14 với nền vừa có."],
+  },
+  pg: {
+    rhythm: "12 tuần, 4 mục mỗi tuần bám năm Phần của sách; mỗi tuần một thí nghiệm psql. Đọc (40–60 phút) → gõ lại lệnh của sách trên lab → so output → trả lời tự kiểm tra → tick.",
+    before: ["PostgreSQL 14+ chạy local hoặc Docker; tạo được extension `pageinspect` và `pg_buffercache`.", "Xong DDIA chương 4 và 8, hoặc tự tin với index B-tree và isolation level ở mức người dùng.", "Mở sẵn hai cửa sổ psql — chương isolation, snapshot và lock cần xen kẽ lệnh giữa hai phiên."],
+    during: ["Mọi câu lệnh có output trong sách: gõ lại và so với output của bạn.", "Tuần 1 và 6 nhẹ chữ: dùng thời gian dư cho lab `pageinspect` và `pg_waldump`, đừng đọc vượt.", "Tuần 9–10 (scan và join): mỗi phương thức ép bằng `enable_*` một lần để thấy chi phí planner tính."],
+    after: ["Một trang giải thích EXPLAIN (ANALYZE, BUFFERS) của một query chậm thật.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: quay lại tuần 21–22 (index và EXPLAIN) với nền vừa có.", "Sang lĩnh vực Kafka: The Definitive Guide — chặng tiếp theo trên con đường Data."],
   },
   "modern-java": {
     rhythm: "12 tuần, 4 mục mỗi tuần bám 21 chương; mỗi tuần một bài tập gõ code. Đọc (30–40 phút) → gõ ví dụ → làm bài tập → tick.",

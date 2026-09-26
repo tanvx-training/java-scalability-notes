@@ -30,6 +30,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | `modern-java` | `modern-java/` | Bản dịch *Modern Java in Action* (Urma, Fusco, Mycroft — Manning) — 21 chương, 100 ảnh, PDF |
 | `effective-java` | `effective-java/` | Bản dịch *Effective Java* 3e (Bloch, Addison-Wesley 2018) — 11 chương (2–12), 90 Item, PDF |
 | `ddia` | `ddia/` | Bản dịch *Designing Data-Intensive Applications* 2e (Kleppmann, O'Reilly) — 14 chương, 105 ảnh, PDF |
+| `pg-internals` | `pg-internals/` | Bản dịch *PostgreSQL 14 Internals* (Rogov, Postgres Professional 2023) — 29 chương + 00/30, 146 ảnh, PDF |
 | `kafka` | `kafka/` | Bản dịch *Kafka: The Definitive Guide* 2e (O'Reilly) — chương 2–14, 47 ảnh, PDF |
 | `modern-concurrency` | `modern-concurrency/` | Bản dịch *Modern Concurrency in Java* (O'Reilly) — 8 chương, 19 ảnh, PDF |
 | `spring-start` | `spring-start/` | Bản dịch *Spring Start Here* (Spilcă, Manning 2021) — 15 chương + hướng dẫn học, 179 ảnh, PDF |
