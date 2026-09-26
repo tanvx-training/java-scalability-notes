@@ -254,7 +254,7 @@ export const fieldGuides = {
     ],
     method: [
       { title: "Một chương một tuần, không nhanh hơn", desc: "DDIA dày ý hơn dày chữ. Đọc nhanh là quên nhanh; track cố tình một chương mỗi tuần." },
-      { title: "Gắn vào hệ của bạn", desc: "Mỗi khái niệm (LSM vs B-tree, leader-based replication, snapshot isolation) hãy hỏi: hệ tôi đang dùng chọn gì? Tra tài liệu Postgres/MySQL/Kafka để đối chiếu." },
+      { title: "Gắn vào hệ của bạn", desc: "Mỗi khái niệm (LSM vs B-tree, leader-based replication, snapshot isolation) hãy hỏi: hệ tôi đang dùng chọn gì? Đối chiếu với lĩnh vực PostgreSQL 14 Internals (chặng tiếp theo) hoặc tài liệu MySQL/Kafka." },
       { title: "Vẽ lại hình của sách", desc: "Đặc biệt chương 5–9: vẽ lại timeline replication lag, split-brain, linearizability bằng tay." },
       { title: "Đọc cùng nhóm nếu được", desc: "Một buổi 45 phút mỗi tuần với 2–3 người đọc cùng chương làm rõ nhiều hơn đọc lại lần hai." },
     ],

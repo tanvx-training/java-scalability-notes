@@ -533,21 +533,21 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w11-1",
         text: "Học B-tree index, leftmost prefix, covering index",
-        lesson: `**Việc cần làm.** Học nền trong 2 buổi: B-tree index hoạt động thế nào; quy tắc leftmost prefix của composite index; covering index. Nguồn: use-the-index-luke.com — miễn phí và hay nhất về chủ đề này.
+        lesson: `**Việc cần làm.** Học nền trong 2 buổi: B-tree index hoạt động thế nào; quy tắc leftmost prefix của composite index; covering index; đọc sâu cấu trúc B-tree ở [PostgreSQL 14 Internals chương 25](#/docs/pg-25). Nguồn: use-the-index-luke.com — miễn phí và hay nhất về chủ đề này.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 21–22](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w11-2",
         text: "Luyện đọc EXPLAIN ANALYZE (PostgreSQL) / EXPLAIN (MySQL)",
-        lesson: `**Việc cần làm.** Luyện đọc plan trên DB công ty đang dùng: PostgreSQL dùng \`EXPLAIN (ANALYZE, BUFFERS) <query>\` — tìm \`Seq Scan\` trên bảng lớn, so \`rows\` ước tính với thật; MySQL dùng \`EXPLAIN\` — nhìn cột \`type\` (\`ALL\` = full scan là xấu), \`rows\`, \`Extra\` (\`Using filesort\`, \`Using temporary\` là cờ đỏ).
+        lesson: `**Việc cần làm.** Luyện đọc plan trên DB công ty đang dùng: PostgreSQL dùng \`EXPLAIN (ANALYZE, BUFFERS) <query>\` — tìm \`Seq Scan\` trên bảng lớn, so \`rows\` ước tính với thật; MySQL dùng \`EXPLAIN\` — nhìn cột \`type\` (\`ALL\` = full scan là xấu), \`rows\`, \`Extra\` (\`Using filesort\`, \`Using temporary\` là cờ đỏ). Muốn hiểu vì sao planner chọn plan đó: [chương 16](#/docs/pg-16) (các giai đoạn thực thi), [chương 17](#/docs/pg-17) (thống kê) và [chương 20](#/docs/pg-20) (index scan) của PostgreSQL 14 Internals.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 21–22](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w11-3",
         text: "Lab sandbox 1 triệu dòng: tạo index rồi tự phá bằng function/wildcard",
-        lesson: `**Việc cần làm.** Lab sandbox trước khi làm thật: tạo bảng một triệu dòng bằng \`generate_series\` (PostgreSQL) hoặc procedure (MySQL). Chạy query \`WHERE\` trên cột chưa index → xem plan → tạo index → xem plan đổi. Sau đó tự phá: bọc cột trong function \`WHERE UPPER(email) = ...\` để thấy index không còn được dùng. Thử tiếp leading wildcard \`LIKE '%abc'\`. Ghi từng thí nghiệm vào README.
+        lesson: `**Việc cần làm.** Lab sandbox trước khi làm thật: tạo bảng một triệu dòng bằng \`generate_series\` (PostgreSQL) hoặc procedure (MySQL). Chạy query \`WHERE\` trên cột chưa index → xem plan → tạo index → xem plan đổi. Sau đó tự phá: bọc cột trong function \`WHERE UPPER(email) = ...\` để thấy index không còn được dùng. Thử tiếp leading wildcard \`LIKE '%abc'\`. Ghi từng thí nghiệm vào README. Vì sao index thường không phục vụ được biểu thức và leading wildcard: [PostgreSQL 14 Internals chương 19](#/docs/pg-19) (operator class).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 21–22](#/docs/sj-01)`,
       },

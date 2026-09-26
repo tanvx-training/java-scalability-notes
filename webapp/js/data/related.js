@@ -111,4 +111,12 @@ export const related = {
   "ej-09": ["wgjd-07"],                             // Item 67 tối ưu thận trọng ↔ hiểu hiệu năng Java, đo trước
   "ej-11": ["jcip-02", "jcip-03", "jcip-05"],       // đồng bộ hoá, visibility, tiện ích concurrency ↔ thread safety, sharing objects, building blocks
   "ej-12": ["ddia-05"],                             // Item 85 tránh Java serialization ↔ encoding và tiến hoá schema
+
+  // ---- PostgreSQL 14 Internals ↔ DDIA (isolation, lưu trữ, replication), JPA (lock, transaction) ----
+  "pg-02": ["ddia-08", "jpa-11"],     // isolation level trong PG ↔ lý thuyết isolation; transaction/lost update trong JPA
+  "pg-04": ["ddia-08"],               // snapshot trong PG ↔ snapshot isolation (DDIA ch.8 trích dẫn chính sách này)
+  "pg-10": ["ddia-04"],               // WAL ↔ write-ahead log trong B-tree
+  "pg-11": ["ddia-06"],               // wal_level & WAL ↔ replication dựa trên log
+  "pg-13": ["jpa-11"],                // row-level lock ↔ pessimistic lock (SELECT … FOR UPDATE)
+  "pg-25": ["ddia-04"],               // B-tree cài đặt thật ↔ B-tree trong lý thuyết lưu trữ
 };
