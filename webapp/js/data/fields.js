@@ -61,6 +61,16 @@ export const FIELDS = {
     // Lộ trình trải từ Java/Spring qua DevOps, Kubernetes, AWS tới hệ phân tán —
     // không nguồn ngoài nào bao hết, nên bỏ externalRef thay vì bịa link.
   },
+  flashsale: {
+    label: "Pet project FlashSale",
+    icon: "🛒",
+    short: "FlashSale",
+    unit: null,
+    desc: "Dự án thực chiến 24 tuần: nền tảng flash sale 10.000 người tranh 500 sản phẩm — modular monolith → chịu tải → event-driven → production-grade → góc nhìn Solution Architect, kèm luồng security tự tấn công mỗi giai đoạn.",
+    certFilter: false,
+    modules: ["dashboard", "guide", "docs", "roadmap"],
+    // Kế hoạch cá nhân trải nhiều công nghệ — không nguồn ngoài nào bao hết.
+  },
   "modern-concurrency": {
     label: "Modern Concurrency in Java",
     icon: "🧵",
@@ -173,7 +183,7 @@ export const FIELDS = {
   },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "pg-internals", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "pg-internals", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java", "flashsale"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.

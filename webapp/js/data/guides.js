@@ -204,6 +204,43 @@ export const fieldGuides = {
     ],
   },
 
+  flashsale: {
+    tagline: "Xây một hệ thống flash sale thật trong 24 tuần — mỗi giai đoạn có số đo, ADR, buổi tự tấn công và một tag Git.",
+    audience: "Java developer đã đi phần lớn con đường Java Backend và Data (Spring, JPA, PostgreSQL, Kafka ở mức dùng được), muốn một dự án chứng minh kỹ năng Senior và mở đầu Solution Architect. Cần **8–10 giờ/tuần** trong 24 tuần; mỗi buổi 2–2,5 giờ.",
+    hoursPerWeek: "8–10 giờ/tuần · 24 tuần",
+    prereqs: [
+      "Máy đủ chạy Docker Compose nhiều container và (từ giai đoạn 4) một cụm kind 3 node — cấu hình tối thiểu ở tài liệu Thiết lập môi trường.",
+      "Tài khoản GitHub để chạy GitHub Actions; repo public từ giai đoạn 1 để dùng CodeQL.",
+      "Ngân sách tài nguyên học (sách, khoá, cloud) theo mục Ngân sách trong Quy ước & tự đánh giá.",
+    ],
+    steps: [
+      { id: "fs-0", title: "Đọc Kế hoạch & theo dõi tiến độ", desc: "Bài toán, NFR bằng số, stack và nguyên tắc làm việc. Đây là thước đo cho mọi giai đoạn — đọc trước khi dựng máy.", href: "#/docs/fs-00", done: { kind: "doc", id: "fs-00" } },
+      { id: "fs-1", title: "Thiết lập môi trường", desc: "Cài công cụ theo danh sách, chạy smoke test môi trường. Đánh dấu đã đọc khi smoke test xanh.", href: "#/docs/fs-01", done: { kind: "doc", id: "fs-01" } },
+      { id: "fs-2", title: "Giai đoạn 0 — Thiết kế trước khi code (tuần 1–2)", desc: "NFR, ước lượng, C4, ADR-001/002, threat model sơ bộ, CI xanh. Tag v0-design.", href: "#/roadmap/fs-gd0", done: { kind: "track", id: "fs-gd0" } },
+      { id: "fs-3", title: "Giai đoạn 1 — Modular monolith chạy đúng (tuần 3–6)", desc: "100 request đồng thời, tồn kho đúng, idempotency, Keycloak, attack log 1. Tag v1-monolith.", href: "#/roadmap/fs-gd1", done: { kind: "track", id: "fs-gd1" } },
+      { id: "fs-4", title: "Giai đoạn 2 — Chịu tải flash sale (tuần 7–10)", desc: "Report p95/p99 trước và sau kèm flame graph; đạt 10.000 request/phút, p99 < 300 ms. Tag v2-perf.", href: "#/roadmap/fs-gd2", done: { kind: "track", id: "fs-gd2" } },
+      { id: "fs-5", title: "Giai đoạn 3 — Event-driven và tách service (tuần 11–15)", desc: "Outbox, saga, consumer idempotent, DLQ, hai service tách; chaos tắt payment vẫn không mất đơn. Tag v3-events.", href: "#/roadmap/fs-gd3", done: { kind: "track", id: "fs-gd3" } },
+      { id: "fs-6", title: "Giai đoạn 4 — Production-grade (tuần 16–19)", desc: "Kubernetes, CI ký image kèm SBOM, SLO và alert, resilience, chaos, postmortem. Tag v4-prod.", href: "#/roadmap/fs-gd4", done: { kind: "track", id: "fs-gd4" } },
+      { id: "fs-7", title: "Giai đoạn 5 — Góc nhìn Solution Architect (tuần 20–24)", desc: "SAD arc42, threat model đầy đủ, TCO và ADR-008, Well-Architected, bài trình bày công khai. Tag v5-sa.", href: "#/roadmap/fs-gd5", done: { kind: "track", id: "fs-gd5" } },
+    ],
+    method: [
+      { title: "Đo trước khi tối ưu", desc: "Không thay đổi gì ở giai đoạn 2 và 4 khi chưa có số baseline; mỗi thay đổi là một mốc trong report với p95/p99 trước và sau." },
+      { title: "Mỗi quyết định một ADR", desc: "Theo mẫu MADR trong docs/adr; ADR bị thay thế thì đánh dấu superseded, không xoá. Nhật ký ADR ở tài liệu tổng quan là mục lục." },
+      { title: "Xây – tấn công – sửa", desc: "Mỗi giai đoạn có buổi tự tấn công 2–3 giờ trước khi gắn tag; mọi phát hiện vào attack log kèm commit fix và test hồi quy." },
+      { title: "Khối Nghiệm thu là cổng thật", desc: "Cuối mỗi track là Definition of Done của giai đoạn; chưa tick đủ thì chưa gắn tag, chưa sang giai đoạn sau." },
+    ],
+    pitfalls: [
+      "Mở rộng scope: làm UI đẹp, thêm tính năng ngoài flash sale, hay tích hợp payment thật — kế hoạch cố tình cấm cả ba.",
+      "Tối ưu khi chưa đo, hoặc đo một lần rồi kết luận — mỗi cấu hình đo 3 lần, lấy trung vị.",
+      "Trễ lịch thì cắt chất lượng bằng chứng (test, số đo, attack log) — kế hoạch cho phép trượt thời gian, không cho trượt bằng chứng; mỗi giai đoạn ghi sẵn buổi nào được cắt khi trễ.",
+    ],
+    doneWhen: [
+      "Sáu tag v0-design → v5-sa, mỗi tag kèm attack log và README cập nhật.",
+      "SAD arc42 hoàn chỉnh, ADR-001…008 có trạng thái cuối, report hiệu năng có số trước/sau.",
+      "Bài viết hoặc tech talk công khai và ít nhất 5 phản biện đã ghi lại.",
+    ],
+  },
+
   "modern-concurrency": {
     tagline: "Đọc Modern Concurrency in Java — virtual thread, structured concurrency, scoped values — bằng thí nghiệm trên JDK 21+.",
     audience: "Java developer đã dùng thread hoặc ExecutorService; **không cần biết trước virtual thread**. Rất nên đọc sau bài 04–05 của lĩnh vực Java & Spring Boot Scalability.",
@@ -654,6 +691,42 @@ export const trackGuides = {
     before: ["Đủ ≥ 6/7 tiêu chí nghiệm thu giai đoạn 3.", "Xin trước một bài toán thật ở công ty để viết design doc #1.", "Tìm 2 người có thể làm mock system design với bạn."],
     during: ["Tuần 1–2 dùng lĩnh vực Kafka; tuần 9–14 dùng lĩnh vực DDIA — tick ở cả hai nơi.", "Design doc phải được review thật và ít nhất một cái được triển khai.", "Mock interview ghi âm lại và tự nghe."],
     after: ["Chấm ma trận lần cuối (100 %).", "Hồ sơ Senior: CV, GitHub, ≥ 4 bài blog.", "Phỏng vấn thật."],
+  },
+  "fs-gd0": {
+    rhythm: "2 tuần, 8 buổi 2–2,5 giờ, làm đúng thứ tự vì buổi sau dùng đầu ra của buổi trước. Mỗi buổi: đọc mục tương ứng trong tài liệu giai đoạn → làm → commit đầu ra → tick.",
+    before: ["Smoke test môi trường xanh (tài liệu Thiết lập môi trường).", "Đọc tài liệu tổng quan: NFR ở bảng đầu là thước đo cho mọi quyết định của giai đoạn này.", "Tạo repo trống, bật branch protection cho `main`."],
+    during: ["Viết NFR bằng số, không bằng tính từ — \"nhanh\" không kiểm được, \"p99 < 300 ms\" thì được.", "Mỗi ADR nêu ít nhất hai phương án thay thế và vì sao không chọn.", "gitleaks và Dependency-Check vào CI ngay từ commit đầu, đừng để \"sau\"."],
+    after: ["Tick đủ khối Nghiệm thu rồi mới gắn tag `v0-design`.", "Cập nhật dòng giai đoạn 0 trong bảng tiến độ và nhật ký tuần.", "Sang track Giai đoạn 1."],
+  },
+  "fs-gd1": {
+    rhythm: "4 tuần, 16 buổi: tuần 3 dựng nền, tuần 4 đặt hàng đúng, tuần 5 thanh toán và hết hạn, tuần 6 tấn công và chốt. Mỗi buổi kết thúc bằng một test xanh hoặc một tài liệu đầu ra.",
+    before: ["Tag `v0-design` và CI xanh.", "Keycloak chạy được trong Docker Compose.", "Đọc mục 3–6 của tài liệu giai đoạn 1 (module, domain, API, luồng đồng thời) trước buổi 1."],
+    during: ["Buổi 8 và 10 dễ trượt nhất; nếu trượt, cắt buổi 15 xuống 1 giờ chứ không bỏ buổi 13–14.", "Test đồng thời chạy lại 10 lần liên tiếp — một lần xanh không chứng minh gì.", "Không thêm Redis hay cache dù thấy chậm: đó là việc của giai đoạn 2."],
+    after: ["`docs/security/attack-log-1.md` có 6 kịch bản và commit fix.", "`docs/perf/baseline-v1.md` — số liệu nền cho giai đoạn 2.", "Tick khối Nghiệm thu, gắn tag `v1-monolith`, sang Giai đoạn 2."],
+  },
+  "fs-gd2": {
+    rhythm: "4 tuần, 16 buổi: tuần 7 đo và tìm nút thắt, tuần 8 đường ghi qua Redis, tuần 9 chặn lạm dụng và đổi mô hình thread, tuần 10 đường đọc, tấn công và chốt. Mỗi thay đổi là một mốc trong report.",
+    before: ["Tag `v1-monolith` và `baseline-v1.md`.", "Môi trường đo cố định (Docker resource limit) — không đo trên máy đang chạy việc khác.", "Đọc mục 3 (phương pháp đo) của tài liệu giai đoạn 2 trước buổi 1."],
+    during: ["Đo mỗi cấu hình 3 lần, lấy trung vị; ghi cả thử nghiệm không có tác dụng.", "Sau mỗi tối ưu chạy lại verify-no-oversell — nhanh mà oversell là hỏng.", "ADR-003 viết ở trạng thái Proposed trước khi code, chỉ sang Accepted khi có số."],
+    after: ["`docs/perf/report.md` có bảng p95/p99 trước/sau mỗi mốc kèm flame graph.", "`docs/security/attack-log-2.md` có 6 kịch bản, gồm race trên đường Redis (buổi tấn công 3–4).", "Tick khối Nghiệm thu, gắn tag `v2-perf`, sang Giai đoạn 3."],
+  },
+  "fs-gd3": {
+    rhythm: "5 tuần, 20 buổi: tuần 11 hạ tầng event, tuần 12 outbox và consumer trong monolith, tuần 13 tách order-service, tuần 14 tách payment-service và saga đầy đủ, tuần 15 security, chaos và chốt.",
+    before: ["Tag `v2-perf` và report hiệu năng làm mốc hồi quy.", "Kafka KRaft, Apicurio, Kafka UI chạy trong Compose.", "Đọc mục 4–7 của tài liệu giai đoạn 3 (topic, outbox, saga, consumer) trước buổi 1."],
+    during: ["Không tách service trước khi bốn đường saga xanh trong monolith (buổi 8).", "Mỗi consumer idempotent ngay từ đầu — replay 1.000 event không được đổi trạng thái.", "ADR-005/006/007 viết kèm số đo, không chỉ lập luận."],
+    after: ["Chaos tắt payment-service 2 phút vẫn đúng 100% đơn.", "Attack log 3 có 6 kịch bản; Kafka chạy SASL/SCRAM + ACL.", "Tick khối Nghiệm thu, gắn tag `v3-events`, sang Giai đoạn 4."],
+  },
+  "fs-gd4": {
+    rhythm: "4 tuần, 16 buổi: tuần 16 observability trên Compose, tuần 17 đóng gói và lên kind, tuần 18 pipeline và resilience, tuần 19 security, chaos và postmortem.",
+    before: ["Tag `v3-events`.", "Máy đủ chạy kind 3 node cùng Strimzi, CloudNativePG, Grafana stack (xem Thiết lập môi trường).", "Đọc mục 3 (observability) trước buổi 1 — cần có mắt trước khi chuyển nhà."],
+    during: ["Làm observability trên Compose trước; lên kind rồi mới thêm trace là mất khả năng so sánh.", "Pipeline fail thật khi có lỗ hổng High/Critical — không hạ ngưỡng để CI xanh.", "Chaos nào cũng đối chiếu dashboard và alert: alert không bắn là một phát hiện."],
+    after: ["`docs/postmortem-001.md` blameless kèm 4 runbook.", "CI xanh có SBOM và chữ ký cosign; Kyverno chặn image không chữ ký.", "Tick khối Nghiệm thu, gắn tag `v4-prod`, sang Giai đoạn 5."],
+  },
+  "fs-gd5": {
+    rhythm: "5 tuần, 20 buổi: tuần 20–21 SAD và threat model, tuần 22 chi phí và Well-Architected, tuần 23 thí nghiệm và đối chiếu, tuần 24 viết, nói và chốt.",
+    before: ["Tag `v4-prod`; mọi ADR, report, attack log và postmortem ở một chỗ.", "Tài khoản AWS Pricing Calculator (không cần chạy cloud thật).", "Đọc mục 3 (arc42) trước buổi 1."],
+    during: ["SAD dùng lại C4, ADR và số liệu đã có — không vẽ lại từ đầu.", "Mỗi phương án chi phí ghi rõ giả định; độ nhạy quan trọng hơn con số tuyệt đối.", "Trình bày cho người thật và ghi phản biện; tự trình bày cho mình không tính."],
+    after: ["`docs/sad` hoàn chỉnh, ADR-008 có bảng chi phí.", "Bài viết hoặc slide công khai và proposal 2 trang từ phản biện.", "Tick khối Nghiệm thu, gắn tag `v5-sa`; xem mục \"Sau giai đoạn 5\" của tài liệu giai đoạn 5."],
   },
   modconc: {
     rhythm: "9 tuần, 3–4 mục mỗi tuần bám 8 chương; mỗi mục: mục tiêu, đọc phần nào, bẫy, tự kiểm tra. Mỗi tuần có ít nhất một đoạn code chạy trên JDK 21+.",

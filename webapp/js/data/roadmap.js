@@ -6,8 +6,8 @@
 // sách Modern Java in Action, đọc sách Effective Java, đọc sách Kafka: The Definitive Guide, đọc
 // sách Spring Start Here, đọc sách Java Concurrency in Practice, đọc sách
 // Optimizing Cloud Native Java, đọc sách Java Persistence with Spring Data
-// and Hibernate, và 4 giai
-// đoạn của Lộ trình Senior Java) — mỗi
+// and Hibernate, 4 giai đoạn của Lộ trình Senior Java và 6 giai đoạn của pet
+// project FlashSale) — mỗi
 // track là một giáo trình tương tác: mỗi mục là một bài học chi tiết
 // (markdown), mỗi tuần kèm tài nguyên liên quan.
 //
@@ -32,11 +32,12 @@
 //   jpa/roadmap-part{1,2}.js                (Tuần 1–7 / 8–13)       — 52 mục
 //   effective-java/roadmap-part{1,2}.js     (Tuần 1–5 / 6–10)       — 40 mục
 //   senior-java/roadmap-gd{1,2,3,4}.js      (Tuần 1–26 mỗi giai đoạn) — 81 / 66 / 64 / 65 mục
+//   flashsale/roadmap-gd{0..5}.js           (Tuần 1–24 theo giai đoạn) — 18 / 27 / 27 / 33 / 29 / 31 mục
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, pg-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, oc-w1, jp-w1, ej-w1, sj-gd1-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, pg-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, oc-w1-1, jp-w1-1, ej-w1-1, sj-gd1-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, pg-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, oc-w1, jp-w1, ej-w1, sj-gd1-w1, fs-gd0-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, pg-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, oc-w1-1, jp-w1-1, ej-w1-1, sj-gd1-w1-1, fs-gd0-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./kubernetes/roadmap-ckad-part1.js";
@@ -82,6 +83,12 @@ import { seniorJavaGd1 } from "./senior-java/roadmap-gd1.js";
 import { seniorJavaGd2 } from "./senior-java/roadmap-gd2.js";
 import { seniorJavaGd3 } from "./senior-java/roadmap-gd3.js";
 import { seniorJavaGd4 } from "./senior-java/roadmap-gd4.js";
+import { flashsaleGd0 } from "./flashsale/roadmap-gd0.js";
+import { flashsaleGd1 } from "./flashsale/roadmap-gd1.js";
+import { flashsaleGd2 } from "./flashsale/roadmap-gd2.js";
+import { flashsaleGd3 } from "./flashsale/roadmap-gd3.js";
+import { flashsaleGd4 } from "./flashsale/roadmap-gd4.js";
+import { flashsaleGd5 } from "./flashsale/roadmap-gd5.js";
 import { bookCrossref } from "./book-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 import { docLabelWithBook } from "./labels.js";
@@ -352,6 +359,72 @@ export const tracks = [
     desc: "Kế hoạch đọc 13 tuần bám theo bản dịch đủ 20 chương: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; cả mười ba tuần đều có bài thực hành gõ tay — dựng cùng một Hello World bằng ba cách, đọc DDL Hibernate sinh ra, so ba chiến lược sinh id, viết converter, hiện thực một cây thừa kế bằng cả bốn chiến lược, đếm câu lệnh khi đổi interface collection, tái hiện LazyInitializationException, chặn lost update bằng optimistic rồi pessimistic lock, đếm query trước và sau khi chữa n+1, chuyển một repository sang Spring Data JDBC, thử ETag, và viết test persistence chạy trên database thật trong container.",
     prereq: "Yêu cầu: đọc và viết được SQL ở mức join và index — sách nói thẳng ở chương 1 rằng nắm vững mô hình quan hệ và SQL là điều kiện tiên quyết. Chạy được một ứng dụng Spring Boot thật để gõ theo từng chương, và có một SQL database chạy được cục bộ hoặc qua Docker vì gần như mọi tuần đều đọc SQL do Hibernate sinh ra. Docker cho chương 17 và 18 (MongoDB và Neo4j). Tên package và giá trị mặc định của Hibernate cùng Spring Data đổi theo phiên bản: đọc để hiểu cơ chế, còn cấu hình thì tra lại theo phiên bản bạn đang chạy.",
     weeks: [...jpaWeeksPart1, ...jpaWeeksPart2],
+  },
+  {
+    id: "fs-gd0",
+    field: "flashsale",
+    label: "Giai đoạn 0",
+    icon: "📐",
+    name: "Thiết kế trước khi code (tuần 1–2)",
+    durationWeeks: 2,
+    desc: "Repo chưa có dòng nghiệp vụ nào nhưng đã có NFR bằng số, ước lượng, C4, ADR-001/002, threat model sơ bộ và CI xanh. Kết thúc bằng tag v0-design.",
+    prereq: "Yêu cầu: đã xong Thiết lập môi trường (smoke test xanh). 8 buổi, mỗi buổi 2–2,5 giờ, làm đúng thứ tự.",
+    weeks: flashsaleGd0,
+  },
+  {
+    id: "fs-gd1",
+    field: "flashsale",
+    label: "Giai đoạn 1",
+    icon: "🧱",
+    name: "Modular monolith chạy đúng (tuần 3–6)",
+    durationWeeks: 4,
+    desc: "Luồng đặt hàng đúng tuyệt đối dưới 100 request đồng thời: Spring Modulith, Idempotency-Key, optimistic locking, Keycloak, attack log đầu tiên. Kết thúc bằng tag v1-monolith.",
+    prereq: "Yêu cầu: tag v0-design. Chưa tối ưu hiệu năng ở giai đoạn này dù thấy chậm.",
+    weeks: flashsaleGd1,
+  },
+  {
+    id: "fs-gd2",
+    field: "flashsale",
+    label: "Giai đoạn 2",
+    icon: "⚡",
+    name: "Chịu tải flash sale (tuần 7–10)",
+    durationWeeks: 4,
+    desc: "10.000 request/phút với p99 < 300 ms mà vẫn 0 oversell: đo baseline, profiling, Redis Lua, token hàng chờ, rate limit, virtual threads — mỗi thay đổi một mốc trong report. Kết thúc bằng tag v2-perf.",
+    prereq: "Yêu cầu: tag v1-monolith và baseline-v1. Không đổi gì khi chưa có số đo trước.",
+    weeks: flashsaleGd2,
+  },
+  {
+    id: "fs-gd3",
+    field: "flashsale",
+    label: "Giai đoạn 3",
+    icon: "📨",
+    name: "Event-driven và tách service (tuần 11–15)",
+    durationWeeks: 5,
+    desc: "Đặt hàng → thanh toán → xác nhận kho chạy bất đồng bộ qua Kafka, tự bù khi lỗi; outbox, saga, consumer idempotent, DLQ; order và payment thành hai service. Kết thúc bằng tag v3-events.",
+    prereq: "Yêu cầu: tag v2-perf. Luồng event phải chạy đúng trong monolith trước khi tách service.",
+    weeks: flashsaleGd3,
+  },
+  {
+    id: "fs-gd4",
+    field: "flashsale",
+    label: "Giai đoạn 4",
+    icon: "🚀",
+    name: "Production-grade (tuần 16–19)",
+    durationWeeks: 4,
+    desc: "Chạy trên Kubernetes với CI/CD ký image, quan sát theo SLO, resilience và chaos có kiểm chứng; postmortem cho một sự cố tự tạo. Kết thúc bằng tag v4-prod.",
+    prereq: "Yêu cầu: tag v3-events. Tuần 19 rơi vào Tết 2027 — dự phòng 1–2 tuần theo kế hoạch trong tài liệu giai đoạn 4.",
+    weeks: flashsaleGd4,
+  },
+  {
+    id: "fs-gd5",
+    field: "flashsale",
+    label: "Giai đoạn 5",
+    icon: "🏛️",
+    name: "Góc nhìn Solution Architect (tuần 20–24)",
+    durationWeeks: 5,
+    desc: "Biến dự án thành portfolio kiến trúc: SAD arc42, threat model đầy đủ, TCO ba phương án (ADR-008), Well-Architected, GraalVM native và một bài trình bày công khai. Kết thúc bằng tag v5-sa.",
+    prereq: "Yêu cầu: tag v4-prod. Viết SAD trước vì mọi việc sau đều bổ sung vào nó.",
+    weeks: flashsaleGd5,
   },
 ];
 

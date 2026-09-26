@@ -5,6 +5,7 @@
 // Lộ trình Senior Java là TRỤC XUYÊN SUỐT (SPINE), đi qua cả ba con đường theo
 // thời gian — không xếp ngang hàng con đường. check-data.mjs (P1) kiểm mọi lĩnh
 // vực xuất hiện đúng một lần trong PATHS ∪ SPINE.
+// Con đường có crossLinks: true (capstone) được link tài liệu mọi con đường — xem #3b.
 
 export const PATHS = {
   kubernetes: {
@@ -28,9 +29,19 @@ export const PATHS = {
     fields: ["ddia", "pg-internals", "kafka"],
     foundation: [],
   },
+  project: {
+    label: "Dự án thực chiến",
+    icon: "🛒",
+    desc: "Ráp mọi thứ đã học vào một hệ thống chạy thật: FlashSale đi qua Java/Spring, PostgreSQL, Redis, Kafka, Kubernetes và bảo mật, kết thúc bằng hồ sơ kiến trúc — nên được trỏ tới tài liệu của cả ba con đường.",
+    fields: ["flashsale"],
+    foundation: [],
+    // Capstone: track của con đường này được link #/docs của MỌI lĩnh vực
+    // (bất biến #3b), giống ngoại lệ của trục Senior Java.
+    crossLinks: true,
+  },
 };
 
-export const PATH_ORDER = ["kubernetes", "java", "data"];
+export const PATH_ORDER = ["kubernetes", "java", "data", "project"];
 
 export const SPINE = {
   field: "senior-java",
