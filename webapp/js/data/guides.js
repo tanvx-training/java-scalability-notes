@@ -270,6 +270,38 @@ export const fieldGuides = {
     ],
   },
 
+  "pg-internals": {
+    tagline: "Đọc PostgreSQL 14 Internals có kỷ luật — 12 tuần từ MVCC tới sáu loại index, mỗi tuần chạy lại thí nghiệm của sách trên psql.",
+    audience: "Backend engineer hoặc DBA đã dùng PostgreSQL, viết được SQL có JOIN và biết transaction là gì; **nên xong DDIA chương 4 (lưu trữ) và chương 8 (transaction) trước** — sách này là bản cài đặt thật của những khái niệm đó. Không cần biết C.",
+    hoursPerWeek: "5–6 giờ/tuần · 12 tuần",
+    prereqs: [
+      "PostgreSQL 14 trở lên chạy local hoặc bằng Docker, kết nối được bằng `psql`.",
+      "Quyền tạo extension `pageinspect` và `pg_buffercache` trên database lab (sách dùng chúng liên tục).",
+      "Đọc được EXPLAIN ở mức cơ bản; biết Read Committed là mặc định.",
+    ],
+    steps: [
+      { id: "pg-1", title: "Dựng lab psql và tự đánh giá nền", desc: "PostgreSQL 14+ chạy được, tạo được extension pageinspect. Tự hỏi: giải thích được isolation level và index B-tree ở mức người dùng chưa? Chưa thì đọc DDIA chương 4 và 8 trước.", done: { kind: "manual" } },
+      // pg-2, pg-3 (bước trỏ track "pg") thêm ở Task 4 — track chưa tồn tại thì G3 báo đỏ.
+      { id: "pg-4", title: "Đọc trọn 31 tài liệu", desc: "Chương 1–29 cùng phần mở đầu và lời kết. Đánh dấu đã đọc từng chương khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
+      { id: "pg-5", title: "Giải thích một query chậm thật bằng kiến thức sách", desc: "Chạy EXPLAIN (ANALYZE, BUFFERS) cho một query chậm ở hệ thật; viết một trang giải thích plan: ước lượng lệch vì thống kê nào, phương thức truy cập và join nào, buffer hit/read. Tự đánh dấu khi xong.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Chạy lại mọi thí nghiệm", desc: "Sách viết quanh các câu lệnh psql có output. Gõ lại, so output của bạn với sách; khác nhau ở đâu thì đó là chỗ đáng hiểu nhất." },
+      { title: "Hai phiên psql cạnh nhau", desc: "Chương isolation, snapshot và lock chỉ hiểu thật khi mở hai (có khi ba) phiên và tự tay xen kẽ lệnh." },
+      { title: "Nối ngược về DDIA", desc: "Mỗi Phần của sách là bản cài đặt thật của một chương DDIA: Phần I ↔ transaction, Phần II ↔ lưu trữ và durability, Phần V ↔ index. Ghi một dòng đối chiếu sau mỗi tuần." },
+    ],
+    pitfalls: [
+      "Đọc lướt chương 3–4 (page, tuple, snapshot) vì \"chỉ là chi tiết\" — vacuum, freezing, HOT và index-only scan về sau đều dựa vào xmin/xmax và visibility.",
+      "Chỉnh tham số trên production ngay sau khi đọc — sách giải thích cơ chế, không phải công thức; đo trên lab trước.",
+      "Bỏ Phần V vì \"chỉ dùng B-tree\" — GIN cho jsonb/full-text và BRIN cho bảng log lớn là chỗ nhiều hệ đang trả giá.",
+    ],
+    doneWhen: [
+      "Giải thích được một bảng phình (bloat) bắt đầu từ transaction nào giữ horizon và vì sao autovacuum không dọn được.",
+      "Đọc EXPLAIN (ANALYZE, BUFFERS) là nói được ước lượng lệch do thống kê nào và vì sao planner chọn join đó.",
+      "Chọn đúng loại index (B-tree, GIN, GiST, BRIN…) cho một truy vấn mới và nêu được cái giá khi ghi.",
+    ],
+  },
+
   "modern-java": {
     tagline: "Đọc Modern Java in Action 12 tuần — lambda, stream, Optional, CompletableFuture — mỗi tuần một bài tập gõ code.",
     audience: "Java developer thành thạo cú pháp trước Java 8 (class, interface, generics, collection) nhưng còn viết vòng `for` cho mọi thứ; **không cần biết trước lambda hay stream**. Đây là sách nền của giai đoạn 1 Lộ trình Senior Java.",
