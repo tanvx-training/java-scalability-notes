@@ -204,6 +204,37 @@ export const fieldGuides = {
     ],
   },
 
+  flashsale: {
+    tagline: "Xây một hệ thống flash sale thật trong 24 tuần — mỗi giai đoạn có số đo, ADR, buổi tự tấn công và một tag Git.",
+    audience: "Java developer đã đi phần lớn con đường Java Backend và Data (Spring, JPA, PostgreSQL, Kafka ở mức dùng được), muốn một dự án chứng minh kỹ năng Senior và mở đầu Solution Architect. Cần **8–10 giờ/tuần** trong 24 tuần; mỗi buổi 2–2,5 giờ.",
+    hoursPerWeek: "8–10 giờ/tuần · 24 tuần",
+    prereqs: [
+      "Máy đủ chạy Docker Compose nhiều container và (từ giai đoạn 4) một cụm kind 3 node — cấu hình tối thiểu ở tài liệu Thiết lập môi trường.",
+      "Tài khoản GitHub để chạy GitHub Actions; repo public từ giai đoạn 1 để dùng CodeQL.",
+      "Ngân sách tài nguyên học (sách, khoá, cloud) theo mục Ngân sách trong Quy ước & tự đánh giá.",
+    ],
+    steps: [
+      { id: "fs-0", title: "Đọc Kế hoạch & theo dõi tiến độ", desc: "Bài toán, NFR bằng số, stack và nguyên tắc làm việc. Đây là thước đo cho mọi giai đoạn — đọc trước khi dựng máy.", href: "#/docs/fs-00", done: { kind: "doc", id: "fs-00" } },
+      { id: "fs-1", title: "Thiết lập môi trường", desc: "Cài công cụ theo danh sách, chạy smoke test môi trường. Đánh dấu đã đọc khi smoke test xanh.", href: "#/docs/fs-01", done: { kind: "doc", id: "fs-01" } },
+    ],
+    method: [
+      { title: "Đo trước khi tối ưu", desc: "Không thay đổi gì ở giai đoạn 2 và 4 khi chưa có số baseline; mỗi thay đổi là một mốc trong report với p95/p99 trước và sau." },
+      { title: "Mỗi quyết định một ADR", desc: "Theo mẫu MADR trong docs/adr; ADR bị thay thế thì đánh dấu superseded, không xoá. Nhật ký ADR ở tài liệu tổng quan là mục lục." },
+      { title: "Xây – tấn công – sửa", desc: "Mỗi giai đoạn có buổi tự tấn công 2–3 giờ trước khi gắn tag; mọi phát hiện vào attack log kèm commit fix và test hồi quy." },
+      { title: "Khối Nghiệm thu là cổng thật", desc: "Cuối mỗi track là Definition of Done của giai đoạn; chưa tick đủ thì chưa gắn tag, chưa sang giai đoạn sau." },
+    ],
+    pitfalls: [
+      "Mở rộng scope: làm UI đẹp, thêm tính năng ngoài flash sale, hay tích hợp payment thật — kế hoạch cố tình cấm cả ba.",
+      "Tối ưu khi chưa đo, hoặc đo một lần rồi kết luận — mỗi cấu hình đo 3 lần, lấy trung vị.",
+      "Bỏ buổi tấn công khi trễ lịch — kế hoạch nói rõ: cắt buổi dọn dẹp, không cắt buổi tấn công.",
+    ],
+    doneWhen: [
+      "Sáu tag v0-design → v5-sa, mỗi tag kèm attack log và README cập nhật.",
+      "SAD arc42 hoàn chỉnh, ADR-001…008 có trạng thái cuối, report hiệu năng có số trước/sau.",
+      "Bài viết hoặc tech talk công khai và ít nhất 5 phản biện đã ghi lại.",
+    ],
+  },
+
   "modern-concurrency": {
     tagline: "Đọc Modern Concurrency in Java — virtual thread, structured concurrency, scoped values — bằng thí nghiệm trên JDK 21+.",
     audience: "Java developer đã dùng thread hoặc ExecutorService; **không cần biết trước virtual thread**. Rất nên đọc sau bài 04–05 của lĩnh vực Java & Spring Boot Scalability.",

@@ -101,6 +101,9 @@ const EXPECTED = {
     // Ngân hàng câu hỏi phỏng vấn JPA — 6 chủ đề × 4 cấp độ, viết dần qua
     // các task. Số này TĂNG DẦN cho tới 24; sửa ở đây TRƯỚC khi viết dữ liệu.
     "interview:jpa": 24,
+    // Lĩnh vực FlashSale — pet project 24 tuần: kế hoạch, môi trường, 6 giai
+    // đoạn, security, quy ước (không phải sách: chapter/part null).
+    "docs:flashsale": 10,
   },
 };
 
