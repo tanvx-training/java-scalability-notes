@@ -1,7 +1,5 @@
 # Giai đoạn 1 — Modular monolith chạy đúng (tài liệu chi tiết)
 
-Sep 26, 2026 · @Nothing
-
 Bốn tuần này làm cho luồng đặt hàng đúng tuyệt đối dưới 100 request đồng thời, chưa cần nhanh; mọi con số đo được ở đây là baseline cho giai đoạn 2.
 
 ## 1. Mục tiêu, phạm vi và Definition of Done

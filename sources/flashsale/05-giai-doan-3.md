@@ -1,7 +1,5 @@
 # Giai đoạn 3 — Event-driven và tách service (tài liệu chi tiết)
 
-Sep 26, 2026 · @Nothing
-
 Năm tuần này biến luồng đặt hàng → thanh toán → xác nhận thành một saga qua Kafka, tự bù khi lỗi, và tách `order` cùng `payment` thành hai service có database riêng; thước đo thành công là tắt payment-service giữa flash sale mà không mất và không trùng một đơn nào.
 
 ## 1. Mục tiêu, phạm vi và Definition of Done

@@ -1,7 +1,5 @@
 # Giai đoạn 5 — Góc nhìn Solution Architect (tài liệu chi tiết)
 
-Sep 26, 2026 · @Nothing
-
 Năm tuần cuối không thêm tính năng; chúng biến 4 giai đoạn code, số đo và ADR thành một bộ tài liệu kiến trúc mà một khách hàng, một CTO và một kỹ sư mới đều đọc được, kèm con số chi phí và một bài trình bày công khai.
 
 ## 1. Mục tiêu, phạm vi và Definition of Done

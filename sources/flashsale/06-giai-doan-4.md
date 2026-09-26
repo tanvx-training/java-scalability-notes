@@ -1,7 +1,5 @@
 # Giai đoạn 4 — Production-grade (tài liệu chi tiết)
 
-Sep 26, 2026 · @Nothing
-
 Bốn tuần này đưa ba deployable lên Kubernetes với pipeline có chữ ký, quan sát được theo SLO và sống sót qua chaos test; thước đo là một postmortem viết được từ dashboard chứ không từ trí nhớ.
 
 ## 1. Mục tiêu, phạm vi và Definition of Done

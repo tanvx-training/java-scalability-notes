@@ -1,7 +1,5 @@
 # Giai đoạn 0 — Thiết kế trước khi code (tài liệu chi tiết)
 
-Sep 26, 2026 · @Nothing
-
 Hai tuần đầu không viết code nghiệp vụ; đầu ra là một repo có yêu cầu đo được, sơ đồ C4, hai ADR, threat model sơ bộ và CI chạy xanh.
 
 ## 1. Mục tiêu, phạm vi và Definition of Done

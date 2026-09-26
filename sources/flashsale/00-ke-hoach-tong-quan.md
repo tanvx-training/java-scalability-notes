@@ -1,7 +1,5 @@
 # FlashSale — Kế hoạch pet project & theo dõi tiến độ
 
-Sep 25, 2026 · @Nothing
-
 ## Tổng quan đề tài
 
 FlashSale là nền tảng bán hàng flash sale chịu tải cao, event-driven, làm trong 24 tuần (8–10 giờ/tuần) để luyện toàn bộ kỹ năng Senior và mở đầu kỹ năng Solution Architect.
@@ -22,7 +20,7 @@ FlashSale là nền tảng bán hàng flash sale chịu tải cao, event-driven,
 
 **Giả định và giới hạn phạm vi:** payment gateway là mock; UI tối giản (hoặc chỉ dùng API); không làm catalog phức tạp; mỗi giai đoạn kết thúc bằng một Git tag và README cập nhật.
 
-Cài đặt máy và công cụ trước khi bắt đầu: Thiết lập môi trường
+Cài đặt máy và công cụ trước khi bắt đầu: [Thiết lập môi trường](01-thiet-lap-moi-truong.md)
 
 ## Bảng theo dõi tiến độ
 
@@ -57,7 +55,7 @@ Kết thúc giai đoạn này là một repo chưa có dòng code nghiệp vụ 
 
 **Mốc kiểm tra:** README nêu rõ NFR; `docs/adr` có 2 ADR; CI xanh trên commit rỗng; tag `v0-design`.
 
-Tài liệu chi tiết của giai đoạn này: Giai đoạn 0 — chi tiết
+Tài liệu chi tiết của giai đoạn này: [Giai đoạn 0 — chi tiết](02-giai-doan-0.md)
 
 ## Giai đoạn 1 — Modular monolith chạy đúng (tuần 3–6)
 
@@ -78,7 +76,7 @@ Mục tiêu là luồng đặt hàng đúng tuyệt đối dưới 100 request �
 
 **Mốc kiểm tra:** test đồng thời xanh 10 lần liên tiếp; coverage luồng đặt hàng trên 80%; tag `v1-monolith`.
 
-Tài liệu chi tiết của giai đoạn này: Giai đoạn 1 — chi tiết
+Tài liệu chi tiết của giai đoạn này: [Giai đoạn 1 — chi tiết](03-giai-doan-1.md)
 
 ## Giai đoạn 2 — Chịu tải flash sale (tuần 7–10)
 
@@ -99,7 +97,7 @@ Mục tiêu là đạt 10.000 request/phút với p99 < 300 ms mà vẫn giữ 0
 
 **Mốc kiểm tra:** `docs/perf/report.md` có bảng p95/p99 trước và sau mỗi thay đổi kèm flame graph; đạt NFR throughput và latency; tag `v2-perf`.
 
-Tài liệu chi tiết của giai đoạn này: Giai đoạn 2 — chi tiết
+Tài liệu chi tiết của giai đoạn này: [Giai đoạn 2 — chi tiết](04-giai-doan-2.md)
 
 ## Giai đoạn 3 — Event-driven và tách service (tuần 11–15)
 
@@ -120,7 +118,7 @@ Mục tiêu là luồng đặt hàng → thanh toán → xác nhận kho chạy 
 
 **Mốc kiểm tra:** chaos test tắt payment giữa chừng vẫn đúng 100% đơn; ADR-005, ADR-006 và ADR-007 hoàn thành; tag `v3-events`.
 
-Tài liệu chi tiết của giai đoạn này: Giai đoạn 3 — chi tiết
+Tài liệu chi tiết của giai đoạn này: [Giai đoạn 3 — chi tiết](05-giai-doan-3.md)
 
 ## Giai đoạn 4 — Production-grade (tuần 16–19)
 
@@ -141,7 +139,7 @@ Mục tiêu là hệ thống chạy trên Kubernetes với CI/CD, quan sát đư
 
 **Mốc kiểm tra:** `docs/postmortem-001.md`; CI xanh có SBOM và chữ ký image; dashboard cho thấy circuit breaker mở và đóng đúng lúc; tag `v4-prod`.
 
-Tài liệu chi tiết của giai đoạn này: Giai đoạn 4 — chi tiết
+Tài liệu chi tiết của giai đoạn này: [Giai đoạn 4 — chi tiết](06-giai-doan-4.md)
 
 ## Giai đoạn 5 — Góc nhìn SA (tuần 20–24)
 
@@ -161,7 +159,7 @@ Mục tiêu là biến dự án thành portfolio kiến trúc: một SAD hoàn c
 
 **Mốc kiểm tra:** `docs/sad` hoàn chỉnh; ADR-008 có bảng chi phí; bài viết hoặc slide công khai; tag `v5-sa`.
 
-Tài liệu chi tiết của giai đoạn này: Giai đoạn 5 — chi tiết
+Tài liệu chi tiết của giai đoạn này: [Giai đoạn 5 — chi tiết](07-giai-doan-5.md)
 
 ## Luồng Security xuyên suốt
 
@@ -203,7 +201,7 @@ Security không phải một giai đoạn riêng mà là một luồng chạy so
 
 **Mốc kiểm tra:** mỗi tag Git kèm `docs/security/attack-log-<giai đoạn>.md` ghi lại đã thử tấn công gì, kết quả, và fix nào được đưa vào; CI không có lỗ hổng High/Critical; threat model cuối cùng nằm trong SAD.
 
-Tài liệu chi tiết của luồng này: Security — chi tiết
+Tài liệu chi tiết của luồng này: [Security — chi tiết](08-security.md)
 
 ## Nguyên tắc làm việc và nhật ký
 
@@ -236,4 +234,4 @@ Dự án chỉ dạy được bạn khi mỗi quyết định để lại dấu 
 | 26/9/2026 | Chốt 10 câu hỏi mở của giai đoạn 0 và 1: qty tối đa 2, giữ đơn 5 phút, không làm UI đến hết giai đoạn 3, ASVS mức 2, O'Reilly Learning; một đơn mỗi user mỗi đợt, mock payment theo test token, tự viết retry, test đồng thời chạy mọi PR, repo public + CodeQL. |
 | 25/9/2026 | Lập kế hoạch; chưa bắt đầu code. |
 
-Tài liệu chi tiết của phần này: Quy ước & tự đánh giá
+Tài liệu chi tiết của phần này: [Quy ước & tự đánh giá](09-quy-uoc-tu-danh-gia.md)

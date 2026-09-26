@@ -1,7 +1,5 @@
 # Security xuyên suốt — tài liệu chi tiết
 
-Sep 26, 2026 · @Nothing
-
 Security trong FlashSale là một luồng chạy qua cả 6 giai đoạn chứ không phải một giai đoạn; tab này gom những gì các tab giai đoạn chỉ nhắc tới: công cụ và cách cài, quy trình buổi tấn công, quy tắc viết code, quản lý secret và dependency, vòng đời threat model, và ánh xạ sang chuẩn ASVS.
 
 ## 1. Mục tiêu, nguyên tắc và vòng lặp xây–tấn công–sửa

@@ -1,7 +1,5 @@
 # Giai đoạn 2 — Chịu tải flash sale (tài liệu chi tiết)
 
-Sep 26, 2026 · @Nothing
-
 Bốn tuần này đưa hệ thống từ đúng ở 100 request đồng thời lên đúng và nhanh ở 2.500 request/giây; mọi thay đổi phải có số đo trước và sau, không có số thì không merge.
 
 ## 1. Mục tiêu, phạm vi và Definition of Done

@@ -1,7 +1,5 @@
 # Thiết lập môi trường — tài liệu chi tiết
 
-Sep 26, 2026 · @Nothing
-
 Môi trường làm việc dựng một lần ở giữa giai đoạn 0 và bổ sung dần theo giai đoạn; mục tiêu là không mất buổi nào vì cài đặt, và có smoke test để biết máy sẵn sàng trước khi bắt đầu mỗi giai đoạn.
 
 ## 1. Yêu cầu máy và hệ điều hành

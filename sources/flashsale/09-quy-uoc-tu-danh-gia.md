@@ -1,7 +1,5 @@
 # Quy ước làm việc và tự đánh giá — tài liệu chi tiết
 
-Sep 26, 2026 · @Nothing
-
 Tab này là "luật chơi" cho 24 tuần: nhịp làm việc, cách dùng Git và ADR, chuẩn tài liệu, cách ghi nhật ký, và bảng tự đánh giá kỹ năng Senior/SA có trạng thái để cập nhật sau mỗi giai đoạn.
 
 ## 1. Nhịp làm việc hàng tuần
