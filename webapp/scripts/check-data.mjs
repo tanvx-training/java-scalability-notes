@@ -104,6 +104,9 @@ const EXPECTED = {
     // Lĩnh vực FlashSale — pet project 24 tuần: kế hoạch, môi trường, 6 giai
     // đoạn, security, quy ước (không phải sách: chapter/part null).
     "docs:flashsale": 10,
+    // 6 track fs-gd0..5 = 96 buổi + 69 tiêu chí nghiệm thu; TĂNG DẦN: 72 sau
+    // GĐ0–2 (18 + 27 + 27), 165 khi đủ 6 giai đoạn.
+    "roadmap-items:flashsale": 72,
   },
 };
 
@@ -292,14 +295,22 @@ await check("Mọi link #/docs/<id> trỏ tới tài liệu có thật", () => {
 });
 
 // #3b — Link #/docs/<id> trong lộ trình phải "cùng đường" với track chứa nó:
-// cùng lĩnh vực, HOẶC cùng con đường học (paths.js), HOẶC track thuộc trục
+// cùng lĩnh vực, HOẶC cùng con đường học (paths.js), HOẶC track thuộc con
+// đường có crossLinks (capstone), HOẶC track thuộc trục
 // Senior Java (đi qua mọi con đường). Bất biến #3 chỉ kiểm id có tồn tại; link
 // lạc đường (vd Kafka → CKS) sẽ âm thầm đổi lĩnh vực của người dùng giữa bài
 // (navigate() trong app.js suy lĩnh vực từ chính tài liệu).
 const { PATHS, PATH_ORDER, SPINE, MATRIX_PATHS, pathOfField } = await import("../js/data/paths.js");
+// Con đường capstone (paths.js: crossLinks: true) được link tài liệu mọi lĩnh
+// vực — dự án tổng hợp cần trỏ về đúng chương Kafka/PG/K8s… nó dùng.
+const crossLinkField = (fieldId) => {
+  const p = pathOfField(fieldId);
+  return p != null && PATHS[p]?.crossLinks === true;
+};
 const sameWay = (docFieldId, trackFieldId) =>
   docFieldId === trackFieldId ||
   trackFieldId === SPINE.field ||
+  crossLinkField(trackFieldId) ||
   (pathOfField(docFieldId) != null && pathOfField(docFieldId) === pathOfField(trackFieldId));
 await check("Link #/docs/<id> trong lộ trình cùng lĩnh vực / cùng con đường với track", () => {
   const docField = new Map(docs.map((d) => [d.id, fieldOf(d)]));
@@ -355,15 +366,15 @@ await check("Mọi link #/roadmap/<trackId> trỏ tới track có thật", () =>
   expect(!bad.length, `link hỏng:\n      ${bad.join("\n      ")}`);
 });
 
-// #3d — Mỗi track sj-gd* phải kết thúc bằng đúng một khối "Nghiệm thu".
+// #3d — Mỗi track sj-gd* / fs-gd* phải kết thúc bằng đúng một khối "Nghiệm thu".
 //
 // Khối nghiệm thu là khối tuần duy nhất khai `badge`, và nó chứa các tiêu chí
 // cổng của giai đoạn. Đặt nhầm vị trí (không ở cuối) hay khai hai khối cùng
 // badge đều làm hỏng ý nghĩa "cổng cuối giai đoạn" mà không lỗi hiển thị nào
 // lộ ra — nên phải có bất biến riêng.
-await check("Mỗi track sj-gd* kết thúc bằng đúng một khối nghiệm thu", () => {
+await check("Mỗi track sj-gd* / fs-gd* kết thúc bằng đúng một khối nghiệm thu", () => {
   const bad = [];
-  for (const t of tracks.filter((x) => x.id.startsWith("sj-gd"))) {
+  for (const t of tracks.filter((x) => /^(sj|fs)-gd/.test(x.id))) {
     const marked = t.weeks.filter((w) => w.badge === "✓");
     if (marked.length !== 1) {
       bad.push(`${t.id}: có ${marked.length} khối badge "✓", cần đúng 1`);

@@ -68,8 +68,7 @@ export const FIELDS = {
     unit: null,
     desc: "Dự án thực chiến 24 tuần: nền tảng flash sale 10.000 người tranh 500 sản phẩm — modular monolith → chịu tải → event-driven → production-grade → góc nhìn Solution Architect, kèm luồng security tự tấn công mỗi giai đoạn.",
     certFilter: false,
-    // "roadmap" bật ở Task 3 khi track fs-gd0..2 có dữ liệu (bất biến #7/#7c).
-    modules: ["dashboard", "guide", "docs"],
+    modules: ["dashboard", "guide", "docs", "roadmap"],
     // Kế hoạch cá nhân trải nhiều công nghệ — không nguồn ngoài nào bao hết.
   },
   "modern-concurrency": {

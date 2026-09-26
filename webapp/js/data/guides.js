@@ -216,6 +216,9 @@ export const fieldGuides = {
     steps: [
       { id: "fs-0", title: "Đọc Kế hoạch & theo dõi tiến độ", desc: "Bài toán, NFR bằng số, stack và nguyên tắc làm việc. Đây là thước đo cho mọi giai đoạn — đọc trước khi dựng máy.", href: "#/docs/fs-00", done: { kind: "doc", id: "fs-00" } },
       { id: "fs-1", title: "Thiết lập môi trường", desc: "Cài công cụ theo danh sách, chạy smoke test môi trường. Đánh dấu đã đọc khi smoke test xanh.", href: "#/docs/fs-01", done: { kind: "doc", id: "fs-01" } },
+      { id: "fs-2", title: "Giai đoạn 0 — Thiết kế trước khi code (tuần 1–2)", desc: "NFR, ước lượng, C4, ADR-001/002, threat model sơ bộ, CI xanh. Tag v0-design.", href: "#/roadmap/fs-gd0", done: { kind: "track", id: "fs-gd0" } },
+      { id: "fs-3", title: "Giai đoạn 1 — Modular monolith chạy đúng (tuần 3–6)", desc: "100 request đồng thời, tồn kho đúng, idempotency, Keycloak, attack log 1. Tag v1-monolith.", href: "#/roadmap/fs-gd1", done: { kind: "track", id: "fs-gd1" } },
+      { id: "fs-4", title: "Giai đoạn 2 — Chịu tải flash sale (tuần 7–10)", desc: "Report p95/p99 trước và sau kèm flame graph; đạt 10.000 request/phút, p99 < 300 ms. Tag v2-perf.", href: "#/roadmap/fs-gd2", done: { kind: "track", id: "fs-gd2" } },
     ],
     method: [
       { title: "Đo trước khi tối ưu", desc: "Không thay đổi gì ở giai đoạn 2 và 4 khi chưa có số baseline; mỗi thay đổi là một mốc trong report với p95/p99 trước và sau." },
@@ -685,6 +688,24 @@ export const trackGuides = {
     before: ["Đủ ≥ 6/7 tiêu chí nghiệm thu giai đoạn 3.", "Xin trước một bài toán thật ở công ty để viết design doc #1.", "Tìm 2 người có thể làm mock system design với bạn."],
     during: ["Tuần 1–2 dùng lĩnh vực Kafka; tuần 9–14 dùng lĩnh vực DDIA — tick ở cả hai nơi.", "Design doc phải được review thật và ít nhất một cái được triển khai.", "Mock interview ghi âm lại và tự nghe."],
     after: ["Chấm ma trận lần cuối (100 %).", "Hồ sơ Senior: CV, GitHub, ≥ 4 bài blog.", "Phỏng vấn thật."],
+  },
+  "fs-gd0": {
+    rhythm: "2 tuần, 8 buổi 2–2,5 giờ, làm đúng thứ tự vì buổi sau dùng đầu ra của buổi trước. Mỗi buổi: đọc mục tương ứng trong tài liệu giai đoạn → làm → commit đầu ra → tick.",
+    before: ["Smoke test môi trường xanh (tài liệu Thiết lập môi trường).", "Đọc tài liệu tổng quan: NFR ở bảng đầu là thước đo cho mọi quyết định của giai đoạn này.", "Tạo repo trống, bật branch protection cho `main`."],
+    during: ["Viết NFR bằng số, không bằng tính từ — \"nhanh\" không kiểm được, \"p99 < 300 ms\" thì được.", "Mỗi ADR nêu ít nhất hai phương án thay thế và vì sao không chọn.", "gitleaks và Dependency-Check vào CI ngay từ commit đầu, đừng để \"sau\"."],
+    after: ["Tick đủ khối Nghiệm thu rồi mới gắn tag `v0-design`.", "Cập nhật dòng giai đoạn 0 trong bảng tiến độ và nhật ký tuần.", "Sang track Giai đoạn 1."],
+  },
+  "fs-gd1": {
+    rhythm: "4 tuần, 16 buổi: tuần 3 dựng nền, tuần 4 đặt hàng đúng, tuần 5 thanh toán và hết hạn, tuần 6 tấn công và chốt. Mỗi buổi kết thúc bằng một test xanh hoặc một tài liệu đầu ra.",
+    before: ["Tag `v0-design` và CI xanh.", "Keycloak chạy được trong Docker Compose.", "Đọc mục 3–6 của tài liệu giai đoạn 1 (module, domain, API, luồng đồng thời) trước buổi 1."],
+    during: ["Buổi 8 và 10 dễ trượt nhất; nếu trượt, cắt buổi 15 xuống 1 giờ chứ không bỏ buổi 13–14.", "Test đồng thời chạy lại 10 lần liên tiếp — một lần xanh không chứng minh gì.", "Không thêm Redis hay cache dù thấy chậm: đó là việc của giai đoạn 2."],
+    after: ["`docs/security/attack-log-1.md` có 6 kịch bản và commit fix.", "`docs/perf/baseline-v1.md` — số liệu nền cho giai đoạn 2.", "Tick khối Nghiệm thu, gắn tag `v1-monolith`, sang Giai đoạn 2."],
+  },
+  "fs-gd2": {
+    rhythm: "4 tuần, 16 buổi: tuần 7 đo và tìm nút thắt, tuần 8 đường ghi qua Redis, tuần 9 chặn lạm dụng và đổi mô hình thread, tuần 10 đường đọc, tấn công và chốt. Mỗi thay đổi là một mốc trong report.",
+    before: ["Tag `v1-monolith` và `baseline-v1.md`.", "Môi trường đo cố định (Docker resource limit) — không đo trên máy đang chạy việc khác.", "Đọc mục 3 (phương pháp đo) của tài liệu giai đoạn 2 trước buổi 1."],
+    during: ["Đo mỗi cấu hình 3 lần, lấy trung vị; ghi cả thử nghiệm không có tác dụng.", "Sau mỗi tối ưu chạy lại verify-no-oversell — nhanh mà oversell là hỏng.", "ADR-003 viết ở trạng thái Proposed trước khi code, chỉ sang Accepted khi có số."],
+    after: ["`docs/perf/report.md` có bảng p95/p99 trước/sau mỗi mốc kèm flame graph.", "Attack log 3–4 có kịch bản race trên đường Redis.", "Tick khối Nghiệm thu, gắn tag `v2-perf`, sang Giai đoạn 3."],
   },
   modconc: {
     rhythm: "9 tuần, 3–4 mục mỗi tuần bám 8 chương; mỗi mục: mục tiêu, đọc phần nào, bẫy, tự kiểm tra. Mỗi tuần có ít nhất một đoạn code chạy trên JDK 21+.",
