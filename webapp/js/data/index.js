@@ -20,6 +20,7 @@ import { javaInterview } from "./java/interview.js";
 import { modernJavaInterview } from "./modern-java/interview.js";
 import { wgjdInterview } from "./wgjd/interview.js";
 import { ddiaInterview } from "./ddia/interview.js";
+import { pgInternalsInterview } from "./pg-internals/interview.js";
 import { kafkaInterview } from "./kafka/interview.js";
 import { modernConcurrencyInterview } from "./modern-concurrency/interview.js";
 import { springStartInterview } from "./spring-start/interview.js";
@@ -32,7 +33,7 @@ export const allTracks = tracks;
 export const allFlashcards = [...flashcards, ...sysprogFlashcards];
 export const allQuestions = [...questions, ...sysprogQuestionsPart1, ...sysprogQuestionsPart2];
 export const allMatrices = [seniorJavaMatrix];
-export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview, ...effectiveJavaInterview, ...wgjdInterview, ...ddiaInterview, ...kafkaInterview, ...modernConcurrencyInterview, ...springStartInterview, ...springSecurityInterview, ...sysprogInterview];
+export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview, ...effectiveJavaInterview, ...wgjdInterview, ...ddiaInterview, ...pgInternalsInterview, ...kafkaInterview, ...modernConcurrencyInterview, ...springStartInterview, ...springSecurityInterview, ...sysprogInterview];
 
 export function fieldOfRecord(rec) {
   const f = rec?.field;

@@ -88,8 +88,7 @@ export const FIELDS = {
     unit: "Ch.",
     desc: "Bản dịch tiếng Việt PostgreSQL 14 Internals (Egor Rogov, Postgres Professional 2023) — isolation và MVCC, vacuum và freezing, buffer cache và WAL, lock, planner và executor, thống kê, các phương thức join, sáu loại index (Hash, B-tree, GiST, SP-GiST, GIN, BRIN).",
     certFilter: false,
-    // Mở dần theo dữ liệu: "interview" bật ở Task 6 — khai sớm là IQ6 báo đỏ.
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "postgrespro.com — PostgreSQL 14 Internals", href: "https://postgrespro.com/community/books/internals" },
   },
   "modern-java": {
