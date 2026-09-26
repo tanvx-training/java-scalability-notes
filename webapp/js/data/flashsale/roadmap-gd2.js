@@ -229,7 +229,7 @@ export const flashsaleGd2 = [
     week: "Nghiệm thu",
     badge: "✓",
     title: "Giai đoạn 2 — gắn tag v2-perf",
-    goal: "Cổng ra của giai đoạn 2: tick đủ 11 tiêu chí Definition of Done mới gắn tag `v2-perf` và đổi dòng giai đoạn trong bảng tiến độ sang Hoàn thành.",
+    goal: "Cổng ra của giai đoạn 2. Mốc kiểm tra: `docs/perf/report.md` có bảng p95/p99 trước và sau mỗi thay đổi kèm flame graph; đạt NFR throughput và latency; tag `v2-perf`. Tick đủ 11 tiêu chí Definition of Done bên dưới rồi mới gắn tag.",
     items: [
       {
         id: "fs-gd2-done-1",

@@ -275,7 +275,7 @@ export const flashsaleGd5 = [
     week: "Nghiệm thu",
     badge: "✓",
     title: "Giai đoạn 5 — gắn tag v5-sa",
-    goal: "Cổng ra của giai đoạn 5: tick đủ 11 tiêu chí Definition of Done mới gắn tag `v5-sa` và đổi dòng giai đoạn trong bảng tiến độ sang Hoàn thành.",
+    goal: "Cổng ra của giai đoạn 5. Mốc kiểm tra: `docs/sad` hoàn chỉnh; ADR-008 có bảng chi phí; bài viết hoặc slide công khai; tag `v5-sa`. Tick đủ 11 tiêu chí Definition of Done bên dưới rồi mới gắn tag.",
     items: [
       {
         id: "fs-gd5-done-1",

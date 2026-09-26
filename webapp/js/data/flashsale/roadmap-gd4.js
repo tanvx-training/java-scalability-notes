@@ -241,7 +241,7 @@ export const flashsaleGd4 = [
     week: "Nghiệm thu",
     badge: "✓",
     title: "Giai đoạn 4 — gắn tag v4-prod",
-    goal: "Cổng ra của giai đoạn 4: tick đủ 13 tiêu chí Definition of Done mới gắn tag `v4-prod` và đổi dòng giai đoạn trong bảng tiến độ sang Hoàn thành.",
+    goal: "Cổng ra của giai đoạn 4. Mốc kiểm tra: `docs/postmortem-001.md`; CI xanh có SBOM và chữ ký image; dashboard cho thấy circuit breaker mở và đóng đúng lúc; tag `v4-prod`. Tick đủ 13 tiêu chí Definition of Done bên dưới rồi mới gắn tag.",
     items: [
       {
         id: "fs-gd4-done-1",

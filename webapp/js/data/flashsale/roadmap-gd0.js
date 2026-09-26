@@ -122,7 +122,7 @@ export const flashsaleGd0 = [
     week: "Nghiệm thu",
     badge: "✓",
     title: "Giai đoạn 0 — gắn tag v0-design",
-    goal: "Cổng ra của giai đoạn 0: tick đủ 10 tiêu chí Definition of Done mới gắn tag `v0-design` và đổi dòng giai đoạn trong bảng tiến độ sang Hoàn thành.",
+    goal: "Cổng ra của giai đoạn 0. Mốc kiểm tra: README nêu rõ NFR; `docs/adr` có 2 ADR; CI xanh trên commit rỗng; tag `v0-design`. Tick đủ 10 tiêu chí Definition of Done bên dưới rồi mới gắn tag.",
     items: [
       {
         id: "fs-gd0-done-1",

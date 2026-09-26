@@ -61,6 +61,8 @@ export const flashsaleGd3 = [
 
 **Đầu ra.** ADR-005 Accepted
 
+**Đọc thêm.** [Ngữ nghĩa Exactly-Once](#/docs/kafka-08)
+
 **Nguồn.** [Giai đoạn 3 — buổi 4](#/docs/fs-05)`,
       },
     ],
@@ -287,7 +289,7 @@ export const flashsaleGd3 = [
     week: "Nghiệm thu",
     badge: "✓",
     title: "Giai đoạn 3 — gắn tag v3-events",
-    goal: "Cổng ra của giai đoạn 3: tick đủ 13 tiêu chí Definition of Done mới gắn tag `v3-events` và đổi dòng giai đoạn trong bảng tiến độ sang Hoàn thành.",
+    goal: "Cổng ra của giai đoạn 3. Mốc kiểm tra: chaos test tắt payment giữa chừng vẫn đúng 100% đơn; ADR-005, ADR-006 và ADR-007 hoàn thành; tag `v3-events`. Tick đủ 13 tiêu chí Definition of Done bên dưới rồi mới gắn tag.",
     items: [
       {
         id: "fs-gd3-done-1",

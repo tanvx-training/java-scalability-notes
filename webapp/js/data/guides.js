@@ -232,7 +232,7 @@ export const fieldGuides = {
     pitfalls: [
       "Mở rộng scope: làm UI đẹp, thêm tính năng ngoài flash sale, hay tích hợp payment thật — kế hoạch cố tình cấm cả ba.",
       "Tối ưu khi chưa đo, hoặc đo một lần rồi kết luận — mỗi cấu hình đo 3 lần, lấy trung vị.",
-      "Bỏ buổi tấn công khi trễ lịch — kế hoạch nói rõ: cắt buổi dọn dẹp, không cắt buổi tấn công.",
+      "Trễ lịch thì cắt chất lượng bằng chứng (test, số đo, attack log) — kế hoạch cho phép trượt thời gian, không cho trượt bằng chứng; mỗi giai đoạn ghi sẵn buổi nào được cắt khi trễ.",
     ],
     doneWhen: [
       "Sáu tag v0-design → v5-sa, mỗi tag kèm attack log và README cập nhật.",
@@ -708,7 +708,7 @@ export const trackGuides = {
     rhythm: "4 tuần, 16 buổi: tuần 7 đo và tìm nút thắt, tuần 8 đường ghi qua Redis, tuần 9 chặn lạm dụng và đổi mô hình thread, tuần 10 đường đọc, tấn công và chốt. Mỗi thay đổi là một mốc trong report.",
     before: ["Tag `v1-monolith` và `baseline-v1.md`.", "Môi trường đo cố định (Docker resource limit) — không đo trên máy đang chạy việc khác.", "Đọc mục 3 (phương pháp đo) của tài liệu giai đoạn 2 trước buổi 1."],
     during: ["Đo mỗi cấu hình 3 lần, lấy trung vị; ghi cả thử nghiệm không có tác dụng.", "Sau mỗi tối ưu chạy lại verify-no-oversell — nhanh mà oversell là hỏng.", "ADR-003 viết ở trạng thái Proposed trước khi code, chỉ sang Accepted khi có số."],
-    after: ["`docs/perf/report.md` có bảng p95/p99 trước/sau mỗi mốc kèm flame graph.", "Attack log 3–4 có kịch bản race trên đường Redis.", "Tick khối Nghiệm thu, gắn tag `v2-perf`, sang Giai đoạn 3."],
+    after: ["`docs/perf/report.md` có bảng p95/p99 trước/sau mỗi mốc kèm flame graph.", "`docs/security/attack-log-2.md` có 6 kịch bản, gồm race trên đường Redis (buổi tấn công 3–4).", "Tick khối Nghiệm thu, gắn tag `v2-perf`, sang Giai đoạn 3."],
   },
   "fs-gd3": {
     rhythm: "5 tuần, 20 buổi: tuần 11 hạ tầng event, tuần 12 outbox và consumer trong monolith, tuần 13 tách order-service, tuần 14 tách payment-service và saga đầy đủ, tuần 15 security, chaos và chốt.",

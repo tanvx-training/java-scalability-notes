@@ -238,7 +238,7 @@ export const flashsaleGd1 = [
     week: "Nghiệm thu",
     badge: "✓",
     title: "Giai đoạn 1 — gắn tag v1-monolith",
-    goal: "Cổng ra của giai đoạn 1: tick đủ 11 tiêu chí Definition of Done mới gắn tag `v1-monolith` và đổi dòng giai đoạn trong bảng tiến độ sang Hoàn thành.",
+    goal: "Cổng ra của giai đoạn 1. Mốc kiểm tra: test đồng thời xanh 10 lần liên tiếp; coverage luồng đặt hàng trên 80%; tag `v1-monolith`. Tick đủ 11 tiêu chí Definition of Done bên dưới rồi mới gắn tag.",
     items: [
       {
         id: "fs-gd1-done-1",
