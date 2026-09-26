@@ -28,6 +28,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | `sysprog` | `sysprog/` | Bản dịch *System Programming Coursebook* (UIUC CS 241, CC BY 4.0) — 18 chương |
 | `java` | `java/` | Series 10 bài Java & Spring Boot Scalability (tự biên) + 21 hình |
 | `modern-java` | `modern-java/` | Bản dịch *Modern Java in Action* (Urma, Fusco, Mycroft — Manning) — 21 chương, 100 ảnh, PDF |
+| `effective-java` | `effective-java/` | Bản dịch *Effective Java* 3e (Bloch, Addison-Wesley 2018) — 11 chương (2–12), 90 Item, PDF |
 | `ddia` | `ddia/` | Bản dịch *Designing Data-Intensive Applications* 2e (Kleppmann, O'Reilly) — 14 chương, 105 ảnh, PDF |
 | `kafka` | `kafka/` | Bản dịch *Kafka: The Definitive Guide* 2e (O'Reilly) — chương 2–14, 47 ảnh, PDF |
 | `modern-concurrency` | `modern-concurrency/` | Bản dịch *Modern Concurrency in Java* (O'Reilly) — 8 chương, 19 ảnh, PDF |

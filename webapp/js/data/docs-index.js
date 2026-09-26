@@ -17,6 +17,7 @@ import { docs as wgjd } from "./wgjd/docs.js";
 import { docs as jcip } from "./jcip/docs.js";
 import { docs as ocnj } from "./ocnj/docs.js";
 import { docs as jpa } from "./jpa/docs.js";
+import { docs as effectiveJava } from "./effective-java/docs.js";
 
 export const docs = [
   ...kubernetes,
@@ -33,4 +34,5 @@ export const docs = [
   ...jcip,
   ...ocnj,
   ...jpa,
+  ...effectiveJava,
 ];

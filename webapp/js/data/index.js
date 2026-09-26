@@ -24,6 +24,7 @@ import { kafkaInterview } from "./kafka/interview.js";
 import { modernConcurrencyInterview } from "./modern-concurrency/interview.js";
 import { springStartInterview } from "./spring-start/interview.js";
 import { springSecurityInterview } from "./spring-security/interview.js";
+import { effectiveJavaInterview } from "./effective-java/interview.js";
 import { sysprogInterview } from "./sysprog/interview.js";
 
 export const allDocs = docs;
@@ -31,7 +32,7 @@ export const allTracks = tracks;
 export const allFlashcards = [...flashcards, ...sysprogFlashcards];
 export const allQuestions = [...questions, ...sysprogQuestionsPart1, ...sysprogQuestionsPart2];
 export const allMatrices = [seniorJavaMatrix];
-export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview, ...wgjdInterview, ...ddiaInterview, ...kafkaInterview, ...modernConcurrencyInterview, ...springStartInterview, ...springSecurityInterview, ...sysprogInterview];
+export const allInterviews = [...jpaInterview, ...jcipInterview, ...ocnjInterview, ...javaInterview, ...modernJavaInterview, ...effectiveJavaInterview, ...wgjdInterview, ...ddiaInterview, ...kafkaInterview, ...modernConcurrencyInterview, ...springStartInterview, ...springSecurityInterview, ...sysprogInterview];
 
 export function fieldOfRecord(rec) {
   const f = rec?.field;
