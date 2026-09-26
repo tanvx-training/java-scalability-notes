@@ -281,7 +281,8 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "pg-1", title: "Dựng lab psql và tự đánh giá nền", desc: "PostgreSQL 14+ chạy được, tạo được extension pageinspect. Tự hỏi: giải thích được isolation level và index B-tree ở mức người dùng chưa? Chưa thì đọc DDIA chương 4 và 8 trước.", done: { kind: "manual" } },
-      // pg-2, pg-3 (bước trỏ track "pg") thêm ở Task 4 — track chưa tồn tại thì G3 báo đỏ.
+      { id: "pg-2", title: "Tuần 1–6: mở đầu, isolation và MVCC, vacuum, freezing, buffer cache, WAL", desc: "Nửa đầu là cách PostgreSQL lưu và bảo vệ dữ liệu. Mỗi tuần một thí nghiệm psql — làm trước khi tick.", href: "#/roadmap/pg", done: { kind: "track", id: "pg", pct: 50 } },
+      { id: "pg-3", title: "Tuần 7–12: lock, planner, thống kê, scan, join và sáu loại index", desc: "Nửa sau là cách truy vấn chạy và được tăng tốc. Tuần 12 có mục tổng ôn chọn index.", href: "#/roadmap/pg", done: { kind: "track", id: "pg" } },
       { id: "pg-4", title: "Đọc trọn 31 tài liệu", desc: "Chương 1–29 cùng phần mở đầu và lời kết. Đánh dấu đã đọc từng chương khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
       { id: "pg-5", title: "Giải thích một query chậm thật bằng kiến thức sách", desc: "Chạy EXPLAIN (ANALYZE, BUFFERS) cho một query chậm ở hệ thật; viết một trang giải thích plan: ước lượng lệch vì thống kê nào, phương thức truy cập và join nào, buffer hit/read. Tự đánh dấu khi xong.", done: { kind: "manual" } },
     ],
@@ -664,7 +665,13 @@ export const trackGuides = {
     rhythm: "12 tuần, 4 mục mỗi tuần, một chương mỗi tuần; mỗi mục: mục tiêu, đọc phần nào, bẫy, tự kiểm tra. Cuối tuần viết một đoạn ngắn nối chương với hệ của bạn.",
     before: ["Chọn một hệ thật (của công ty hoặc dự án cá nhân) làm “ca nghiên cứu” xuyên suốt.", "Sổ tay hoặc file ghi chú theo chương.", "Chấp nhận tốc độ một chương mỗi tuần."],
     during: ["Đọc phần được chỉ; vẽ lại hình quan trọng bằng tay.", "Câu tự kiểm tra trả lời bằng ví dụ từ hệ của bạn.", "Tuần 8–9 khó nhất: đọc hai lần nếu cần, không bỏ."],
-    after: ["Viết design note cho hệ của bạn và xin review.", "Nếu đang theo Lộ trình Senior Java giai đoạn 4: tick tuần 9–14 ở đó.", "Đọc Kafka: The Definitive Guide chương 5–6 và 14 với nền vừa có."],
+    after: ["Viết design note cho hệ của bạn và xin review.", "Nếu đang theo Lộ trình Senior Java giai đoạn 4: tick tuần 9–14 ở đó.", "Sang lĩnh vực PostgreSQL 14 Internals — chặng tiếp theo trên con đường Data, nơi isolation, lưu trữ và index của DDIA được xem trong một CSDL thật.", "Đọc Kafka: The Definitive Guide chương 5–6 và 14 với nền vừa có."],
+  },
+  pg: {
+    rhythm: "12 tuần, 4 mục mỗi tuần bám năm Phần của sách; mỗi tuần một thí nghiệm psql. Đọc (40–60 phút) → gõ lại lệnh của sách trên lab → so output → trả lời tự kiểm tra → tick.",
+    before: ["PostgreSQL 14+ chạy local hoặc Docker; tạo được extension `pageinspect` và `pg_buffercache`.", "Xong DDIA chương 4 và 8, hoặc tự tin với index B-tree và isolation level ở mức người dùng.", "Mở sẵn hai cửa sổ psql — chương isolation, snapshot và lock cần xen kẽ lệnh giữa hai phiên."],
+    during: ["Mọi câu lệnh có output trong sách: gõ lại và so với output của bạn.", "Tuần 4 và 6 nhẹ chữ: dùng thời gian dư cho lab `pageinspect` và `pg_waldump`, đừng đọc vượt.", "Tuần 9–10 (scan và join): mỗi phương thức ép bằng `enable_*` một lần để thấy chi phí planner tính."],
+    after: ["Một trang giải thích EXPLAIN (ANALYZE, BUFFERS) của một query chậm thật.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: quay lại tuần 21–22 (index và EXPLAIN) với nền vừa có.", "Sang lĩnh vực Kafka: The Definitive Guide — chặng tiếp theo trên con đường Data."],
   },
   "modern-java": {
     rhythm: "12 tuần, 4 mục mỗi tuần bám 21 chương; mỗi tuần một bài tập gõ code. Đọc (30–40 phút) → gõ ví dụ → làm bài tập → tick.",

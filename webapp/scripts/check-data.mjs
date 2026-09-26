@@ -62,6 +62,7 @@ const EXPECTED = {
     "roadmap-items:ddia": 48,
     // Lĩnh vực PostgreSQL 14 Internals — 29 chương + "Về cuốn sách" (00) + "Lời kết" (30).
     "docs:pg-internals": 31,
+    "roadmap-items:pg-internals": 48,
     // Lĩnh vực Modern Java in Action — 21 chương sách Manning.
     "docs:modern-java": 21,
     "interview:modern-java": 24,
