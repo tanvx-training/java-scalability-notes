@@ -7,9 +7,10 @@
 // Link mục dạng [§N.M …](#/docs/pg-NN) — N luôn bằng số chương của doc.
 // GIỮ NGUYÊN id (pg-w<N> / pg-w<N>-<M>) — tiến độ localStorage lưu theo id này.
 //
-// Phân bổ 12 tuần bám ranh giới Phần: T1 00–01 · T2 ch2–3 · T3 ch4–6 · T4 ch7–8 + ôn Phần I ·
-// T5 ch9–10 · T6 ch11 + ôn Phần II · T7 ch12–15 · T8 ch16–17 · T9 ch18–20 · T10 ch21–23 ·
-// T11 ch24–26 · T12 ch27–30 + tổng ôn. Tuần 4 và 6 nhẹ chữ — dành cho lab.
+// Phân bổ 12 tuần bám ranh giới Phần: T1 00–01 · T2 ch2–3 · T3 ch4–6 (§6.1–6.4) ·
+// T4 §6.5–6.7 + ch7–8 + ôn Phần I · T5 ch9–10 · T6 ch11 + ôn Phần II · T7 ch12–15 ·
+// T8 ch16–17 · T9 ch18–20 · T10 ch21–23 · T11 ch24–26 · T12 ch27–30 + tổng ôn.
+// Tuần 1 và 6 nhẹ chữ — dành cho lab.
 
 export const pgWeeksPart1 = [
   {
@@ -214,7 +215,7 @@ export const pgWeeksPart1 = [
         text: "Wraparound, đóng băng tuple và quản lý freezing",
         lesson: `**Mục tiêu.** Giải thích được vì sao transaction ID 32-bit cần khái niệm "cũ hơn/trẻ hơn" thay vì "nhỏ hơn/lớn hơn", và xếp đúng thứ tự bốn tham số freezing theo tuổi transaction mà chúng kích hoạt.
 
-**Đọc.** [§7.1 Wraparound của Transaction ID (Transaction ID Wraparound)](#/docs/pg-07) — đọc kỹ phép ẩn dụ mặt đồng hồ và vì sao so sánh XID phải dùng phép trừ 32-bit thay vì so sánh trực tiếp. [§7.2 Đóng băng tuple và quy tắc visibility (Tuple Freezing and Visibility Rules)](#/docs/pg-07) cho cách freeze biến \`xmin\` thành "vô cực" bằng hint bit chứ không ghi đè XID. [§7.3 Quản lý freezing (Managing Freezing)](#/docs/pg-07) — đọc tuần tự bốn mục con: tuổi freezing tối thiểu, tuổi cho freezing tích cực, tuổi cho autovacuum cưỡng bức, tuổi cho freezing failsafe; gõ lại thí nghiệm giảm \`vacuum_freeze_min_age\` xuống 1 và quan sát \`relfrozenxid\`.
+**Đọc.** [§7.1 Wraparound của Transaction ID (Transaction ID Wraparound)](#/docs/pg-07) — đọc kỹ phép ẩn dụ mặt đồng hồ và vì sao so sánh XID phải dùng phép trừ 32-bit thay vì so sánh trực tiếp. [§7.2 Đóng băng tuple và quy tắc visibility (Tuple Freezing and Visibility Rules)](#/docs/pg-07) cho cách freeze biến \`xmin\` thành "âm vô cùng" bằng hint bit chứ không ghi đè XID. [§7.3 Quản lý freezing (Managing Freezing)](#/docs/pg-07) — đọc tuần tự bốn mục con: tuổi freezing tối thiểu, tuổi cho freezing tích cực, tuổi cho autovacuum cưỡng bức, tuổi cho freezing failsafe; gõ lại thí nghiệm giảm \`vacuum_freeze_min_age\` xuống 1 và quan sát \`relfrozenxid\`.
 
 **Bẫy.** Nghĩ freeze xoá \`xmin\` khỏi tuple. Sách nói \`xmin\` vẫn giữ nguyên trên đĩa; thuộc tính freeze chỉ được xác định bởi tổ hợp hai hint bit \`committed\`+\`aborted\` cùng lúc. Bẫy thứ hai: đặt \`vacuum_freeze_min_age\` quá thấp để "an toàn". Sách cảnh báo điều này lãng phí công sức freeze các dòng "nóng" đang bị UPDATE liên tục — mỗi phiên bản mới lại phải freeze lại.
 

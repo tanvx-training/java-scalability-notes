@@ -21,7 +21,7 @@ export const docs = [
     id: "pg-00", field: "pg-internals", chapter: null, part: null,
     title: "Về cuốn sách này (About This Book)",
     file: "content/pg-internals/00-about-this-book.md", icon: "📖",
-    desc: "Sách dành cho ai, không và có mang lại gì, cấu trúc năm Phần và quy ước ghi chú lề (tham chiếu trang, phiên bản, giá trị mặc định).",
+    desc: "Sách dành cho ai, những gì sách mang lại và không mang lại, cấu trúc năm Phần và quy ước ghi chú lề (tham chiếu trang, phiên bản, giá trị mặc định).",
     tags: ["PostgreSQL", "Giới thiệu", "Quy ước"],
   },
   {
@@ -133,7 +133,7 @@ export const docs = [
     id: "pg-16", field: "pg-internals", chapter: 16, part: P4,
     title: "Các giai đoạn thực thi truy vấn (Query Execution Stages)",
     file: "content/pg-internals/16-query-execution-stages.md", icon: "🔄",
-    desc: "Database demo, simple query protocol (parse, rewrite, plan, execute) và extended query protocol với prepared statement, generic và custom plan.",
+    desc: "Database demo, simple query protocol (parse, transformation (rewrite), plan, execute) và extended query protocol với prepared statement, generic và custom plan.",
     tags: ["PostgreSQL", "Planner", "EXPLAIN"],
   },
   {

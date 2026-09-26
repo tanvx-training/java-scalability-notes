@@ -670,7 +670,7 @@ export const trackGuides = {
   pg: {
     rhythm: "12 tuần, 4 mục mỗi tuần bám năm Phần của sách; mỗi tuần một thí nghiệm psql. Đọc (40–60 phút) → gõ lại lệnh của sách trên lab → so output → trả lời tự kiểm tra → tick.",
     before: ["PostgreSQL 14+ chạy local hoặc Docker; tạo được extension `pageinspect` và `pg_buffercache`.", "Xong DDIA chương 4 và 8, hoặc tự tin với index B-tree và isolation level ở mức người dùng.", "Mở sẵn hai cửa sổ psql — chương isolation, snapshot và lock cần xen kẽ lệnh giữa hai phiên."],
-    during: ["Mọi câu lệnh có output trong sách: gõ lại và so với output của bạn.", "Tuần 4 và 6 nhẹ chữ: dùng thời gian dư cho lab `pageinspect` và `pg_waldump`, đừng đọc vượt.", "Tuần 9–10 (scan và join): mỗi phương thức ép bằng `enable_*` một lần để thấy chi phí planner tính."],
+    during: ["Mọi câu lệnh có output trong sách: gõ lại và so với output của bạn.", "Tuần 1 và 6 nhẹ chữ: dùng thời gian dư cho lab `pageinspect` và `pg_waldump`, đừng đọc vượt.", "Tuần 9–10 (scan và join): mỗi phương thức ép bằng `enable_*` một lần để thấy chi phí planner tính."],
     after: ["Một trang giải thích EXPLAIN (ANALYZE, BUFFERS) của một query chậm thật.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: quay lại tuần 21–22 (index và EXPLAIN) với nền vừa có.", "Sang lĩnh vực Kafka: The Definitive Guide — chặng tiếp theo trên con đường Data."],
   },
   "modern-java": {
