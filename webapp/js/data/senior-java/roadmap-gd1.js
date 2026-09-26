@@ -547,7 +547,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w11-3",
         text: "Lab sandbox 1 triệu dòng: tạo index rồi tự phá bằng function/wildcard",
-        lesson: `**Việc cần làm.** Lab sandbox trước khi làm thật: tạo bảng một triệu dòng bằng \`generate_series\` (PostgreSQL) hoặc procedure (MySQL). Chạy query \`WHERE\` trên cột chưa index → xem plan → tạo index → xem plan đổi. Sau đó tự phá: bọc cột trong function \`WHERE UPPER(email) = ...\` để thấy index không còn được dùng. Thử tiếp leading wildcard \`LIKE '%abc'\`. Ghi từng thí nghiệm vào README. Vì sao index thường không phục vụ được biểu thức và leading wildcard: [PostgreSQL 14 Internals chương 19](#/docs/pg-19) (operator class).
+        lesson: `**Việc cần làm.** Lab sandbox trước khi làm thật: tạo bảng một triệu dòng bằng \`generate_series\` (PostgreSQL) hoặc procedure (MySQL). Chạy query \`WHERE\` trên cột chưa index → xem plan → tạo index → xem plan đổi. Sau đó tự phá: bọc cột trong function \`WHERE UPPER(email) = ...\` để thấy index không còn được dùng. Thử tiếp leading wildcard \`LIKE '%abc'\`. Ghi từng thí nghiệm vào README. Vì sao bọc cột trong hàm hoặc \`LIKE\` có tiền tố (\`LIKE 'ELENA%'\`) không dùng được index B-tree thường: [PostgreSQL 14 Internals chương 19](#/docs/pg-19) (operator class quyết định toán tử index dùng được). Còn leading wildcard cần hẳn một loại index khác — trigram: [chương 28](#/docs/pg-28) (GIN, \`pg_trgm\`).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 21–22](#/docs/sj-01)`,
       },
