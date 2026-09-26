@@ -219,6 +219,9 @@ export const fieldGuides = {
       { id: "fs-2", title: "Giai đoạn 0 — Thiết kế trước khi code (tuần 1–2)", desc: "NFR, ước lượng, C4, ADR-001/002, threat model sơ bộ, CI xanh. Tag v0-design.", href: "#/roadmap/fs-gd0", done: { kind: "track", id: "fs-gd0" } },
       { id: "fs-3", title: "Giai đoạn 1 — Modular monolith chạy đúng (tuần 3–6)", desc: "100 request đồng thời, tồn kho đúng, idempotency, Keycloak, attack log 1. Tag v1-monolith.", href: "#/roadmap/fs-gd1", done: { kind: "track", id: "fs-gd1" } },
       { id: "fs-4", title: "Giai đoạn 2 — Chịu tải flash sale (tuần 7–10)", desc: "Report p95/p99 trước và sau kèm flame graph; đạt 10.000 request/phút, p99 < 300 ms. Tag v2-perf.", href: "#/roadmap/fs-gd2", done: { kind: "track", id: "fs-gd2" } },
+      { id: "fs-5", title: "Giai đoạn 3 — Event-driven và tách service (tuần 11–15)", desc: "Outbox, saga, consumer idempotent, DLQ, hai service tách; chaos tắt payment vẫn không mất đơn. Tag v3-events.", href: "#/roadmap/fs-gd3", done: { kind: "track", id: "fs-gd3" } },
+      { id: "fs-6", title: "Giai đoạn 4 — Production-grade (tuần 16–19)", desc: "Kubernetes, CI ký image kèm SBOM, SLO và alert, resilience, chaos, postmortem. Tag v4-prod.", href: "#/roadmap/fs-gd4", done: { kind: "track", id: "fs-gd4" } },
+      { id: "fs-7", title: "Giai đoạn 5 — Góc nhìn Solution Architect (tuần 20–24)", desc: "SAD arc42, threat model đầy đủ, TCO và ADR-008, Well-Architected, bài trình bày công khai. Tag v5-sa.", href: "#/roadmap/fs-gd5", done: { kind: "track", id: "fs-gd5" } },
     ],
     method: [
       { title: "Đo trước khi tối ưu", desc: "Không thay đổi gì ở giai đoạn 2 và 4 khi chưa có số baseline; mỗi thay đổi là một mốc trong report với p95/p99 trước và sau." },
@@ -706,6 +709,24 @@ export const trackGuides = {
     before: ["Tag `v1-monolith` và `baseline-v1.md`.", "Môi trường đo cố định (Docker resource limit) — không đo trên máy đang chạy việc khác.", "Đọc mục 3 (phương pháp đo) của tài liệu giai đoạn 2 trước buổi 1."],
     during: ["Đo mỗi cấu hình 3 lần, lấy trung vị; ghi cả thử nghiệm không có tác dụng.", "Sau mỗi tối ưu chạy lại verify-no-oversell — nhanh mà oversell là hỏng.", "ADR-003 viết ở trạng thái Proposed trước khi code, chỉ sang Accepted khi có số."],
     after: ["`docs/perf/report.md` có bảng p95/p99 trước/sau mỗi mốc kèm flame graph.", "Attack log 3–4 có kịch bản race trên đường Redis.", "Tick khối Nghiệm thu, gắn tag `v2-perf`, sang Giai đoạn 3."],
+  },
+  "fs-gd3": {
+    rhythm: "5 tuần, 20 buổi: tuần 11 hạ tầng event, tuần 12 outbox và consumer trong monolith, tuần 13 tách order-service, tuần 14 tách payment-service và saga đầy đủ, tuần 15 security, chaos và chốt.",
+    before: ["Tag `v2-perf` và report hiệu năng làm mốc hồi quy.", "Kafka KRaft, Apicurio, Kafka UI chạy trong Compose.", "Đọc mục 4–7 của tài liệu giai đoạn 3 (topic, outbox, saga, consumer) trước buổi 1."],
+    during: ["Không tách service trước khi bốn đường saga xanh trong monolith (buổi 8).", "Mỗi consumer idempotent ngay từ đầu — replay 1.000 event không được đổi trạng thái.", "ADR-005/006/007 viết kèm số đo, không chỉ lập luận."],
+    after: ["Chaos tắt payment-service 2 phút vẫn đúng 100% đơn.", "Attack log 3 có 6 kịch bản; Kafka chạy SASL/SCRAM + ACL.", "Tick khối Nghiệm thu, gắn tag `v3-events`, sang Giai đoạn 4."],
+  },
+  "fs-gd4": {
+    rhythm: "4 tuần, 16 buổi: tuần 16 observability trên Compose, tuần 17 đóng gói và lên kind, tuần 18 pipeline và resilience, tuần 19 security, chaos và postmortem.",
+    before: ["Tag `v3-events`.", "Máy đủ chạy kind 3 node cùng Strimzi, CloudNativePG, Grafana stack (xem Thiết lập môi trường).", "Đọc mục 3 (observability) trước buổi 1 — cần có mắt trước khi chuyển nhà."],
+    during: ["Làm observability trên Compose trước; lên kind rồi mới thêm trace là mất khả năng so sánh.", "Pipeline fail thật khi có lỗ hổng High/Critical — không hạ ngưỡng để CI xanh.", "Chaos nào cũng đối chiếu dashboard và alert: alert không bắn là một phát hiện."],
+    after: ["`docs/postmortem-001.md` blameless kèm 4 runbook.", "CI xanh có SBOM và chữ ký cosign; Kyverno chặn image không chữ ký.", "Tick khối Nghiệm thu, gắn tag `v4-prod`, sang Giai đoạn 5."],
+  },
+  "fs-gd5": {
+    rhythm: "5 tuần, 20 buổi: tuần 20–21 SAD và threat model, tuần 22 chi phí và Well-Architected, tuần 23 thí nghiệm và đối chiếu, tuần 24 viết, nói và chốt.",
+    before: ["Tag `v4-prod`; mọi ADR, report, attack log và postmortem ở một chỗ.", "Tài khoản AWS Pricing Calculator (không cần chạy cloud thật).", "Đọc mục 3 (arc42) trước buổi 1."],
+    during: ["SAD dùng lại C4, ADR và số liệu đã có — không vẽ lại từ đầu.", "Mỗi phương án chi phí ghi rõ giả định; độ nhạy quan trọng hơn con số tuyệt đối.", "Trình bày cho người thật và ghi phản biện; tự trình bày cho mình không tính."],
+    after: ["`docs/sad` hoàn chỉnh, ADR-008 có bảng chi phí.", "Bài viết hoặc slide công khai và proposal 2 trang từ phản biện.", "Tick khối Nghiệm thu, gắn tag `v5-sa`; xem mục \"Sau giai đoạn 5\" của tài liệu giai đoạn 5."],
   },
   modconc: {
     rhythm: "9 tuần, 3–4 mục mỗi tuần bám 8 chương; mỗi mục: mục tiêu, đọc phần nào, bẫy, tự kiểm tra. Mỗi tuần có ít nhất một đoạn code chạy trên JDK 21+.",

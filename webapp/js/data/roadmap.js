@@ -86,6 +86,9 @@ import { seniorJavaGd4 } from "./senior-java/roadmap-gd4.js";
 import { flashsaleGd0 } from "./flashsale/roadmap-gd0.js";
 import { flashsaleGd1 } from "./flashsale/roadmap-gd1.js";
 import { flashsaleGd2 } from "./flashsale/roadmap-gd2.js";
+import { flashsaleGd3 } from "./flashsale/roadmap-gd3.js";
+import { flashsaleGd4 } from "./flashsale/roadmap-gd4.js";
+import { flashsaleGd5 } from "./flashsale/roadmap-gd5.js";
 import { bookCrossref } from "./book-crossref.js";
 import { docs as allDocsRaw } from "./docs-index.js";
 import { docLabelWithBook } from "./labels.js";
@@ -389,6 +392,39 @@ export const tracks = [
     desc: "10.000 request/phút với p99 < 300 ms mà vẫn 0 oversell: đo baseline, profiling, Redis Lua, token hàng chờ, rate limit, virtual threads — mỗi thay đổi một mốc trong report. Kết thúc bằng tag v2-perf.",
     prereq: "Yêu cầu: tag v1-monolith và baseline-v1. Không đổi gì khi chưa có số đo trước.",
     weeks: flashsaleGd2,
+  },
+  {
+    id: "fs-gd3",
+    field: "flashsale",
+    label: "Giai đoạn 3",
+    icon: "📨",
+    name: "Event-driven và tách service (tuần 11–15)",
+    durationWeeks: 5,
+    desc: "Đặt hàng → thanh toán → xác nhận kho chạy bất đồng bộ qua Kafka, tự bù khi lỗi; outbox, saga, consumer idempotent, DLQ; order và payment thành hai service. Kết thúc bằng tag v3-events.",
+    prereq: "Yêu cầu: tag v2-perf. Luồng event phải chạy đúng trong monolith trước khi tách service.",
+    weeks: flashsaleGd3,
+  },
+  {
+    id: "fs-gd4",
+    field: "flashsale",
+    label: "Giai đoạn 4",
+    icon: "🚀",
+    name: "Production-grade (tuần 16–19)",
+    durationWeeks: 4,
+    desc: "Chạy trên Kubernetes với CI/CD ký image, quan sát theo SLO, resilience và chaos có kiểm chứng; postmortem cho một sự cố tự tạo. Kết thúc bằng tag v4-prod.",
+    prereq: "Yêu cầu: tag v3-events. Tuần 19 rơi vào Tết 2027 — dự phòng 1–2 tuần theo kế hoạch trong tài liệu giai đoạn 4.",
+    weeks: flashsaleGd4,
+  },
+  {
+    id: "fs-gd5",
+    field: "flashsale",
+    label: "Giai đoạn 5",
+    icon: "🏛️",
+    name: "Góc nhìn Solution Architect (tuần 20–24)",
+    durationWeeks: 5,
+    desc: "Biến dự án thành portfolio kiến trúc: SAD arc42, threat model đầy đủ, TCO ba phương án (ADR-008), Well-Architected, GraalVM native và một bài trình bày công khai. Kết thúc bằng tag v5-sa.",
+    prereq: "Yêu cầu: tag v4-prod. Viết SAD trước vì mọi việc sau đều bổ sung vào nó.",
+    weeks: flashsaleGd5,
   },
 ];
 

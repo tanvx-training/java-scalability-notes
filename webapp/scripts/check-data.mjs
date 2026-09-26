@@ -104,9 +104,8 @@ const EXPECTED = {
     // Lĩnh vực FlashSale — pet project 24 tuần: kế hoạch, môi trường, 6 giai
     // đoạn, security, quy ước (không phải sách: chapter/part null).
     "docs:flashsale": 10,
-    // 6 track fs-gd0..5 = 96 buổi + 69 tiêu chí nghiệm thu; TĂNG DẦN: 72 sau
-    // GĐ0–2 (18 + 27 + 27), 165 khi đủ 6 giai đoạn.
-    "roadmap-items:flashsale": 72,
+    // 6 track fs-gd0..5 = 96 buổi + 69 tiêu chí nghiệm thu (18 + 27 + 27 + 33 + 29 + 31).
+    "roadmap-items:flashsale": 165,
   },
 };
 
