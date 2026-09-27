@@ -14,11 +14,12 @@ Nguồn markdown nằm ở [`../sources/`](../sources/README.md); app đọc b�
 
 | Trang | Nội dung |
 |---|---|
+| 🗓️ Kế hoạch tuần | **Toàn cục** (mọi lĩnh vực): lịch 104 tuần gắn ngày (05/10/2026 → 01/10/2028) theo kế hoạch "một dự án, mọi cuốn sách" (`sj-06`): tuần hiện tại tính từ ngày thật; **việc tuần này** gom một lát trục Senior (`sj-gd*`), một lát FlashSale (`fs-gd*`, nửa tốc) hoặc giáo trình CKAD/CKA (năm 2) và chương sách đọc just-in-time — checkbox tick thẳng vào `roadmap.checked` / `docs.read`; **giờ học** ghi từng buổi (ngày, giờ, loại, ghi chú) so với mục tiêu, biểu đồ 8 tuần; **nợ tuần trước**; **nghi thức** review tuần / review quý (tuần 13, 26, …); mốc sắp tới (tag, cổng, thi, nghỉ); thanh 104 tuần + toàn bộ lịch theo quý; cài đặt ngày bắt đầu (thứ Hai) và giờ mục tiêu. Bảng điều khiển mọi lĩnh vực có thẻ *Tuần này* |
 | 🧭 Con đường học | Bốn con đường bao trên 17 lĩnh vực: ☸️ **Kubernetes & Cloud**, ☕ **Java Backend** (Spring Start → Modern Java → Effective Java → The Well-Grounded Java Developer → Java Concurrency in Practice → Optimizing Cloud Native Java → Java Persistence → Java Scalability → Modern Concurrency → Spring Security, nền tuỳ chọn: Lập trình hệ thống), 🗄️ **Data & Distributed** (DDIA → PostgreSQL 14 Internals → Kafka), 🛒 **Dự án thực chiến** (pet project FlashSale — được link tài liệu cả ba con đường). Lộ trình Senior Java là **trục xuyên suốt** (4 giai đoạn → con đường). Bộ chọn lĩnh vực hai tầng; thẻ *Con đường của bạn* trên bảng điều khiển; badge con đường trên module ma trận |
 | 🏠 Bảng điều khiển | Hero theo lĩnh vực; thẻ **Con đường của bạn** (vị trí, lĩnh vực kế tiếp); **Tiếp tục** (mục mở gần đây); **Bước tiếp theo** lấy từ Hướng dẫn học; số liệu lộ trình / tài liệu đã đọc / flashcard / trắc nghiệm / phỏng vấn / thi thử / ma trận; **chuỗi ngày học** 14 ngày; lưới lĩnh vực khác bấm để chuyển |
 | 🧭 Hướng dẫn học | Mỗi lĩnh vực: cho ai, bao lâu, cần gì trước; **lộ trình khuyến nghị** cấp module (stepper) với trạng thái tính từ tiến độ thật (track, tài liệu đã đọc, flashcard, trắc nghiệm, thi thử, ma trận, hoặc tự tick); cách học hiệu quả; bẫy phương pháp; “coi như xong khi”; cách học từng track |
 | 🗺️ Lộ trình học | 29 track / 1251 mục theo tuần, mỗi mục một bài học markdown; khối **Cách học track này**; badge **Bắt đầu tại đây**; chip 📖 nối tuần chứng chỉ với chương sách; tiến độ lưu riêng từng track |
-| 📚 Thư viện tài liệu | 311 tài liệu, gom theo **sách → Phần** (Phần lấy từ README nguồn / domain đề thi, không bịa); nhãn chương thống nhất `Ch. 5 · Pod` sinh từ `chapter` (không viết tay); khối **Đọc liền mạch trên con đường** (144 cặp liên kết chéo khác lĩnh vực); trang đọc có **hướng dẫn đọc suy từ lộ trình** (mục tiêu, bài học liên quan, bẫy, câu tự kiểm tra), thời gian đọc ước tính, **đánh dấu đã đọc**, thanh tiến độ cuộn, chỉnh cỡ chữ, mục lục nổi (desktop) / gọn (mobile), link `.md` tương đối mở trong app, mermaid, ảnh, copy code |
+| 📚 Thư viện tài liệu | 318 tài liệu, gom theo **sách → Phần** (Phần lấy từ README nguồn / domain đề thi, không bịa); nhãn chương thống nhất `Ch. 5 · Pod` sinh từ `chapter` (không viết tay); khối **Đọc liền mạch trên con đường** (144 cặp liên kết chéo khác lĩnh vực); trang đọc có **hướng dẫn đọc suy từ lộ trình** (mục tiêu, bài học liên quan, bẫy, câu tự kiểm tra), thời gian đọc ước tính, **đánh dấu đã đọc**, thanh tiến độ cuộn, chỉnh cỡ chữ, mục lục nổi (desktop) / gọn (mobile), link `.md` tương đối mở trong app, mermaid, ảnh, copy code |
 | 📊 Ma trận năng lực | 6 module / 34 chủ đề / 96 tiêu chí Senior Java theo 4 cấp độ — chỉ lĩnh vực Lộ trình Senior Java |
 | 🎓 Chứng chỉ K8s · ⚡ Thực hành nhanh · 🧪 Labs · ⏱️ Thi thử | Chỉ lĩnh vực Kubernetes: so sánh 5 chứng chỉ; 130 lệnh, 48 YAML mẫu, 16 quy trình, thẻ trước giờ thi (ghim, lọc, chế độ gọn); 22 lab đề thật; thi thử bấm giờ theo tỷ trọng domain |
 | 🃏 Flashcards · ✅ Trắc nghiệm | 174 thẻ spaced repetition, 220 câu có giải thích — Kubernetes và Lập trình hệ thống |
@@ -45,10 +46,13 @@ sửa script — xem [`sources/README.md`](../sources/README.md).
 ./webapp/scripts/build-content.sh webapp/content && node webapp/scripts/check-data.mjs
 ```
 
-57 bất biến: id trùng, tệp/ảnh tồn tại, `docs[].file` nằm trong `content/<field>/` (#2c), link
+61 bất biến: id trùng, tệp/ảnh tồn tại, `docs[].file` nằm trong `content/<field>/` (#2c), link
 `#/docs` hỏng, link chéo sách, khoá phân loại, hình dạng câu hỏi, hợp đồng câu hỏi phỏng vấn theo cấp
 độ (#IQ1–#IQ8), module ↔ dữ liệu, hướng dẫn học (G1–G4), con đường (P1), chương/Phần và tiền tố cũ
-(D1), liên kết chéo (R1), link lộ trình cùng đường (#3b) và số lượng bản ghi theo bảng kỳ vọng.
+(D1), liên kết chéo (R1), link lộ trình cùng đường (#3b), lịch 104 tuần (PL1–PL4: mọi tham chiếu
+tuần/mục/tài liệu tồn tại và đúng khoảng; mọi mục `sj-gd*`/`fs-gd*` xuất hiện đúng một lần; 104 tuần
+liên tục, quý/giai đoạn/tuần nghỉ khớp; giờ 6–10 mỗi tuần, ≤ 4 chương đọc) và số lượng bản ghi theo
+bảng kỳ vọng.
 CI chạy trước khi deploy.
 
 ## Deploy GitHub Pages
@@ -79,7 +83,9 @@ webapp/
 │   ├── search.js             # chỉ mục tìm kiếm không dấu + command palette
 │   ├── activity.js           # chuỗi ngày, mục gần đây, tài liệu đã đọc
 │   ├── stats.js              # số liệu tiến độ theo lĩnh vực (dùng chung)
-│   └── guides.js             # đảo chỉ mục bài học → tài liệu; trạng thái bước hướng dẫn
+│   ├── guides.js             # đảo chỉ mục bài học → tài liệu; trạng thái bước hướng dẫn
+│   └── plan.js               # lịch 104 tuần đã nở, tuần hiện tại, tiến độ tuần từ tiến độ thật,
+│                             #   nhật ký giờ học, nghi thức, mốc (module Kế hoạch tuần)
 ├── js/data/
 │   ├── fields.js             # 17 lĩnh vực: label, icon, module bật; GLOBAL_MODULES
 │   ├── meta.js · index.js · roadmap.js · docs-index.js · book-crossref.js
@@ -92,15 +98,18 @@ webapp/
 │       ├── roadmap-*.js      #   track lộ trình theo tuần
 │       └── …                 #   kubernetes: certs, commands, snippets, playbooks, examday, labs,
 │                             #   flashcards, questions; sysprog: flashcards, questions;
-│                             #   senior-java: matrix;
+│                             #   senior-java: matrix, schedule (lịch 104 tuần: PLAN + 104 tuần
+│                             #     tham chiếu id mục sj-gd*/fs-gd*/ckad/cka và id tài liệu);
 │                             #   interview (24 câu/lĩnh vực): jpa · jcip · ocnj ·
 │                             #   java · modern-java · effective-java · wgjd · ddia · pg-internals · kafka ·
 │                             #   modern-concurrency · spring-start ·
 │                             #   spring-security · sysprog
 └── js/views/                 # dashboard, guide, roadmap, docs, tracker, certs, commands,
-                              # flashcards, quiz, interview, exam, labs, settings
+                              # flashcards, quiz, interview, exam, labs, settings,
+                              # planner (toàn cục — GLOBAL_MODULES + mục nav `global: true`)
 ```
 
+Sửa lịch 104 tuần: chỉ sửa `js/data/senior-java/schedule.js` (mỗi tuần một khối `w(n, {...})`, tham chiếu `[weekId, from, to]`), chạy `check-data.mjs` (PL1–PL4), rồi sinh lại bảng tuần trong `sources/senior-java/06-…md` từ dữ liệu.
 Thêm câu hỏi / câu hỏi phỏng vấn / flashcard / lab: sửa tệp tương ứng trong `js/data/<lĩnh vực>/` theo schema ở đầu tệp,
 chạy `check-data.mjs` — không cần đụng view. Thêm lĩnh vực: khai trong `fields.js` (kèm `short`/`unit`), xếp vào một con đường trong `paths.js`, tạo
 `js/data/<id>/docs.js` (có `chapter`/`part`), thêm `fieldGuides[id]` và `trackGuides` cho mỗi track.
