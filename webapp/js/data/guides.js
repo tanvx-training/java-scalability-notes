@@ -176,6 +176,8 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "sj-0", title: "Đọc Hướng dẫn học với kho tài nguyên này", desc: "Phân hạng 14 lĩnh vực thành đọc trọn / đọc chọn / tra cứu để vừa 104 tuần, vòng học một tài liệu, nhịp tuần và lịch chứng chỉ. Đọc trước để không ôm hết 178 tuần sách.", href: "#/docs/sj-05", done: { kind: "doc", id: "sj-05" } },
+      { id: "sj-0a", title: "Đọc Kế hoạch tổng thể 104 tuần và Sắp xếp thời gian", desc: "Bản kế hoạch đã gắn ngày (05/10/2026 → 01/10/2028): FlashSale là phòng lab của trục Senior chạy nửa tốc, sách đọc just-in-time, lịch tám quý từng tuần. Khi mâu thuẫn với sj-05 về “tuần này làm gì”, theo tài liệu này. Kèm năm khối tuần, ba chế độ tuần và luật cắt khi thiếu giờ.", href: "#/docs/sj-06", done: { kind: "doc", id: "sj-06" } },
+      { id: "sj-0b", title: "Mở Kế hoạch tuần, đặt ngày bắt đầu và giờ mục tiêu", desc: "Trang 🗓️ Kế hoạch tuần (nhóm Kế hoạch, có ở mọi lĩnh vực) gom việc mỗi tuần từ trục Senior, FlashSale và chương sách, tick thẳng vào lộ trình, ghi giờ học và nghi thức tuần/quý. Tự đánh dấu sau khi đã kiểm tra ngày bắt đầu, tạo 5 khối lặp trong calendar và ghi buổi học đầu tiên.", href: "#/planner", done: { kind: "manual" } },
       { id: "sj-1", title: "Đọc Tổng quan roadmap 24 tháng", desc: "Bức tranh bốn giai đoạn, nghi thức review hàng quý và quy tắc học xuyên suốt. Đánh dấu đã đọc trước khi bắt đầu tuần 1.", href: "#/docs/sj-00", done: { kind: "doc", id: "sj-00" } },
       { id: "sj-2", title: "Giai đoạn 1 — Java & Spring chuyên sâu (tháng 1–6)", desc: "Output: repo java-deep-dive ≥ 10 chủ đề, 2 case optimize có số liệu, pass mock interview. Khối “Nghiệm thu” cuối track là cổng sang giai đoạn 2.", href: "#/roadmap/sj-gd1", done: { kind: "track", id: "sj-gd1" } },
       { id: "sj-3", title: "Tự chấm ma trận năng lực lần 1", desc: "Sau giai đoạn 1, tick những tiêu chí bạn trình bày được không nhìn tài liệu — mục tiêu ≥ 25 % tổng số tiêu chí. Không tick theo cảm giác.", href: "#/tracker", done: { kind: "tracker", pct: 25 } },
@@ -191,6 +193,7 @@ export const fieldGuides = {
       { title: "Cổng nghiệm thu là thật", desc: "Khối “Nghiệm thu” cuối mỗi track có 6–7 tiêu chí; chưa đủ ngưỡng thì chưa sang giai đoạn sau — thà chậm một tháng còn hơn kéo lỗ hổng đi hai năm." },
       { title: "Review hàng quý", desc: "Tài liệu tổng quan quy định nghi thức review mỗi quý: nhìn lại ma trận, điều chỉnh tốc độ, không đổi mục tiêu." },
       { title: "Mượn lĩnh vực khác của app", desc: "Giai đoạn 1 mượn Modern Java in Action, Effective Java và Java Scalability; giai đoạn 3 mượn Kubernetes; giai đoạn 4 mượn Kafka và DDIA. Chip trong tuần đã nối sẵn." },
+      { title: "Một dự án, mọi cuốn sách", desc: "FlashSale là phòng lab của cả lộ trình, chạy nửa tốc và xong ở tuần 53; mỗi cuốn sách được đọc để làm một việc cụ thể trong dự án tuần đó. Lịch 104 tuần (sj-06) và trang Kế hoạch tuần là nơi ráp ba thứ lại." },
     ],
     pitfalls: [
       "Tick ma trận theo cảm giác — ma trận chỉ có giá trị khi bạn tick sau khi trình bày được cho người khác.",

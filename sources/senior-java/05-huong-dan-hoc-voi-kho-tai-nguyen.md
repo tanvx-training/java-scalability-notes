@@ -4,6 +4,8 @@
 > **Đích:** Senior Java có chiều sâu thật (đo được bằng ma trận năng lực) + CV có chứng chỉ danh giá.
 > **Thời gian:** 24 tháng, 8–10 giờ/tuần ngoài giờ làm. Bắt đầu **tháng 10/2026**, kết thúc **tháng 9/2028**.
 > **Tài liệu này trả lời ba câu:** học *cái gì trong kho* theo thứ tự nào, học *bằng cách nào* để nhớ và dùng được, và lấy chứng chỉ nào *vào lúc nào*.
+>
+> **Bản cập nhật (28/09/2026).** Tài liệu này viết khi kho có 14 lĩnh vực. Kho nay có 17 (thêm Effective Java, PostgreSQL 14 Internals và pet project FlashSale). Bản kế hoạch *đã gắn ngày* và đã hoà FlashSale vào lộ trình là [Kế hoạch tổng thể 104 tuần](06-ke-hoach-tong-the-104-tuan.md); **khi hai tài liệu mâu thuẫn về "tuần này làm gì", theo tài liệu đó.** Vòng học một tài liệu (§2), ba công cụ đo (§6), chiến lược chứng chỉ (§5) và bẫy phương pháp (§9) ở đây vẫn đúng và được các tài liệu 07–12 tham chiếu.
 
 ---
 

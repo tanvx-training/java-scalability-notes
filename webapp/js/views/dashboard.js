@@ -10,6 +10,7 @@ import { currentField, goToField } from "../lib/field.js";
 import { recentItems, streakInfo } from "../lib/activity.js";
 import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, interviewStats, fieldSummary, trackStats } from "../lib/stats.js";
 import { fieldProgress } from "../lib/guides.js";
+import { planSummary, fmtRange } from "../lib/plan.js";
 
 // Tiến độ đại diện: lộ trình nếu có, không thì tài liệu đã đọc.
 function fieldPct(id) {
@@ -45,6 +46,9 @@ export function render(root) {
         has("docs") ? h("a", { class: "btn", href: "#/docs" }, "📚 Tài liệu") : null,
         has("exam") ? h("a", { class: "btn", href: "#/exam" }, "⏱️ Thi thử") : null,
         has("tracker") ? h("a", { class: "btn", href: "#/tracker" }, "📊 Ma trận năng lực") : null)));
+
+  // ---- Tuần này (kế hoạch 104 tuần, toàn cục) ----
+  page.append(planCard());
 
   // ---- Con đường của bạn ----
   page.append(fieldKey === SPINE.field ? spineCard() : pathCard(fieldKey));
@@ -202,6 +206,35 @@ function spineCard() {
       h("span", { class: "faint" }, "mỗi giai đoạn mượn một con đường")),
     h("p", { class: "muted small mt0 mb-3" }, SPINE.desc),
     h("div", { class: "spine-stages" }, stages));
+}
+
+// Thẻ 🗓️ Tuần này — có ở mọi lĩnh vực vì kế hoạch là toàn cục.
+function planCard() {
+  const ps = planSummary();
+  if (!ps.started) {
+    return h("a", { class: "card card-link plan-dash mb-4", href: "#/planner" },
+      h("div", { class: "card-head" }, h("strong", {}, "🗓️ Kế hoạch 104 tuần"), h("span", { class: "faint" }, "chưa bắt đầu")),
+      h("p", { class: "muted small mt0 mb0" }, "Lịch một dự án, mọi cuốn sách bắt đầu 05/10/2026. Mở để xem trước tuần 1, đặt ngày bắt đầu và tạo 5 khối lặp trong calendar."));
+  }
+  if (ps.finished) {
+    return h("a", { class: "card card-link plan-dash mb-4", href: "#/planner" },
+      h("div", { class: "card-head" }, h("strong", {}, "🗓️ Kế hoạch 104 tuần"), h("span", { class: "faint" }, "đã kết thúc")),
+      h("p", { class: "muted small mt0 mb0" }, "Đã qua tuần 104 — review quý 8 và quyết định 24 tháng tiếp theo."));
+  }
+  const { entry, progress, hours, hoursTarget, n, total } = ps;
+  const hp = Math.min(100, Math.round((hours.total / hoursTarget) * 100));
+  return h("a", { class: "card card-link plan-dash mb-4", href: "#/planner" },
+    h("div", { class: "card-head" },
+      h("strong", {}, `🗓️ Tuần ${n}/${total} · ${ps.phase?.label ?? ""}`),
+      h("span", { class: "faint" }, fmtRange(entry.dates))),
+    h("p", { class: "mt0 mb-2" }, entry.focus),
+    h("div", { class: "plan-dash-meta" },
+      h("span", {}, entry.rest ? "🌴 tuần nghỉ" : `📌 ${progress.done}/${progress.total} mục · ${progress.readsDone}/${progress.readsTotal} chương`),
+      h("span", {}, `⏱️ ${hours.total}h / ${hoursTarget}h`),
+      entry.ms ? h("span", {}, `🚩 ${entry.ms.label}`) : null),
+    h("div", { class: "flex mt-2", style: "gap:10px" },
+      h("div", { class: `progress thin grow${progress.complete ? " green" : ""}`, title: "Tiến độ tuần" }, h("span", { style: `width:${progress.pct}%` })),
+      h("div", { class: `progress thin grow${hp >= 80 ? " green" : hp >= 60 ? " amber" : ""}`, title: "Giờ học / mục tiêu" }, h("span", { style: `width:${hp}%` }))));
 }
 
 function streakCard(st) {

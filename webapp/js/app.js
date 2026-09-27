@@ -22,6 +22,7 @@ import * as labs from "./views/labs.js";
 import * as tracker from "./views/tracker.js";
 import * as settings from "./views/settings.js";
 import * as guide from "./views/guide.js";
+import * as planner from "./views/planner.js";
 
 const routes = {
   dashboard,
@@ -37,6 +38,7 @@ const routes = {
   tracker,
   settings,
   guide,
+  planner,
 };
 
 // Khôi phục "chế độ gọn" (ẩn sidebar, mật độ cao) nếu người dùng đã bật.

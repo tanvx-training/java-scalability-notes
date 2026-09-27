@@ -46,7 +46,7 @@ const EXPECTED = {
     "interview:spring-security": 24,
     "roadmap-items:spring-security": 30,
     // Lĩnh vực Lộ trình Senior Java — 5 tài liệu kế hoạch 24 tháng.
-    "docs:senior-java": 6,
+    "docs:senior-java": 13,
     "roadmap-items:senior-java": 276,
     // Ma trận năng lực Senior Java — chuyển từ roadmap-seed.yaml.
     "matrix-modules:senior-java": 6,
@@ -654,7 +654,7 @@ await check("Không lựa chọn nào trùng đáp án đúng của câu khác (
 });
 
 // #5 — modules trỏ tới view có thật
-const { FIELDS, FIELD_ORDER, DEFAULT_FIELD, navFor, moduleAllowed } =
+const { FIELDS, FIELD_ORDER, DEFAULT_FIELD, navFor, moduleAllowed, GLOBAL_MODULES, NAV_GROUPS } =
   await import("../js/data/fields.js");
 
 await check("Mọi module của lĩnh vực là view có thật", () => {
@@ -909,10 +909,13 @@ await check("navFor() lọc đúng và bỏ nhóm rỗng", () => {
   for (const id of FIELD_ORDER) {
     const groups = navFor(id);
     const ids = groups.flatMap((g) => g.items.map((i) => i.id));
-    const mods = FIELDS[id].modules;
+    // Mục global (planner…) hiện ở MỌI lĩnh vực mà không nằm trong FIELDS[].modules.
+    const globalNav = NAV_GROUPS.flatMap((g) => g.items).filter((i) => i.global).map((i) => i.id);
+    const mods = [...FIELDS[id].modules, ...globalNav];
     expect(ids.length === mods.length,
-      `navFor("${id}") trả ${ids.length} mục, modules có ${mods.length}`);
+      `navFor("${id}") trả ${ids.length} mục, modules + global có ${mods.length}`);
     for (const m of mods) expect(ids.includes(m), `navFor("${id}") thiếu "${m}"`);
+    for (const g of globalNav) expect(GLOBAL_MODULES.includes(g), `mục nav global "${g}" phải nằm trong GLOBAL_MODULES`);
     for (const g of groups) expect(g.items.length > 0, `navFor("${id}") còn nhóm rỗng "${g.title}"`);
   }
   expect(moduleAllowed("java", "docs") === true, 'moduleAllowed("java","docs") phải là true');
@@ -1072,7 +1075,7 @@ await check("fieldGuides[].steps: id duy nhất, href/done hợp lệ", () => {
         if (!m) { bad.push(`${field}/${s.id} href lạ: ${s.href}`); continue; }
         const [, route, param] = m;
         if (!VIEW_ROUTES.has(route)) bad.push(`${field}/${s.id} href route "${route}" không có view`);
-        else if (!FIELDS[field].modules.includes(route) && route !== "settings") bad.push(`${field}/${s.id} href tới module "${route}" mà lĩnh vực không khai`);
+        else if (!FIELDS[field].modules.includes(route) && !GLOBAL_MODULES.includes(route)) bad.push(`${field}/${s.id} href tới module "${route}" mà lĩnh vực không khai`);
         if (route === "docs" && param && !docIds.has(param)) bad.push(`${field}/${s.id} href doc "${param}" không tồn tại`);
         if (route === "roadmap" && param && !trackIds.has(param)) bad.push(`${field}/${s.id} href track "${param}" không tồn tại`);
       }
@@ -1187,6 +1190,75 @@ await check("EXPECTED.counts phủ mọi lĩnh vực khai docs/roadmap/tracker",
     }
   }
   expect(!bad.length, `${bad.join("; ")} trong EXPECTED.counts`);
+});
+
+// ---- PL — Lịch học tổng thể 104 tuần (js/data/senior-java/schedule.js) ----
+//
+// Lịch là tầng bao: mỗi tuần tham chiếu MỤC của track (sj-gd*, fs-gd*, ckad, cka) và
+// TÀI LIỆU. Một id tuần gõ sai hay khoảng mục lệch là lỗi im lặng — tuần chỉ hiện
+// ít việc hơn, không văng lỗi. Nặng hơn: một mục của trục Senior hay FlashSale bị
+// bỏ sót thì kế hoạch "phủ trọn" thành lời nói suông. Nên có nhóm bất biến riêng.
+const { PLAN, RAW_WEEKS, buildSchedule } = await import("../js/data/senior-java/schedule.js");
+const tracksById = new Map(tracks.map((t) => [t.id, t]));
+const scheduleWeeks = buildSchedule(tracksById);
+const plDocIds = new Set(docs.map((d) => d.id));
+
+await check("PL1 — Mọi tham chiếu tuần/mục/tài liệu trong lịch tồn tại và đúng khoảng", () => {
+  const bad = [];
+  for (const w of scheduleWeeks) {
+    for (const r of w.refs) {
+      const t = tracksById.get(r.trackId);
+      const wk = t?.weeks.find((x) => x.id === r.weekId);
+      if (!wk) { bad.push(`tuần ${w.n}: ${r.trackId}/${r.weekId} không tồn tại`); continue; }
+      if (!(r.from >= 1 && r.to >= r.from && r.to <= wk.items.length)) {
+        bad.push(`tuần ${w.n}: ${r.weekId} khoảng ${r.from}–${r.to} lệch (tuần có ${wk.items.length} mục)`);
+      }
+    }
+    for (const id of w.reads) if (!plDocIds.has(id)) bad.push(`tuần ${w.n}: tài liệu "${id}" không tồn tại`);
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PL2 — Mọi mục sj-gd* và fs-gd* xuất hiện đúng một lần; không mục nào lặp", () => {
+  const seen = new Map();
+  for (const w of scheduleWeeks) for (const id of w.items) seen.set(id, (seen.get(id) ?? 0) + 1);
+  const dup = [...seen].filter(([, n]) => n > 1).map(([id, n]) => `${id}×${n}`);
+  const missing = [];
+  for (const t of tracks) {
+    if (!/^(sj|fs)-gd/.test(t.id)) continue;
+    for (const wk of t.weeks) for (const it of wk.items) if (!seen.has(it.id)) missing.push(it.id);
+  }
+  const bad = [];
+  if (dup.length) bad.push(`lặp: ${dup.slice(0, 10).join(", ")}${dup.length > 10 ? "…" : ""}`);
+  if (missing.length) bad.push(`thiếu ${missing.length} mục: ${missing.slice(0, 10).join(", ")}${missing.length > 10 ? "…" : ""}`);
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PL3 — 104 tuần liên tục, quý/giai đoạn khớp, tuần nghỉ đúng khai báo", () => {
+  const bad = [];
+  expect(RAW_WEEKS.length === PLAN.weeks, `có ${RAW_WEEKS.length} tuần, PLAN.weeks = ${PLAN.weeks}`);
+  scheduleWeeks.forEach((w, i) => {
+    if (w.n !== i + 1) bad.push(`vị trí ${i + 1} là tuần ${w.n}`);
+    const ph = PLAN.phases[w.phase];
+    if (!ph) bad.push(`tuần ${w.n}: giai đoạn "${w.phase}" lạ`);
+    else if (w.n < ph.weeks[0] || w.n > ph.weeks[1]) bad.push(`tuần ${w.n} khai ${w.phase} nhưng giai đoạn đó là ${ph.weeks.join("–")}`);
+    const shouldRest = PLAN.rest.includes(w.n);
+    if (shouldRest !== w.rest) bad.push(`tuần ${w.n}: rest=${w.rest} nhưng PLAN.rest ${shouldRest ? "có" : "không có"} tuần này`);
+    if (w.rest && w.items.length) bad.push(`tuần nghỉ ${w.n} vẫn có ${w.items.length} mục`);
+    if (!w.rest && !w.items.length) bad.push(`tuần ${w.n} không có mục nào`);
+    if (!w.focus) bad.push(`tuần ${w.n} thiếu focus`);
+  });
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PL4 — Giờ mỗi tuần trong ngưỡng 6–10 (tuần nghỉ ≤ 3), mỗi tuần ≤ 4 chương đọc", () => {
+  const bad = [];
+  for (const w of scheduleWeeks) {
+    if (w.rest ? w.hoursTotal > 3 : (w.hoursTotal < 6 || w.hoursTotal > 10)) bad.push(`tuần ${w.n}: ${w.hoursTotal} giờ`);
+    if (w.reads.length > 4) bad.push(`tuần ${w.n}: ${w.reads.length} chương đọc`);
+    if (!w.rest && !w.practice) bad.push(`tuần ${w.n} thiếu practice`);
+  }
+  expect(!bad.length, bad.join("; "));
 });
 
 // Bảng kỳ vọng
