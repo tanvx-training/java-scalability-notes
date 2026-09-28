@@ -90,3 +90,6 @@ export const store = {
 // activity              : { "YYYY-MM-DD": số thao tác học }  (chuỗi ngày)
 // guide.manual          : { [stepId]: epoch ms }   (bước hướng dẫn tự tick)
 // reader.fontScale      : 0.9 … 1.3
+// plan.config           : { start?: "YYYY-MM-DD", hoursTarget?: number }   (Kế hoạch tuần)
+// plan.log              : [ { id, date, h, kind, note } ]                  (nhật ký giờ học)
+// plan.rituals          : { [`w<n>`]: { [ritualId]: epoch ms } }           (review tuần / quý)

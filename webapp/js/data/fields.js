@@ -189,6 +189,10 @@ export const DEFAULT_FIELD = "kubernetes";
 // Thứ tự, nhãn và icon của từng module trong sidebar.
 // Lấy nguyên từ index.html cũ để người dùng Kubernetes không thấy khác đi.
 export const NAV_GROUPS = [
+  // Nhóm global: mục có `global: true` hiện ở MỌI lĩnh vực (module thuộc GLOBAL_MODULES),
+  // navFor() giữ lại chúng dù không nằm trong FIELDS[].modules.
+  { title: "Kế hoạch", items: [
+      { id: "planner",    label: "Kế hoạch tuần",   icon: "🗓️", href: "#/planner", global: true } ] },
   { title: "Tổng quan", items: [
       { id: "dashboard",  label: "Bảng điều khiển", icon: "🏠", href: "#/" },
       { id: "guide",      label: "Hướng dẫn học",   icon: "🧭", href: "#/guide" },
@@ -210,10 +214,10 @@ export function isField(id) {
   return Object.prototype.hasOwnProperty.call(FIELDS, id);
 }
 
-// Module toàn cục: có ở MỌI lĩnh vực, không cần dữ liệu riêng và không nằm
-// trong sidebar nav (vào từ chân sidebar). Không khai trong FIELDS[].modules để
-// bất biến #5/#7 và navFor() không phải biết tới nó.
-export const GLOBAL_MODULES = ["settings"];
+// Module toàn cục: có ở MỌI lĩnh vực, không cần dữ liệu riêng. "settings" vào từ
+// chân sidebar; "planner" (Kế hoạch tuần, lịch 104 tuần) là mục nav `global: true`.
+// Không khai trong FIELDS[].modules để bất biến #5/#7 không phải biết tới nó.
+export const GLOBAL_MODULES = ["planner", "settings"];
 
 export function moduleAllowed(fieldId, moduleId) {
   if (!isField(fieldId)) return false;
@@ -226,6 +230,6 @@ export function navFor(fieldId) {
   const id = isField(fieldId) ? fieldId : DEFAULT_FIELD;
   const mods = new Set(FIELDS[id].modules);
   return NAV_GROUPS
-    .map((g) => ({ title: g.title, items: g.items.filter((i) => mods.has(i.id)) }))
+    .map((g) => ({ title: g.title, items: g.items.filter((i) => i.global || mods.has(i.id)) }))
     .filter((g) => g.items.length > 0);
 }

@@ -1535,3 +1535,84 @@ dialog.modal .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; 
 .spine-stage .num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-faint); }
 .spine-stage strong { font-size: 14px; }
 .spine-stage .badge { align-self: flex-start; }
+
+/* ---------- 🗓️ Kế hoạch tuần (views/planner.js) ---------- */
+.plan-head h2 { font-size: 22px; }
+.plan-timeline { display: flex; gap: 2px; margin-top: 14px; flex-wrap: nowrap; }
+.plan-tl {
+  flex: 1 1 0; min-width: 3px; height: 14px; border-radius: 2px;
+  background: var(--border-strong); opacity: .55; position: relative; display: inline-block;
+}
+.plan-tl.p1 { background: var(--accent); }
+.plan-tl.p2 { background: var(--teal); }
+.plan-tl.p3 { background: var(--purple); }
+.plan-tl.p4 { background: var(--amber); }
+.plan-tl.rest { background: var(--border-strong); opacity: .35; }
+.plan-tl.done { opacity: 1; }
+.plan-tl.debt { background: var(--red); opacity: .9; }
+.plan-tl.ms::after {
+  content: ""; position: absolute; left: 50%; top: -5px; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--text); transform: translateX(-50%);
+}
+.plan-tl.cur { opacity: 1; outline: 2px solid var(--text); outline-offset: 1px; z-index: 1; }
+.plan-tl:hover { opacity: 1; }
+.plan-legend { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 10px; font-size: 12px; }
+.plan-legend .plan-tl { flex: none; width: 14px; height: 10px; }
+.plan-legend .plan-tl.ms::after { top: -4px; }
+
+.plan-group { margin-top: 10px; }
+.plan-group h4 { margin: 0 0 4px; font-size: 13.5px; }
+.plan-group-head { font-size: 12.5px; margin: 6px 0 2px; }
+.plan-item {
+  display: flex; align-items: flex-start; gap: 8px; padding: 5px 6px; border-radius: 6px;
+  cursor: pointer; font-size: 14px; line-height: 1.4;
+}
+.plan-item:hover { background: var(--bg-soft); }
+.plan-item input { margin-top: 3px; flex: none; }
+.plan-item.done a, .plan-item.done > span { color: var(--text-faint); text-decoration: line-through; }
+.plan-item a { color: inherit; }
+.plan-item a:hover { color: var(--accent-text); }
+.plan-rituals .plan-item { padding: 6px 4px; }
+.list-check.plan-rituals { list-style: none; padding: 0; margin: 0; }
+
+.plan-log-form { display: flex; flex-direction: column; gap: 8px; }
+.plan-log-form .input[type="date"] { max-width: 160px; }
+.plan-kinds { flex-wrap: wrap; }
+.plan-kinds button { font-size: 12.5px; }
+.plan-sessions { display: flex; flex-direction: column; gap: 4px; }
+.plan-session { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 4px 6px; border-radius: 6px; }
+.plan-session:hover { background: var(--bg-soft); }
+.plan-del { width: 26px; height: 26px; font-size: 12px; opacity: .6; }
+.plan-del:hover { opacity: 1; color: var(--red); }
+.plan-bars { display: flex; gap: 6px; align-items: flex-end; height: 64px; }
+.plan-bar { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 2px; text-decoration: none; }
+.plan-bar > span { width: 100%; background: var(--border-strong); border-radius: 3px 3px 0 0; min-height: 2px; }
+.plan-bar.ok > span { background: var(--green); }
+.plan-bar.mid > span { background: var(--amber); }
+.plan-bar.low > span { background: var(--red); }
+.plan-bar.cur > span { outline: 2px solid var(--accent-soft); }
+.plan-bar small { font-size: 10.5px; color: var(--text-faint); }
+
+.plan-debt { display: flex; flex-direction: column; gap: 3px; }
+.plan-debt-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; color: inherit; font-size: 13.5px; }
+.plan-debt-row:hover { background: var(--bg-soft); }
+
+.plan-quarter { margin-bottom: 10px; }
+.plan-quarter summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.plan-quarter summary::-webkit-details-marker { display: none; }
+.plan-quarter[open] summary .chev { transform: rotate(90deg); }
+.plan-table td, .plan-table th { font-size: 13px; vertical-align: middle; }
+.plan-table tbody tr { cursor: pointer; }
+.plan-table tbody tr.cur { background: var(--accent-soft); }
+.plan-table tbody tr.now td:first-child a { font-weight: 700; }
+.plan-table tbody tr.rest td { color: var(--text-faint); }
+
+/* Thẻ Tuần này trên bảng điều khiển */
+.plan-dash { border-left: 3px solid var(--accent); }
+.plan-dash .plan-dash-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+
+@media (max-width: 640px) {
+  .plan-timeline { gap: 1px; }
+  .plan-tl { min-width: 2px; height: 10px; }
+  .plan-bars { height: 48px; }
+}
