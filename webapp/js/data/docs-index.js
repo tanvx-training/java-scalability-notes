@@ -15,6 +15,7 @@ import { docs as modernJava } from "./modern-java/docs.js";
 import { docs as kafka } from "./kafka/docs.js";
 import { docs as springStart } from "./spring-start/docs.js";
 import { docs as wgjd } from "./wgjd/docs.js";
+import { docs as underHood } from "./under-hood/docs.js";
 import { docs as jcip } from "./jcip/docs.js";
 import { docs as ocnj } from "./ocnj/docs.js";
 import { docs as jpa } from "./jpa/docs.js";
@@ -34,6 +35,7 @@ export const docs = [
   ...kafka,
   ...springStart,
   ...wgjd,
+  ...underHood,
   ...jcip,
   ...ocnj,
   ...jpa,

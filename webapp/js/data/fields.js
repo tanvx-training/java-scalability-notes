@@ -151,6 +151,17 @@ export const FIELDS = {
     modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
     externalRef: { label: "docs.oracle.com — JVM Specification", href: "https://docs.oracle.com/javase/specs/" },
   },
+  "under-hood": {
+    label: "Java Under the Hood",
+    icon: "🔬",
+    short: "JUH",
+    unit: "Bài",
+    desc: "Series tiếng Việt Java Under the Hood — 26 bài, 6 chặng đi từ dòng mã nguồn xuống HotSpot: class file và bytecode, class loading, vùng nhớ và object layout, interpreter và JIT, khởi động nhanh, G1/ZGC/Shenandoah trong container, memory leak, JMM, monitor, safepoint, virtual threads, invokedynamic, proxy, exception, rồi jcmd/JFR/async-profiler để điều tra sự cố production; mọi output chạy thật trên OpenJDK 17/21/25.",
+    certFilter: false,
+    // Mở dần theo dữ liệu: "roadmap" và "interview" bật khi có track uh và ngân hàng câu hỏi — khai sớm là #7/#7b báo đỏ.
+    // Không có externalRef: series không có trang phát hành công khai.
+    modules: ["dashboard", "guide", "docs"],
+  },
   jcip: {
     label: "Java Concurrency in Practice",
     icon: "🔐",
@@ -183,7 +194,7 @@ export const FIELDS = {
   },
 };
 
-export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "jcip", "ocnj", "jpa", "ddia", "pg-internals", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java", "flashsale"];
+export const FIELD_ORDER = ["kubernetes", "sysprog", "java", "modern-java", "effective-java", "wgjd", "under-hood", "jcip", "ocnj", "jpa", "ddia", "pg-internals", "kafka", "modern-concurrency", "spring-start", "spring-security", "senior-java", "flashsale"];
 export const DEFAULT_FIELD = "kubernetes";
 
 // Thứ tự, nhãn và icon của từng module trong sidebar.

@@ -477,6 +477,42 @@ export const fieldGuides = {
     ],
   },
 
+  "under-hood": {
+    tagline: "Đọc Java Under the Hood có kỷ luật — 13 tuần từ bytecode tới điều tra sự cố production, mỗi bài chạy lại thí nghiệm trên JDK thật.",
+    audience: "Lập trình viên đã viết Java và Spring Boot vài năm — thạo `@Service`, `@Transactional`, JPA, REST, có thể đã deploy lên Kubernetes — nhưng còn thiếu mô hình trong đầu về những gì xảy ra bên dưới. **Nên xong The Well-Grounded Java Developer trước**: series này đào sâu đúng tầng JVM mà WGJD mới mở ra ở mức tổng quan. Không cần biết C++ hay mã nguồn HotSpot.",
+    hoursPerWeek: "5–6 giờ/tuần · 13 tuần",
+    prereqs: [
+      "JDK 25 (LTS) hoặc JDK 27 chạy từ dòng lệnh; có thêm JDK 17/21 càng tốt — vài bài so hành vi giữa các phiên bản.",
+      "Bộ công cụ đi kèm JDK: `javap`, `jcmd`, JFR; cùng JDK Mission Control (JMC) để mở bản ghi `.jfr`.",
+      "JOL (Java Object Layout) cho bài 5, async-profiler cho bài 25–26, Eclipse MAT để đọc heap dump ở bài 14.",
+      "Linux hoặc Docker chạy được: bài 13 và capstone cần giới hạn CPU/bộ nhớ của container thật.",
+    ],
+    steps: [
+      { id: "uh-1", title: "Dựng lab và tự đánh giá nền", desc: "JDK 25 chạy được `javap`, `jcmd`, JFR; Docker hoặc Linux sẵn sàng. Tự hỏi: giải thích được heap/stack, GC là gì, `volatile` dùng khi nào ở mức người dùng chưa? Chưa thì đọc WGJD chương 4–7 trước.", done: { kind: "manual" } },
+      // uh-2 (T1–7, track 50%), uh-3 (T8–13, track 100%) — bước trỏ track "uh" thêm khi
+      // có lộ trình; track chưa tồn tại thì G3 báo đỏ.
+      { id: "uh-4", title: "Đọc trọn 27 tài liệu", desc: "Lộ trình series và 26 bài, từ bức tranh toàn cảnh JVM tới capstone. Đánh dấu đã đọc từng bài khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
+      { id: "uh-5", title: "Chẩn đoán một sự cố thật bằng jcmd, JFR và heap dump", desc: "Chọn một service thật (hoặc dựng lại một kịch bản capstone): lấy thread dump, bản ghi JFR và heap dump từ tiến trình đang chạy mà không restart; viết một trang đi từ triệu chứng tới nguyên nhân. Tự đánh dấu khi xong.", done: { kind: "manual" } },
+    ],
+    method: [
+      { title: "Chạy lại mọi thí nghiệm", desc: "Mỗi bài viết quanh chương trình nhỏ, lệnh chạy và output thật. Gõ lại trên máy bạn; số sẽ khác — điều cần so là hình dạng của kết quả, và chỗ khác hình dạng là chỗ đáng hiểu nhất." },
+      { title: "Vẽ lại sơ đồ cơ chế", desc: "Sau mỗi bài, gập tài liệu lại và vẽ cơ chế lên giấy: vùng nhớ, luồng dữ liệu, trình tự. Vẽ không được là chưa hiểu, dù đọc thấy quen." },
+      { title: "Đem về Spring Boot của mình", desc: "Mỗi bài có khung SPRING BOOT. Sau mỗi tuần, áp một điều vào service thật: xem GC nào đang chạy trong pod, đếm thread, mở thử một bản ghi JFR." },
+    ],
+    pitfalls: [
+      "Bỏ qua bài 2 (bytecode) vì \"không ai đọc `javap`\" — bài 6, 16, 21–23 đều đọc bytecode để giải thích cơ chế.",
+      "Đọc chặng III rồi chỉnh cờ GC trên production ngay — series giải thích cơ chế và cái giá, không phải công thức; đo trên lab trước.",
+      "Coi số trong bài là chuẩn — output lấy từ một máy 2 vCPU cụ thể; so hình dạng, đừng so con số.",
+      "Đọc chặng VI mà không tự tay chạy `jcmd`, JFR, async-profiler — bộ đồ nghề chỉ thành phản xạ khi đã dùng trước lúc có sự cố.",
+    ],
+    doneWhen: [
+      "Vẽ được trên bảng trắng một request vào Spring Boot: bytecode nào chạy, nằm ở vùng nhớ nào, được JIT lúc nào, rác được dọn ra sao.",
+      "Giải thích được vì sao pod bị OOMKilled dù heap còn trống, bằng số liệu NMT chứ không bằng phỏng đoán.",
+      "Chọn GC, heap và tham số container cho một service mới và nêu được lý do cụ thể cho từng lựa chọn.",
+      "Đọc được log GC, log JIT, thread dump, heap dump, flame graph và rút ra kết luận.",
+    ],
+  },
+
   jcip: {
     tagline: "Đọc Java Concurrency in Practice — nền tảng concurrency của Java: thread safety, visibility, lock, AQS và Java Memory Model.",
     audience: "Lập trình viên Java đã viết code đa luồng và muốn hiểu vì sao nó đúng — hoặc vì sao nó thỉnh thoảng sai. **Không phải sách nhập môn**, và cũng không phải sách dạy API mới nhất: nó dạy các quy tắc mà mọi API concurrency về sau vẫn phải tuân theo.",
