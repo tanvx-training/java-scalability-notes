@@ -489,8 +489,8 @@ export const fieldGuides = {
     ],
     steps: [
       { id: "uh-1", title: "Dựng lab và tự đánh giá nền", desc: "JDK 25 chạy được `javap`, `jcmd`, JFR; Docker hoặc Linux sẵn sàng. Tự hỏi: giải thích được heap/stack, GC là gì, `volatile` dùng khi nào ở mức người dùng chưa? Chưa thì đọc WGJD chương 4–7 trước.", done: { kind: "manual" } },
-      // uh-2 (T1–7, track 50%), uh-3 (T8–13, track 100%) — bước trỏ track "uh" thêm khi
-      // có lộ trình; track chưa tồn tại thì G3 báo đỏ.
+      { id: "uh-2", title: "Tuần 1–7: nền móng, execution engine, nền tảng GC và G1", desc: "Nửa đầu là đường đi của mã: class file, class loading, vùng nhớ, object layout, interpreter, JIT, khởi động nhanh, rồi GC và G1. Mỗi tuần một thí nghiệm — chạy trước khi tick.", href: "#/roadmap/uh", done: { kind: "track", id: "uh", pct: 50 } },
+      { id: "uh-3", title: "Tuần 8–13: ZGC, container, leak, concurrency, ngôn ngữ dưới lớp vỏ và chẩn đoán", desc: "Nửa sau là thứ làm service chậm hoặc chết trong production. Tuần 13 dựng lại ba sự cố capstone.", href: "#/roadmap/uh", done: { kind: "track", id: "uh" } },
       { id: "uh-4", title: "Đọc trọn 27 tài liệu", desc: "Lộ trình series và 26 bài, từ bức tranh toàn cảnh JVM tới capstone. Đánh dấu đã đọc từng bài khi xong.", href: "#/docs", done: { kind: "docs", readPct: 100 } },
       { id: "uh-5", title: "Chẩn đoán một sự cố thật bằng jcmd, JFR và heap dump", desc: "Chọn một service thật (hoặc dựng lại một kịch bản capstone): lấy thread dump, bản ghi JFR và heap dump từ tiến trình đang chạy mà không restart; viết một trang đi từ triệu chứng tới nguyên nhân. Tự đánh dấu khi xong.", done: { kind: "manual" } },
     ],
@@ -813,8 +813,14 @@ export const trackGuides = {
     rhythm: "12 tuần, 4 mục mỗi tuần bám 16 chương; mỗi tuần một bài gõ tay trên máy thật. Đọc (40–60 phút) → gõ lại ví dụ → làm bài thực hành của tuần → trả lời tự kiểm tra → tick.",
     before: ["JDK 17 trở lên, gọi được `javac`, `java` và `javap` từ dòng lệnh.", "Một dự án Java thật để áp dụng chương build và chương container.", "Docker chạy được — tuần 8 và phần Testcontainers tuần 9 cần nó.", "Biết trước rằng chương 9 (Kotlin) và 10 (Clojure) không có trong bản dịch; tuần 6 dành để bù."],
     during: ["Mỗi chương có thứ để chạy — chương nào không gõ thì chương đó chưa đọc.", "Tuần 2 và tuần 11 dùng chung một công cụ: `javap -c`. Giữ lại output tuần 2 để đối chiếu ở tuần 11.", "Tuần 9–11 đọc mã Kotlin và Clojure liên tục: mở lại phần bổ túc tuần 6 thay vì bỏ chương."],
-    after: ["Một ghi chú cho đội: ba chỗ trong codebase hiện tại sẽ được lợi từ Loom, Valhalla, Amber hoặc Panama.", "Sang lĩnh vực Java Concurrency in Practice — chặng tiếp theo trên con đường Java Backend, nơi nền tảng thread safety và JMM mà chương 5–6 mới chạm tới được đào sâu.", "Đọc Modern Concurrency in Java để đi tiếp phần virtual thread mà chương 18 mới chỉ giới thiệu."],
+    after: ["Một ghi chú cho đội: ba chỗ trong codebase hiện tại sẽ được lợi từ Loom, Valhalla, Amber hoặc Panama.", "Sang lĩnh vực Java Under the Hood — chặng tiếp theo trên con đường Java Backend, đào sâu đúng tầng HotSpot mà chương 4–7 mới vẽ tổng quan: bytecode, class loading, JIT, GC, JMM.", "Đọc Modern Concurrency in Java để đi tiếp phần virtual thread mà chương 18 mới chỉ giới thiệu."],
+  },  uh: {
+    rhythm: "13 tuần, 4 mục mỗi tuần bám sáu chặng của series; mỗi tuần một thí nghiệm chạy thật. Đọc (40–60 phút) → chạy lại lệnh của bài trên máy mình → so hình dạng output với bài → trả lời tự kiểm tra → tick.",
+    before: ["JDK 25 gọi được `javap`, `jcmd`, `jfr`; cài sẵn JOL, JMH, async-profiler và Eclipse MAT (đều miễn phí).", "Linux hoặc Docker chạy được — bài 13 và capstone cần giới hạn CPU/bộ nhớ của container thật.", "Giải nén mã lab bài 16–26 từ `sources/under-hood/src/` vào một thư mục làm việc riêng."],
+    during: ["Số của bạn sẽ khác số trong bài — so hình dạng kết quả, không so từng con số.", "Mỗi bài có mục \"Ghép lại\": tự vẽ lại hình đó trên giấy trước khi đọc bảng tóm tắt.", "Tuần 10–11 (JMM, monitor, safepoint, virtual threads) nặng nhất: chạy litmus test và thread dump trước khi đọc phần giải thích."],
+    after: ["Một trang chẩn đoán một sự cố thật (hoặc một kịch bản capstone) đi từ triệu chứng tới nguyên nhân bằng jcmd, JFR và heap dump.", "Nếu đang theo Lộ trình Senior Java giai đoạn 1: các mục GC, JMM, virtual thread và proxy ở đó đã có link sang bài tương ứng.", "Sang lĩnh vực Java Concurrency in Practice — chặng tiếp theo trên con đường Java Backend, nơi thread safety được dạy ở tầng thiết kế thay vì tầng mã máy."],
   },
+
 
   jcip: {
     rhythm: "10 tuần, 4 mục mỗi tuần bám 13 chương và phụ lục A; bảy trong mười tuần có bài gõ tay trên máy thật. Đọc (45–60 phút) → gõ lại listing sai rồi listing đúng → làm bài thực hành của tuần → trả lời tự kiểm tra → tick.",

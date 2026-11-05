@@ -27,6 +27,7 @@
 //   kafka/roadmap-part{1,2}.js              (Tuần 1–6 / 7–11)       — 44 mục
 //   spring-start/roadmap-part{1,2}.js       (Tuần 1–4 / 5–8)        — 32 mục
 //   wgjd/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
+//   under-hood/roadmap-part{1,2}.js         (Tuần 1–7 / 8–13)       — 52 mục
 //   jcip/roadmap-part{1,2}.js               (Tuần 1–5 / 6–10)       — 40 mục
 //   ocnj/roadmap-part{1,2}.js               (Tuần 1–6 / 7–12)       — 48 mục
 //   jpa/roadmap-part{1,2}.js                (Tuần 1–7 / 8–13)       — 52 mục
@@ -36,8 +37,8 @@
 //
 // Lĩnh vực senior-java (4 track SJ1–SJ4) có tổng 276 mục lộ trình.
 //
-// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, pg-w1, mj-w1, kf-w1, sh-w1, wg-w1, jc-w1, oc-w1, jp-w1, ej-w1, sj-gd1-w1, fs-gd0-w1…) và id
-// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, pg-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, jc-w1-1, oc-w1-1, jp-w1-1, ej-w1-1, sj-gd1-w1-1, fs-gd0-w1-1…) là khóa lưu
+// LƯU Ý: id tuần (w1, cka-w1, sp-w1, kb-w1, cb-w1, ku-w1, ss-w1, mc-w1, dd-w1, pg-w1, mj-w1, kf-w1, sh-w1, wg-w1, uh-w1, jc-w1, oc-w1, jp-w1, ej-w1, sj-gd1-w1, fs-gd0-w1…) và id
+// mục (w1-1, cka-w1-1, sp-w1-1, kb-w1-1, cb-w1-1, ku-w1-1, ss-w1-1, mc-w1-1, dd-w1-1, pg-w1-1, mj-w1-1, kf-w1-1, sh-w1-1, wg-w1-1, uh-w1-1, jc-w1-1, oc-w1-1, jp-w1-1, ej-w1-1, sj-gd1-w1-1, fs-gd0-w1-1…) là khóa lưu
 // tiến độ trong localStorage — không được đổi.
 
 import { weeksPart1 } from "./kubernetes/roadmap-ckad-part1.js";
@@ -71,6 +72,8 @@ import { springStartWeeksPart1 } from "./spring-start/roadmap-part1.js";
 import { springStartWeeksPart2 } from "./spring-start/roadmap-part2.js";
 import { wgjdWeeksPart1 } from "./wgjd/roadmap-part1.js";
 import { wgjdWeeksPart2 } from "./wgjd/roadmap-part2.js";
+import { uhWeeksPart1 } from "./under-hood/roadmap-part1.js";
+import { uhWeeksPart2 } from "./under-hood/roadmap-part2.js";
 import { jcipWeeksPart1 } from "./jcip/roadmap-part1.js";
 import { jcipWeeksPart2 } from "./jcip/roadmap-part2.js";
 import { ocnjWeeksPart1 } from "./ocnj/roadmap-part1.js";
@@ -326,6 +329,17 @@ export const tracks = [
     desc: "Kế hoạch đọc 12 tuần bám theo bản dịch 16 chương: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; mỗi tuần một bài thực hành gõ tay — đọc bytecode bằng javap, đo bằng JMH, dựng build Maven và Gradle, đóng gói image nhận đúng cgroup limit.",
     prereq: "Yêu cầu: viết được Java ở mức thành thạo và có một dự án Maven hoặc Gradle thật để áp dụng — đây không phải sách nhập môn. Bản dịch không có chương 9 (Kotlin) và chương 10 (Clojure); các tuần 9–11 đọc mã hai ngôn ngữ đó, nên tuần 6 có phần tự bổ túc cú pháp cơ bản trước khi tới đó.",
     weeks: [...wgjdWeeksPart1, ...wgjdWeeksPart2],
+  },
+  {
+    id: "uh",
+    field: "under-hood",
+    label: "Under the Hood",
+    icon: "🔬",
+    name: "Đọc Java Under the Hood",
+    durationWeeks: 13,
+    desc: "Kế hoạch đọc 13 tuần bám sáu chặng của series: mỗi mục nêu mục tiêu, chỉ đúng mục cần đọc, bẫy thường gặp và câu tự kiểm tra; mỗi tuần một thí nghiệm chạy thật — javap, -Xlog, jcmd, JFR, JOL, JMH, heap dump, async-profiler.",
+    prereq: "Yêu cầu: đã viết Java/Spring Boot vài năm, hiểu heap/stack, GC và volatile ở mức người dùng; nên xong The Well-Grounded Java Developer trước. Cần JDK 25 và Linux hoặc Docker cho các thí nghiệm container.",
+    weeks: [...uhWeeksPart1, ...uhWeeksPart2],
   },
   {
     id: "jcip",
