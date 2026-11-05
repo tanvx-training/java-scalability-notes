@@ -188,6 +188,12 @@ export const INTERVIEW_TOPICS = {
   "pg-lock":   { label: "Lock",                                 short: "Lock",       field: "pg-internals" },
   "pg-plan":   { label: "Planner, thống kê, scan và join",      short: "Planner",    field: "pg-internals" },
   "pg-index":  { label: "Các loại index",                       short: "Index",      field: "pg-internals" },
+  "uh-found":  { label: "Nền móng: bytecode, class loading, vùng nhớ, object", short: "Nền móng", field: "under-hood" },
+  "uh-exec":   { label: "Execution engine: interpreter, JIT, khởi động nhanh", short: "JIT",      field: "under-hood" },
+  "uh-gc":     { label: "Bộ nhớ & GC",                          short: "GC",         field: "under-hood" },
+  "uh-conc":   { label: "Concurrency nhìn từ JVM",              short: "Concurrency", field: "under-hood" },
+  "uh-lang":   { label: "Ngôn ngữ dưới lớp vỏ",                 short: "Ngôn ngữ",   field: "under-hood" },
+  "uh-diag":   { label: "Quan sát & chẩn đoán",                 short: "Chẩn đoán",  field: "under-hood" },
 
   "kf-producer":     { label: "Producer: ghi message",                               short: "Producer",   field: "kafka" },
   "kf-consumer":     { label: "Consumer: đọc và commit offset",                      short: "Consumer",   field: "kafka" },

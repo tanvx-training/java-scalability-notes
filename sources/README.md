@@ -2,7 +2,7 @@
 
 Mọi tài liệu học (markdown + ảnh) nằm ở đây. Web app không đọc trực tiếp thư mục này: script
 [`webapp/scripts/build-content.sh`](../webapp/scripts/build-content.sh) sao chép **nguyên cây**
-`sources/` (trừ `*.pdf`) vào `webapp/content/` lúc chạy local, build Docker và deploy GitHub Pages.
+`sources/` (trừ `*.pdf`, `*.zip`) vào `webapp/content/` lúc chạy local, build Docker và deploy GitHub Pages.
 Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và không được commit.
 
 ## Quy ước
@@ -14,7 +14,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | Lĩnh vực **một nguồn** đặt markdown thẳng trong thư mục lĩnh vực, không tạo cấp trung gian | `sources/kafka/02-cai-dat-kafka.md` |
 | Tệp markdown đánh số thứ tự đọc: `NN-slug.md`; phụ lục dùng chữ (`A-…md`) | `05-pods.md`, `A-building-your-own-kubernetes-cluster.md` |
 | Ảnh trong `images/` cạnh markdown, tham chiếu **tương đối theo tệp** (`images/x.png` hoặc `images/chNN/x.png`) | ảnh được resolve theo thư mục chứa tệp, cùng quy tắc ở app và ở `check-data.mjs` #2b |
-| PDF gốc (nếu giữ) nằm trong `pdf/` cùng cấp, **không** bao giờ vào `content/` | `sources/ddia/pdf/…` |
+| PDF gốc (nếu giữ) nằm trong `pdf/` cùng cấp, **không** bao giờ vào `content/`; tệp `*.zip` (mã nguồn lab) cũng không vào | `sources/ddia/pdf/…`, `sources/under-hood/src/*.zip` |
 | Mỗi nguồn dịch từ sách có `README.md` ghi tác giả, ấn bản, giấy phép/bản quyền | `sources/sysprog/README.md` |
 
 ## Bản đồ hiện tại
@@ -36,6 +36,7 @@ Vì thế `webapp/content/` luôn là ảnh gương của thư mục này và kh
 | `spring-start` | `spring-start/` | Bản dịch *Spring Start Here* (Spilcă, Manning 2021) — 15 chương + hướng dẫn học, 179 ảnh, PDF |
 | `spring-security` | `spring-security/` | Bản dịch *Spring Security in Action* 2e (Spilca, Manning) — 17 chương (2–18), 142 ảnh, PDF |
 | `wgjd` | `wgjd/` | Bản dịch *The Well-Grounded Java Developer* 2e (Evans, Clark, Verburg — Manning) — 16 chương (1–8, 11–18), 93 ảnh, PDF |
+| `under-hood` | `under-hood/` | Series *Java Under the Hood* (tiếng Việt, bản thẩm định 10/2026) — 26 bài + lộ trình series (Bài 01 Phần A), hình cắt từ PDF, PDF, mã nguồn lab bài 14–26 (`src/`, zip không vào deploy) |
 | `jcip` | `jcip/` | Bản dịch *Java Concurrency in Practice* (Goetz, Peierls, Bloch, Bowbeer, Holmes, Lea — Addison-Wesley 2006) — 13 chương (2–8, 10, 11, 13–16) + phụ lục A, 204 ảnh, PDF |
 | `ocnj` | `ocnj/` | Bản dịch *Optimizing Cloud Native Java* 2e (Evans, Gough, Newland — O'Reilly) — 15 chương, 116 ảnh, PDF |
 | `jpa` | `jpa/` | Bản dịch *Java Persistence with Spring Data and Hibernate* (Tudose — Manning) — 20 chương, 127 ảnh, PDF |

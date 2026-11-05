@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Nguồn duy nhất của logic dựng webapp/content/: sao chép NGUYÊN CÂY sources/
-# (trừ *.pdf) vào <dest>. webapp/content/ vì thế luôn là ảnh gương của sources/,
+# (trừ *.pdf, *.zip) vào <dest>. webapp/content/ vì thế luôn là ảnh gương của sources/,
 # và mọi docs[].file trong js/data/<lĩnh vực>/docs.js đều có dạng
 # content/<lĩnh vực>/… (bất biến #2c trong check-data.mjs).
 #
@@ -27,7 +27,7 @@ fi
 
 # tar có sẵn ở macOS, debian:*-slim và GitHub runner; --exclude không neo nên
 # '*.pdf' khớp ở mọi độ sâu.
-tar -C "$SRC" --exclude='*.pdf' --exclude='.DS_Store' -cf - . | tar -C "$DEST" -xf -
+tar -C "$SRC" --exclude='*.pdf' --exclude='*.zip' --exclude='.DS_Store' -cf - . | tar -C "$DEST" -xf -
 find "$DEST" -type d -name pdf -empty -delete
 
 echo "✓ content: $(find "$DEST" -name '*.md' | wc -l | tr -d ' ') markdown, $(find "$DEST" -type f ! -name '*.md' | wc -l | tr -d ' ') ảnh → $DEST"

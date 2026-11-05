@@ -119,4 +119,29 @@ export const related = {
   "pg-11": ["ddia-06"],               // wal_level & WAL ↔ replication dựa trên log
   "pg-13": ["jpa-11"],                // row-level lock ↔ pessimistic lock (SELECT … FOR UPDATE)
   "pg-25": ["ddia-04"],               // B-tree cài đặt thật ↔ B-tree trong lý thuyết lưu trữ
+
+  // ---- Java Under the Hood ↔ WGJD, OCNJ (JVM/GC/JIT/profiling), JCiP & Modern Concurrency (JMM, VT),
+  //      Java Scalability (container, @Transactional), Effective Java, Spring nhập môn ----
+  "uh-02": ["wgjd-04", "wgjd-05"],              // javap, constant pool, opcode ↔ class file & bytecode; count++ lost update ↔ §5.5 lost update qua bytecode
+  "uh-03": ["wgjd-04"],                         // class loader, uỷ quyền, liên kết, module ↔ §4.1–4.2 class loading
+  "uh-06": ["wgjd-17", "ocnj-06"],              // vtable/itable, gọi method ↔ §17.1 gọi virtual/interface; interpreter, klass word & vtable
+  "uh-07": ["ocnj-06", "wgjd-07"],              // tiered C1/C2, code cache, log biên dịch ↔ JIT trong HotSpot; §7.6 JIT HotSpot
+  "uh-08": ["wgjd-07"],                         // inlining, mono/megamorphic, deoptimization ↔ §7.6.3–7.6.6
+  "uh-09": ["ocnj-06"],                         // CDS/AOT cache/native image ↔ AOT, GraalVM
+  "uh-10": ["ocnj-04", "wgjd-07"],              // mark–sweep, GC root, thế hệ, TLAB ↔ cùng các khái niệm; §7.5 GC cơ bản
+  "uh-11": ["ocnj-05"],                         // region, mixed GC, remembered set, Full GC của G1 ↔ mục G1
+  "uh-12": ["ocnj-05"],                         // ZGC load barrier, Shenandoah forwarding ↔ concurrent evacuation, forwarding pointer, ZGC
+  "uh-13": ["java-07", "wgjd-12", "ocnj-09"],   // CPU limit = CFS throttling ↔ §3.1 sizing pool; hiệu năng trong container; Container và GC, OOME
+  "uh-14": ["ocnj-12"],                         // heap dump, dominator tree ↔ memory profiling, heap dump
+  "uh-15": ["ej-02"],                           // SoftReference cache, Cleaner, ThreadLocal rò rỉ ↔ Item 7 tham chiếu lỗi thời, Item 8 finalizer/cleaner
+  "uh-16": ["jcip-16", "wgjd-05", "ocnj-13"],   // reordering, happens-before, safe publication ↔ JMM ở ba cuốn (VarHandle ở OCNJ)
+  "uh-17": ["jcip-13"],                         // synchronized vs ReentrantLock khi tranh chấp ↔ §13.2/13.4 hiệu năng, chọn khoá
+  "uh-18": ["ocnj-05", "java-04"],              // safepoint, stop-the-world ↔ JVM safepoint; thread Java = thread OS, thread dump
+  "uh-19": ["java-05", "modconc-02", "modconc-03"], // pinning, ThreadLocal, dời nghẽn ↔ bẫy production; pinning; continuation & ForkJoinPool
+  "uh-20": ["jcip-14", "mjia-07"],              // AQS ↔ §14.5–14.6 AbstractQueuedSynchronizer; commonPool/parallelStream ↔ stream song song
+  "uh-21": ["wgjd-17"],                         // invokedynamic, LambdaMetafactory, StringConcatFactory, hidden class ↔ §17.4–17.7
+  "uh-22": ["ej-05"],                           // type erasure, TypeReference ↔ Item 28 list vs mảng (erasure), Item 33 type token
+  "uh-23": ["java-09", "wgjd-17", "springstart-06"], // proxy & self-invocation ↔ @Transactional proxy; reflection/MethodHandle/proxy; Spring AOP
+  "uh-24": ["ej-10"],                           // chi phí exception làm luồng điều khiển ↔ Item 69
+  "uh-25": ["ocnj-12"],                         // jcmd, JFR, flame graph, async-profiler ↔ chương Profiling
 };
