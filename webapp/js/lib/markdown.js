@@ -199,8 +199,10 @@ export function renderMarkdown(md, opts = {}) {
 
     // Table
     if (line.includes("|") && isTableSep(lines[i + 1])) {
+      // `\|` là dấu | nằm trong ô (như GFM), không phải ranh giới cột.
       const parseRow = (l) =>
-        l.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map((c) => c.trim());
+        l.replace(/^\s*\|/, "").replace(/(?<!\\)\|\s*$/, "").split(/(?<!\\)\|/)
+          .map((c) => c.trim().replace(/\\\|/g, "|"));
       const header = parseRow(line);
       i += 2;
       const rows = [];
