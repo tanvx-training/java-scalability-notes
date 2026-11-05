@@ -46,7 +46,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w1-4",
         text: "Viết demo records/sealed classes/pattern matching/text blocks",
-        lesson: `**Việc cần làm.** Với mỗi tính năng mới (records, sealed classes, pattern matching cho switch, text blocks), viết một file demo đặt cách viết cũ và cách viết mới cạnh nhau, kèm comment giải thích khác biệt. Ví dụ: refactor một DTO class 50 dòng thành record 3 dòng.
+        lesson: `**Việc cần làm.** Với mỗi tính năng mới (records, sealed classes, pattern matching cho switch, text blocks), viết một file demo đặt cách viết cũ và cách viết mới cạnh nhau, kèm comment giải thích khác biệt. Ví dụ: refactor một DTO class 50 dòng thành record 3 dòng. Muốn biết record, sealed và switch pattern biến thành gì trong class file: [Java Under the Hood bài 22](#/docs/uh-22) (record/sealed, SwitchBootstraps) và [bài 21](#/docs/uh-21) (toString/equals/hashCode của record qua ObjectMethods).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 1–2](#/docs/sj-01)`,
       },
@@ -75,7 +75,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w2-1",
         text: "Học lý thuyết GC: vẽ sơ đồ heap Eden → Survivor → Old gen",
-        lesson: `**Việc cần làm.** Học lý thuyết trong 2 buổi: xem talk "Understanding Java Garbage Collection" (Devoxx) và đọc docs Oracle về G1. Vẽ tay sơ đồ heap: Eden → Survivor → Old gen, chụp ảnh bỏ vào README.
+        lesson: `**Việc cần làm.** Học lý thuyết trong 2 buổi: xem talk "Understanding Java Garbage Collection" (Devoxx) và đọc docs Oracle về G1. Vẽ tay sơ đồ heap: Eden → Survivor → Old gen, chụp ảnh bỏ vào README. Đọc sâu bằng tiếng Việt: [Java Under the Hood bài 10](#/docs/uh-10) (GC root, giả thuyết thế hệ, TLAB) và [bài 11](#/docs/uh-11) (mổ xẻ G1).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 3–4](#/docs/sj-01)`,
       },
@@ -89,21 +89,21 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w2-3",
         text: "Chẩn đoán leak bằng VisualVM: Heap Dump → Retained Size → GC Root",
-        lesson: `**Việc cần làm.** Chẩn đoán bằng VisualVM: attach vào process → tab Monitor xem heap tăng dần không giảm sau GC (dấu hiệu leak) → bấm Heap Dump khi heap gần đầy → trong dump, sort theo Retained Size → thấy \`byte[]\` chiếm nhiều nhất → click chuột phải "Show Nearest GC Root" → truy ra static field gây leak. Ghi lại từng bước kèm ảnh chụp màn hình vào README.
+        lesson: `**Việc cần làm.** Chẩn đoán bằng VisualVM: attach vào process → tab Monitor xem heap tăng dần không giảm sau GC (dấu hiệu leak) → bấm Heap Dump khi heap gần đầy → trong dump, sort theo Retained Size → thấy \`byte[]\` chiếm nhiều nhất → click chuột phải "Show Nearest GC Root" → truy ra static field gây leak. Ghi lại từng bước kèm ảnh chụp màn hình vào README. Shallow/retained size, dominator tree và đường tới GC root được giải thích kỹ ở [Java Under the Hood bài 14](#/docs/uh-14).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 3–4](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w2-4",
         text: "Lặp lại chẩn đoán bằng dòng lệnh: jcmd, jmap, Eclipse MAT",
-        lesson: `**Việc cần làm.** Làm lại bằng dòng lệnh — kỹ năng cần cho production khi không có GUI: \`jcmd <pid> GC.heap_info\`, \`jmap -dump:live,format=b,file=heap.hprof <pid>\`, rồi mở file dump bằng Eclipse MAT và chạy "Leak Suspects Report".
+        lesson: `**Việc cần làm.** Làm lại bằng dòng lệnh — kỹ năng cần cho production khi không có GUI: \`jcmd <pid> GC.heap_info\`, \`jmap -dump:live,format=b,file=heap.hprof <pid>\`, rồi mở file dump bằng Eclipse MAT và chạy "Leak Suspects Report". Quy trình histogram → heap dump → dominator tree bằng dòng lệnh: [Java Under the Hood bài 14](#/docs/uh-14); mỗi lệnh \`jcmd\` tốn bao nhiêu trên production: [bài 25](#/docs/uh-25).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 3–4](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w2-5",
         text: "Lab GC log app công ty: bắn tải, đọc pause, so sánh -Xmx",
-        lesson: `**Việc cần làm.** Chạy app Spring Boot công ty (bản dev) với \`-Xlog:gc*:file=gc.log:time,uptime\`. Bắn tải bằng \`hey -z 60s http://localhost:8080/...\`. Mở gc.log, tìm các dòng Pause, ghi lại pause dài nhất. Upload log lên gceasy.io để xem biểu đồ. Đổi \`-Xmx\` (256m → 1g) rồi chạy lại, so sánh tần suất GC và pause time, ghi kết luận.
+        lesson: `**Việc cần làm.** Chạy app Spring Boot công ty (bản dev) với \`-Xlog:gc*:file=gc.log:time,uptime\`. Bắn tải bằng \`hey -z 60s http://localhost:8080/...\`. Mở gc.log, tìm các dòng Pause, ghi lại pause dài nhất. Upload log lên gceasy.io để xem biểu đồ. Đổi \`-Xmx\` (256m → 1g) rồi chạy lại, so sánh tần suất GC và pause time, ghi kết luận. Cú pháp unified logging và cách đọc từng dòng log G1: [Java Under the Hood bài 14](#/docs/uh-14) và [bài 11](#/docs/uh-11) mục 9.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 3–4](#/docs/sj-01)`,
       },
@@ -159,7 +159,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w3-5",
         text: "So sánh ConcurrentHashMap vs HashMap vs synchronizedMap",
-        lesson: `**Việc cần làm.** Đọc thêm sự khác nhau giữa \`ConcurrentHashMap\`, \`HashMap\` và \`Collections.synchronizedMap\`: viết một bảng so sánh 5 dòng trong README (lock granularity, iterator, null key).
+        lesson: `**Việc cần làm.** Đọc thêm sự khác nhau giữa \`ConcurrentHashMap\`, \`HashMap\` và \`Collections.synchronizedMap\`: viết một bảng so sánh 5 dòng trong README (lock granularity, iterator, null key). Bên trong \`ConcurrentHashMap\` khoá từng ô thế nào: [Java Under the Hood bài 20](#/docs/uh-20) mục 4.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 5–6](#/docs/sj-01)`,
       },
@@ -188,7 +188,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w4-2",
         text: "Lab type erasure: getClass() của List<String> và List<Integer>",
-        lesson: `**Việc cần làm.** Viết \`List<String>\` và \`List<Integer>\`, in \`getClass()\` của cả hai để thấy chúng cùng một class. Thử viết \`new T[]\` để hiểu tại sao không được phép.
+        lesson: `**Việc cần làm.** Viết \`List<String>\` và \`List<Integer>\`, in \`getClass()\` của cả hai để thấy chúng cùng một class. Thử viết \`new T[]\` để hiểu tại sao không được phép. Generic biến đi đâu sau javac, bridge method và vì sao Jackson cần \`TypeReference\`: [Java Under the Hood bài 22](#/docs/uh-22).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 7–8](#/docs/sj-01)`,
       },
@@ -230,28 +230,28 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w5-2",
         text: "Lab race condition: 2 thread count++ 1 triệu lần, chạy 5 lần",
-        lesson: `**Việc cần làm.** Lab race condition: class \`Counter\` có trường \`int count\`; 2 thread, mỗi thread gọi \`count++\` một triệu lần; join rồi in kết quả — gần như luôn nhỏ hơn 2 triệu. Chạy 5 lần, ghi 5 kết quả khác nhau vào README (tính không xác định chính là bài học).
+        lesson: `**Việc cần làm.** Lab race condition: class \`Counter\` có trường \`int count\`; 2 thread, mỗi thread gọi \`count++\` một triệu lần; join rồi in kết quả — gần như luôn nhỏ hơn 2 triệu. Chạy 5 lần, ghi 5 kết quả khác nhau vào README (tính không xác định chính là bài học). Vì sao \`count++\` mất cập nhật — nhìn ở mức bytecode \`getfield\`/\`iadd\`/\`putfield\`: [Java Under the Hood bài 02](#/docs/uh-02) mục 7.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 9–10](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w5-3",
         text: "Fix 3 cách: synchronized, AtomicInteger, LongAdder + benchmark",
-        lesson: `**Việc cần làm.** Fix bằng 3 cách, mỗi cách một class: \`synchronized\`, \`AtomicInteger\`, \`LongAdder\`. Viết benchmark JMH cho cả 3 cách với 8 thread — sẽ thấy \`LongAdder\` thắng khi contention cao. Ghi bảng số liệu.
+        lesson: `**Việc cần làm.** Fix bằng 3 cách, mỗi cách một class: \`synchronized\`, \`AtomicInteger\`, \`LongAdder\`. Viết benchmark JMH cho cả 3 cách với 8 thread — sẽ thấy \`LongAdder\` thắng khi contention cao. Ghi bảng số liệu. Cái giá thật của \`synchronized\` khi không và có tranh chấp (mark word, monitor): [Java Under the Hood bài 17](#/docs/uh-17).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 9–10](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w5-4",
         text: "Lab visibility: volatile flag dừng vòng lặp while(!stop)",
-        lesson: `**Việc cần làm.** Lab visibility: thread A chạy \`while(!stop) {}\`, thread B set \`stop = true\` sau 1 giây. Không có \`volatile\` thì có thể treo vô hạn (chạy với JIT, bỏ print trong loop). Thêm \`volatile\` thì dừng ngay. Đây là demo visibility kinh điển — tự chạy được nó ăn đứt đọc 10 bài blog.
+        lesson: `**Việc cần làm.** Lab visibility: thread A chạy \`while(!stop) {}\`, thread B set \`stop = true\` sau 1 giây. Không có \`volatile\` thì có thể treo vô hạn (chạy với JIT, bỏ print trong loop). Thêm \`volatile\` thì dừng ngay. Đây là demo visibility kinh điển — tự chạy được nó ăn đứt đọc 10 bài blog. Vì sao JIT làm vòng lặp không bao giờ dừng và \`volatile\` biên dịch thành gì: [Java Under the Hood bài 16](#/docs/uh-16) mục 4–7.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 9–10](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w5-5",
         text: "Ghi chú Feynman: vì sao volatile đủ cho flag nhưng không đủ cho counter",
-        lesson: `**Việc cần làm.** Viết ghi chú Feynman: "Tại sao volatile đủ cho cờ stop nhưng không đủ cho counter" — chốt lại rằng visibility khác atomicity.
+        lesson: `**Việc cần làm.** Viết ghi chú Feynman: "Tại sao volatile đủ cho cờ stop nhưng không đủ cho counter" — chốt lại rằng visibility khác atomicity. Đối chiếu với [Java Under the Hood bài 16](#/docs/uh-16) mục 7 ("volatile không làm count++ thành nguyên tử").
 
 **Nguồn.** [Giai đoạn 1 — Tuần 9–10](#/docs/sj-01)`,
       },
@@ -329,14 +329,14 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w7-3",
         text: "Lab pinning: virtual thread trong synchronized với -Djdk.tracePinnedThreads",
-        lesson: `**Việc cần làm.** Học virtual threads: đọc JEP 444. Lab pinning: cho virtual thread chạy một block \`synchronized\` có sleep bên trong, bật \`-Djdk.tracePinnedThreads=full\` để thấy cảnh báo pinned. Hiểu rằng \`synchronized\` giữ carrier thread (trước Java 24), nên code cũ nhiều \`synchronized\` chưa hưởng lợi ngay từ virtual threads.
+        lesson: `**Việc cần làm.** Học virtual threads: đọc JEP 444. Lab pinning: cho virtual thread chạy một block \`synchronized\` có sleep bên trong, bật \`-Djdk.tracePinnedThreads=full\` để thấy cảnh báo pinned. Hiểu rằng \`synchronized\` giữ carrier thread (trước Java 24), nên code cũ nhiều \`synchronized\` chưa hưởng lợi ngay từ virtual threads. Pinning nhìn từ bên trong JVM, cái gì đã sửa ở JDK 24 và cái gì vẫn ghim carrier: [Java Under the Hood bài 19](#/docs/uh-19) mục 8.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 13–14](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w7-4",
         text: "So sánh 100.000 virtual threads vs platform threads (OOM)",
-        lesson: `**Việc cần làm.** Thí nghiệm ấn tượng: tạo 100.000 virtual thread mỗi cái sleep 1s — chạy ngon trong khoảng 1s; thử lại với 100.000 platform thread — OOM hoặc treo máy. Ghi lại số liệu — đây là câu chuyện kể hay khi phỏng vấn.
+        lesson: `**Việc cần làm.** Thí nghiệm ấn tượng: tạo 100.000 virtual thread mỗi cái sleep 1s — chạy ngon trong khoảng 1s; thử lại với 100.000 platform thread — OOM hoặc treo máy. Ghi lại số liệu — đây là câu chuyện kể hay khi phỏng vấn. Virtual thread rẻ tới mức nào và vì sao (continuation, stack trên heap): [Java Under the Hood bài 19](#/docs/uh-19) mục 2–3.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 13–14](#/docs/sj-01)`,
       },
@@ -372,14 +372,14 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w8-3",
         text: "Chứng minh proxy: getClass() của bean @Transactional ra $$SpringCGLIB$$",
-        lesson: `**Việc cần làm.** Lab chứng minh proxy: inject một bean có \`@Transactional\`, đặt breakpoint rồi xem \`getClass()\` — sẽ thấy tên kiểu dạng \`...$$SpringCGLIB$$...\` chứ không phải class của bạn. Đó là bằng chứng AOP = proxy bọc ngoài.
+        lesson: `**Việc cần làm.** Lab chứng minh proxy: inject một bean có \`@Transactional\`, đặt breakpoint rồi xem \`getClass()\` — sẽ thấy tên kiểu dạng \`...$$SpringCGLIB$$...\` chứ không phải class của bạn. Đó là bằng chứng AOP = proxy bọc ngoài. Proxy lớp con kiểu CGLIB được sinh ra lúc chạy thế nào: [Java Under the Hood bài 23](#/docs/uh-23) mục 5.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 15–16](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w8-4",
         text: "Lab self-invocation: this.b() né proxy, mất log @Transactional",
-        lesson: `**Việc cần làm.** Lab self-invocation: trong một service, method \`a()\` (không annotation) gọi \`this.b()\` (có \`@Transactional\`). Bật log \`logging.level.org.springframework.transaction.interceptor=TRACE\` — gọi qua \`a()\` sẽ không thấy log mở transaction; gọi \`b()\` trực tiếp từ ngoài thì có. Kết luận: \`this.\` đi thẳng vào object thật, né mất proxy.
+        lesson: `**Việc cần làm.** Lab self-invocation: trong một service, method \`a()\` (không annotation) gọi \`this.b()\` (có \`@Transactional\`). Bật log \`logging.level.org.springframework.transaction.interceptor=TRACE\` — gọi qua \`a()\` sẽ không thấy log mở transaction; gọi \`b()\` trực tiếp từ ngoài thì có. Kết luận: \`this.\` đi thẳng vào object thật, né mất proxy. Self-invocation nhìn trong bytecode của proxy: [Java Under the Hood bài 23](#/docs/uh-23) mục 6.
 
 **Nguồn.** [Giai đoạn 1 — Tuần 15–16](#/docs/sj-01)`,
       },
@@ -393,7 +393,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w8-6",
         text: "Học lý thuyết bù: JDK dynamic proxy vs CGLIB, vì sao final không proxy được",
-        lesson: `**Việc cần làm.** Học lý thuyết bù: JDK dynamic proxy (cần interface) so với CGLIB (subclass), và tại sao method \`final\` không proxy được.
+        lesson: `**Việc cần làm.** Học lý thuyết bù: JDK dynamic proxy (cần interface) so với CGLIB (subclass), và tại sao method \`final\` không proxy được. Đọc sâu: [Java Under the Hood bài 23](#/docs/uh-23) mục 4–7 (JDK dynamic proxy, proxy lớp con, final/private và những field null).
 
 **Nguồn.** [Giai đoạn 1 — Tuần 15–16](#/docs/sj-01)`,
       },
@@ -658,14 +658,14 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w13-3",
         text: "G1 hoạt động thế nào, khi nào chọn ZGC?",
-        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại phần lý thuyết GC và ghi chú Feynman "GC hoạt động thế nào" ở tuần 3–4 (JVM memory & GC) để ôn lại.
+        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại phần lý thuyết GC và ghi chú Feynman "GC hoạt động thế nào" ở tuần 3–4 (JVM memory & GC) để ôn lại. Đọc thêm [Java Under the Hood bài 11](#/docs/uh-11) (G1) và [bài 12](#/docs/uh-12) (ZGC & Shenandoah).
 
 **Nguồn.** [Giai đoạn 1 — Bộ câu hỏi tự kiểm tra](#/docs/sj-01)`,
       },
       {
         id: "sj-gd1-w13-4",
         text: "Các bước chẩn đoán memory leak trên production?",
-        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại lab chẩn đoán bằng VisualVM và bằng dòng lệnh (jcmd/jmap/Eclipse MAT) ở tuần 3–4 (JVM memory & GC) để ôn lại.
+        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại lab chẩn đoán bằng VisualVM và bằng dòng lệnh (jcmd/jmap/Eclipse MAT) ở tuần 3–4 (JVM memory & GC) để ôn lại. Quy trình đầy đủ ở [Java Under the Hood bài 14](#/docs/uh-14).
 
 **Nguồn.** [Giai đoạn 1 — Bộ câu hỏi tự kiểm tra](#/docs/sj-01)`,
       },
@@ -679,7 +679,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w13-6",
         text: "Happens-before là gì? volatile giải quyết gì và không giải quyết gì?",
-        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại lab race condition và lab visibility ở tuần 9–10 (Thread safety, visibility, atomicity) để ôn lại.
+        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại lab race condition và lab visibility ở tuần 9–10 (Thread safety, visibility, atomicity) để ôn lại. Đọc thêm [Java Under the Hood bài 16](#/docs/uh-16) (happens-before, volatile bên trong).
 
 **Nguồn.** [Giai đoạn 1 — Bộ câu hỏi tự kiểm tra](#/docs/sj-01)`,
       },
@@ -693,7 +693,7 @@ Mỗi thư mục sẽ có \`README.md\` (ghi chú Feynman) cộng mã nguồn. �
       {
         id: "sj-gd1-w13-8",
         text: "Virtual threads giải quyết gì, pinning là gì?",
-        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại lab pinning và lab so sánh virtual threads với platform threads ở tuần 13–14 (CompletableFuture & virtual threads) để ôn lại.
+        lesson: `**Cách tự chấm.** Trả lời thành tiếng, ghi âm rồi nghe lại — chỗ nào ấp úng nghĩa là chưa hiểu, quay lại lab pinning và lab so sánh virtual threads với platform threads ở tuần 13–14 (CompletableFuture & virtual threads) để ôn lại. Đọc thêm [Java Under the Hood bài 19](#/docs/uh-19).
 
 **Nguồn.** [Giai đoạn 1 — Bộ câu hỏi tự kiểm tra](#/docs/sj-01)`,
       },
