@@ -158,9 +158,8 @@ export const FIELDS = {
     unit: "Bài",
     desc: "Series tiếng Việt Java Under the Hood — 26 bài, 6 chặng đi từ dòng mã nguồn xuống HotSpot: class file và bytecode, class loading, vùng nhớ và object layout, interpreter và JIT, khởi động nhanh, G1/ZGC/Shenandoah trong container, memory leak, JMM, monitor, safepoint, virtual threads, invokedynamic, proxy, exception, rồi jcmd/JFR/async-profiler để điều tra sự cố production; mọi output chạy thật trên OpenJDK 17/21/25.",
     certFilter: false,
-    // Mở dần theo dữ liệu: "interview" bật khi có ngân hàng câu hỏi — khai sớm là #7/#7b báo đỏ.
     // Không có externalRef: series không có trang phát hành công khai.
-    modules: ["dashboard", "guide", "docs", "roadmap"],
+    modules: ["dashboard", "guide", "docs", "roadmap", "interview"],
   },
   jcip: {
     label: "Java Concurrency in Practice",
