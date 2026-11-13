@@ -210,7 +210,7 @@ Repo \`…/core:/stable:/v1.36/deb/\` chỉ có bản 1.36.x, nên \`apt-get ins
       ],
     },
     tips: [
-      "Bookmark trang *Installing kubeadm* và *Container Runtimes* trước giờ thi; hai khối lệnh `modules-load.d` và `sysctl.d` chép thẳng từ docs nhanh hơn gõ.",
+      "Bookmark trang \"Installing kubeadm\" và \"Container Runtimes\" trước giờ thi; hai khối lệnh `modules-load.d` và `sysctl.d` chép thẳng từ docs nhanh hơn gõ.",
       "Mọi thay đổi \"cho bền\" đều có hai nửa: áp ngay (`swapoff`, `modprobe`, `sysctl --system`) và khai cho lần khởi động sau (`fstab`, `modules-load.d`, `sysctl.d`). Kiểm cả hai.",
       "`systemctl cat <unit>` trước khi sửa bất cứ thứ gì của kubelet: nó cho thấy đối số thật đến từ tệp nào.",
       "Sửa `config.toml` của containerd xong phải `systemctl restart containerd` — containerd chỉ đọc cấu hình lúc khởi động.",

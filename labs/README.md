@@ -2,7 +2,7 @@
 
 Thư mục này là phần chạy trên máy bạn của module **Thực hành** trong DevPrep (`#/practice`). Web app chỉ hiển thị đề bài, gợi ý và lời giải; còn **dựng VM, đặt bài, chấm kết quả** là việc của `./labs/lab`, một CLI bash điều khiển các VM [Multipass](https://canonical.com/multipass).
 
-Mỗi chương trình thực hành (hiện có `cka`) có một thư mục riêng `labs/<chương trình>/`. Phần dùng chung (`lab`, `lib/`) không biết gì về chương trình cụ thể nào: mọi thứ riêng nằm trong `labs/<chương trình>/`.
+Mỗi chương trình thực hành (hiện có `cka`, ghi chú riêng ở [`cka/README.md`](cka/README.md)) có một thư mục riêng `labs/<chương trình>/`. Phần dùng chung (`lab`, `lib/`) không biết gì về chương trình cụ thể nào: mọi thứ riêng nằm trong `labs/<chương trình>/`.
 
 ## Yêu cầu máy
 
@@ -10,7 +10,7 @@ Mỗi chương trình thực hành (hiện có `cka`) có một thư mục riên
 |---|---|
 | macOS, `/bin/bash` 3.2 có sẵn | Script trong `labs/` viết cho bash 3.2 của macOS (không mảng kết hợp, không `mapfile`). Script chạy bên trong VM thì không bị ràng buộc này |
 | [Multipass](https://canonical.com/multipass) | `brew install --cask multipass`; `lab` báo lỗi rõ nếu thiếu |
-| Docker (Docker Desktop hoặc OrbStack) | Chỉ cần cho `lab images` (build rồi nạp image ứng dụng vào VM) |
+| Docker (Docker Desktop hoặc OrbStack) | Cần cho `lab images` (build rồi nạp image ứng dụng vào VM), và cho `selftest`/`restore` khi chuỗi buổi có buổi nạp image (với `cka`: `apply.sh` của s05 và s06 gọi bước nạp image) |
 | Tài nguyên cho chương trình `cka` | Ba VM: `cka-cp` 2 vCPU, 3G RAM, 20G đĩa; `cka-w1` và `cka-w2` mỗi máy 2 vCPU, 2G RAM, 15G đĩa. Tổng 6 vCPU, 7G RAM, 50G đĩa; image Ubuntu 24.04 |
 
 Image ứng dụng build cho `linux/arm64`, tức máy Mac Apple Silicon.

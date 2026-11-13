@@ -327,7 +327,7 @@ Làm lại bộ năm bài từ đầu: \`rm ~/drills/s02/broken.yaml\` rồi \`.
       ],
     },
     tips: [
-      "Gõ `:set paste` *trước* khi vào Insert mode rồi mới dán; dán xong `:set nopaste` để autoindent hoạt động lại.",
+      "Gõ `:set paste` **trước** khi vào Insert mode rồi mới dán; dán xong `:set nopaste` để autoindent hoạt động lại.",
       "`u` không sợ: hoàn tác từng bước, `Ctrl-r` làm lại. Sửa hỏng thì `u` chứ đừng `:q!` rồi làm lại cả tệp.",
       "Biết số dòng khối cần thụt? `:27,32>` nhanh hơn chọn Visual. `:set number` (có trong vimrc) để đọc số dòng.",
       "`export do=…` không có dấu cách quanh `=`. Viết `export do = \"…\"` thì bash báo lỗi `not a valid identifier` cho dấu `=` và `$do` thành rỗng — lệnh `k run … $do` sau đó tạo thật tài nguyên thay vì in YAML.",
@@ -440,7 +440,7 @@ Hai thói quen cần hình thành: **sửa tệp → \`daemon-reload\` → resta
       "User `shop` phải vào được `/opt/shop` để chạy script: thư mục `750` chủ `shop` là đủ. `status=200/CHDIR` hay `Permission denied` trong journal là dấu hiệu sai chủ/quyền.",
       "Viết vòng lặp thẳng trong `ExecStart=` thì `$` bị systemd hiểu là biến của nó (phải viết `$$`). Đặt vòng lặp trong một tệp script cho khỏi bẫy này.",
       "Sửa tệp unit xong mà `status` vẫn hiện cấu hình cũ, kèm cảnh báo `changed on disk`: thiếu `systemctl daemon-reload`.",
-      "`kill -TERM` dừng sạch nên `Restart=on-failure` *không* khởi động lại; `kill -KILL` bị coi là chết bất thường nên được khởi động lại. Nếu bạn đã TERM và dịch vụ nằm im, chỉ cần `systemctl start shop-heartbeat`.",
+      "`kill -TERM` dừng sạch nên `Restart=on-failure` **không** khởi động lại; `kill -KILL` bị coi là chết bất thường nên được khởi động lại. Nếu bạn đã TERM và dịch vụ nằm im, chỉ cần `systemctl start shop-heartbeat`.",
     ],
     solution: `Làm bằng root (\`sudo -i\`) trên cka-cp.
 
