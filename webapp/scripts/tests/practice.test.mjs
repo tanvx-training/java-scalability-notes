@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as P from "../../js/lib/practice.js";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { makeProgram } from "./fixtures/program.mjs";
 
 const p = makeProgram();
@@ -141,4 +143,22 @@ test("addMockResult keeps every paste, even on the same day", () => {
 test("findMock with unknown id is null", () => {
   assert.equal(P.findMock(p, "m9"), null);
   assert.equal(P.findMock({ id: "x" }, "m1"), null);
+});
+
+test("lab mock score output round-trips through parseMockResult", () => {
+  const labs = fileURLToPath(new URL("../../../labs/", import.meta.url));
+  const env = {
+    ...process.env,
+    LAB_ROOT: `${labs}tests/fixtures`,
+    PATH: `${labs}tests/stubs:${process.env.PATH}`,
+    MP_LIST: 'tst-a,Running,10.0.0.1,,x,""\ntst-b,Running,10.0.0.2,,x,""',
+  };
+  delete env.MP_LOG;
+  const out = execFileSync("/bin/bash", [`${labs}lab`, "mock", "tst", "m1", "score"], { env, encoding: "utf8" });
+  const last = out.trim().split("\n").pop();
+  assert.match(last, /^devprep-mock:v1:tst:m1:\d{4}-\d{2}-\d{2}:a=3\/6,b=2\/4$/);
+  const r = P.parseMockResult(last, p);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.record.byDomain, { a: { got: 3, max: 6 }, b: { got: 2, max: 4 } });
+  assert.equal(r.record.total, 50);
 });

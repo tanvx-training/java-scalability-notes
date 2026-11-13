@@ -10,6 +10,9 @@ LAB_ROOT="${LAB_ROOT:-$LAB_HOME}"
 export LAB_ROOT
 . "$LAB_HOME/lib/core.sh"
 . "$LAB_HOME/lib/multipass.sh"
+. "$LAB_HOME/lib/assert.sh"
+. "$LAB_HOME/lib/session.sh"
+. "$LAB_HOME/lib/snapshot.sh"
 
 MP_HINT="brew install --cask multipass"
 
@@ -22,6 +25,14 @@ Lệnh:
   down <chương trình>      dừng các VM (giữ nguyên dữ liệu)
   status <chương trình>    hiện trạng thái các VM của chương trình
   destroy <chương trình>   xoá hẳn các VM của chương trình (hỏi trước, --yes để bỏ hỏi)
+  check <ct> <buổi>        kiểm đầu vào của buổi (không sửa gì)
+  begin <ct> <buổi>        check rồi chạy setup.sh của buổi
+  verify <ct> <buổi>       kiểm kết quả của buổi
+  restore <ct> <buổi>      đưa VM về trạng thái đầu vào của buổi (mốc gần nhất hoặc dựng lại)
+  break <ct> <mã-lỗi>      gây lỗi có chủ ý để luyện sự cố
+  mock <ct> <đề> start|score   bắt đầu hoặc chấm đề mock (score in dòng devprep-mock:v1)
+  selftest <ct> [--from <buổi>]  chạy apply + verify mọi buổi trên VM sạch
+  snapshot <ct> <tên>      chụp snapshot mọi VM của chương trình
   help                     in trợ giúp này
 USAGE
   local p n=""
@@ -130,7 +141,7 @@ main() {
   case "$cmd" in
     '') usage; exit 1 ;;
     help|-h|--help) usage; exit 0 ;;
-    up|down|status|destroy) ;;
+    up|down|status|destroy|check|begin|verify|restore|break|mock|selftest|snapshot) ;;
     *) usage >&2; die "lệnh '$cmd' không tồn tại" ;;
   esac
   shift
@@ -145,8 +156,9 @@ main() {
   set -- $args
   [ $# -ge 1 ] || die "thiếu tên chương trình, ví dụ: ./labs/lab $cmd <chương trình>"
   load_program "$1"
+  shift
   require_cmd multipass "$MP_HINT"
-  "cmd_$cmd"
+  "cmd_$cmd" "$@"
 }
 
 main "$@"

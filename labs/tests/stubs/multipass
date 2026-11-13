@@ -8,6 +8,12 @@ if [ -n "${MP_FAIL:-}" ] && [ "$MP_FAIL" = "$sub" ]; then
 fi
 run="${MP_LOG:-/dev/null}.run"
 case "$sub" in
+  info)
+    # <VM>.<snapshot> chỉ tồn tại nếu có trong MP_SNAPS (các từ cách nhau bằng khoảng trắng)
+    for a in "$@"; do
+      case "$a" in *.*) case " ${MP_SNAPS:-} " in *" $a "*) ;; *) echo "stub: no snapshot $a" >&2; exit 2 ;; esac ;; esac
+    done
+    ;;
   list)
     echo "Name,State,IPv4,IPv6,Release,AllIPv4"
     [ -n "${MP_LIST:-}" ] && printf '%s\n' "$MP_LIST"
