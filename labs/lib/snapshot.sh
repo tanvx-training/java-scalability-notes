@@ -9,6 +9,8 @@
 # Vì vậy mốc luôn được chụp cho mọi VM của chương trình, khi tất cả đã dừng, và được khôi phục cùng nhau.
 #
 # milestones: mỗi dòng "<id buổi> <tên snapshot>"; snapshot chụp sau khi buổi đó qua verify trong selftest.
+# Vì chụp lúc VM dừng, phần KHÔNG bền của đầu ra buổi mốc (netns, container chạy bằng tay…) không có trong
+# snapshot: restore về mốc xong thì áp lại apply.sh của chính buổi mốc (apply.sh chạy lại được theo hợp đồng).
 
 snap_name_ok() { case "$1" in ''|-*|*[!a-z0-9-]*) return 1 ;; esac; return 0; }
 
@@ -141,7 +143,11 @@ cmd_restore() {
     [ -z "$list" ] || mp delete --purge $list >/dev/null || die "không xoá được VM"
     cmd_up
   fi
-  apply_chain $(sessions_through "$target" "$ms_sid")
+  if [ -n "$ms_sid" ]; then
+    apply_chain "$ms_sid" $(sessions_through "$target" "$ms_sid")
+  else
+    apply_chain $(sessions_through "$target")
+  fi
   info "kiểm '$target'"
   run_session_file "$target" verify.sh n || rc=$?
   return "$rc"

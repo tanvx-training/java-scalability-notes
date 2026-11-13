@@ -252,11 +252,11 @@ tst-b,Running,10.0.0.2,,x,""'; export MP_LIST; run_lab "" verify tst a2
 check "verify khi VM Stopped: báo ./lab up, không chạy script" $((a+b+c))
 
 sess_case; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" restore tst a3 --yes
-[ "$RC" -eq 0 ]; a=$?; trace_is "a2/apply a3/apply a3/verify"; b=$?
+[ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a2/apply a3/apply a3/verify"; b=$?
 has "$MP_LOG" '^stop tst-a tst-b$'; c=$?
 has "$MP_LOG" '^restore tst-a.m-a1 --destructive$'; d=$?; has "$MP_LOG" '^restore tst-b.m-a1 --destructive$'; e=$?
 has "$MP_LOG" '^start tst-a tst-b$'; f=$?; ! has "$MP_LOG" '^delete'; g=$?
-check "restore tst a3 --yes có mốc a1: stop, restore từng VM, start, apply a2 a3, verify a3" $((a+b+c+d+e+f+g))
+check "restore tst a3 --yes có mốc a1: stop, restore từng VM, start, apply lại a1 (mốc) rồi a2 a3, verify a3" $((a+b+c+d+e+f+g))
 sess_case; run_lab "" restore tst a3 --yes
 [ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a2/apply a3/apply a3/verify"; b=$?
 ! has "$MP_LOG" '^restore'; c=$?; has "$MP_LOG" '^delete --purge tst-a tst-b$'; d=$?
@@ -265,8 +265,8 @@ sess_case; MP_SNAPS="tst-a.m-a1"; export MP_SNAPS; run_lab "" restore tst a3 --y
 [ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a2/apply a3/apply a3/verify"; b=$?; ! has "$MP_LOG" '^restore'; c=$?
 check "restore: snapshot chỉ có trên một VM thì không dùng" $((a+b+c))
 sess_case; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" restore tst a1 --yes
-[ "$RC" -eq 0 ]; a=$?; trace_is "a1/verify"; b=$?
-check "restore tst a1 (đúng mốc): không apply, chỉ verify" $((a+b))
+[ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a1/verify"; b=$?
+check "restore tst a1 (đúng mốc): apply lại a1 (trạng thái không bền mất khi chụp lúc VM dừng), verify" $((a+b))
 sess_case; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "n
 " restore tst a3
 [ "$RC" -ne 0 ]; a=$?; ! has "$MP_LOG" '^stop\|^restore\|^delete'; b=$?; has "$OUT" 'tst-a'; c=$?; trace_is ""; d=$?
@@ -275,7 +275,7 @@ sess_case; run_lab "" restore tst a3
 [ "$RC" -ne 0 ]; a=$?; ! has "$MP_LOG" '^delete'; b=$?
 check "restore stdin rỗng: không xoá VM" $((a+b))
 sess_case; FAIL=a2/apply; export FAIL; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" restore tst a3 --yes
-[ "$RC" -eq 1 ]; a=$?; trace_is "a2/apply"; b=$?; has "$ERR" "apply.sh của 'a2' lỗi"; c=$?
+[ "$RC" -eq 1 ]; a=$?; trace_is "a1/apply a2/apply"; b=$?; has "$ERR" "apply.sh của 'a2' lỗi"; c=$?
 check "restore: apply hỏng thì dừng, mã 1" $((a+b+c))
 sess_case; FAIL=a3/verify; export FAIL; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" restore tst a3 --yes
 [ "$RC" -eq 1 ]; a=$?
