@@ -36,7 +36,7 @@ Chạy từ **gốc repo**: `./labs/lab <lệnh> <chương trình> [đối số�
 | `down <ct>` | Dừng các VM đang chạy, giữ nguyên dữ liệu |
 | `status <ct>` | Bảng tên, trạng thái, IPv4 của từng VM |
 | `destroy <ct>` | Xoá hẳn (purge) các VM của chương trình. Liệt kê VM rồi hỏi `y/N`; thêm `--yes` để bỏ hỏi |
-| `check <ct> <buổi>` | Kiểm **đầu vào** của buổi, không sửa gì. VM phải đang chạy; rồi chạy `check.sh` của buổi nếu có, nếu không thì `verify.sh` của buổi đứng trước trong `ORDER` |
+| `check <ct> <buổi>` | Kiểm **đầu vào** của buổi, không sửa gì. VM phải đang chạy; rồi chạy `check.sh` của buổi nếu có, nếu không thì `verify.sh` của buổi đứng trước trong `ORDER`. Với buổi đầu tiên trong `ORDER` không chạy script nào, chỉ đòi VM đang chạy |
 | `begin <ct> <buổi>` | `check` rồi chạy `setup.sh` của buổi (nếu có): đặt tệp bài tập, hoặc gây lỗi cho buổi sự cố. Đầu vào chưa đạt thì dừng và gợi ý `restore` về buổi trước. Đây là bước khởi động mà trang buổi học hiển thị |
 | `verify <ct> <buổi>` | Chạy `verify.sh` của buổi: kiểm **kết quả** bạn làm. Thoát mã 0 khi mọi mục đạt |
 | `restore <ct> <buổi>` | Đưa VM về trạng thái sau khi hoàn thành buổi đó (xem bên dưới). Hỏi xác nhận, `--yes` để bỏ hỏi |
@@ -78,15 +78,15 @@ labs/<chương trình>/
 │       ├── setup.sh          # tuỳ chọn: chạy bởi `begin`
 │       └── files/            # tuỳ chọn: tệp đi kèm buổi
 ├── breaks/<mã-lỗi>/run.sh    # lỗi gây có chủ ý, dùng bởi `break` hoặc gọi từ setup.sh
-└── mocks/<đề>/{setup.sh,score.sh}
+└── mocks/<đề>/{setup.sh,score.sh}   # bắt buộc với mỗi đề khai trong mocks.js (PR11)
 ```
 
 - Mỗi script được `source` trong một subshell riêng, stdin là `/dev/null`. `apply.sh`, `setup.sh`, `break` chạy với `set -e`; `verify.sh`, `check.sh`, `score.sh` thì không.
 - Có sẵn trong script: `vm <tên-vm> "<lệnh>"` (chạy lệnh trong VM, qua `mp`), `vm_put <nguồn> <tên-vm> <đích>` (chép tệp vào VM), `lab_break <mã-lỗi>` (gây lỗi từ `setup.sh`), các biến `LAB_CP`, `LAB_VMS`, `LAB_PROGRAM`, `SESSION_DIR`, và các hàm assert.
 - **Assert** (`labs/lib/assert.sh`), mỗi hàm in một dòng ✓ hoặc ✗:
   - `expect_ok "<nhãn>" <lệnh…>` đạt khi lệnh trả 0; `expect_fail` đạt khi lệnh trả khác 0.
-  - `expect_eq "<nhãn>" "<kỳ vọng>" <lệnh…>` đạt khi stdout (đã cắt khoảng trắng đầu và cuối) bằng kỳ vọng.
-  - `expect_match "<nhãn>" "<regex>" <lệnh…>` đạt khi stdout và stderr gộp lại khớp regex (`grep -E`).
+  - `expect_eq "<nhãn>" "<kỳ vọng>" <lệnh…>` đạt khi lệnh trả 0 **và** stdout (đã cắt khoảng trắng đầu và cuối) bằng kỳ vọng.
+  - `expect_match "<nhãn>" "<regex>" <lệnh…>` đạt khi lệnh trả 0 **và** stdout với stderr gộp lại khớp regex (`grep -E`).
   - `assert_summary` in `→ a/b đạt` và trả 0 khi đủ. Script `verify.sh` phải kết thúc bằng lệnh này.
 - **Đề mock**: `score.sh` in mỗi dòng `<câu> <domain> <got> <max>`. `lab` cộng điểm theo domain, in bảng và dòng kết quả không có khoảng trắng: `devprep-mock:v1:<chương trình>:<đề>:<YYYY-MM-DD>:<domain>=<got>/<max>,…`. Dòng sai hình dạng là lỗi, không bị bỏ qua.
 - Trạng thái đầu vào của một buổi mặc định được kiểm bằng `verify.sh` của buổi đứng trước. Buổi nào có trạng thái đầu vào không bền qua khởi động lại VM thì có `check.sh` riêng.
@@ -99,8 +99,8 @@ Ví dụ chương trình `xyz`. Id chương trình chỉ gồm chữ thường, 
    - `LAB_PREFIX` (dạng `xyz-`, **không trùng VM nào bạn đang dùng**), `LAB_VMS` (mọi tên bắt đầu bằng tiền tố), `LAB_CP`, `LAB_IMAGE` (mặc định `24.04`).
    - Hàm `lab_vm_spec <tên-vm>` in `"<cpus> <mem> <disk>"`, ví dụ `2 2G 15G`.
    - Nếu cần nạp image: `LAB_IMAGES` và hàm `lab_build_images`.
-2. **`labs/xyz/sessions/ORDER`** liệt kê id buổi theo thứ tự học, rồi mỗi buổi **đã phát hành** có thư mục `sessions/<id>/` theo hợp đồng ở trên. Tuỳ chọn thêm `milestones`, `breaks/`, `mocks/`.
-3. **Dữ liệu cho web** trong `webapp/js/data/practice/xyz/`: `program.js` (meta, đề thi, `project`, `stages[].sessions`), `skills.js`, `mocks.js`, và các tệp `stage-NN.js` chứa buổi học. Xem các tệp trong `webapp/js/data/practice/cka/` làm mẫu; schema và quy tắc nằm ở các bất biến PR1–PR12 trong `webapp/scripts/check-data.mjs`.
+2. **`labs/xyz/sessions/ORDER`** liệt kê id buổi theo thứ tự học, rồi mỗi buổi **đã phát hành** có thư mục `sessions/<id>/` theo hợp đồng ở trên. Tuỳ chọn thêm `milestones` và `breaks/`; `mocks/<đề>/` chỉ được bỏ khi danh sách `mocks` trong `mocks.js` rỗng, còn mỗi đề đã khai thì cần đủ `setup.sh` và `score.sh`.
+3. **Dữ liệu cho web** trong `webapp/js/data/practice/xyz/`: `program.js` (meta, đề thi, `project`, `stages[].sessions`; `field` phải là id một lĩnh vực có trong `webapp/js/data/fields.js`, và `exam.domains[].weight` phải cộng đúng 100 — PR1), `skills.js`, `mocks.js`, và các tệp `stage-NN.js` chứa buổi học. Xem các tệp trong `webapp/js/data/practice/cka/` làm mẫu; schema và quy tắc nằm ở các bất biến PR1–PR12 trong `webapp/scripts/check-data.mjs`.
 4. **Đăng ký** trong `webapp/js/data/practice/index.js`: import các tệp trên và thêm một phần tử `assemble(...)` vào `PROGRAMS`. Phần dùng chung `webapp/js/lib/practice.js` và `webapp/js/views/practice.js` không được chứa tên chương trình cụ thể nào (bất biến PR12).
 5. **Khai số kỳ vọng** (số buổi, số buổi đã phát hành) trong bảng kỳ vọng của `check-data.mjs`, rồi chạy các lệnh kiểm ở mục dưới.
 

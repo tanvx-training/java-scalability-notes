@@ -130,12 +130,12 @@ webapp/
 Sửa lịch 104 tuần: chỉ sửa `js/data/senior-java/schedule.js` (mỗi tuần một khối `w(n, {...})`, tham chiếu `[weekId, from, to]`), chạy `check-data.mjs` (PL1–PL4), rồi sinh lại bảng tuần trong `sources/senior-java/06-…md` từ dữ liệu.
 Thêm buổi thực hành: sửa `js/data/practice/<chương trình>/stage-NN.js` (khai đủ trường của buổi khung —
 `id`, `stage`, `title`, `durationMin`, `domain`, `competencies`, `requires`, `pieces`, `goals`, `skills`,
-`stateIn`, `stateOut`), thêm id vào `stages[].sessions` trong `program.js` và vào `labs/<chương trình>/sessions/ORDER`
+`uses` (mảng), `status` (`"skeleton"` hoặc `"published"`), `stateIn`, `stateOut`), thêm id vào `stages[].sessions` trong `program.js` và vào `labs/<chương trình>/sessions/ORDER`
 (cùng thứ tự). Phát hành một buổi: đổi `status` thành `"published"`, viết đủ `mindset`, `refs`, `tasks`,
 `hints`, `solution`, `exam`, `tips`, `outcome`, `review`, thêm thư mục script `labs/<chương trình>/sessions/<id>/`
 (`apply.sh` + `verify.sh`, chạy thử trên VM thật), tăng số `practice-published:<chương trình>` trong bảng kỳ vọng
 của `check-data.mjs` (sửa số **trước**), rồi chạy `check-data.mjs`.
-Thêm chương trình thực hành: tạo `js/data/practice/<id>/` (`program.js`, `skills.js`, `mocks.js`, các `stage-NN.js`),
+Thêm chương trình thực hành: `program.js` phải khai `field` là id một lĩnh vực có trong `fields.js` và `exam.domains[].weight` cộng đúng 100 (PR1); mỗi đề trong `mocks.js` cần `labs/<id>/mocks/<đề>/{setup.sh,score.sh}` (PR11). Tạo `js/data/practice/<id>/` (`program.js`, `skills.js`, `mocks.js`, các `stage-NN.js`),
 đăng ký trong `js/data/practice/index.js`, khai số kỳ vọng trong `check-data.mjs`, và tạo phần chạy trên máy
 tại `labs/<id>/` — các bước chi tiết ở [`../labs/README.md`](../labs/README.md). `lib/practice.js` và
 `views/practice.js` dùng chung, không được nhắc tên chương trình nào (PR12).
