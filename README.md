@@ -88,9 +88,11 @@ Thư mục [`sources/java/images/`](./sources/java/images/) — 21 hình đượ
 │   ├── sysprog/ · modern-java/ · effective-java/ · wgjd/ · under-hood/ · jcip/ · ocnj/ · jpa/ · ddia/ · kafka/
 │   └── modern-concurrency/ · spring-start/ · spring-security/ · senior-java/
 ├── inbox/              # nguồn thô CHƯA tích hợp (không vào app)
+├── labs/               # bộ lệnh `lab` (bash + Multipass) và script từng buổi cho module Thực hành
+│   └── README.md       # yêu cầu máy, bảng lệnh, hợp đồng script buổi, thêm chương trình mới
 ├── webapp/             # DevPrep — vanilla JS, không build
 │   ├── js/data/<lĩnh vực>/   # dữ liệu học tập, gương của sources/
-│   ├── scripts/        # dev.sh · build-content.sh · check-data.mjs
+│   ├── scripts/        # dev.sh · build-content.sh · check-data.mjs · tests/
 │   └── content/        # ảnh gương của sources/ trừ PDF, sinh lúc chạy (gitignored)
 ├── docs/superpowers/   # spec & kế hoạch từng lần tích hợp
 └── Dockerfile · docker-compose.yml · .github/workflows/deploy-pages.yml
@@ -127,7 +129,8 @@ Ngoài mảng Java, repo còn chứa bộ tài liệu luyện thi **CKAD/CKA/CKS
 | [`sources/jpa/`](./sources/jpa/) | Bản dịch tiếng Việt *Java Persistence with Spring Data and Hibernate* (Cătălin Tudose — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. Đủ 20 chương, 127 hình. Đọc trong app ở lĩnh vực Java Persistence with Spring Data and Hibernate, kèm lộ trình đọc 13 tuần. |
 | [`sources/modern-java/`](./sources/modern-java/) | Bản dịch tiếng Việt *Modern Java in Action* (Raoul-Gabriel Urma, Mario Fusco, Alan Mycroft — Manning) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 21 chương, 100 hình. Đọc trong app ở lĩnh vực Modern Java in Action, kèm lộ trình đọc 12 tuần. |
 | [`sources/effective-java/`](./sources/effective-java/) | Bản dịch tiếng Việt *Effective Java*, ấn bản 3 (Joshua Bloch — Addison-Wesley 2018) — sách có bản quyền thương mại, không phải giấy phép mở như CC BY 4.0. 11 chương (2–12), đủ 90 Item, không có hình. Đọc trong app ở lĩnh vực Effective Java, kèm lộ trình đọc 10 tuần. |
-| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (18 lĩnh vực): **bốn con đường học** (Kubernetes & Cloud · Java Backend · Data & Distributed · Dự án thực chiến) bao trên 18 lĩnh vực, **Hướng dẫn học** cho từng lĩnh vực / track / tài liệu, **🗓️ Kế hoạch tuần** (toàn cục: lịch 104 tuần gắn ngày, việc tuần này gom từ trục Senior + FlashSale/CKAD/CKA + chương sách và tick thẳng vào lộ trình, nhật ký giờ học so với mục tiêu, nợ tuần trước, nghi thức tuần/quý, mốc, toàn bộ lịch theo quý), thư viện theo sách → Phần, lộ trình tương tác (30 giáo trình, 1303 mục), thư viện tài liệu (345 tài liệu, đánh dấu đã đọc), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs, tra cứu kubectl, tìm kiếm toàn cục không dấu, xuất/nhập tiến độ. Không cần build, không dependency. Chi tiết: [`webapp/README.md`](./webapp/README.md). |
+| [`labs/`](./labs/) | Phần chạy trên máy của module **🛠️ Thực hành** trong DevPrep: CLI `./labs/lab` điều khiển VM Multipass (`up`, `begin`, `verify`, `restore`, `break`, `mock`, `selftest`…) và script `apply.sh`/`verify.sh` cho từng buổi. Hiện có chương trình CKA: dựng và vận hành một hệ thống Spring Boot trên cluster kubeadm 3 node. Chỉ đụng VM có tiền tố `cka-`, không đụng VM khác của bạn. Chi tiết: [`labs/README.md`](./labs/README.md). |
+| [`webapp/`](./webapp/) | **DevPrep** — web app học tập đa lĩnh vực (18 lĩnh vực): **bốn con đường học** (Kubernetes & Cloud · Java Backend · Data & Distributed · Dự án thực chiến) bao trên 18 lĩnh vực, **Hướng dẫn học** cho từng lĩnh vực / track / tài liệu, **🗓️ Kế hoạch tuần** (toàn cục: lịch 104 tuần gắn ngày, việc tuần này gom từ trục Senior + FlashSale/CKAD/CKA + chương sách và tick thẳng vào lộ trình, nhật ký giờ học so với mục tiêu, nợ tuần trước, nghi thức tuần/quý, mốc, toàn bộ lịch theo quý), thư viện theo sách → Phần, lộ trình tương tác (30 giáo trình, 1303 mục), thư viện tài liệu (345 tài liệu, đánh dấu đã đọc), ma trận năng lực (96 tiêu chí), flashcards spaced repetition (174 thẻ), trắc nghiệm (220 câu), thi thử bấm giờ, 22 labs, **🛠️ Thực hành** (chương trình thực hành theo buổi trên VM thật, kèm bộ lệnh `labs/lab`), tra cứu kubectl, tìm kiếm toàn cục không dấu, xuất/nhập tiến độ. Không cần build, không dependency. Chi tiết: [`webapp/README.md`](./webapp/README.md). |
 
 ### Chạy local
 

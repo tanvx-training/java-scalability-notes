@@ -24,11 +24,14 @@ Nguồn markdown nằm ở [`../sources/`](../sources/README.md); app đọc b�
 | 🎓 Chứng chỉ K8s · ⚡ Thực hành nhanh · 🧪 Labs · ⏱️ Thi thử | Chỉ lĩnh vực Kubernetes: so sánh 5 chứng chỉ; 130 lệnh, 48 YAML mẫu, 16 quy trình, thẻ trước giờ thi (ghim, lọc, chế độ gọn); 22 lab đề thật; thi thử bấm giờ theo tỷ trọng domain |
 | 🃏 Flashcards · ✅ Trắc nghiệm | 174 thẻ spaced repetition, 220 câu có giải thích — Kubernetes và Lập trình hệ thống |
 | 🎤 Câu hỏi phỏng vấn | **360 câu tự luận** có đáp án mẫu và rubric trên **15 lĩnh vực** (JPA, Java Concurrency in Practice, Optimizing Cloud Native Java, Java Scalability, Modern Java in Action, Effective Java, The Well-Grounded Java Developer, Java Under the Hood, DDIA, PostgreSQL 14 Internals, Kafka, Modern Concurrency, Spring Start Here, Spring Security, Lập trình hệ thống) — mỗi lĩnh vực 6 chủ đề × 4 cấp năng lực (L1 Hiểu lý thuyết → L4 Thiết kế & xử lý sự cố), đúng 6 câu mỗi cấp. Hai pha: trả lời rồi mới lật đáp án; tự tick từng ý `mustCover` rồi tự chấm ba mức; tổng kết tách theo cấp để thấy rụng ở tầng nào. Hợp đồng cứng theo cấp do `check-data.mjs` ép: L2 phải có `code`, L3 phải có `tradeoffs`, L4 phải có `incident` với `symptom`/`scale`/`constraints` |
+| 🛠️ Thực hành | **Toàn cục** (`#/practice`): chương trình thực hành theo buổi, mỗi buổi 60–90 phút làm trên VM thật bằng bộ lệnh [`labs/lab`](../labs/README.md). Trang buổi có mục tiêu, trạng thái đầu vào / đầu ra, nhiệm vụ tick từng bước, gợi ý, lời giải, mẹo thi, kết quả mong đợi (`verify` in gì) và câu ôn; bấm giờ theo mục tiêu thời gian của đề thi; ghi chú riêng từng buổi; trang **kỹ năng** gom kỹ năng học mới và dùng lại ở buổi nào; thi thử bằng đề mock rồi dán dòng `devprep-mock:v1:…` do `./labs/lab mock … score` in ra để lưu điểm theo domain. Buổi khung (chưa phát hành) hiện đề cương nhưng không tính vào tiến độ. Chương trình có sẵn: CKA. Bảng điều khiển của lĩnh vực có thẻ tiến độ Thực hành |
 | 🔍 Tìm kiếm toàn cục | `Ctrl/⌘ K` hoặc `/`: tài liệu, bài học, lab, lệnh, YAML, quy trình, flashcard — **khớp không dấu**, chuyển lĩnh vực tự động khi mở kết quả |
 | ⚙️ Cài đặt & tiến độ | Theme (sáng / tối / hệ thống), cỡ chữ đọc, **xuất / nhập toàn bộ tiến độ** (JSON), dung lượng từng khoá, đặt lại |
 
 Toàn bộ tiến độ lưu trong `localStorage` (namespace `kubeprep.` — giữ nguyên vì lịch sử) — không đăng
-nhập, không backend. Phím tắt: `?`.
+nhập, không backend. Module Thực hành dùng bốn khoá: `practice.done` (buổi đã xong, kèm thời điểm),
+`practice.tasks` (nhiệm vụ đã tick), `practice.notes` (ghi chú theo buổi), `practice.mock` (danh sách
+kết quả thi thử); cả bốn đi theo xuất / nhập tiến độ như mọi khoá khác. Phím tắt: `?`.
 
 ## Chạy local
 
@@ -46,13 +49,22 @@ sửa script — xem [`sources/README.md`](../sources/README.md).
 ./webapp/scripts/build-content.sh webapp/content && node webapp/scripts/check-data.mjs
 ```
 
-61 bất biến: id trùng, tệp/ảnh tồn tại, `docs[].file` nằm trong `content/<field>/` (#2c), link
+73 bất biến: id trùng, tệp/ảnh tồn tại, `docs[].file` nằm trong `content/<field>/` (#2c), link
 `#/docs` hỏng, link chéo sách, khoá phân loại, hình dạng câu hỏi, hợp đồng câu hỏi phỏng vấn theo cấp
 độ (#IQ1–#IQ8), module ↔ dữ liệu, hướng dẫn học (G1–G4), con đường (P1), chương/Phần và tiền tố cũ
 (D1), liên kết chéo (R1), link lộ trình cùng đường (#3b), lịch 104 tuần (PL1–PL4: mọi tham chiếu
 tuần/mục/tài liệu tồn tại và đúng khoảng; mọi mục `sj-gd*`/`fs-gd*` xuất hiện đúng một lần; 104 tuần
-liên tục, quý/giai đoạn/tuần nghỉ khớp; giờ 6–10 mỗi tuần, ≤ 4 chương đọc) và số lượng bản ghi theo
-bảng kỳ vọng.
+liên tục, quý/giai đoạn/tuần nghỉ khớp; giờ 6–10 mỗi tuần, ≤ 4 chương đọc), module Thực hành
+(PR1–PR12: chương trình và tỷ trọng domain; id buổi/kỹ năng/chặng/mock không trùng; tham chiếu và
+`requires` hợp lệ; kỹ năng học ở đúng một buổi; phủ đủ năng lực của đề và mảnh project; buổi khung đủ
+trường, buổi đã phát hành đủ nội dung; số buổi theo domain khớp tỷ trọng đề; đề mock; thư mục `labs/`
+khớp dữ liệu; phần dùng chung không nhắc tên chương trình) và số lượng bản ghi theo bảng kỳ vọng.
+
+Test đơn vị cho logic thuần của module Thực hành (không cần trình duyệt):
+
+```bash
+node --test "webapp/scripts/tests/*.test.mjs"
+```
 CI chạy trước khi deploy.
 
 ## Deploy GitHub Pages
@@ -73,7 +85,8 @@ webapp/
 ├── scripts/
 │   ├── dev.sh                # build content + http.server
 │   ├── build-content.sh      # tar sources/ → content/ (trừ PDF); dùng bởi dev.sh, Dockerfile, CI
-│   └── check-data.mjs        # 57 bất biến dữ liệu
+│   ├── check-data.mjs        # 73 bất biến dữ liệu
+│   └── tests/                # test đơn vị (node --test) cho lib/practice.js
 ├── js/app.js                 # hash router, theme, sidebar, bộ chọn lĩnh vực, phím tắt
 ├── js/lib/
 │   ├── store.js              # localStorage có namespace + exportAll/importAll
@@ -84,8 +97,11 @@ webapp/
 │   ├── activity.js           # chuỗi ngày, mục gần đây, tài liệu đã đọc
 │   ├── stats.js              # số liệu tiến độ theo lĩnh vực (dùng chung)
 │   ├── guides.js             # đảo chỉ mục bài học → tài liệu; trạng thái bước hướng dẫn
-│   └── plan.js               # lịch 104 tuần đã nở, tuần hiện tại, tiến độ tuần từ tiến độ thật,
-│                             #   nhật ký giờ học, nghi thức, mốc (module Kế hoạch tuần)
+│   ├── plan.js               # lịch 104 tuần đã nở, tuần hiện tại, tiến độ tuần từ tiến độ thật,
+│   │                         #   nhật ký giờ học, nghi thức, mốc (module Kế hoạch tuần)
+│   ├── practice.js           # logic thuần của module Thực hành: thứ tự buổi, tiến độ, chấm dòng mock,
+│   │                         #   bọc store cho practice.*
+│   └── timer.js              # bấm giờ và đếm ngược cho trang Thực hành
 ├── js/data/
 │   ├── fields.js             # 18 lĩnh vực: label, icon, module bật; GLOBAL_MODULES
 │   ├── meta.js · index.js · roadmap.js · docs-index.js · book-crossref.js
@@ -93,6 +109,8 @@ webapp/
 │   ├── paths.js              # 4 con đường học (con đường capstone crossLinks), trục Senior Java, module ma trận → con đường
 │   ├── related.js            # liên kết chéo khác lĩnh vực (một chiều, code phản chiếu)
 │   ├── books.js · labels.js  # mã sách; docLabel/docLabelWithBook/docBook/relatedOf
+│   ├── practice/             # module Thực hành: index.js ráp PROGRAMS; <chương trình>/ có program.js
+│   │                         #   (meta, đề thi, project, chặng), stage-NN.js (buổi), skills.js, mocks.js
 │   └── <lĩnh vực>/           # gương của sources/<lĩnh vực>/:
 │       ├── docs.js           #   danh mục tài liệu: id, chapter, part, title (tên chương), file…
 │       ├── roadmap-*.js      #   track lộ trình theo tuần
@@ -106,10 +124,21 @@ webapp/
 │                             #   spring-security · sysprog
 └── js/views/                 # dashboard, guide, roadmap, docs, tracker, certs, commands,
                               # flashcards, quiz, interview, exam, labs, settings,
-                              # planner (toàn cục — GLOBAL_MODULES + mục nav `global: true`)
+                              # planner, practice (toàn cục — GLOBAL_MODULES + mục nav `global: true`)
 ```
 
 Sửa lịch 104 tuần: chỉ sửa `js/data/senior-java/schedule.js` (mỗi tuần một khối `w(n, {...})`, tham chiếu `[weekId, from, to]`), chạy `check-data.mjs` (PL1–PL4), rồi sinh lại bảng tuần trong `sources/senior-java/06-…md` từ dữ liệu.
+Thêm buổi thực hành: sửa `js/data/practice/<chương trình>/stage-NN.js` (khai đủ trường của buổi khung —
+`id`, `stage`, `title`, `durationMin`, `domain`, `competencies`, `requires`, `pieces`, `goals`, `skills`,
+`stateIn`, `stateOut`), thêm id vào `stages[].sessions` trong `program.js` và vào `labs/<chương trình>/sessions/ORDER`
+(cùng thứ tự). Phát hành một buổi: đổi `status` thành `"published"`, viết đủ `mindset`, `refs`, `tasks`,
+`hints`, `solution`, `exam`, `tips`, `outcome`, `review`, thêm thư mục script `labs/<chương trình>/sessions/<id>/`
+(`apply.sh` + `verify.sh`, chạy thử trên VM thật), tăng số `practice-published:<chương trình>` trong bảng kỳ vọng
+của `check-data.mjs` (sửa số **trước**), rồi chạy `check-data.mjs`.
+Thêm chương trình thực hành: tạo `js/data/practice/<id>/` (`program.js`, `skills.js`, `mocks.js`, các `stage-NN.js`),
+đăng ký trong `js/data/practice/index.js`, khai số kỳ vọng trong `check-data.mjs`, và tạo phần chạy trên máy
+tại `labs/<id>/` — các bước chi tiết ở [`../labs/README.md`](../labs/README.md). `lib/practice.js` và
+`views/practice.js` dùng chung, không được nhắc tên chương trình nào (PR12).
 Thêm câu hỏi / câu hỏi phỏng vấn / flashcard / lab: sửa tệp tương ứng trong `js/data/<lĩnh vực>/` theo schema ở đầu tệp,
 chạy `check-data.mjs` — không cần đụng view. Thêm lĩnh vực: khai trong `fields.js` (kèm `short`/`unit`), xếp vào một con đường trong `paths.js`, tạo
 `js/data/<id>/docs.js` (có `chapter`/`part`), thêm `fieldGuides[id]` và `trackGuides` cho mỗi track.
