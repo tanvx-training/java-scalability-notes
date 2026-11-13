@@ -46,8 +46,8 @@ require_running() {
     s="$(vm_state "$v")"
     case "$s" in
       Running) ;;
-      '') die "VM $v chưa tạo, chạy: ./lab up $LAB_PROGRAM" ;;
-      *) die "VM $v đang dừng, chạy: ./lab up $LAB_PROGRAM" ;;
+      '') die "VM $v chưa tạo, chạy: $LAB_CMD up $LAB_PROGRAM" ;;
+      *) die "VM $v đang dừng, chạy: $LAB_CMD up $LAB_PROGRAM" ;;
     esac
   done
 }
@@ -82,7 +82,7 @@ lab_break() {
 }
 
 cmd_verify() {
-  [ $# -eq 1 ] || die "cách dùng: ./lab verify $LAB_PROGRAM <buổi>"
+  [ $# -eq 1 ] || die "cách dùng: $LAB_CMD verify $LAB_PROGRAM <buổi>"
   local rc=0
   require_session "$1"
   require_running
@@ -111,19 +111,19 @@ check_input() {
 }
 
 cmd_check() {
-  [ $# -eq 1 ] || die "cách dùng: ./lab check $LAB_PROGRAM <buổi>"
+  [ $# -eq 1 ] || die "cách dùng: $LAB_CMD check $LAB_PROGRAM <buổi>"
   local rc=0
   check_input "$1" || rc=$?
   return "$rc"
 }
 
 cmd_begin() {
-  [ $# -eq 1 ] || die "cách dùng: ./lab begin $LAB_PROGRAM <buổi>"
+  [ $# -eq 1 ] || die "cách dùng: $LAB_CMD begin $LAB_PROGRAM <buổi>"
   local id="$1" prev rc=0
   check_input "$id" || rc=$?
   if [ "$rc" -ne 0 ]; then
     prev="$(session_prev "$id")"
-    echo "lab: đầu vào của '$id' chưa đạt, thử: ./lab restore $LAB_PROGRAM $prev" >&2
+    echo "lab: đầu vào của '$id' chưa đạt, thử: $LAB_CMD restore $LAB_PROGRAM $prev" >&2
     return 1
   fi
   if [ -f "$(session_dir "$id")/setup.sh" ]; then
@@ -137,7 +137,7 @@ cmd_begin() {
 }
 
 cmd_break() {
-  [ $# -eq 1 ] || die "cách dùng: ./lab break $LAB_PROGRAM <mã-lỗi>"
+  [ $# -eq 1 ] || die "cách dùng: $LAB_CMD break $LAB_PROGRAM <mã-lỗi>"
   local rc=0
   id_ok "$1" || die "tên lỗi '$1' không hợp lệ"
   [ -f "$LAB_ROOT/$LAB_PROGRAM/breaks/$1/run.sh" ] || die "không có lỗi '$1' trong chương trình '$LAB_PROGRAM'"
@@ -154,7 +154,7 @@ mock_dir() {
 }
 
 cmd_mock() {
-  [ $# -eq 2 ] || die "cách dùng: ./lab mock $LAB_PROGRAM <đề> start|score"
+  [ $# -eq 2 ] || die "cách dùng: $LAB_CMD mock $LAB_PROGRAM <đề> start|score"
   local m="$1" action="$2" d rc=0 out agg line today
   d="$(mock_dir "$m")"
   case "$action" in

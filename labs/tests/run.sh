@@ -221,7 +221,7 @@ sess_case; run_lab "" begin tst a2
 [ "$RC" -eq 0 ]; a=$?; tail -n 3 "$TRACE" | head -n 2 | tr "\n" " " | grep -q "^a2/setup b1/run "; b=$?
 check "begin tst a2: check, setup.sh, lab_break chạy breaks/b1/run.sh" $((a+b))
 sess_case; FAIL=a1/verify; export FAIL; run_lab "" begin tst a2
-[ "$RC" -eq 1 ]; a=$?; trace_is "a1/verify"; b=$?; has "$ERR" 'lab restore tst a1'; c=$?
+[ "$RC" -eq 1 ]; a=$?; trace_is "a1/verify"; b=$?; has "$ERR" 'chưa đạt, thử: ./labs/lab restore tst a1$'; c=$?
 check "begin tst a2, check hỏng: không setup, gợi ý restore a1" $((a+b+c))
 sess_case; run_lab "" begin tst a1
 [ "$RC" -eq 0 ]; a=$?; trace_is ""; b=$?; has "$OUT" 'không có setup.sh'; c=$?
@@ -248,8 +248,8 @@ sess_case; run_lab "" verify tst '../a2'
 check "verify id có '..': từ chối" $((a+b))
 sess_case; MP_LIST='tst-a,Stopped,,,x,""
 tst-b,Running,10.0.0.2,,x,""'; export MP_LIST; run_lab "" verify tst a2
-[ "$RC" -eq 1 ]; a=$?; has "$ERR" '^lab: VM tst-a đang dừng, chạy: ./lab up tst$'; b=$?; trace_is ""; c=$?
-check "verify khi VM Stopped: báo ./lab up, không chạy script" $((a+b+c))
+[ "$RC" -eq 1 ]; a=$?; has "$ERR" '^lab: VM tst-a đang dừng, chạy: ./labs/lab up tst$'; b=$?; trace_is ""; c=$?
+check "verify khi VM Stopped: báo ./labs/lab up, không chạy script" $((a+b+c))
 
 sess_case; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" restore tst a3 --yes
 [ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a2/apply a3/apply a3/verify"; b=$?
@@ -486,6 +486,12 @@ check "vm: \$# = 0 và \$1 rỗng bên trong lệnh chạy trong VM" $a
 # ---- Lint: lib và lab không chứa chương trình cụ thể ----
 hits="$(grep -ril "cka\|kubernetes" "$LABS/lib" "$LABS/lab" 2>/dev/null)"
 [ -z "$hits" ]; check "lib/lab không chứa 'cka' hay 'kubernetes'" $?
+# Gợi ý in cho người học phải chạy được từ gốc repo: mọi chỗ dùng $LAB_CMD, không viết tay "./lab ".
+hits="$(grep -n '\./lab ' "$LABS/lib"/*.sh "$LABS/lab" 2>/dev/null)"
+[ -z "$hits" ]; check "lib/lab không viết tay './lab ' trong gợi ý" $?
+new_case; MP_LIST="$RUNNING"; export MP_LIST; run_lab "" verify tst
+[ "$RC" -eq 1 ]; a=$?; has "$ERR" '^lab: cách dùng: ./labs/lab verify tst <buổi>$'; b=$?
+check "verify thiếu buổi: dòng cách dùng in ./labs/lab" $((a+b))
 
 echo "---"
 echo "$((CASES-FAILS))/$CASES ca đạt"

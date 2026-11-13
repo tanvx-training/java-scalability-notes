@@ -52,10 +52,10 @@ start_all() {
 # Xoá hết bản cũ trước khi chụp để một lần lỗi giữa chừng không để lại tên mốc chứa các trạng thái lẫn lộn.
 snapshot_take() {
   local name="$1" v hint
-  hint="VM có thể đang dừng, chạy: ./lab up $LAB_PROGRAM"
+  hint="VM có thể đang dừng, chạy: $LAB_CMD up $LAB_PROGRAM"
   snap_name_ok "$name" || die "tên snapshot '$name' không hợp lệ (chỉ chữ thường, số, dấu gạch)"
   for v in $LAB_VMS; do
-    [ -n "$(vm_state "$v")" ] || die "VM $v chưa tạo, chạy: ./lab up $LAB_PROGRAM"
+    [ -n "$(vm_state "$v")" ] || die "VM $v chưa tạo, chạy: $LAB_CMD up $LAB_PROGRAM"
   done
   info "chụp snapshot '$name' cho:$(printf ' %s' $LAB_VMS)"
   stop_running
@@ -72,7 +72,7 @@ snapshot_take() {
 }
 
 cmd_snapshot() {
-  [ $# -eq 1 ] || die "cách dùng: ./lab snapshot $LAB_PROGRAM <tên>"
+  [ $# -eq 1 ] || die "cách dùng: $LAB_CMD snapshot $LAB_PROGRAM <tên>"
   local v old=""
   check_list
   snap_name_ok "$1" || die "tên snapshot '$1' không hợp lệ (chỉ chữ thường, số, dấu gạch)"
@@ -108,7 +108,7 @@ apply_chain() {
 }
 
 cmd_restore() {
-  [ $# -eq 1 ] || die "cách dùng: ./lab restore $LAB_PROGRAM <buổi>"
+  [ $# -eq 1 ] || die "cách dùng: $LAB_CMD restore $LAB_PROGRAM <buổi>"
   local target="$1" sid name ms_sid="" ms_name="" rev list v rc=0
   require_session "$target"
   check_list
@@ -158,7 +158,7 @@ cmd_selftest() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --from) [ $# -ge 2 ] || die "--from cần một id buổi"; from="$2"; shift 2 ;;
-      *) die "đối số '$1' không hợp lệ, cách dùng: ./lab selftest $LAB_PROGRAM [--from <buổi>]" ;;
+      *) die "đối số '$1' không hợp lệ, cách dùng: $LAB_CMD selftest $LAB_PROGRAM [--from <buổi>]" ;;
     esac
   done
   check_list

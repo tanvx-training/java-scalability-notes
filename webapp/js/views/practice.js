@@ -55,6 +55,11 @@ function crumbs(program, last) {
 
 // Điền <session> / <mock> / <id> vào mẫu lệnh trong env.commands.
 const fill = (tpl, values) => tpl.replace(/<(\w+)>/g, (m, k) => (k in values ? values[k] : m));
+// Lệnh lab của chương trình (env.commands[key]) đã điền chỗ trống; null nếu chương trình không khai.
+const labCmd = (program, key, values = {}) => {
+  const tpl = ((program.env && program.env.commands) || {})[key];
+  return typeof tpl === "string" && tpl ? fill(tpl, values) : null;
+};
 const cmd = (text) => codeNode({ lang: "bash", text });
 const indexOfSession = (program, id) => orderedSessions(program).findIndex((s) => s.id === id);
 const stageOf = (program, session) => (program.stages || []).find((st) => st.id === session.stage) || null;
@@ -378,7 +383,7 @@ function renderSession(root, program, session) {
   if ((session.tips || []).length) {
     page.append(block("⚡ Tips", h("ul", { class: "pr-list" }, session.tips.map((t) => h("li", { html: inlineMd(t) })))));
   }
-  page.append(outcomeBlock(session));
+  page.append(outcomeBlock(program, session));
   page.append(finishBlock(program, session, state));
   page.append(sessionNav(program, session));
   pushRecentSession(program, session, idx);
@@ -443,10 +448,11 @@ function examBlock(program, session) {
   return box;
 }
 
-function outcomeBlock(session) {
+function outcomeBlock(program, session) {
   const o = session.outcome || {};
+  const verify = labCmd(program, "verify", { session: session.id });
   return block("✅ Kết quả mong muốn", md(o.md),
-    o.verifyOutput ? [h("p", { class: "small muted mb-1" }, "Output kỳ vọng của ", h("code", {}, "./lab verify"), ":"), cmd(o.verifyOutput)] : null,
+    o.verifyOutput ? [h("p", { class: "small muted mb-1" }, "Output kỳ vọng của ", verify ? h("code", {}, verify) : "bước kiểm", ":"), cmd(o.verifyOutput)] : null,
     o.projectDelta ? h("p", { class: "small mt-2 mb0" }, h("strong", {}, "Project thay đổi: "), h("span", { html: inlineMd(o.projectDelta) })) : null);
 }
 
@@ -468,6 +474,7 @@ function finishBlock(program, session, state) {
   });
   paint();
 
+  const verify = labCmd(program, "verify", { session: session.id });
   const noteKey = sessionKey(program.id, session.id);
   const area = h("textarea", { class: "input", rows: 4, placeholder: "Điều bạn rút ra, chỗ vấp, lệnh cần nhớ…" });
   area.value = state.notes[noteKey] || "";
@@ -477,7 +484,7 @@ function finishBlock(program, session, state) {
 
   return h("div", { class: "card mb-4" },
     h("div", { class: "card-head" }, h("strong", {}, "Hoàn thành & ghi chú")),
-    h("p", { class: "muted small mt0" }, "Bấm sau khi ", h("code", {}, "./lab verify"), " đạt."), doneBtn,
+    h("p", { class: "muted small mt0" }, "Bấm sau khi ", verify ? h("code", {}, verify) : "bước kiểm", " đạt."), doneBtn,
     h("label", { class: "small muted mt-3", style: "display:block", for: "pr-note" }, "Ghi chú của tôi (hiện ở bước ôn của buổi kế tiếp)"),
     (area.id = "pr-note", area));
 }
@@ -580,9 +587,8 @@ function renderProject(root, program) {
 
 const pctOf = (got, max) => (max > 0 ? Math.round((got / max) * 100) : 0);
 const mockCmd = (program, mock, which) => {
-  const c = (program.env && program.env.commands) || {};
-  const tpl = c[which === "start" ? "mockStart" : "mockScore"];
-  return tpl ? fill(tpl, { mock: mock.id }) : `./lab mock ${program.id} ${mock.id} ${which}`;
+  const text = labCmd(program, which === "start" ? "mockStart" : "mockScore", { mock: mock.id });
+  return text ? cmd(text) : null;
 };
 
 function scoreTable(program, rec) {
@@ -648,7 +654,7 @@ function renderMockPage(root, program, mock) {
 
   add(block("📋 Trước khi làm",
     h("div", { class: "chip-row mb-3" }, program.exam.domains.map((d) => h("span", { class: "badge badge-blue" }, `${d.label} ${d.weight}%`))),
-    h("p", { class: "muted small mt0" }, "Dựng đề trên cluster lab:"), cmd(mockCmd(program, mock, "start"))));
+    mockCmd(program, mock, "start") ? [h("p", { class: "muted small mt0" }, "Dựng đề trên lab:"), mockCmd(program, mock, "start")] : null));
 
   // Đồng hồ: gắn el vào DOM trước khi start() (timer tự dừng nếu el chưa gắn).
   const clockSlot = h("span", { class: "pr-mock-clock" });
@@ -708,7 +714,7 @@ function renderMockPage(root, program, mock) {
   };
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
   add(block("📥 Kết quả",
-    h("p", { class: "muted small mt0" }, "Sau khi làm xong, chấm đề rồi dán dòng kết quả in ra:"), cmd(mockCmd(program, mock, "score")),
+    h("p", { class: "muted small mt0" }, "Sau khi làm xong, chấm đề rồi dán dòng kết quả in ra:"), mockCmd(program, mock, "score"),
     h("div", { class: "flex mt-2" }, input, h("button", { class: "btn btn-primary", type: "button", onclick: submit }, "Lưu kết quả")),
     err, out));
   add(h("a", { class: "btn btn-ghost btn-sm", href: `#/practice/${program.id}/mock` }, "← Danh sách đề mock"));

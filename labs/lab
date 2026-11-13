@@ -19,7 +19,7 @@ MP_HINT="brew install --cask multipass"
 
 usage() {
   cat <<USAGE
-Cách dùng: ./labs/lab <lệnh> <chương trình> [đối số…]
+Cách dùng: $LAB_CMD <lệnh> <chương trình> [đối số…]
 
 Lệnh:
   up <chương trình>        tạo hoặc khởi động các VM, chờ đến khi Running
@@ -94,7 +94,7 @@ wait_running() {
       [ "$(vm_state "$v")" = Running ] || { ok=0; break; }
     done
     [ "$ok" -eq 1 ] && return 0
-    [ "$waited" -ge "$limit" ] && die "hết ${limit}s mà VM chưa Running, xem './labs/lab status $LAB_PROGRAM'"
+    [ "$waited" -ge "$limit" ] && die "hết ${limit}s mà VM chưa Running, xem '$LAB_CMD status $LAB_PROGRAM'"
     sleep "$poll"
     waited=$((waited + poll))
     # tránh vòng lặp vô hạn khi poll = 0
@@ -158,7 +158,7 @@ main() {
     esac
   done
   set -- $args
-  [ $# -ge 1 ] || die "thiếu tên chương trình, ví dụ: ./labs/lab $cmd <chương trình>"
+  [ $# -ge 1 ] || die "thiếu tên chương trình, ví dụ: $LAB_CMD $cmd <chương trình>"
   load_program "$1"
   shift
   case "$cmd" in

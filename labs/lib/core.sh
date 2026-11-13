@@ -1,6 +1,9 @@
 #!/bin/bash
 # Tiện ích lõi của CLI lab. Không chứa giá trị riêng của chương trình nào.
 
+# Lệnh in trong mọi gợi ý và dòng "cách dùng": đường dẫn chạy được từ gốc repo.
+LAB_CMD="./labs/lab"
+
 die() { echo "lab: $*" >&2; exit 1; }
 info() { echo "lab: $*"; }
 
