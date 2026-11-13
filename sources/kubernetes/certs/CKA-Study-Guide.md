@@ -171,7 +171,7 @@ CKA cần cluster **nhiều node** và quyền SSH vào node → minikube 1 node
 | **kind (multi-node)** | `kind create cluster --config` với nhiều node — nhẹ, nhưng khác thực tế ở phần systemd |
 | KodeKloud labs | Kèm khóa học, môi trường dựng sẵn |
 
-**Thực hành ngay trong DevPrep:** module **🛠️ Thực hành** (`#/practice`) là chương trình thực hành CKA theo từng buổi trên 3 VM Multipass tự dựng (control plane + 2 worker, kubeadm), có script `./labs/lab` đặt bài, chấm kết quả và đưa VM về trạng thái cũ. Cách chạy: [`labs/README.md`](../../../labs/README.md).
+**Thực hành ngay trong DevPrep:** module **🛠️ Thực hành** (`#/practice`) là chương trình thực hành CKA theo từng buổi trên 3 VM Multipass tự dựng (control plane + 2 worker, kubeadm), có script `./labs/lab` đặt bài, chấm kết quả và đưa VM về trạng thái cũ. Cách chạy: xem `labs/README.md` ở gốc repo.
 
 ---
 
