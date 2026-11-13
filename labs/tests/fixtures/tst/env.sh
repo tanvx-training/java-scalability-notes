@@ -10,6 +10,7 @@ lab_vm_spec() {
     *) echo "1 2G 15G" ;;
   esac
 }
+LAB_CTR_NAMESPACE="tst.ns"
 LAB_IMAGES="tst/a:1.0 tst/b:2.0"
 lab_build_images() {
   local img

@@ -25,11 +25,35 @@ milestone_names() {
   return 0
 }
 
+# snap_exists <vm> <tên>: 0 nếu có snapshot, 1 nếu không có (multipass trả 2: "No such snapshot" hoặc
+# instance chưa tồn tại). Mã khác (daemon không trả lời, lỗi lạ) là lỗi dò: dừng hẳn, không đoán là "không có",
+# vì "không có mốc" dẫn tới nhánh xoá và dựng lại VM.
+snap_exists() {
+  local rc=0
+  mp info "$1.$2" --format csv >/dev/null 2>&1 || rc=$?
+  case "$rc" in
+    0) return 0 ;;
+    2) return 1 ;;
+  esac
+  die "không dò được snapshot $1.$2 (multipass trả mã $rc), dừng lại, không đổi gì"
+}
+
+# milestone_all_names: tên mọi snapshot mốc khai trong milestones (theo thứ tự tệp)
+milestone_all_names() {
+  local f="$LAB_ROOT/$LAB_PROGRAM/milestones" sid name rest
+  [ -f "$f" ] || return 0
+  while read -r sid name rest || [ -n "$sid" ]; do
+    case "$sid" in ''|'#'*) continue ;; esac
+    snap_name_ok "$name" && echo "$name"
+  done < "$f"
+  return 0
+}
+
 # snapshot_everywhere <tên>: có snapshot này trên mọi VM của chương trình
 snapshot_everywhere() {
   local v
   for v in $LAB_VMS; do
-    mp info "$v.$1" --format csv >/dev/null 2>&1 || return 1
+    snap_exists "$v" "$1" || return 1
   done
 }
 
@@ -60,7 +84,7 @@ snapshot_take() {
   info "chụp snapshot '$name' cho:$(printf ' %s' $LAB_VMS)"
   stop_running
   for v in $LAB_VMS; do
-    if mp info "$v.$name" --format csv >/dev/null 2>&1; then
+    if snap_exists "$v" "$name"; then
       mp delete --purge "$v.$name" >/dev/null || die "không xoá được snapshot cũ $v.$name ($hint)"
     fi
   done
@@ -77,7 +101,7 @@ cmd_snapshot() {
   check_list
   snap_name_ok "$1" || die "tên snapshot '$1' không hợp lệ (chỉ chữ thường, số, dấu gạch)"
   for v in $LAB_VMS; do
-    mp info "$v.$1" --format csv >/dev/null 2>&1 && old="$old $v"
+    if snap_exists "$v" "$1"; then old="$old $v"; fi
   done
   if [ -n "$old" ] && [ "$YES" -ne 1 ]; then
     echo "Snapshot '$1' đã có trên:$old"
@@ -109,7 +133,7 @@ apply_chain() {
 
 cmd_restore() {
   [ $# -eq 1 ] || die "cách dùng: $LAB_CMD restore $LAB_PROGRAM <buổi>"
-  local target="$1" sid name ms_sid="" ms_name="" rev list v rc=0
+  local target="$1" sid name ms_sid="" ms_name="" rev list v gone rc=0
   require_session "$target"
   check_list
   # mốc gần nhất tại hoặc trước buổi đích mà mọi VM đều có snapshot
@@ -125,9 +149,22 @@ cmd_restore() {
     echo "Sẽ khôi phục các VM về mốc '$ms_name' (sau buổi '$ms_sid'), rồi áp lại tới '$target':"
     for v in $LAB_VMS; do echo "  $v"; done
   else
-    list="$(existing_vms)"
+    list="$(existing_vms)" || exit 1
     echo "Không có mốc dùng được. Sẽ xoá hẳn và dựng lại VM, rồi áp lại từ đầu tới '$target':"
     for v in $LAB_VMS; do echo "  $v"; done
+    if [ -n "$list" ]; then
+      # Xoá hẳn VM là mất luôn snapshot của nó, kể cả mốc của các buổi SAU buổi đích.
+      gone=""
+      for name in $(milestone_all_names); do
+        for v in $list; do
+          if snap_exists "$v" "$name"; then gone="$gone $name"; break; fi
+        done
+      done
+      echo "Xoá hẳn VM là xoá luôn MỌI snapshot của các VM đó${gone:+, gồm cả mốc:$gone}."
+      echo "Mốc đã mất thì restore về buổi sau mốc sẽ phải dựng lại từ đầu, cho tới khi bạn chụp lại mốc:"
+      echo "  $LAB_CMD selftest $LAB_PROGRAM   (dựng sạch và chụp mọi mốc), hoặc"
+      echo "  $LAB_CMD snapshot $LAB_PROGRAM <tên mốc>   (sau khi tự đi tới buổi mốc)"
+    fi
   fi
   if [ "$YES" -ne 1 ]; then
     confirm "Tiếp tục?" || die "đã huỷ, không đổi gì"
@@ -166,7 +203,7 @@ cmd_selftest() {
     id_ok "$from" && order_list | grep -Fxq -- "$from" || die "không có buổi '$from' trong chương trình '$LAB_PROGRAM'"
     require_running
   else
-    list="$(existing_vms)"
+    list="$(existing_vms)" || exit 1
     echo "Selftest dựng VM sạch. Sẽ xoá hẳn rồi tạo lại:"
     for v in $LAB_VMS; do echo "  $v"; done
     if [ "$YES" -ne 1 ]; then

@@ -102,10 +102,13 @@ wait_running() {
   done
 }
 
+# existing_vms: in các VM của chương trình đã tạo. Không đọc được danh sách thì trả 1 (người gọi dừng lại),
+# không bao giờ coi lỗi đọc là "chưa có VM nào".
 existing_vms() {
-  local v out=""
+  local v s out=""
   for v in $LAB_VMS; do
-    [ -n "$(vm_state "$v")" ] && out="$out $v"
+    s="$(vm_state "$v")" || { echo "lab: không đọc được trạng thái VM $v từ multipass" >&2; return 1; }
+    [ -n "$s" ] && out="$out $v"
   done
   echo $out
 }
@@ -129,7 +132,7 @@ cmd_images() { check_list; images_load; }
 cmd_destroy() {
   local list v
   check_list
-  list="$(existing_vms)"
+  list="$(existing_vms)" || exit 1
   [ -n "$list" ] || { info "không có VM nào của '$LAB_PROGRAM' để xoá"; return 0; }
   echo "Sẽ xoá hẳn các VM:"
   for v in $list; do echo "  $v"; done
@@ -157,7 +160,10 @@ main() {
       *) args="$args $a" ;;
     esac
   done
+  # Tách lại theo khoảng trắng nhưng không mở rộng glob ('c*' giữ nguyên là 'c*').
+  set -f
   set -- $args
+  set +f
   [ $# -ge 1 ] || die "thiếu tên chương trình, ví dụ: $LAB_CMD $cmd <chương trình>"
   load_program "$1"
   shift

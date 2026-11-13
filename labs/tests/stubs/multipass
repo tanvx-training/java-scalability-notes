@@ -1,10 +1,10 @@
 #!/bin/bash
 # Stub multipass: ghi lời gọi vào $MP_LOG, trả lời theo MP_LIST / MP_FAIL.
-# MP_LIST: các dòng csv (không header). MP_FAIL: tên lệnh con cần giả lỗi.
+# MP_LIST: các dòng csv (không header). MP_FAIL: tên lệnh con cần giả lỗi, thoát mã MP_FAIL_RC (mặc định 2).
 [ -n "${MP_LOG:-}" ] && echo "$*" >> "$MP_LOG"
 sub="${1:-}"
 if [ -n "${MP_FAIL:-}" ] && [ "$MP_FAIL" = "$sub" ]; then
-  echo "stub: $sub failed" >&2; exit 2
+  echo "stub: $sub failed" >&2; exit "${MP_FAIL_RC:-2}"
 fi
 run="${MP_LOG:-/dev/null}.run"
 case "$sub" in
@@ -21,8 +21,9 @@ case "$sub" in
     ;;
   exec)
     # multipass 1.16.3 thật treo (quay CPU) khi stdout hoặc stderr là /dev/null: ghi dấu để test bắt.
-    # fd_id: "thiết bị:inode" của một tệp; `stat -f` là dạng BSD (macOS), `stat -c` là dạng GNU (Linux CI).
-    fd_id() { stat -L -f '%d:%i' "$1" 2>/dev/null || stat -L -c '%d:%i' "$1" 2>/dev/null; }
+    # fd_id: "thiết bị:inode" của một tệp. Thử dạng GNU `stat -c` (Linux CI) trước: trên GNU, `stat -f` là
+    # thông tin HỆ TỆP và vẫn trả 0, nên thử nó trước sẽ so nhầm. BSD stat (macOS) không có -c, rơi sang -f.
+    fd_id() { stat -L -c '%d:%i' "$1" 2>/dev/null || stat -L -f '%d:%i' "$1" 2>/dev/null; }
     if [ -n "${MP_LOG:-}" ]; then
       null_id="$(fd_id /dev/null)"
       err_id="$(fd_id /dev/fd/3 3>&2)"                 # fd 2 bên trong $(…) vẫn là stderr thật

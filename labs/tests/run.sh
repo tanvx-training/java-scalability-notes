@@ -17,7 +17,7 @@ new_case() {
   : > "$MP_LOG"
   export DK_LOG="$WORK/dk.log"; : > "$DK_LOG"
   OUT="$WORK/out"; ERR="$WORK/err"
-  unset MP_LIST MP_FAIL MP_SNAPS MP_NOCTR DK_MISSING TRACE FAIL
+  unset MP_LIST MP_FAIL MP_FAIL_RC MP_SNAPS MP_NOCTR DK_MISSING TRACE FAIL
 }
 # run_lab <stdin> args... : chạy lab với stub, đặt RC
 run_lab() {
@@ -160,6 +160,12 @@ new_case; RC=0; (cd / && env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" /bin/bas
 [ "$RC" -eq 0 ]; a=$?
 check "chạy từ thư mục khác" $a
 
+# Đối số không bị mở rộng glob: 't*' không được thành 'tst' dù thư mục hiện tại có tệp tên tst.
+new_case; mkdir -p "$WORK/globdir"; : > "$WORK/globdir/tst"
+RC=0; (cd "$WORK/globdir" && env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" /bin/bash "$LAB" status 't*' >"$OUT" 2>"$ERR") || RC=$?
+[ "$RC" -eq 1 ]; a=$?; has "$ERR" "không có chương trình 't\*'"; b=$?; log_empty; c=$?
+check "đối số 't*' không bị glob thành tên chương trình" $((a+b+c))
+
 # prefix_ok / guard_vm hoạt động độc lập với load_program
 RC=0; new_case
 env PATH="$STUBPATH" /bin/bash -c '. "$1/lib/core.sh"; . "$1/lib/multipass.sh"; LAB_PREFIX="a-
@@ -280,6 +286,34 @@ check "restore: apply hỏng thì dừng, mã 1" $((a+b+c))
 sess_case; FAIL=a3/verify; export FAIL; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" restore tst a3 --yes
 [ "$RC" -eq 1 ]; a=$?
 check "restore: verify cuối hỏng thì mã 1" $a
+# Dò snapshot lỗi (mã khác 0 và khác 2 của "không có") phải dừng, không được coi là "không có mốc" rồi xoá VM.
+for yes in "--yes" ""; do
+  sess_case; MP_SNAPS="$SNAPS_A1"; MP_FAIL=info; MP_FAIL_RC=1; export MP_SNAPS MP_FAIL MP_FAIL_RC
+  run_lab "y
+" restore tst a3 $yes
+  [ "$RC" -ne 0 ]; a=$?; has "$ERR" 'không dò được snapshot tst-a.m-a1 (multipass trả mã 1)'; b=$?
+  ! has "$MP_LOG" '^delete\|^restore\|^stop\|^launch'; c=$?; trace_is ""; d=$?
+  check "restore ${yes:-(trả lời y)} khi dò snapshot lỗi: dừng, không xoá/khôi phục/dừng VM" $((a+b+c+d))
+done
+sess_case; MP_FAIL=info; MP_FAIL_RC=3; export MP_FAIL MP_FAIL_RC; run_lab "" snapshot tst manual-1 --yes
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" 'không dò được snapshot'; b=$?; ! has "$MP_LOG" '^delete\|^snapshot\|^stop'; c=$?
+check "snapshot khi dò snapshot lỗi: dừng trước khi dừng VM" $((a+b+c))
+sess_case; MP_FAIL=info; export MP_FAIL; run_lab "" restore tst a3 --yes
+[ "$RC" -eq 0 ]; a=$?; has "$MP_LOG" '^delete --purge tst-a tst-b$'; b=$?
+check "restore khi multipass trả 2 (không có snapshot): dựng lại như cũ" $((a+b))
+
+# Restore về buổi trước mốc đầu tiên: lời hỏi nói rõ snapshot (cả mốc sau) sẽ mất theo VM.
+ms="$WORK/fx-ms"; rm -rf "$ms"; cp -R "$HERE/fixtures/tst" "$ms.tmp"; mkdir -p "$ms"; mv "$ms.tmp" "$ms/tst"
+printf 'a2 m-a2\n' > "$ms/tst/milestones"
+sess_case; MP_SNAPS="tst-a.m-a2 tst-b.m-a2"; export MP_SNAPS
+RC=0; printf 'n\n' | env PATH="$STUBPATH" LAB_ROOT="$ms" LAB_WAIT_SECS=2 LAB_POLL_SECS=0 /bin/bash "$LAB" restore tst a1 >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -ne 0 ]; a=$?; has "$OUT" 'xoá luôn MỌI snapshot'; b=$?; has "$OUT" 'gồm cả mốc: m-a2'; c=$?
+has "$OUT" './labs/lab selftest tst'; d=$?; ! has "$MP_LOG" '^delete\|^stop\|^restore'; e=$?
+check "restore về trước mốc đầu: hỏi kèm cảnh báo mất snapshot m-a2 và cách chụp lại; trả lời n thì không đổi gì" $((a+b+c+d+e))
+sess_case; MP_SNAPS="tst-a.m-a2 tst-b.m-a2"; export MP_SNAPS
+RC=0; printf '' | env PATH="$STUBPATH" LAB_ROOT="$ms" LAB_WAIT_SECS=2 LAB_POLL_SECS=0 /bin/bash "$LAB" restore tst a1 --yes >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a1/verify"; b=$?; has "$MP_LOG" '^delete --purge tst-a tst-b$'; c=$?
+check "restore về trước mốc đầu --yes: dựng lại, áp a1, verify" $((a+b+c))
 
 sess_case; run_lab "" selftest tst --yes
 [ "$RC" -eq 0 ]; a=$?; trace_is "a1/apply a1/verify a2/apply a2/verify a3/apply a3/verify"; b=$?
@@ -406,7 +440,7 @@ has "$DK_LOG" '^save -o .* tst/a:1.0 tst/b:2.0'; c=$?
 [ "$(count "$MP_LOG" '^transfer')" = 2 ]; e=$?
 has "$MP_LOG" '^transfer .* tst-a:/tmp/lab-images.tar'; f=$?
 has "$MP_LOG" '^transfer .* tst-b:/tmp/lab-images.tar'; g=$?
-[ "$(count "$MP_LOG" 'exec tst-.* -- bash -lc .* _ sudo ctr -n k8s.io images import /tmp/lab-images.tar')" = 2 ]; h=$?
+[ "$(count "$MP_LOG" 'exec tst-.* -- bash -lc .* _ sudo ctr -n tst.ns images import /tmp/lab-images.tar')" = 2 ]; h=$?
 check "images tst: save một lần, transfer + ctr import cho từng VM, không build khi đã có" $((a+b+c+d+e+f+g+h))
 
 new_case; MP_LIST="$RUNNING2"; DK_MISSING=1; export MP_LIST DK_MISSING; run_lab "" images tst
@@ -428,6 +462,17 @@ check "images tst: VM đang dừng bị bỏ qua, không đụng tới" $((a+b+c
 new_case; MP_LIST="$RUNNING2"; MP_FAIL=transfer; export MP_LIST MP_FAIL; run_lab "" images tst
 [ "$RC" -ne 0 ]; a=$?; has "$ERR" '^lab: '; b=$?
 check "images tst: transfer lỗi thì thoát khác 0 kèm thông báo lab:" $((a+b))
+
+for st in Stopped NOCTR; do
+  new_case; DK_MISSING=1; export DK_MISSING
+  if [ "$st" = NOCTR ]; then MP_LIST="$RUNNING2"; MP_NOCTR="tst-a tst-b"; export MP_NOCTR
+  else MP_LIST='tst-a,Stopped,,,x,""
+tst-b,Stopped,,,x,""'; fi
+  export MP_LIST; run_lab "" images tst
+  [ "$RC" -ne 0 ]; a=$?; has "$ERR" 'không có VM nào đang chạy và có containerd'; b=$?
+  ! has "$DK_LOG" '^build\|^save'; c=$?; ! has "$MP_LOG" '^transfer'; d=$?
+  check "images tst khi không VM nào nhận được ($st): mã khác 0, không build, không save" $((a+b+c+d))
+done
 
 new_case; MP_LIST="$RUNNING2"; export MP_LIST; run_lab "" images tst extra
 [ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
