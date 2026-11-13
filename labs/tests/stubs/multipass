@@ -26,6 +26,15 @@ case "$sub" in
     fi
     # MP_NOCTR: các tên VM chưa có containerd (`command -v ctr` thất bại)
     case "$*" in *"command -v ctr"*) for n in ${MP_NOCTR:-}; do [ "$2" = "$n" ] && exit 1; done ;; esac
+    # MP_EXEC_RUN=1: chạy thật phần sau `--` trên máy test, trả mã thoát của nó. multipass 1.16.3 thật
+    # chạy lại lệnh mãi khi lệnh trong VM thoát mã 4 (trùng mã "retry" của nó): ghi dấu để test bắt.
+    if [ "${MP_EXEC_RUN:-}" = 1 ]; then
+      while [ $# -gt 0 ] && [ "$1" != "--" ]; do shift; done
+      shift
+      rc=0; "$@" || rc=$?
+      [ "$rc" -eq 4 ] && [ -n "${MP_LOG:-}" ] && echo "EXEC-RC-4" >> "$MP_LOG"
+      exit "$rc"
+    fi
     ;;
   launch)
     n=""; while [ $# -gt 0 ]; do [ "$1" = "--name" ] && n="$2"; shift; done

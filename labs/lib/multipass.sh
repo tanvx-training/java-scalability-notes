@@ -113,12 +113,16 @@ vm_field() {
 # vm_state <tên>: in State, rỗng nếu VM chưa tồn tại
 vm_state() { vm_field "$1" 2; }
 
-# vm <tên> <lệnh…>: chạy lệnh trong VM
-# stderr của multipass luôn đi qua một pipe: multipass 1.16.3 treo (quay CPU mãi) khi stderr
-# của nó là /dev/null mà lệnh trong VM ghi ra stderr — đúng tình huống `vm … 2>/dev/null`.
+# vm <tên> <lệnh…>: chạy lệnh trong VM (login shell của user mặc định), trả mã thoát của lệnh.
+# Hai lỗi của multipass 1.16.3 được tránh ở đây:
+#  - Treo (quay CPU mãi) khi stderr của nó là /dev/null mà lệnh trong VM ghi ra stderr — đúng tình
+#    huống `vm … 2>/dev/null`: stderr luôn đi qua một pipe.
+#  - Lệnh trong VM thoát mã 4 (trùng mã "retry" của multipass) thì multipass chạy lại lệnh mãi
+#    (vd. `systemctl is-active <unit chưa có>`): mã 4 được đổi thành 104, mã khác giữ nguyên.
+#    Lệnh chạy trong subshell để `exit 4` bên trong lệnh cũng bị bắt.
 vm() {
   local name="$1"; shift
-  mp exec "$name" -- bash -lc "$*" 2> >(cat >&2)
+  mp exec "$name" -- bash -lc '(eval "$1"); r=$?; [ "$r" -eq 4 ] && r=104; exit "$r"' _ "$*" 2> >(cat >&2)
 }
 
 # vm_put <nguồn> <tên> <đích>

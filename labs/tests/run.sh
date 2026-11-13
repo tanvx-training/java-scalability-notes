@@ -406,7 +406,7 @@ has "$DK_LOG" '^save -o .* tst/a:1.0 tst/b:2.0'; c=$?
 [ "$(count "$MP_LOG" '^transfer')" = 2 ]; e=$?
 has "$MP_LOG" '^transfer .* tst-a:/tmp/lab-images.tar'; f=$?
 has "$MP_LOG" '^transfer .* tst-b:/tmp/lab-images.tar'; g=$?
-[ "$(count "$MP_LOG" 'exec tst-.* -- bash -lc sudo ctr -n k8s.io images import /tmp/lab-images.tar')" = 2 ]; h=$?
+[ "$(count "$MP_LOG" 'exec tst-.* -- bash -lc .* _ sudo ctr -n k8s.io images import /tmp/lab-images.tar')" = 2 ]; h=$?
 check "images tst: save một lần, transfer + ctr import cho từng VM, không build khi đã có" $((a+b+c+d+e+f+g+h))
 
 new_case; MP_LIST="$RUNNING2"; DK_MISSING=1; export MP_LIST DK_MISSING; run_lab "" images tst
@@ -461,6 +461,18 @@ env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" MP_FAIL=exec /bi
   echo het' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
 [ "$RC" -eq 0 ]; a=$?; has "$OUT" '^khong$'; b=$?; has "$OUT" '^bat-duoc$'; c=$?; has "$OUT" '^het$'; d=$?
 check "vm lỗi trong if / || dưới set -e: script chạy tiếp (bash 3.2)" $((a+b+c+d))
+
+# ---- vm: lệnh trong VM thoát mã 4 không được trả nguyên mã 4 cho multipass (1.16.3 chạy lại mãi) ----
+new_case
+RC=0
+env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" MP_EXEC_RUN=1 /bin/bash -c '
+  . "$1/lib/core.sh"; . "$1/lib/multipass.sh"; load_program tst
+  vm tst-a "echo \"a b\" | tr a A; exit 4"; echo "rc4=$?"
+  vm tst-a "exit 3"; echo "rc3=$?"
+  vm tst-a "echo ok"; echo "rc0=$?"' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
+! has "$MP_LOG" 'EXEC-RC-4'; a=$?; has "$OUT" '^A b$'; b=$?; has "$OUT" '^rc4=104$'; c=$?
+has "$OUT" '^rc3=3$'; d=$?; has "$OUT" '^ok$'; e=$?; has "$OUT" '^rc0=0$'; f=$?
+check "vm: mã 4 của lệnh trong VM đổi thành 104, mã khác giữ nguyên, lệnh chạy đúng một lần" $((a+b+c+d+e+f))
 
 # ---- Lint: lib và lab không chứa chương trình cụ thể ----
 hits="$(grep -ril "cka\|kubernetes" "$LABS/lib" "$LABS/lab" 2>/dev/null)"
