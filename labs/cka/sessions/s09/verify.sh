@@ -2,7 +2,7 @@
 # node) chạy được trên hai worker. Namespace tạm, tự xoá: thứ duy nhất verify tạo ra. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
-  kubectl wait --for=condition=Ready node --all --timeout=120s" >/dev/null 2>&1 || true
+  kubectl wait --for=condition=Ready node --all --timeout=180s" >/dev/null 2>&1 || true
 for v in $LAB_VMS; do
   expect_eq "node $v Ready" "True" \
     vm "$cp" "kubectl get node $v -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}'"

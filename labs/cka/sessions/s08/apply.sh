@@ -15,7 +15,7 @@ EOF2"
 vm "$w1" "sudo install -d -m 755 /etc/kubernetes/manifests"
 vm_put "$SESSION_DIR/files/web-static.yaml" "$w1" /tmp/web-static.yaml
 # Chỉ ghi khi nội dung khác: ghi lại tệp manifest (dù cùng nội dung) làm kubelet chạy lại static pod (đã thấy restartCount tăng)
-vm "$w1" "sudo cmp -s /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml || sudo install -m 644 /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml; rm -f /tmp/web-static.yaml"
+vm "$w1" "{ sudo cmp -s /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml || sudo install -m 644 /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml; } && rm -f /tmp/web-static.yaml"
 vm "$cp" "grep -qxF 'source <(kubectl completion bash)' ~/.bashrc || echo 'source <(kubectl completion bash)' >> ~/.bashrc
 grep -qxF 'complete -o default -F __start_kubectl k' ~/.bashrc || echo 'complete -o default -F __start_kubectl k' >> ~/.bashrc"
 echo "s08: chờ Pod web-static-$w1 Running"

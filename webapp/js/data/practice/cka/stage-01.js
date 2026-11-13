@@ -585,7 +585,7 @@ ssh cka-w1 "sudo journalctl -u kubelet --since '-2 min' | grep -i mirror"
 \`\`\`bash
 sudo cat /var/lib/kubelet/kubeadm-flags.env        # KUBELET_KUBEADM_ARGS=""  (kubeadm 1.36 để trống trên lab)
 sudo grep containerRuntimeEndpoint /var/lib/kubelet/config.yaml   # unix:///var/run/containerd/containerd.sock
-ls /etc/cni/net.d/ /opt/cni/bin/ | head            # 10-calico.conflist; calico, calico-ipam, …
+sudo ls /etc/cni/net.d/; ls /opt/cni/bin/ | head         # 10-calico.conflist; calico, calico-ipam, …
 kubectl get csidrivers                              # No resources found
 \`\`\`
 
