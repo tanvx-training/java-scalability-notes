@@ -67,7 +67,7 @@ const domainOf = (program, session) =>
   ((program.exam && program.exam.domains) || []).find((d) => d.id === session.domain) || null;
 
 function renderMissing(root, pid, desc) {
-  root.append(h("div", { class: "page" },
+  root.append(h("div", { class: "page pr-page" },
     emptyState("🛠️", "Không tìm thấy", desc || `Chưa có chương trình thực hành “${pid}”.`,
       h("a", { class: "btn", href: "#/practice" }, "← Về danh sách chương trình"))));
 }
@@ -80,7 +80,7 @@ function renderList(root) {
     return;
   }
   const state = practiceState();
-  const page = h("div", { class: "page" },
+  const page = h("div", { class: "page pr-page" },
     pageHead("🛠️ Thực hành", "Chương trình thực hành trên lab thật, từng buổi có tiêu chí xong rõ ràng.", "Kế hoạch"));
   if (!PROGRAMS.length) {
     page.append(emptyState("🛠️", "Chưa có chương trình nào"));
@@ -110,7 +110,7 @@ function renderHome(root, program) {
   // Chương trình có đề thi thì hiện nhịp tới ngày thi; chương trình theo chủ đề thì chỉ hiện tiến độ.
   const pace = n >= total ? "đã xong" : exam ? `còn khoảng ${weeksLeft(program, state.done)} tuần ở nhịp 3 buổi/tuần` : null;
 
-  const page = h("div", { class: "page" });
+  const page = h("div", { class: "page pr-page" });
   page.append(
     crumbs(program),
     pageHead(`${program.icon} ${program.label}`, program.name, "Thực hành"),
@@ -339,7 +339,7 @@ function stateBlock(title, text) { return text ? block(title, md(text)) : null; 
 function renderSession(root, program, session) {
   const idx = indexOfSession(program, session.id) + 1;
   const state = practiceState();
-  const page = h("div", { class: "page" }, sessionHead(program, session, idx));
+  const page = h("div", { class: "page pr-page" }, sessionHead(program, session, idx));
 
   if ((session.goals || []).length) {
     page.append(block("🎯 Mục tiêu", h("ul", { class: "pr-list" }, session.goals.map((g) => h("li", { html: inlineMd(g) })))));
@@ -546,7 +546,7 @@ function renderSkills(root, program) {
   };
   paint();
 
-  root.append(h("div", { class: "page" },
+  root.append(h("div", { class: "page pr-page" },
     crumbs(program, "Kỹ năng"),
     pageHead("🧩 Bản đồ kỹ năng", "Mục lục mọi kỹ năng của chương trình: học ở buổi nào, dùng lại ở buổi nào.", `${program.label} · Kỹ năng`),
     h("div", { class: "card mb-4" }, kindBar, areaBar),
@@ -562,7 +562,7 @@ function renderSkills(root, program) {
 function renderProject(root, program) {
   const state = practiceState();
   const pieces = projectPieces(program, state.done);
-  const page = h("div", { class: "page" },
+  const page = h("div", { class: "page pr-page" },
     crumbs(program, "Project"),
     pageHead("🏗️ Project xuyên suốt", "Hệ thống lớn dần qua từng chặng.", `${program.label} · Project`));
   const add = (...n) => page.append(...n.filter(Boolean));
@@ -657,7 +657,7 @@ function examLine(program) {
 
 function renderMockIndex(root, program) {
   const mocks = program.mocks || [];
-  const page = h("div", { class: "page" },
+  const page = h("div", { class: "page pr-page" },
     crumbs(program, "Đề mock"),
     pageHead("⏱️ Đề mock", examLine(program), `${program.label} · Mock`));
   const add = (...n) => page.append(...n.filter(Boolean));
@@ -677,7 +677,7 @@ function renderMockIndex(root, program) {
 
 function renderMockPage(root, program, mock) {
   const questions = mock.questions || [];
-  const page = h("div", { class: "page" },
+  const page = h("div", { class: "page pr-page" },
     crumbs(program, mock.title),
     pageHead(`⏱️ ${mock.title}`,
       [`${mock.durationMin} phút`, `${questions.length} câu`, passPctOf(program) == null ? null : `đậu từ ${passPctOf(program)}%`].filter(Boolean).join(" · "),

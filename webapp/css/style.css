@@ -1643,13 +1643,14 @@ dialog.modal .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; 
 .pr-q.marked { border-color: var(--amber, var(--accent)); box-shadow: 0 0 0 1px var(--amber, var(--accent)); }
 .pr-err { color: var(--red); margin-top: 6px; }
 .pr-mock-clock { font-size: 20px; margin-left: 12px; }
-/* Không để nhãn dài đẩy trang vượt khung (nút prev/next, nút vào buổi, danh sách buổi) */
-.page .btn { max-width: 100%; }
-.pr-nav .btn, .page .card .btn-primary, .pr-sessions a { white-space: normal; text-align: left; }
+/* Không để nhãn dài đẩy trang vượt khung (nút prev/next, nút vào buổi, danh sách buổi).
+   Mọi luật chung (.btn, code, badge, reveal) chỉ áp trong trang Thực hành (.pr-page), không đụng view khác. */
+.pr-page .btn { max-width: 100%; }
+.pr-nav .btn, .pr-page .card .btn-primary, .pr-sessions a { white-space: normal; text-align: left; }
 .pr-nav > a { flex: 1 1 240px; min-width: 0; }
 .pr-sessions li { overflow-wrap: anywhere; }
 .pr-stage summary .grow { min-width: 0; overflow-wrap: anywhere; }
 /* Buổi đã phát hành: đường dẫn/lệnh dài trong code inline và nhãn "Cần: …" phải xuống dòng ở màn hẹp */
-.pr-task > span, .pr-list li, .reveal-body p { min-width: 0; overflow-wrap: anywhere; }
-.prose :not(pre) > code { overflow-wrap: anywhere; }
-.chip-row a.badge { white-space: normal; max-width: 100%; }
+.pr-task > span, .pr-list li, .pr-page .reveal-body p { min-width: 0; overflow-wrap: anywhere; }
+.pr-page .prose :not(pre) > code { overflow-wrap: anywhere; }
+.pr-page .chip-row a.badge { white-space: normal; max-width: 100%; }
