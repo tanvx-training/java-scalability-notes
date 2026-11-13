@@ -38,6 +38,12 @@ jobs:
       - name: Unit tests
         run: node --test "webapp/scripts/tests/*.test.mjs"
 
+      # Test CLI labs/lab với multipass và docker giả (labs/tests/stubs), không đụng VM nào.
+      # Script viết cho bash 3.2 của macOS; bộ test giữ được trên bash 5 của runner Linux
+      # (stub dùng `stat -c` của GNU trước `stat -f` của BSD, không có `sed -i ''`).
+      - name: Lab CLI tests
+        run: /bin/bash labs/tests/run.sh
+
   deploy:
     needs: check
     runs-on: ubuntu-latest
