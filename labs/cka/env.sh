@@ -13,3 +13,16 @@ lab_vm_spec() {
     *)      echo "2 2G 15G" ;;
   esac
 }
+
+# Image của ứng dụng shop (nạp vào containerd bằng `lab images`)
+LAB_IMAGES="shop/gateway:1.0 shop/gateway:2.0 shop/catalog:1.0 shop/catalog:2.0 shop/order:1.0 shop/order:2.0"
+
+# lab_build_images: build mọi image trong LAB_IMAGES (linux/arm64) từ labs/cka/app
+lab_build_images() {
+  local img name svc ver
+  for img in $LAB_IMAGES; do
+    name="${img%%:*}"; ver="${img##*:}"; svc="${name##*/}"
+    docker build --platform linux/arm64 --build-arg "SERVICE=$svc" --build-arg "APP_VERSION=$ver" \
+      -t "$img" "$LAB_ROOT/cka/app" || return 1
+  done
+}

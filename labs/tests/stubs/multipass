@@ -19,6 +19,10 @@ case "$sub" in
     [ -n "${MP_LIST:-}" ] && printf '%s\n' "$MP_LIST"
     [ -f "$run" ] && cat "$run"
     ;;
+  exec)
+    # MP_NOCTR: các tên VM chưa có containerd (`command -v ctr` thất bại)
+    case "$*" in *"command -v ctr"*) for n in ${MP_NOCTR:-}; do [ "$2" = "$n" ] && exit 1; done ;; esac
+    ;;
   launch)
     n=""; while [ $# -gt 0 ]; do [ "$1" = "--name" ] && n="$2"; shift; done
     [ -n "${MP_LOG:-}" ] && echo "$n,Running,10.0.0.9,,Ubuntu 24.04 LTS,\"\"" >> "$run"

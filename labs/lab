@@ -13,6 +13,7 @@ export LAB_ROOT
 . "$LAB_HOME/lib/assert.sh"
 . "$LAB_HOME/lib/session.sh"
 . "$LAB_HOME/lib/snapshot.sh"
+. "$LAB_HOME/lib/images.sh"
 
 MP_HINT="brew install --cask multipass"
 
@@ -33,6 +34,7 @@ Lệnh:
   mock <ct> <đề> start|score   bắt đầu hoặc chấm đề mock (score in dòng devprep-mock:v1)
   selftest <ct> [--from <buổi>]  chạy apply + verify mọi buổi trên VM sạch
   snapshot <ct> <tên>      chụp snapshot mọi VM của chương trình
+  images <ct>              build (nếu chưa có) và nạp image ứng dụng vào containerd của từng VM
   help                     in trợ giúp này
 USAGE
   local p n=""
@@ -122,6 +124,8 @@ cmd_down() {
 
 cmd_status() { check_list; print_status; }
 
+cmd_images() { check_list; images_load; }
+
 cmd_destroy() {
   local list v
   check_list
@@ -141,7 +145,7 @@ main() {
   case "$cmd" in
     '') usage; exit 1 ;;
     help|-h|--help) usage; exit 0 ;;
-    up|down|status|destroy|check|begin|verify|restore|break|mock|selftest|snapshot) ;;
+    up|down|status|destroy|check|begin|verify|restore|break|mock|selftest|snapshot|images) ;;
     *) usage >&2; die "lệnh '$cmd' không tồn tại" ;;
   esac
   shift
@@ -158,7 +162,7 @@ main() {
   load_program "$1"
   shift
   case "$cmd" in
-    up|down|status|destroy) [ $# -eq 0 ] || die "'$cmd' không nhận đối số thừa '$*'" ;;
+    up|down|status|destroy|images) [ $# -eq 0 ] || die "'$cmd' không nhận đối số thừa '$*'" ;;
   esac
   require_cmd multipass "$MP_HINT"
   "cmd_$cmd" "$@"

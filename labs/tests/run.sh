@@ -15,8 +15,9 @@ new_case() {
   export MP_LOG="$WORK/mp.log"
   rm -f "$MP_LOG" "$MP_LOG.run"
   : > "$MP_LOG"
+  export DK_LOG="$WORK/dk.log"; : > "$DK_LOG"
   OUT="$WORK/out"; ERR="$WORK/err"
-  unset MP_LIST MP_FAIL MP_SNAPS TRACE FAIL
+  unset MP_LIST MP_FAIL MP_SNAPS MP_NOCTR DK_MISSING TRACE FAIL
 }
 # run_lab <stdin> args... : chạy lab với stub, đặt RC
 run_lab() {
@@ -389,6 +390,50 @@ for args in "snapshot tst-a --name x" "snapshot tst-a -n x --comment hi" "info t
 done
 for args in "snapshot cp1 --name x" "snapshot tst-a --name x cp1" "restore --destructive cp1.x" "restore tst-a.x cp1.y" "info cp1.x --format csv" \
             "delete --purge cp1.x" "snapshot tst-a --all" "restore --force tst-a.x" "info --snapshots tst-a"; do
+  new_case; guard_direct $args
+  [ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+  check "mp $args: từ chối, log rỗng" $((a+b))
+done
+
+# ---- images ----
+RUNNING2='tst-a,Running,10.0.0.1,,Ubuntu 24.04 LTS,""
+tst-b,Running,10.0.0.2,,Ubuntu 24.04 LTS,""'
+new_case; MP_LIST="$RUNNING2"; export MP_LIST; run_lab "" images tst
+[ "$RC" -eq 0 ]; a=$?
+[ "$(count "$DK_LOG" '^save')" = 1 ]; b=$?
+has "$DK_LOG" '^save -o .* tst/a:1.0 tst/b:2.0'; c=$?
+! has "$DK_LOG" '^build'; d=$?
+[ "$(count "$MP_LOG" '^transfer')" = 2 ]; e=$?
+has "$MP_LOG" '^transfer .* tst-a:/tmp/lab-images.tar'; f=$?
+has "$MP_LOG" '^transfer .* tst-b:/tmp/lab-images.tar'; g=$?
+[ "$(count "$MP_LOG" 'exec tst-.* -- bash -lc sudo ctr -n k8s.io images import /tmp/lab-images.tar')" = 2 ]; h=$?
+check "images tst: save một lần, transfer + ctr import cho từng VM, không build khi đã có" $((a+b+c+d+e+f+g+h))
+
+new_case; MP_LIST="$RUNNING2"; DK_MISSING=1; export MP_LIST DK_MISSING; run_lab "" images tst
+[ "$RC" -eq 0 ]; a=$?; [ "$(count "$DK_LOG" '^build')" = 2 ]; b=$?
+check "images tst: thiếu image thì gọi lab_build_images" $((a+b))
+
+new_case; MP_LIST="$RUNNING2"; MP_NOCTR="tst-b"; export MP_LIST MP_NOCTR; run_lab "" images tst
+[ "$RC" -eq 0 ]; a=$?
+has "$MP_LOG" '^transfer .* tst-a:'; b=$?
+! has "$MP_LOG" '^transfer .* tst-b:'; c=$?
+has "$OUT" '^lab: cảnh báo: bỏ qua tst-b (chưa có containerd)'; d=$?
+check "images tst: VM chưa có containerd bị bỏ qua kèm cảnh báo, VM kia vẫn nạp" $((a+b+c+d))
+
+new_case; MP_LIST='tst-a,Running,10.0.0.1,,Ubuntu 24.04 LTS,""
+tst-b,Stopped,,,Ubuntu 24.04 LTS,""'; export MP_LIST; run_lab "" images tst
+[ "$RC" -eq 0 ]; a=$?; ! has "$MP_LOG" 'tst-b:'; b=$?; ! has "$MP_LOG" '^exec tst-b'; c=$?; has "$OUT" 'bỏ qua tst-b (chưa chạy)'; d=$?
+check "images tst: VM đang dừng bị bỏ qua, không đụng tới" $((a+b+c+d))
+
+new_case; MP_LIST="$RUNNING2"; MP_FAIL=transfer; export MP_LIST MP_FAIL; run_lab "" images tst
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" '^lab: '; b=$?
+check "images tst: transfer lỗi thì thoát khác 0 kèm thông báo lab:" $((a+b))
+
+new_case; MP_LIST="$RUNNING2"; export MP_LIST; run_lab "" images tst extra
+[ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+check "images tst extra: từ chối đối số thừa" $((a+b))
+
+for args in "transfer f cp1:/tmp/x" "exec cp1 -- bash -lc sudo"; do
   new_case; guard_direct $args
   [ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
   check "mp $args: từ chối, log rỗng" $((a+b))

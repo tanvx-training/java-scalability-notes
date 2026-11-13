@@ -10,3 +10,8 @@ lab_vm_spec() {
     *) echo "1 2G 15G" ;;
   esac
 }
+LAB_IMAGES="tst/a:1.0 tst/b:2.0"
+lab_build_images() {
+  local img
+  for img in $LAB_IMAGES; do docker build -t "$img" "$LAB_ROOT/tst" || return 1; done
+}

@@ -1,0 +1,8 @@
+#!/bin/bash
+# Stub docker: ghi lời gọi vào $DK_LOG. DK_MISSING=1: `image inspect` báo chưa có image.
+[ -n "${DK_LOG:-}" ] && echo "$*" >> "$DK_LOG"
+case "${1:-}" in
+  image) [ "${2:-}" = inspect ] && [ -n "${DK_MISSING:-}" ] && exit 1 ;;
+  save) shift; while [ $# -gt 0 ]; do [ "$1" = "-o" ] && : > "$2"; shift; done ;;
+esac
+exit 0

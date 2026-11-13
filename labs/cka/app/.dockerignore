@@ -1,0 +1,4 @@
+**/target/
+.git
+*.tar
+README.md

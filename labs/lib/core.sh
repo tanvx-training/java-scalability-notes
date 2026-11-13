@@ -36,8 +36,8 @@ load_program() {
     ''|*[!a-z0-9_-]*) die "không có chương trình '$prog'" ;;
   esac
   [ -f "${LAB_ROOT:?}/$prog/env.sh" ] || die "không có chương trình '$prog'"
-  unset LAB_PREFIX LAB_VMS LAB_CP LAB_IMAGE K8S_INSTALL_MINOR K8S_TARGET_MINOR
-  unset -f lab_vm_spec 2>/dev/null || true
+  unset LAB_PREFIX LAB_VMS LAB_CP LAB_IMAGE K8S_INSTALL_MINOR K8S_TARGET_MINOR LAB_IMAGES
+  unset -f lab_vm_spec lab_build_images 2>/dev/null || true
   # shellcheck disable=SC1090
   . "$LAB_ROOT/$prog/env.sh"
   LAB_PROGRAM="$prog"
