@@ -1,0 +1,24 @@
+#!/bin/bash
+# Stub multipass: ghi lời gọi vào $MP_LOG, trả lời theo MP_LIST / MP_FAIL.
+# MP_LIST: các dòng csv (không header). MP_FAIL: tên lệnh con cần giả lỗi.
+[ -n "${MP_LOG:-}" ] && echo "$*" >> "$MP_LOG"
+sub="${1:-}"
+if [ -n "${MP_FAIL:-}" ] && [ "$MP_FAIL" = "$sub" ]; then
+  echo "stub: $sub failed" >&2; exit 2
+fi
+run="${MP_LOG:-/dev/null}.run"
+case "$sub" in
+  list)
+    echo "Name,State,IPv4,IPv6,Release,AllIPv4"
+    [ -n "${MP_LIST:-}" ] && printf '%s\n' "$MP_LIST"
+    [ -f "$run" ] && cat "$run"
+    ;;
+  launch)
+    n=""; while [ $# -gt 0 ]; do [ "$1" = "--name" ] && n="$2"; shift; done
+    [ -n "${MP_LOG:-}" ] && echo "$n,Running,10.0.0.9,,Ubuntu 24.04 LTS,\"\"" >> "$run"
+    ;;
+  start)
+    shift; for n in "$@"; do [ -n "${MP_LOG:-}" ] && echo "$n,Running,10.0.0.9,,Ubuntu 24.04 LTS,\"\"" >> "$run"; done
+    ;;
+esac
+exit 0

@@ -1,0 +1,144 @@
+#!/bin/bash
+# lab <lệnh> <chương trình> [đối số…]  — quản lý VM Multipass cho chương trình thực hành.
+LAB_SELF="$0"
+while [ -h "$LAB_SELF" ]; do
+  t="$(readlink "$LAB_SELF")"
+  case "$t" in /*) LAB_SELF="$t" ;; *) LAB_SELF="$(dirname "$LAB_SELF")/$t" ;; esac
+done
+LAB_HOME="$(cd "$(dirname "$LAB_SELF")" && pwd)"
+LAB_ROOT="${LAB_ROOT:-$LAB_HOME}"
+export LAB_ROOT
+. "$LAB_HOME/lib/core.sh"
+. "$LAB_HOME/lib/multipass.sh"
+
+MP_HINT="brew install --cask multipass"
+
+usage() {
+  cat <<USAGE
+Cách dùng: ./labs/lab <lệnh> <chương trình> [đối số…]
+
+Lệnh:
+  up <chương trình>        tạo hoặc khởi động các VM, chờ đến khi Running
+  down <chương trình>      dừng các VM (giữ nguyên dữ liệu)
+  status <chương trình>    hiện trạng thái các VM của chương trình
+  destroy <chương trình>   xoá hẳn các VM của chương trình (hỏi trước, --yes để bỏ hỏi)
+  help                     in trợ giúp này
+USAGE
+  local p n=""
+  for p in "$LAB_ROOT"/*/env.sh; do
+    [ -f "$p" ] || continue
+    n="$n $(basename "$(dirname "$p")")"
+  done
+  [ -n "$n" ] && echo "Chương trình có sẵn:$n"
+  return 0
+}
+
+print_status() {
+  local v s ip
+  printf '%-14s %-12s %s\n' NAME STATE IPV4
+  for v in $LAB_VMS; do
+    s="$(vm_state "$v")"; ip="$(vm_field "$v" 3)"
+    printf '%-14s %-12s %s\n' "$v" "${s:-(chưa tạo)}" "${ip:--}"
+  done
+}
+
+cmd_up() {
+  local v s spec cpus mem disk
+  for v in $LAB_VMS; do
+    s="$(vm_state "$v")"
+    case "$s" in
+      Running) info "$v đã chạy" ;;
+      Stopped|Suspended)
+        info "khởi động $v"
+        mp start "$v" >/dev/null || die "không khởi động được $v" ;;
+      '')
+        spec="$(lab_vm_spec "$v")"
+        set -- $spec; cpus="$1"; mem="$2"; disk="$3"
+        info "tạo $v ($cpus vCPU, $mem RAM, $disk đĩa), có thể mất vài phút"
+        mp launch --name "$v" --cpus "$cpus" --memory "$mem" --disk "$disk" "$LAB_IMAGE" >/dev/null \
+          || die "không tạo được $v" ;;
+      Deleted)
+        mp recover "$v" >/dev/null || die "không khôi phục được $v"
+        mp start "$v" >/dev/null || die "không khởi động được $v" ;;
+      *) die "$v đang ở trạng thái '$s', chưa xử lý được" ;;
+    esac
+  done
+  wait_running
+  print_status
+}
+
+wait_running() {
+  local waited=0 limit="${LAB_WAIT_SECS:-300}" v ok
+  while :; do
+    ok=1
+    for v in $LAB_VMS; do
+      [ "$(vm_state "$v")" = Running ] || { ok=0; break; }
+    done
+    [ "$ok" -eq 1 ] && return 0
+    [ "$waited" -ge "$limit" ] && die "hết ${limit}s mà VM chưa Running, xem './labs/lab status $LAB_PROGRAM'"
+    sleep "${LAB_POLL_SECS:-3}"
+    waited=$((waited + ${LAB_POLL_SECS:-3}))
+    # tránh vòng lặp vô hạn khi poll = 0
+    [ "${LAB_POLL_SECS:-3}" -eq 0 ] && waited=$((waited + 1))
+  done
+}
+
+existing_vms() {
+  local v out=""
+  for v in $LAB_VMS; do
+    [ -n "$(vm_state "$v")" ] && out="$out $v"
+  done
+  echo $out
+}
+
+cmd_down() {
+  local list v
+  list=""
+  for v in $LAB_VMS; do
+    [ "$(vm_state "$v")" = Running ] && list="$list $v"
+  done
+  [ -n "$list" ] || { info "không có VM nào đang chạy"; return 0; }
+  info "dừng:$list"
+  mp stop $list >/dev/null || die "không dừng được VM"
+}
+
+cmd_status() { print_status; }
+
+cmd_destroy() {
+  local list v
+  list="$(existing_vms)"
+  [ -n "$list" ] || { info "không có VM nào của '$LAB_PROGRAM' để xoá"; return 0; }
+  echo "Sẽ xoá hẳn các VM:"
+  for v in $list; do echo "  $v"; done
+  if [ "$YES" -ne 1 ]; then
+    confirm "Xoá các VM trên?" || die "đã huỷ, không xoá gì"
+  fi
+  mp delete --purge $list >/dev/null || die "không xoá được VM"
+  info "đã xoá:$(printf ' %s' $list)"
+}
+
+main() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    '') usage; exit 1 ;;
+    help|-h|--help) usage; exit 0 ;;
+    up|down|status|destroy) ;;
+    *) usage >&2; die "lệnh '$cmd' không tồn tại" ;;
+  esac
+  shift
+  YES=0
+  local args="" a
+  for a in "$@"; do
+    case "$a" in
+      --yes|-y) YES=1 ;;
+      *) args="$args $a" ;;
+    esac
+  done
+  set -- $args
+  [ $# -ge 1 ] || die "thiếu tên chương trình, ví dụ: ./labs/lab $cmd <chương trình>"
+  load_program "$1"
+  require_cmd multipass "$MP_HINT"
+  "cmd_$cmd"
+}
+
+main "$@"
