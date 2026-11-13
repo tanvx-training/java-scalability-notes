@@ -63,11 +63,21 @@ journalctl -u kubelet -f                           # theo dõi trực tiếp (Ct
 
 **4. sysctl.** Tham số kernel lúc chạy, nằm dưới \`/proc/sys/\` (\`net.ipv4.ip_forward\` ↔ \`/proc/sys/net/ipv4/ip_forward\`). \`sysctl -w k=v\` đặt ngay (mất khi reboot); muốn bền thì ghi vào \`/etc/sysctl.d/<tên>.conf\` rồi \`sysctl --system\` để áp mọi tệp ngay. \`ip_forward = 1\` cho phép node chuyển tiếp gói giữa các card — không có nó, gói từ Pod không ra khỏi node.
 
-**Bài tập nền (10 phút, trên cka-w1, trước khi làm nhiệm vụ):**
+**Bài tập nền (10 phút, trên cka-cp — node duy nhất đã có containerd từ s05 — trước khi làm nhiệm vụ):**
 1. \`systemctl cat containerd | head -20\` — tìm dòng đầu (đường dẫn tệp unit) và \`ExecStart\`.
 2. \`journalctl -u containerd -p warning --no-pager | tail -5\` rồi đổi \`warning\` thành \`err\`.
-3. \`lsmod | grep -E 'overlay|br_netfilter'\`; \`ls /proc/sys/net/bridge 2>&1\` — vì sao báo không có?
-4. \`sysctl net.ipv4.ip_forward\` và \`cat /proc/sys/net/ipv4/ip_forward\` — hai cách đọc cùng một giá trị.
+3. Drop-in và \`daemon-reload\` — tạo một drop-in thử rồi gỡ:
+   \`\`\`bash
+   sudo mkdir -p /etc/systemd/system/containerd.service.d
+   printf '[Service]\\nEnvironment=LAB_NOTE=s06\\n' | sudo tee /etc/systemd/system/containerd.service.d/lab.conf
+   systemctl show containerd -p Environment     # Environment=   (systemd chưa đọc tệp mới)
+   sudo systemctl daemon-reload
+   systemctl show containerd -p Environment     # Environment=LAB_NOTE=s06
+   sudo rm /etc/systemd/system/containerd.service.d/lab.conf && sudo systemctl daemon-reload
+   \`\`\`
+   systemd chỉ đọc lại tệp unit khi \`daemon-reload\`; biến mới chỉ tới tiến trình containerd ở lần restart sau.
+4. \`lsmod | grep -E 'overlay|br_netfilter'\`; \`ls /proc/sys/net/bridge 2>&1\` — vì sao báo không có?
+5. \`sysctl net.ipv4.ip_forward\` và \`cat /proc/sys/net/ipv4/ip_forward\` — hai cách đọc cùng một giá trị.
 
 Đọc thêm: phần Linux trong [Kiến thức nền tảng](#/docs/prerequisites).`,
     },
@@ -94,15 +104,15 @@ journalctl -u kubelet -f                           # theo dõi trực tiếp (Ct
       { id: "t2", text: "Trên **mỗi** node: `swapon --show` thấy `/swap.img`; `swapoff -a`; chú thích dòng swap trong `/etc/fstab` (vim hoặc `sed`); `swapon --show` phải rỗng." },
       { id: "t3", text: "Trên mỗi node: viết `/etc/modules-load.d/k8s.conf` (hai dòng `overlay`, `br_netfilter`), `modprobe` cả hai; viết `/etc/sysctl.d/k8s.conf` với `net.bridge.bridge-nf-call-iptables`, `net.bridge.bridge-nf-call-ip6tables`, `net.ipv4.ip_forward` bằng 1; `sysctl --system`." },
       { id: "t4", text: "Trên hai worker: thêm repo pkgs.k8s.io v1.36 (như s05), `apt-get install -y containerd`. Trên mỗi node: `containerd config default > /etc/containerd/config.toml`, đổi `SystemdCgroup = false` thành `true`, `systemctl restart containerd`; viết `/etc/crictl.yaml` trên hai worker." },
-      { id: "t5", text: "Trên mỗi node: `apt-get install -y kubelet kubeadm kubectl cri-tools`; `apt-mark hold kubelet kubeadm kubectl`; đọc `systemctl status kubelet` và `systemctl cat kubelet` (drop-in nằm ở đâu?)." },
+      { id: "t5", text: "Trên mỗi node: `apt-get install -y kubelet kubeadm kubectl cri-tools`; `apt-mark hold kubelet kubeadm kubectl`; `crictl info | grep SystemdCgroup` phải ra `true` (containerd đang dùng cấu hình mới); đọc `systemctl status kubelet` và `systemctl cat kubelet` (drop-in nằm ở đâu?)." },
       { id: "t6", text: "Trên Mac: `./labs/lab images cka` — lần này hai worker đã có containerd nên cũng nhận sáu image shop." },
-      { id: "t7", text: "Trên Mac: `./labs/lab verify cka s06` phải đạt 33/33." },
+      { id: "t7", text: "Trên Mac: `./labs/lab verify cka s06` phải đạt 39/39." },
     ],
     hints: [
       "Làm một node trước cho chắc tay, rồi dùng tmux chia ba pane (`ssh cka-w1`, `ssh cka-w2`) gõ lại — hoặc ghi các bước vào một script rồi `scp` sang worker. Trong phòng thi, chuẩn bị node thường chỉ một node, nên tập gõ tay ít nhất một lần.",
-      "Chú thích fstab bằng một lệnh: `sed -i '/ swap / s/^/#/' /etc/fstab`. Kiểm bằng `grep swap /etc/fstab` — dòng còn lại phải bắt đầu bằng `#`. Chỉ `swapoff -a` mà quên fstab thì reboot là swap quay lại.",
+      "Chú thích fstab bằng một lệnh: `sed -Ei '/^[^#].*[[:space:]]swap[[:space:]]/ s/^/#/' /etc/fstab` — `[[:space:]]` khớp cả dấu cách lẫn TAB (bộ cài Ubuntu ghi fstab bằng TAB, nên mẫu `/ swap /` với dấu cách không khớp gì). Kiểm bằng `grep swap /etc/fstab` — dòng còn lại phải bắt đầu bằng `#`. Chỉ `swapoff -a` mà quên fstab thì reboot là swap quay lại.",
       "`sysctl: cannot stat /proc/sys/net/bridge/bridge-nf-call-iptables` nghĩa là `br_netfilter` chưa nạp: `modprobe br_netfilter` trước, rồi `sysctl --system`.",
-      "Trong `config.toml` của containerd 2.x, `SystemdCgroup` nằm dưới `[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]` (containerd 1.x có tên bảng khác — xem trang Container Runtimes). Trong vim: `/SystemdCgroup` rồi `cw` sửa chữ `false`. Kiểm: `grep -n SystemdCgroup /etc/containerd/config.toml`.",
+      "Trong `config.toml` của containerd 2.x, `SystemdCgroup` nằm dưới `[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]` (containerd 1.x có tên bảng khác — xem trang Container Runtimes). Trong vim: `:%s/SystemdCgroup = false/SystemdCgroup = true/` rồi `:wq`. Kiểm: `grep -n SystemdCgroup /etc/containerd/config.toml`.",
       "Trên VM lab, gói `kubeadm` 1.36 không kéo theo `cri-tools`: thiếu nó thì worker không có `crictl` — cài thêm `cri-tools`. `apt-mark showhold` phải in đủ ba tên.",
     ],
     solution: `Làm bằng root (\`sudo -i\`). Ba node làm giống hệt nhau, trừ bước 1 (chỉ cka-cp) và việc cài containerd (cka-cp đã có từ s05).
@@ -110,7 +120,7 @@ journalctl -u kubelet -f                           # theo dõi trực tiếp (Ct
 **1. Dọn container của s05** (cka-cp):
 
 \`\`\`bash
-ctr -n k8s.io task kill -s SIGKILL catalog; ctr -n k8s.io task rm catalog
+ctr -n k8s.io task kill -s SIGKILL catalog; ctr -n k8s.io task rm -f catalog
 ctr -n k8s.io container rm catalog
 ctr -n k8s.io containers ls -q          # không còn catalog
 \`\`\`
@@ -122,7 +132,8 @@ Container chạy bằng \`ctr\` không có ai giám sát; nếu VM đã tắt t�
 \`\`\`bash
 swapon --show                           # /swap.img file 512M …
 swapoff -a
-sed -i '/ swap / s/^/#/' /etc/fstab     # chú thích dòng /swap.img none swap sw 0 0
+sed -Ei '/^[^#].*[[:space:]]swap[[:space:]]/ s/^/#/' /etc/fstab   # dòng /swap.img<TAB>none<TAB>swap…
+cat -A /etc/fstab | grep swap           # #/swap.img^Inone^Iswap^Isw^I0^I0$  (^I là TAB)
 swapon --show                           # rỗng
 \`\`\`
 
@@ -165,6 +176,7 @@ Trên worker viết thêm \`/etc/crictl.yaml\` giống s05. \`config default\` i
 apt-get install -y kubelet kubeadm kubectl cri-tools
 apt-mark hold kubelet kubeadm kubectl
 apt-mark showhold                       # kubeadm kubectl kubelet
+crictl info | grep SystemdCgroup        # "SystemdCgroup": true — cấu hình containerd ĐANG dùng, không chỉ tệp
 kubeadm version -o short                # v1.36.x
 systemctl status kubelet --no-pager     # enabled, inactive (dead)
 systemctl cat kubelet                   # unit gốc + Drop-In 10-kubeadm.conf
@@ -194,7 +206,7 @@ Repo \`…/core:/stable:/v1.36/deb/\` chỉ có bản 1.36.x, nên \`apt-get ins
         {
           text: "Trên cka-w1 có người đã đặt `SystemdCgroup = false` và `net.ipv4.ip_forward = 0` (giả định). Sửa cả hai cho bền qua reboot. Giới hạn 4 phút.",
           timeLimitMin: 4,
-          solution: "```bash\nssh cka-w1\nsudo -i\nsed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml\nsystemctl restart containerd\ngrep -rn ip_forward /etc/sysctl.conf /etc/sysctl.d/   # tìm tệp nào đặt 0\necho 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/k8s.conf   # (giữ cả hai dòng bridge nếu có)\nsysctl --system | grep ip_forward\nsystemctl restart kubelet   # nếu node đã join\n```\n`sysctl --system` áp các tệp theo thứ tự tên; tệp đứng sau thắng — nên phải tìm và sửa chỗ đặt 0, không chỉ thêm một dòng mới.",
+          solution: "```bash\nssh cka-w1\nsudo -i\nsed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml\nsystemctl restart containerd\nsystemd-analyze cat-config sysctl.d | grep -n -e '^# /' -e ip_forward   # thứ tự áp và tệp nào đặt 0\nsed -i 's/^net.ipv4.ip_forward *= *0/net.ipv4.ip_forward = 1/' <tệp tìm được>\nsysctl --system | grep ip_forward\nsystemctl restart kubelet   # nếu node đã join\n```\nCác tệp được áp theo thứ tự tên và tệp áp sau thắng; trên Ubuntu `/etc/sysctl.conf` được áp qua `/etc/sysctl.d/99-sysctl.conf`, tức là **sau** `k8s.conf`. Thêm một dòng mới vào `k8s.conf` (hay ghi đè nó bằng `>`, làm mất hai dòng bridge) không thắng được số 0 nằm ở tệp áp sau: phải sửa đúng tệp đặt 0.",
         },
       ],
     },
@@ -211,8 +223,8 @@ Repo \`…/core:/stable:/v1.36/deb/\` chỉ có bản 1.36.x, nên \`apt-get ins
 ./labs/lab verify cka s06
 \`\`\`
 
-Kết quả phải là 33/33 (10 dòng mỗi node, một dòng về container catalog, hai dòng về image trên worker).`,
-      verifyOutput: "lab: kiểm s06\n  ✓ cka-cp: swapon --show rỗng\n  ✓ cka-cp: /etc/fstab không còn dòng swap đang bật\n  ✓ cka-cp: module overlay đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-cp: module br_netfilter đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-cp: ba sysctl mạng bằng 1\n  ✓ cka-cp: containerd active\n  ✓ cka-cp: /etc/containerd/config.toml có SystemdCgroup = true\n  ✓ cka-cp: kubeadm bản 1.36 và đang hold\n  ✓ cka-cp: kubelet bản 1.36 và đang hold\n  ✓ cka-cp: kubectl bản 1.36 và đang hold\n  ✓ cka-w1: swapon --show rỗng\n  ✓ cka-w1: /etc/fstab không còn dòng swap đang bật\n  ✓ cka-w1: module overlay đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w1: module br_netfilter đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w1: ba sysctl mạng bằng 1\n  ✓ cka-w1: containerd active\n  ✓ cka-w1: /etc/containerd/config.toml có SystemdCgroup = true\n  ✓ cka-w1: kubeadm bản 1.36 và đang hold\n  ✓ cka-w1: kubelet bản 1.36 và đang hold\n  ✓ cka-w1: kubectl bản 1.36 và đang hold\n  ✓ cka-w2: swapon --show rỗng\n  ✓ cka-w2: /etc/fstab không còn dòng swap đang bật\n  ✓ cka-w2: module overlay đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w2: module br_netfilter đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w2: ba sysctl mạng bằng 1\n  ✓ cka-w2: containerd active\n  ✓ cka-w2: /etc/containerd/config.toml có SystemdCgroup = true\n  ✓ cka-w2: kubeadm bản 1.36 và đang hold\n  ✓ cka-w2: kubelet bản 1.36 và đang hold\n  ✓ cka-w2: kubectl bản 1.36 và đang hold\n  ✓ cka-cp: không còn container catalog (ctr) của s05\n  ✓ cka-w1: có image shop/catalog:1.0 trong k8s.io\n  ✓ cka-w2: có image shop/catalog:1.0 trong k8s.io\n  → 33/33 đạt",
+Kết quả phải là 39/39: 12 dòng mỗi node (trong đó sysctl được kiểm hai lần — giá trị đang áp và giá trị khai bền trong \`sysctl.d\`; SystemdCgroup cũng hai lần — trong \`config.toml\` và trong cấu hình containerd **đang dùng**, đọc qua \`crictl info\`), một dòng về container catalog, hai dòng về image trên worker.`,
+      verifyOutput: "lab: kiểm s06\n  ✓ cka-cp: swapon --show rỗng\n  ✓ cka-cp: /etc/fstab không còn dòng swap đang bật\n  ✓ cka-cp: module overlay đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-cp: module br_netfilter đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-cp: ba sysctl mạng bằng 1\n  ✓ cka-cp: ba sysctl khai bền bằng 1 (sysctl.d, áp lúc khởi động)\n  ✓ cka-cp: containerd active\n  ✓ cka-cp: /etc/containerd/config.toml có SystemdCgroup = true\n  ✓ cka-cp: containerd đang chạy với SystemdCgroup = true (crictl info)\n  ✓ cka-cp: kubeadm bản 1.36 và đang hold\n  ✓ cka-cp: kubelet bản 1.36 và đang hold\n  ✓ cka-cp: kubectl bản 1.36 và đang hold\n  ✓ cka-w1: swapon --show rỗng\n  ✓ cka-w1: /etc/fstab không còn dòng swap đang bật\n  ✓ cka-w1: module overlay đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w1: module br_netfilter đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w1: ba sysctl mạng bằng 1\n  ✓ cka-w1: ba sysctl khai bền bằng 1 (sysctl.d, áp lúc khởi động)\n  ✓ cka-w1: containerd active\n  ✓ cka-w1: /etc/containerd/config.toml có SystemdCgroup = true\n  ✓ cka-w1: containerd đang chạy với SystemdCgroup = true (crictl info)\n  ✓ cka-w1: kubeadm bản 1.36 và đang hold\n  ✓ cka-w1: kubelet bản 1.36 và đang hold\n  ✓ cka-w1: kubectl bản 1.36 và đang hold\n  ✓ cka-w2: swapon --show rỗng\n  ✓ cka-w2: /etc/fstab không còn dòng swap đang bật\n  ✓ cka-w2: module overlay đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w2: module br_netfilter đã nạp và có trong /etc/modules-load.d/\n  ✓ cka-w2: ba sysctl mạng bằng 1\n  ✓ cka-w2: ba sysctl khai bền bằng 1 (sysctl.d, áp lúc khởi động)\n  ✓ cka-w2: containerd active\n  ✓ cka-w2: /etc/containerd/config.toml có SystemdCgroup = true\n  ✓ cka-w2: containerd đang chạy với SystemdCgroup = true (crictl info)\n  ✓ cka-w2: kubeadm bản 1.36 và đang hold\n  ✓ cka-w2: kubelet bản 1.36 và đang hold\n  ✓ cka-w2: kubectl bản 1.36 và đang hold\n  ✓ cka-cp: không còn container catalog (ctr) của s05\n  ✓ cka-w1: có image shop/catalog:1.0 trong k8s.io\n  ✓ cka-w2: có image shop/catalog:1.0 trong k8s.io\n  → 39/39 đạt",
       projectDelta: "Chưa có cluster, nhưng cả ba node đã là \"node Kubernetes chưa join\": runtime và kubelet sẵn sàng, image shop có trên mọi node — điều kiện để chặng 2 chạy shop trên bất kỳ worker nào.",
     },
     review: [

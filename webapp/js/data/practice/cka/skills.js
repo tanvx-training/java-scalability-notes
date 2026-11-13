@@ -235,7 +235,7 @@ export const skills = [
 
   // ── s26 Mạng Pod tới Pod, CNI ──
   { id: "net-pod-network-model", kind: "concept", area: "network", label: "Mô hình mạng Kubernetes: mỗi Pod một IP, Pod gọi Pod không qua NAT" },
-  { id: "k-calico-status", kind: "command", area: "kubernetes", label: "k get tigerastatus; k get pods -n calico-system -o wide" },
+  { id: "k-calico-status", kind: "command", area: "kubernetes", label: "k -n kube-system get pods -l k8s-app=calico-node -o wide (Calico cài bằng manifest nằm ở kube-system)" },
   { id: "net-node-pod-routes", kind: "command", area: "network", label: "ip route | grep -E 'vxlan|tunl|cali' — route tới pod CIDR của node khác" },
   { id: "net-tcpdump", kind: "command", area: "network", label: "tcpdump -ni any host <IP Pod> and port 8080" },
   { id: "lx-nsenter", kind: "command", area: "linux", label: "PID=$(crictl inspect <id> | jq .info.pid); nsenter -t $PID -n ip addr" },
