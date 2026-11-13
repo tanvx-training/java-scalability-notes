@@ -1,7 +1,7 @@
 // Đồng hồ cho module Thực hành: bấm giờ (stopwatch) và đếm ngược (countdown).
-// Lưu ý: interval tự dừng ở nhịp đầu nếu `el` chưa gắn vào DOM, nên gắn `el` ngay sau khi tạo.
 // Cả hai trả về { el, ... }; stop() gọi nhiều lần vẫn an toàn. Interval tự dừng
 // khi `el` bị gỡ khỏi trang (đổi route) để không rò timer.
+// Lưu ý: interval cũng tự dừng ở nhịp đầu nếu `el` chưa gắn vào DOM, nên gắn `el` ngay sau khi tạo.
 import { h, fmtClock } from "./ui.js";
 
 function ticker(el, step) {

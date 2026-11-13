@@ -342,11 +342,15 @@ function renderSession(root, program, session) {
   const state = practiceState();
   const page = h("div", { class: "page" }, sessionHead(program, session, idx));
 
-  page.append(block("🎯 Mục tiêu", h("ul", { class: "pr-list" }, (session.goals || []).map((g) => h("li", { html: inlineMd(g) })))));
-  page.append(skillsBlock(program, session));
+  if ((session.goals || []).length) {
+    page.append(block("🎯 Mục tiêu", h("ul", { class: "pr-list" }, session.goals.map((g) => h("li", { html: inlineMd(g) })))));
+  }
+  // Native append(null) in ra chữ "null": chỉ nối các khối có thật.
+  const add = (...nodes) => page.append(...nodes.filter(Boolean));
+  add(skillsBlock(program, session));
 
   if (!isPublished(session)) {
-    page.append(stateBlock("📥 Trạng thái đầu vào", session.stateIn), stateBlock("📤 Trạng thái đầu ra", session.stateOut));
+    add(stateBlock("📥 Trạng thái đầu vào", session.stateIn), stateBlock("📤 Trạng thái đầu ra", session.stateOut));
     page.append(emptyState("🚧", "Nội dung buổi này sẽ phát hành ở đợt sau", "Khung buổi đã có; nhiệm vụ, gợi ý và lời giải sẽ bổ sung sau."));
     page.append(sessionNav(program, session));
     pushRecentSession(program, session, idx);
@@ -364,7 +368,7 @@ function renderSession(root, program, session) {
       return h("li", {}, h("a", ext ? { href: r.href, target: "_blank", rel: "noopener" } : { href: r.href }, r.label, ext ? " ↗" : ""));
     }))));
   }
-  page.append(stateBlock("📥 Trạng thái đầu vào", session.stateIn));
+  add(stateBlock("📥 Trạng thái đầu vào", session.stateIn));
   page.append(tasksBlock(program, session, state));
   page.append(hintsBlock(session));
   page.append(examBlock(program, session));
