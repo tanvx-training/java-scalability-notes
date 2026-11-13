@@ -447,8 +447,8 @@ env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" /bin/bash -c '
   vm tst-a "echo hi" 2>/dev/null
   vm tst-a "echo hi" >/dev/null 2>&1
   expect_eq "x" "" vm tst-a "echo hi"' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
-[ "$(count "$MP_LOG" '^exec tst-a')" = 3 ]; a=$?; ! has "$MP_LOG" 'EXEC-STDERR-NULL'; b=$?
-check "vm: stderr của multipass exec không phải /dev/null kể cả khi người gọi bỏ stderr" $((a+b))
+[ "$(count "$MP_LOG" '^exec tst-a')" = 3 ]; a=$?; ! has "$MP_LOG" 'EXEC-STDERR-NULL'; b=$?; ! has "$MP_LOG" 'EXEC-STDOUT-NULL'; c=$?
+check "vm: stdout/stderr của multipass exec không phải /dev/null kể cả khi người gọi bỏ chúng" $((a+b+c))
 
 # ---- vm thất bại trong điều kiện if dưới set -e (apply/setup chạy set -e) không được thoát script ----
 new_case
