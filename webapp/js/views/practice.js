@@ -8,11 +8,15 @@
 //        #/practice/<p>/mock[/<m>]  → đề mock               (Task 6)
 //        #/practice/<p>/<sessionId> → một buổi              (Task 5)
 
-import { h, pageHead, sectionTitle, codeNode, emptyState, inlineMd } from "../lib/ui.js";
+import { h, pageHead, sectionTitle, codeNode, emptyState, inlineMd, mdInto, toast } from "../lib/ui.js";
+import { createStopwatch } from "../lib/timer.js";
+import { pushRecent } from "../lib/activity.js";
+import { goTo } from "../lib/search.js";
 import { PROGRAMS, getProgram } from "../data/practice/index.js";
 import {
   RESERVED_SEGMENTS, findSession, findMock, orderedSessions, isPublished, isDone, doneCount, nextSession,
-  stageProgress, domainCoverage, projectPieces, reviewFor, weeksLeft, practiceState, sessionKey,
+  stageProgress, domainCoverage, projectPieces, reviewFor, weeksLeft, practiceState, sessionKey, taskKey,
+  neighbors, missingRequires, setDone, setTask, setNote,
 } from "../lib/practice.js";
 
 // Hàm dọn của trang đang mở (timer…). Task 5/6 đăng ký qua onCleanup().
@@ -49,7 +53,6 @@ function underConstruction(root, program, title) {
       h("a", { class: "btn", href: `#/practice/${program.id}` }, "← Về trang chủ chương trình")));
   root.append(page);
 }
-function renderSession(root, program, session) { underConstruction(root, program, `Buổi ${session.id}`); }   // Task 5
 function renderSkills(root, program) { underConstruction(root, program, "Kỹ năng"); }                         // Task 5
 function renderProject(root, program) { underConstruction(root, program, "Project"); }                       // Task 5
 function renderMock(root, program, mockId) {                                                                  // Task 6
@@ -180,7 +183,7 @@ function todayBlock(program, state, next) {
             h("summary", { html: inlineMd(r.q) }),
             h("p", { class: "muted mt-2 mb0", html: inlineMd(r.a) }))))
       : h("p", { class: "muted mt0" }, "Chưa có câu ôn từ buổi trước."),
-    savedNote ? h("div", { class: "card mt-2" }, h("strong", { class: "small" }, "Ghi chú của anh ở buổi trước"), h("p", { class: "mt-1 mb0", style: "white-space:pre-wrap" }, savedNote)) : null,
+    savedNote ? h("div", { class: "card mt-2" }, h("strong", { class: "small" }, "Ghi chú của bạn ở buổi trước"), h("p", { class: "mt-1 mb0", style: "white-space:pre-wrap" }, savedNote)) : null,
   ];
   const step3 = h("a", { class: "btn btn-primary", href: `#/practice/${program.id}/${next.id}` }, `Bắt đầu buổi ${idx} →`);
 
@@ -272,4 +275,210 @@ function mockBlock(program, rec) {
       h("span", { class: `badge badge-${pass ? "green" : "amber"}` }, `${rec.total}%`),
       h("span", { class: "muted small" }, pass ? `Đạt ngưỡng ${program.exam.passPct}%` : `Chưa đạt ngưỡng ${program.exam.passPct}%`)),
     h("a", { class: "btn btn-ghost btn-sm mt-3", href: `#/practice/${program.id}/mock` }, "Mở đề mock"));
+}
+
+// ---------- Trang một buổi ----------
+
+const SKILL_GROUPS = [
+  ["command", "⌨️ Lệnh"], ["yaml", "📄 YAML"], ["procedure", "🧭 Quy trình"],
+  ["concept", "💡 Khái niệm"], ["docs", "🔖 Trang docs"], ["path", "📁 File và đường dẫn"],
+];
+const AREA_LABEL = { vim: "vim", linux: "Linux", network: "Network" }; // khu vực khác hiện đúng mã khu vực
+// Cùng đích với lib/search.js: loại ref → trang Thực hành nhanh.
+const REF_HREF = { command: "#/commands", snippet: "#/commands/yaml", playbook: "#/commands/playbooks" };
+
+function block(title, ...body) {
+  return h("div", { class: "card mb-4" }, h("div", { class: "card-head" }, h("strong", {}, title)), body);
+}
+function md(text, cls = "prose") { const n = h("div", { class: cls }); mdInto(n, text); return n; }
+function reveal(title, ...body) {
+  return h("details", { class: "reveal" }, h("summary", {}, title), h("div", { class: "reveal-body" }, body));
+}
+
+function skillLink(program, skill) {
+  const ref = skill.ref;
+  const base = ref && REF_HREF[ref.type];
+  if (!base) return h("span", {}, skill.label);
+  // Dùng goTo() của search.js: đặt hash rồi cuộn tới anchor và làm nổi thẻ.
+  const item = { field: program.field, href: base, anchor: ref.id };
+  return h("a", { href: base, title: "Mở trong Thực hành nhanh", onclick: (e) => { e.preventDefault(); goTo(item); } }, skill.label);
+}
+
+function skillsBlock(program, session) {
+  const byId = new Map((program.skills || []).map((s) => [s.id, s]));
+  const rows = (session.skills || []).map((x) => ({ skill: byId.get(x.skill), level: x.level })).filter((r) => r.skill);
+  if (!rows.length) return null;
+  const table = h("table", { class: "table pr-skills" },
+    h("thead", {}, h("tr", {}, h("th", {}, "Kỹ năng"), h("th", {}, "Mức cần đạt"))));
+  const body = h("tbody");
+  for (const [kind, label] of SKILL_GROUPS) {
+    const group = rows.filter((r) => r.skill.kind === kind);
+    if (!group.length) continue;
+    body.append(h("tr", { class: "pr-group" }, h("th", { colspan: 2 }, label)));
+    for (const r of group) body.append(h("tr", {}, h("td", {}, skillLink(program, r.skill)), h("td", { class: "muted" }, r.level)));
+  }
+  table.append(body);
+  return block("🧰 Sau buổi này bạn làm được", h("div", { class: "table-wrap" }, table));
+}
+
+function sessionHead(program, session, idx) {
+  const stage = stageOf(program, session);
+  const domain = domainOf(program, session);
+  const req = (session.requires || []).map((id) => findSession(program, id)).filter(Boolean);
+  return [
+    crumbs(program, `Buổi ${idx}`),
+    pageHead(`${idx}. ${session.title}`, stage ? stage.title : "", `${program.label} · Buổi ${idx}`),
+    h("div", { class: "chip-row mb-4" },
+      domain ? h("span", { class: "badge badge-blue" }, `${domain.label} ${domain.weight}%`) : null,
+      session.durationMin ? h("span", { class: "badge" }, `⏱ ${session.durationMin} phút`) : null,
+      req.map((r) => h("a", { class: "badge", href: `#/practice/${program.id}/${r.id}` }, `Cần: ${r.title}`))),
+  ];
+}
+
+function stateBlock(title, text) { return text ? block(title, md(text)) : null; }
+
+function renderSession(root, program, session) {
+  const idx = indexOfSession(program, session.id) + 1;
+  const state = practiceState();
+  const page = h("div", { class: "page" }, sessionHead(program, session, idx));
+
+  page.append(block("🎯 Mục tiêu", h("ul", { class: "pr-list" }, (session.goals || []).map((g) => h("li", { html: inlineMd(g) })))));
+  page.append(skillsBlock(program, session));
+
+  if (!isPublished(session)) {
+    page.append(stateBlock("📥 Trạng thái đầu vào", session.stateIn), stateBlock("📤 Trạng thái đầu ra", session.stateOut));
+    page.append(emptyState("🚧", "Nội dung buổi này sẽ phát hành ở đợt sau", "Khung buổi đã có; nhiệm vụ, gợi ý và lời giải sẽ bổ sung sau."));
+    page.append(sessionNav(program, session));
+    pushRecentSession(program, session, idx);
+    root.append(page);
+    return;
+  }
+
+  if (session.foundation) {
+    page.append(block(`🧱 Nền tảng cần cho buổi này${session.foundation.area ? ` · ${AREA_LABEL[session.foundation.area] || session.foundation.area}` : ""}`, md(session.foundation.md)));
+  }
+  page.append(block("🧠 Tư duy", md(session.mindset)));
+  if ((session.refs || []).length) {
+    page.append(block("📖 Tham chiếu", h("ul", { class: "pr-list" }, session.refs.map((r) => {
+      const ext = !String(r.href).startsWith("#/");
+      return h("li", {}, h("a", ext ? { href: r.href, target: "_blank", rel: "noopener" } : { href: r.href }, r.label, ext ? " ↗" : ""));
+    }))));
+  }
+  page.append(stateBlock("📥 Trạng thái đầu vào", session.stateIn));
+  page.append(tasksBlock(program, session, state));
+  page.append(hintsBlock(session));
+  page.append(examBlock(program, session));
+  if ((session.tips || []).length) {
+    page.append(block("⚡ Tips", h("ul", { class: "pr-list" }, session.tips.map((t) => h("li", { html: inlineMd(t) })))));
+  }
+  page.append(outcomeBlock(session));
+  page.append(finishBlock(program, session, state));
+  page.append(sessionNav(program, session));
+  pushRecentSession(program, session, idx);
+  root.append(page);
+}
+
+function pushRecentSession(program, session, idx) {
+  pushRecent({ type: "lab", icon: program.icon, title: `Buổi ${idx}: ${session.title}`, sub: program.label,
+    field: program.field, href: `#/practice/${program.id}/${session.id}` });
+}
+
+function tasksBlock(program, session, state) {
+  const tasks = session.tasks || [];
+  const count = h("span", { class: "faint" });
+  const refresh = () => {
+    const n = tasks.filter((t) => practiceState().tasks[taskKey(program.id, session.id, t.id)]).length;
+    count.textContent = `${n} / ${tasks.length} bước`;
+  };
+  const list = h("div", { class: "pr-tasks" }, tasks.map((t) => {
+    const box = h("input", { type: "checkbox", id: `pr-${session.id}-${t.id}` });
+    box.checked = !!state.tasks[taskKey(program.id, session.id, t.id)];
+    box.addEventListener("change", () => { setTask(program.id, session.id, t.id, box.checked); refresh(); });
+    return h("label", { class: "pr-task", for: box.id }, box, h("span", { html: inlineMd(t.text) }));
+  }));
+  refresh();
+  return h("div", { class: "card mb-4" }, h("div", { class: "card-head" }, h("strong", {}, "📋 Nhiệm vụ"), count), list);
+}
+
+function hintsBlock(session) {
+  const hints = session.hints || [];
+  return h("div", { class: "mb-4" },
+    hints.map((t, i) => reveal(`💡 Gợi ý ${i + 1}`, h("p", { class: "mt0 mb0", html: inlineMd(t) }))),
+    session.solution ? reveal("🔓 Cách xử lý", md(session.solution)) : null);
+}
+
+function examBlock(program, session) {
+  const domain = domainOf(program, session);
+  const ex = session.exam || {};
+  const box = block(`🎓 Trong đề thi${domain ? ` · ${domain.label} ${domain.weight}%` : ""}`);
+  if ((ex.patterns || []).length) {
+    box.append(h("p", { class: "muted small mt0" }, "Dạng câu thường gặp:"),
+      h("ul", { class: "pr-list" }, ex.patterns.map((t) => h("li", { html: inlineMd(t) }))));
+  }
+  if (ex.timeTargetMin) box.append(h("p", { class: "small" }, `⏱ Thời gian mục tiêu trong phòng thi: `, h("strong", {}, `${ex.timeTargetMin} phút`), " cho mỗi câu dạng này."));
+  (ex.drills || []).forEach((d, i) => {
+    const slot = h("span", { class: "pr-drill-clock" });
+    const det = h("details", { class: "reveal" },
+      h("summary", {}, `Câu luyện ${i + 1}`, d.timeLimitMin ? ` · giới hạn ${d.timeLimitMin} phút` : "", " ", slot),
+      h("div", { class: "reveal-body" }, h("div", { html: inlineMd(d.text) }), reveal("Lời giải", md(d.solution))));
+    let sw = null, used = false;
+    // Bấm giờ khi mở câu, dừng khi đóng; mỗi câu chỉ bấm một lần.
+    det.addEventListener("toggle", () => {
+      if (det.open && !used) {
+        used = true;
+        sw = createStopwatch({ limitSec: d.timeLimitMin ? d.timeLimitMin * 60 : undefined });
+        slot.append(sw.el); // gắn vào DOM ngay, trước nhịp đầu (timer.js tự dừng nếu el chưa gắn)
+        onCleanup(sw.stop);
+      } else if (!det.open && sw) sw.stop();
+    });
+    box.append(det);
+  });
+  return box;
+}
+
+function outcomeBlock(session) {
+  const o = session.outcome || {};
+  return block("✅ Kết quả mong muốn", md(o.md),
+    o.verifyOutput ? [h("p", { class: "small muted mb-1" }, "Output kỳ vọng của ", h("code", {}, "./lab verify"), ":"), cmd(o.verifyOutput)] : null,
+    o.projectDelta ? h("p", { class: "small mt-2 mb0" }, h("strong", {}, "Project thay đổi: "), h("span", { html: inlineMd(o.projectDelta) })) : null);
+}
+
+function finishBlock(program, session, state) {
+  const doneBtn = h("button", { class: "btn" });
+  const paint = () => {
+    const on = isDone(program, session.id, practiceState().done);
+    doneBtn.textContent = on ? "✓ Đã hoàn thành (bấm để bỏ)" : "Đánh dấu hoàn thành";
+    doneBtn.className = on ? "btn" : "btn btn-primary";
+  };
+  doneBtn.addEventListener("click", () => {
+    const on = !isDone(program, session.id, practiceState().done);
+    setDone(program.id, session.id, on);
+    if (on) {
+      const miss = missingRequires(program, session.id, practiceState().done);
+      if (miss.length) toast(`Bạn còn thiếu buổi tiên quyết: ${miss.map((id) => (findSession(program, id) || {}).title || id).join("; ")}`, "info", 5000);
+    }
+    paint();
+  });
+  paint();
+
+  const noteKey = sessionKey(program.id, session.id);
+  const area = h("textarea", { class: "input", rows: 4, placeholder: "Điều bạn rút ra, chỗ vấp, lệnh cần nhớ…" });
+  area.value = state.notes[noteKey] || "";
+  const save = () => setNote(program.id, session.id, area.value.trim());
+  area.addEventListener("blur", save);
+  onCleanup(save); // rời trang khi đang gõ dở vẫn giữ được
+
+  return h("div", { class: "card mb-4" },
+    h("div", { class: "card-head" }, h("strong", {}, "Hoàn thành & ghi chú")),
+    h("p", { class: "muted small mt0" }, "Bấm sau khi ", h("code", {}, "./lab verify"), " đạt."), doneBtn,
+    h("label", { class: "small muted mt-3", style: "display:block", for: "pr-note" }, "Ghi chú của tôi (hiện ở bước ôn của buổi kế tiếp)"),
+    (area.id = "pr-note", area));
+}
+
+function sessionNav(program, session) {
+  const { prev, next } = neighbors(program, session.id);
+  const link = (s, label, cls) => s
+    ? h("a", { class: `btn ${cls}`, href: `#/practice/${program.id}/${s.id}` }, `${label} ${s.title}`)
+    : h("span");
+  return h("div", { class: "flex pr-nav" }, link(prev, "←", "btn-ghost"), h("span", { class: "grow" }), link(next, "→", "btn-ghost"));
 }
