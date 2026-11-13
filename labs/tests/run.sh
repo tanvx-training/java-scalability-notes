@@ -439,6 +439,29 @@ for args in "transfer f cp1:/tmp/x" "exec cp1 -- bash -lc sudo"; do
   check "mp $args: từ chối, log rỗng" $((a+b))
 done
 
+# ---- vm: multipass exec không bao giờ nhận stderr là /dev/null (1.16.3 treo khi đó) ----
+new_case
+RC=0
+env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" /bin/bash -c '
+  . "$1/lib/core.sh"; . "$1/lib/multipass.sh"; . "$1/lib/assert.sh"; load_program tst
+  vm tst-a "echo hi" 2>/dev/null
+  vm tst-a "echo hi" >/dev/null 2>&1
+  expect_eq "x" "" vm tst-a "echo hi"' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
+[ "$(count "$MP_LOG" '^exec tst-a')" = 3 ]; a=$?; ! has "$MP_LOG" 'EXEC-STDERR-NULL'; b=$?
+check "vm: stderr của multipass exec không phải /dev/null kể cả khi người gọi bỏ stderr" $((a+b))
+
+# ---- vm thất bại trong điều kiện if dưới set -e (apply/setup chạy set -e) không được thoát script ----
+new_case
+RC=0
+env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" MP_FAIL=exec /bin/bash -c '
+  . "$1/lib/core.sh"; . "$1/lib/multipass.sh"; load_program tst
+  set -e
+  if vm tst-a "test -f /x"; then echo co; else echo khong; fi
+  vm tst-a "false" || echo bat-duoc
+  echo het' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" '^khong$'; b=$?; has "$OUT" '^bat-duoc$'; c=$?; has "$OUT" '^het$'; d=$?
+check "vm lỗi trong if / || dưới set -e: script chạy tiếp (bash 3.2)" $((a+b+c+d))
+
 # ---- Lint: lib và lab không chứa chương trình cụ thể ----
 hits="$(grep -ril "cka\|kubernetes" "$LABS/lib" "$LABS/lab" 2>/dev/null)"
 [ -z "$hits" ]; check "lib/lab không chứa 'cka' hay 'kubernetes'" $?

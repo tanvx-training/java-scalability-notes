@@ -96,7 +96,11 @@ mp() {
   if [ "$sub" != list ] && [ "$checked" -eq 0 ]; then
     die "mp: '$sub' không chỉ rõ VM nào, từ chối"
   fi
-  command multipass "$sub" "$@"
+  # Không dùng `command multipass`: trong bash 3.2, `command X` thất bại dưới set -e làm thoát shell
+  # kể cả khi nằm trong if / || (apply.sh, setup.sh chạy với set -e). Lấy đường dẫn thật từ PATH.
+  local bin
+  bin="$(type -P multipass)" || die "chưa cài multipass"
+  "$bin" "$sub" "$@"
 }
 
 # vm_field <tên> <cột: 2=State 3=IPv4>: lấy từ `list --format csv` (dòng cuối thắng)
@@ -110,9 +114,11 @@ vm_field() {
 vm_state() { vm_field "$1" 2; }
 
 # vm <tên> <lệnh…>: chạy lệnh trong VM
+# stderr của multipass luôn đi qua một pipe: multipass 1.16.3 treo (quay CPU mãi) khi stderr
+# của nó là /dev/null mà lệnh trong VM ghi ra stderr — đúng tình huống `vm … 2>/dev/null`.
 vm() {
   local name="$1"; shift
-  mp exec "$name" -- bash -lc "$*"
+  mp exec "$name" -- bash -lc "$*" 2> >(cat >&2)
 }
 
 # vm_put <nguồn> <tên> <đích>

@@ -20,6 +20,10 @@ case "$sub" in
     [ -f "$run" ] && cat "$run"
     ;;
   exec)
+    # multipass 1.16.3 thật treo (quay CPU) khi stderr là /dev/null mà lệnh trong VM ghi ra stderr: ghi dấu để test bắt
+    if [ -n "${MP_LOG:-}" ] && [ "$(stat -L -f '%d:%i' /dev/fd/3 3>&2 2>/dev/null)" = "$(stat -L -f '%d:%i' /dev/null)" ]; then
+      echo "EXEC-STDERR-NULL $2" >> "$MP_LOG"
+    fi
     # MP_NOCTR: các tên VM chưa có containerd (`command -v ctr` thất bại)
     case "$*" in *"command -v ctr"*) for n in ${MP_NOCTR:-}; do [ "$2" = "$n" ] && exit 1; done ;; esac
     ;;
