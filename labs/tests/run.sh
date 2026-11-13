@@ -54,11 +54,19 @@ for args in "delete cp1" "restore w1.snap" "delete tst-a cp1" "stop w2" "start -
             "stop -c cp1 tst-a" "exec -n cp1 tst-a -- ls" "restore -d cp1.snap tst-a.snap" \
             "delete -pa tst-a" "delete -ap tst-a" "delete --all" "delete --bogus tst-a" \
             "launch --name=cp1 24.04" "launch --bridged --name tst-a 24.04" "stop -t 1 tst-a" \
-            "delete --purge=1 tst-a"; do
+            "delete --purge=1 tst-a" \
+            "stop -a:-v tst-a" "stop -at:-v tst-a" "delete -pa:-v tst-a" "delete -a:--purge tst-a" \
+            "stop --all:-v tst-a" "stop -v2 tst-a" "stop -vv tst-a"; do
   new_case; guard_direct $args
   [ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
   check "mp $args: từ chối, log rỗng" $((a+b))
 done
+new_case; guard_direct stop "--force --all" tst-a
+[ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+check "mp stop '--force --all' (token có khoảng trắng): từ chối" $((a+b))
+new_case; guard_direct stop "-v tst-a"
+[ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+check "mp stop '-v tst-a' (một token): từ chối" $((a+b))
 for args in "stop tst-a" "restore tst-a.snap" "info tst-a tst-b" "exec tst-a -- ls cp1" "transfer f tst-a:/tmp" "delete --purge tst-a" "delete -p tst-a" "list --format csv" "launch --name tst-a --cpus 1 --memory 1G --disk 5G 24.04" "exec -n tst-a -- ls" "restore -d tst-a.snap"; do
   new_case; guard_direct $args
   [ "$RC" -eq 0 ]; a=$?; [ "$(wc -l < "$MP_LOG" | tr -d ' ')" = 1 ]; b=$?

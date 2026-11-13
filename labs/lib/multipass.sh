@@ -18,18 +18,40 @@ guard_vm() {
 # Danh sách cho phép theo từng lệnh con (đối chiếu `multipass help <lệnh>`); mặc định là từ chối.
 # Không nhận dạng gộp (-pa) hay dạng --opt=value.
 mp_opt_kind() {
-  case "$1:$2" in
-    *:-v) echo flag ;;
-    launch:--name|launch:--cpus|launch:--memory|launch:--disk|launch:--timeout) echo value ;;
-    start:--timeout) echo value ;;
-    stop:--force) echo flag ;;
-    delete:--purge|delete:-p) echo flag ;;
-    list:--format|info:--format) echo value ;;
-    exec:-n|exec:--no-map-working-directory) echo flag ;;
-    exec:-d|exec:--working-directory) echo value ;;
-    transfer:-r|transfer:--recursive|transfer:-p|transfer:--parents) echo flag ;;
-    snapshot:--name|snapshot:-n|snapshot:--comment) echo value ;;
-    restore:--destructive|restore:-d) echo flag ;;
+  local sub="$1" opt="$2"
+  # Hình dạng: đúng "-<một chữ cái>" hoặc "--<chữ thường và dấu gạch>"; mọi thứ khác bị loại.
+  case "$opt" in
+    -[a-zA-Z]) ;;
+    --[a-z]*) case "$opt" in *[!a-z-]*) return 1 ;; esac ;;
+    *) return 1 ;;
+  esac
+  case "$opt" in -v) echo flag; return 0 ;; esac
+  case "$sub" in
+    launch)
+      case "$opt" in
+        --name|--cpus|--memory|--disk|--timeout) echo value ;;
+        *) return 1 ;;
+      esac ;;
+    start)
+      case "$opt" in --timeout) echo value ;; *) return 1 ;; esac ;;
+    stop)
+      case "$opt" in --force) echo flag ;; *) return 1 ;; esac ;;
+    delete)
+      case "$opt" in --purge|-p) echo flag ;; *) return 1 ;; esac ;;
+    list|info)
+      case "$opt" in --format) echo value ;; *) return 1 ;; esac ;;
+    exec)
+      case "$opt" in
+        -n|--no-map-working-directory) echo flag ;;
+        -d|--working-directory) echo value ;;
+        *) return 1 ;;
+      esac ;;
+    transfer)
+      case "$opt" in -r|--recursive|-p|--parents) echo flag ;; *) return 1 ;; esac ;;
+    snapshot)
+      case "$opt" in --name|-n|--comment) echo value ;; *) return 1 ;; esac ;;
+    restore)
+      case "$opt" in --destructive|-d) echo flag ;; *) return 1 ;; esac ;;
     *) return 1 ;;
   esac
 }
