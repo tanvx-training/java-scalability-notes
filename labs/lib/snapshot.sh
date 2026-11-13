@@ -29,11 +29,12 @@ milestone_names() {
 # instance chưa tồn tại). Mã khác (daemon không trả lời, lỗi lạ) là lỗi dò: dừng hẳn, không đoán là "không có",
 # vì "không có mốc" dẫn tới nhánh xoá và dựng lại VM.
 snap_exists() {
-  local rc=0
-  mp info "$1.$2" --format csv >/dev/null 2>&1 || rc=$?
+  local rc=0 out
+  out="$(mp info "$1.$2" --format csv 2>&1)" || rc=$?
   case "$rc" in
     0) return 0 ;;
-    2) return 1 ;;
+    2) # mã 2 là mã lỗi chung của multipass: chỉ tin là "không có" khi chính thông báo nói vậy
+       case "$out" in *"No such snapshot"*|*"does not exist"*) return 1 ;; esac ;;
   esac
   die "không dò được snapshot $1.$2 (multipass trả mã $rc), dừng lại, không đổi gì"
 }

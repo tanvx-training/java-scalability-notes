@@ -1539,7 +1539,8 @@ await check("PR8 — buổi đã phát hành có đủ nội dung; link #/docs, 
       if (s.domain && !strList(s.exam?.patterns, 1)) bad.push(`${at}: exam.patterns cần ≥1`);
       if (hasExam(p) && !(Number.isFinite(s.exam?.timeTargetMin) && s.exam.timeTargetMin > 0)) bad.push(`${at}: thiếu exam.timeTargetMin`);
       if (!strList(s.tips, 2)) bad.push(`${at}: tips cần ≥2`);
-      for (const k of ["md", "verifyOutput", "projectDelta"]) {
+      const outcomeKeys = (p.project?.pieces?.length ? ["md", "verifyOutput", "projectDelta"] : ["md", "verifyOutput"]);
+      for (const k of outcomeKeys) {
         if (!nonEmptyStr(s.outcome?.[k])) bad.push(`${at}: thiếu outcome.${k}`);
       }
       const review = s.review ?? [];

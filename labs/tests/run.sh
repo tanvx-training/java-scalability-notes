@@ -298,9 +298,13 @@ done
 sess_case; MP_FAIL=info; MP_FAIL_RC=3; export MP_FAIL MP_FAIL_RC; run_lab "" snapshot tst manual-1 --yes
 [ "$RC" -ne 0 ]; a=$?; has "$ERR" 'không dò được snapshot'; b=$?; ! has "$MP_LOG" '^delete\|^snapshot\|^stop'; c=$?
 check "snapshot khi dò snapshot lỗi: dừng trước khi dừng VM" $((a+b+c))
-sess_case; MP_FAIL=info; export MP_FAIL; run_lab "" restore tst a3 --yes
+sess_case; run_lab "" restore tst a3 --yes
 [ "$RC" -eq 0 ]; a=$?; has "$MP_LOG" '^delete --purge tst-a tst-b$'; b=$?
-check "restore khi multipass trả 2 (không có snapshot): dựng lại như cũ" $((a+b))
+check "restore khi multipass trả 2 kèm 'No such snapshot': dựng lại như cũ" $((a+b))
+# Mã 2 là mã lỗi chung của multipass: không kèm thông báo "không có" thì vẫn là lỗi dò, phải dừng.
+sess_case; MP_FAIL=info; export MP_FAIL; run_lab "" restore tst a3 --yes
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" 'không dò được snapshot'; b=$?; ! has "$MP_LOG" '^delete\|^restore\|^stop\|^launch'; c=$?
+check "restore --yes khi multipass trả 2 với lỗi khác: dừng, không xoá VM" $((a+b+c))
 
 # Restore về buổi trước mốc đầu tiên: lời hỏi nói rõ snapshot (cả mốc sau) sẽ mất theo VM.
 ms="$WORK/fx-ms"; rm -rf "$ms"; cp -R "$HERE/fixtures/tst" "$ms.tmp"; mkdir -p "$ms"; mv "$ms.tmp" "$ms/tst"

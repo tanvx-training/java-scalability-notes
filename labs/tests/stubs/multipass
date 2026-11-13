@@ -11,7 +11,7 @@ case "$sub" in
   info)
     # <VM>.<snapshot> chỉ tồn tại nếu có trong MP_SNAPS (các từ cách nhau bằng khoảng trắng)
     for a in "$@"; do
-      case "$a" in *.*) case " ${MP_SNAPS:-} " in *" $a "*) ;; *) echo "stub: no snapshot $a" >&2; exit 2 ;; esac ;; esac
+      case "$a" in *.*) case " ${MP_SNAPS:-} " in *" $a "*) ;; *) echo "info failed: The following errors occurred:" >&2; echo "No such snapshot: $a" >&2; exit 2 ;; esac ;; esac
     done
     ;;
   list)
