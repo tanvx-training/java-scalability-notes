@@ -72,7 +72,7 @@ export const skills = [
   // ── s07 kubeadm init, CNI, join ──
   { id: "k-kubeadm-init", kind: "command", area: "kubernetes", label: "kubeadm init --pod-network-cidr=<CIDR> --apiserver-advertise-address=<IP cka-cp>", ref: cmd("ca001") },
   { id: "k-kubeconfig-admin", kind: "path", area: "kubernetes", label: "/etc/kubernetes/admin.conf → ~/.kube/config (chown theo user)" },
-  { id: "k-calico-install", kind: "procedure", area: "kubernetes", label: "Cài Calico bằng tigera-operator và custom-resources.yaml khớp pod CIDR" },
+  { id: "k-calico-install", kind: "procedure", area: "kubernetes", label: "Cài Calico từ manifest calico.yaml (ghim phiên bản): kubectl apply -f, kiểm IPPool khớp pod CIDR" },
   { id: "k-kubeadm-token", kind: "command", area: "kubernetes", label: "kubeadm token create --print-join-command", ref: cmd("ca002") },
   { id: "k-join-worker", kind: "procedure", area: "kubernetes", label: "Join worker: chuẩn bị node → kubeadm join … → kiểm Ready", ref: pb("pb-join-worker") },
   { id: "k-get-nodes-wide", kind: "command", area: "kubernetes", label: "k get nodes -o wide", ref: cmd("ca014") },

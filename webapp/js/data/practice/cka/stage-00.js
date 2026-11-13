@@ -592,7 +592,7 @@ apt-mark showhold             # jq
 |---|---|---|
 | Card nào, IP gì? | \`ip -br addr\` | tên card (\`enp0s1\`), trạng thái, IP/độ dài prefix |
 | Gói đi ra ngoài qua đâu? | \`ip route\`, \`ip route get 1.1.1.1\` | dòng \`default via <gateway> dev <card>\` |
-| Hỏi DNS ai? | \`resolvectl status\` hoặc \`resolvectl dns\` | \`/etc/resolv.conf\` chỉ ghi \`127.0.0.53\` — đó là **stub** của systemd-resolved trên chính máy; máy chủ DNS thật (DHCP cấp) nằm ở \`DNS Servers:\` của card; \`Current DNS Server:\` là cái stub đang dùng lúc này |
+| Hỏi DNS ai? | \`resolvectl status\` hoặc \`resolvectl dns\` | \`/etc/resolv.conf\` chỉ ghi \`127.0.0.53\` — đó là **stub** của systemd-resolved trên chính máy; máy chủ DNS cấu hình cho card (học qua DHCP/RA) nằm ở \`DNS Servers:\` của card; \`Current DNS Server:\` là cái stub đang dùng lúc này |
 | Ai đang nghe cổng nào? | \`sudo ss -tlnp\` | \`t\` TCP, \`l\` đang nghe, \`n\` số, \`p\` tiến trình (cần root) |
 | Tới được dịch vụ kia không? | \`nc -zv -w2 host port\`, \`curl -sv http://host:port/\` | \`succeeded\` / \`refused\` / timeout |
 
@@ -662,7 +662,7 @@ EOF
 
 Thay bằng giá trị trên máy bạn (PID của sshd đổi sau mỗi lần khởi động). Trên Multipass, DHCP của Mac thường cấp cùng một địa chỉ cho gateway và DNS — đó là sự trùng hợp của môi trường, không phải quy luật.
 
-Thử xem máy chủ đó có trả lời thật không: \`dig +short @192.168.252.1 pkgs.k8s.io\`. Trên máy soạn bài này nó trả \`connection refused\` — Mac không phục vụ DNS ở địa chỉ IPv4 đó — và \`journalctl -u systemd-resolved\` cho thấy stub đã chuyển sang server IPv6 \`fe80::…\` (chính là \`Current DNS Server\`): \`dig +short @fe80::…%enp0s1 pkgs.k8s.io\` trả lời bình thường. Máy bạn có thể khác. Đây đúng là cách chẩn đoán DNS: hỏi thẳng từng server bằng \`dig @server\`, đừng tin cấu hình. Đáp án \`DNS_SERVER\` của bài vẫn là địa chỉ IPv4 cấu hình cho card.
+Thử xem máy chủ đó có trả lời thật không: \`dig +short @192.168.252.1 pkgs.k8s.io\`. Trên máy soạn bài này nó trả \`connection refused\` — Mac không phục vụ DNS ở địa chỉ IPv4 đó — và \`resolvectl status\` cho thấy stub đang dùng server IPv6 \`fe80::…\` (dòng \`Current DNS Server\`): \`dig +short @fe80::…%enp0s1 pkgs.k8s.io\` trả lời bình thường. Máy bạn có thể khác. Đây đúng là cách chẩn đoán DNS: hỏi thẳng từng server bằng \`dig @server\`, đừng tin cấu hình. Đáp án \`DNS_SERVER\` của bài vẫn là địa chỉ IPv4 cấu hình cho card.
 
 **2. Hai "Pod" nối bằng veth** (\`sudo -i\`):
 
