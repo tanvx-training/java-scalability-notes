@@ -1,5 +1,5 @@
 # s07 — kiểm: ba node Ready đúng minor, calico-node Running trên từng node, kubectl chạy bằng user ubuntu trên cka-cp,
-# Pod trên cka-w1 ping được Pod trên cka-w2 (namespace tạm, tự xoá: thứ duy nhất verify tạo ra).
+# Pod trên cka-w1 ping được Pod trên cka-w2 (namespace tạm, xoá và chờ xoá xong trước khi kết thúc: thứ duy nhất verify tạo ra).
 # Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
 minor_re="$(printf '%s' "$K8S_INSTALL_MINOR" | sed 's/\./\\./g')"

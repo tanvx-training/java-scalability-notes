@@ -19,5 +19,8 @@ for v in $LAB_VMS; do
     systemctl is-active --quiet kubelet && systemctl is-enabled --quiet kubelet" \
     || { echo "s09: kubelet trên $v chưa active/enabled sau khi sửa" >&2; exit 1; }
 done
+# Sau khi bật VM (vd. ngay sau restore về mốc st1-done) apiserver cần một lúc mới nhận kết nối: chờ có giới hạn.
+vm "$LAB_CP" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
+  echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
 echo "s09: chờ ba node Ready"
 vm "$LAB_CP" "kubectl wait --for=condition=Ready node --all --timeout=300s >/dev/null"

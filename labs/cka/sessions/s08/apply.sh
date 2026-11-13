@@ -4,6 +4,9 @@
 cp="$LAB_CP"
 w1=""
 for v in $LAB_VMS; do [ "$v" = "$cp" ] || { w1="$v"; break; }; done
+# Sau khi bật VM (vd. ngay sau restore về mốc st1-done) apiserver cần một lúc mới nhận kết nối: chờ có giới hạn.
+vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
+  echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")")"
 printf '%s\n' "$facts" | grep -q '^APISERVER_CERT_EXPIRY=[0-9]' || { echo "s08: không đọc được giá trị cluster: $facts" >&2; exit 1; }
 vm "$cp" "mkdir -p ~/drills/s08 && cat > ~/drills/s08/answers.env <<'EOF2'
@@ -11,7 +14,8 @@ $facts
 EOF2"
 vm "$w1" "sudo install -d -m 755 /etc/kubernetes/manifests"
 vm_put "$SESSION_DIR/files/web-static.yaml" "$w1" /tmp/web-static.yaml
-vm "$w1" "sudo install -m 644 /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml && rm -f /tmp/web-static.yaml"
+# Chỉ ghi khi nội dung khác: ghi lại tệp manifest (dù cùng nội dung) làm kubelet chạy lại static pod (đã thấy restartCount tăng)
+vm "$w1" "sudo cmp -s /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml || sudo install -m 644 /tmp/web-static.yaml /etc/kubernetes/manifests/web-static.yaml; rm -f /tmp/web-static.yaml"
 vm "$cp" "grep -qxF 'source <(kubectl completion bash)' ~/.bashrc || echo 'source <(kubectl completion bash)' >> ~/.bashrc
 grep -qxF 'complete -o default -F __start_kubectl k' ~/.bashrc || echo 'complete -o default -F __start_kubectl k' >> ~/.bashrc"
 echo "s08: chờ Pod web-static-$w1 Running"

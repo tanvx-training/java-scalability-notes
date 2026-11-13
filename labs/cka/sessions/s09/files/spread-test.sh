@@ -5,7 +5,7 @@
 set -u
 want="$(printf '%s\n' "$@" | sort | tr '\n' ' ')"
 ns="lab-verify-$(date +%s)-$$"
-trap 'kubectl delete namespace "$ns" --wait=false >/dev/null 2>&1' EXIT
+trap 'kubectl delete namespace "$ns" --timeout=90s >/dev/null 2>&1' EXIT
 kubectl create namespace "$ns" >/dev/null || exit 1
 kubectl -n "$ns" apply -f - >/dev/null <<'YAML' || exit 1
 apiVersion: apps/v1
