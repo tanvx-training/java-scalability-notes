@@ -343,8 +343,8 @@ labs/
 
 - Chỉ đụng VM có tiền tố của chương trình (xem A3). `destroy` và `restore` phải liệt kê VM sẽ bị tác động trước khi làm.
 - Script trong `lib/` không chứa tên chương trình; mọi thứ riêng của CKA nằm trong `labs/cka/`.
-- `check-data.mjs` đối chiếu: mỗi buổi trong dữ liệu có `labs/<program>/sessions/<id>/verify.sh`, và mỗi thư mục buổi có buổi tương ứng trong dữ liệu; tương tự cho mock.
-- `verify.sh` không sửa cluster.
+- `check-data.mjs` đối chiếu: mỗi buổi trong dữ liệu có `labs/<program>/sessions/<id>/verify.sh`, và mỗi thư mục buổi có buổi tương ứng trong dữ liệu; tương tự cho mock (hai chiều), cộng dòng `milestones` và id `lab_break` phải trỏ tới thứ có thật (PR11).
+- `verify.sh` không sửa trạng thái mà buổi học tạo ra. Ngoại lệ có chủ ý: khi cần thử một hành vi (vd. Pod chạy được, DNS phân giải trong cluster), `verify.sh` được chép một script trợ giúp vào `/tmp` của control plane (tệp này ở lại, chạy lại thì bị ghi đè) và tạo một **namespace tạm** cùng Pod trong đó; namespace **bị xoá trước khi script thoát** (s07, s09 làm vậy). Vì `check` chạy `verify.sh` của buổi trước, điều này cũng áp cho `check`.
 
 ## 9. Thứ tự giao hàng [Tự quyết, cần người dùng biết]
 

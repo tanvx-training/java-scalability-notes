@@ -15,6 +15,5 @@ webapp/content/
 # Artifact build (image tar/zip) — không commit, sinh lại bằng docker buildx
 dist/
 
-# Mockup brainstorm và trạng thái cục bộ của bộ lệnh lab — không commit
+# Mockup brainstorm — không commit
 .superpowers/brainstorm/
-labs/.state/

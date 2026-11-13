@@ -36,16 +36,16 @@ Chạy từ **gốc repo**: `./labs/lab <lệnh> <chương trình> [đối số�
 | `down <ct>` | Dừng các VM đang chạy, giữ nguyên dữ liệu |
 | `status <ct>` | Bảng tên, trạng thái, IPv4 của từng VM |
 | `destroy <ct>` | Xoá hẳn (purge) các VM của chương trình. Liệt kê VM rồi hỏi `y/N`; thêm `--yes` để bỏ hỏi |
-| `check <ct> <buổi>` | Kiểm **đầu vào** của buổi, không sửa gì. VM phải đang chạy; rồi chạy `check.sh` của buổi nếu có, nếu không thì `verify.sh` của buổi đứng trước trong `ORDER`. Với buổi đầu tiên trong `ORDER` không chạy script nào, chỉ đòi VM đang chạy |
+| `check <ct> <buổi>` | Kiểm **đầu vào** của buổi, không sửa trạng thái buổi học (xem ghi chú về `verify` ngay dưới). VM phải đang chạy; rồi chạy `check.sh` của buổi nếu có, nếu không thì `verify.sh` của buổi đứng trước trong `ORDER`. Với buổi đầu tiên trong `ORDER` không chạy script nào, chỉ đòi VM đang chạy |
 | `begin <ct> <buổi>` | `check` rồi chạy `setup.sh` của buổi (nếu có): đặt tệp bài tập, hoặc gây lỗi cho buổi sự cố. Đầu vào chưa đạt thì dừng và gợi ý `restore` về buổi trước. Đây là bước khởi động mà trang buổi học hiển thị |
-| `verify <ct> <buổi>` | Chạy `verify.sh` của buổi: kiểm **kết quả** bạn làm. Thoát mã 0 khi mọi mục đạt |
+| `verify <ct> <buổi>` | Chạy `verify.sh` của buổi: kiểm **kết quả** bạn làm. Thoát mã 0 khi mọi mục đạt. Có buổi (với `cka`: s07, s09) cần thử thật một hành vi nên `verify` chép một script trợ giúp vào `/tmp` của control plane và tạo một **namespace tạm** có Pod; namespace bị xoá trước khi `verify` thoát. `check` chạy `verify` của buổi trước nên cũng vậy |
 | `restore <ct> <buổi>` | Đưa VM về trạng thái sau khi hoàn thành buổi đó (xem bên dưới). Hỏi xác nhận, `--yes` để bỏ hỏi |
 | `break <ct> <mã-lỗi>` | Gây một lỗi có chủ ý, theo `labs/<ct>/breaks/<mã-lỗi>/run.sh`, để luyện sự cố |
 | `mock <ct> <đề> start` | Bắt đầu một đề mock: chạy `mocks/<đề>/setup.sh` |
 | `mock <ct> <đề> score` | Chấm đề: chạy `mocks/<đề>/score.sh`, in bảng điểm theo domain và một dòng `devprep-mock:v1:…` để dán vào trang Thực hành |
 | `selftest <ct> [--from <buổi>]` | Kiểm chính bộ lab: lần lượt chạy `apply.sh` rồi `verify.sh` của mọi buổi. Không có `--from` thì **xoá và dựng lại** VM sạch trước (có hỏi). Có `--from` thì dùng VM đang chạy và bắt đầu từ buổi đó. Dừng ở lỗi đầu tiên |
 | `snapshot <ct> <tên>` | Dừng VM, chụp snapshot cùng tên cho mọi VM của chương trình (ghi đè nếu đã có, có hỏi), rồi bật lại |
-| `images <ct>` | Build (nếu chưa có) và nạp image ứng dụng của chương trình vào containerd của từng VM đang chạy |
+| `images <ct>` | Chọn các VM đang chạy và đã có containerd, rồi mới build (nếu chưa có) và nạp image ứng dụng vào containerd của từng VM đó, trong namespace `LAB_CTR_NAMESPACE` của chương trình. Không VM nào nhận được thì dừng với mã khác 0, không build gì |
 | `help` | In trợ giúp |
 
 Với mọi lệnh, thêm `--yes` hoặc `-y` để bỏ các câu hỏi xác nhận. `up`, `down`, `status`, `destroy`, `images` không nhận đối số nào ngoài tên chương trình.
@@ -58,8 +58,10 @@ Chương trình có thể khai các **mốc** trong tệp `labs/<ct>/milestones`
 
 1. Tìm mốc gần nhất tại hoặc trước buổi đích mà **mọi** VM đều có snapshot.
 2. Có mốc: khôi phục mọi VM về snapshot đó, rồi bật lên. **Áp lại `apply.sh` của chính buổi mốc**, rồi `apply.sh` của các buổi sau mốc cho tới buổi đích. Lý do: snapshot chụp lúc VM đã dừng nên phần không bền của kết quả buổi mốc (netns, container chạy bằng tay…) không có trong đó; `apply.sh` chạy lại được nên áp lại là an toàn.
-3. Không có mốc: xoá hẳn và dựng lại VM, rồi áp `apply.sh` từ buổi đầu tới buổi đích.
+3. Không có mốc (ví dụ buổi đích đứng trước mốc đầu tiên): xoá hẳn và dựng lại VM, rồi áp `apply.sh` từ buổi đầu tới buổi đích. **Xoá VM là mất luôn mọi snapshot của nó, kể cả mốc của các buổi sau**; lời hỏi xác nhận liệt kê các mốc sẽ mất. Sau đó mỗi lần `restore` về buổi sau mốc lại phải dựng từ đầu, cho tới khi bạn chụp lại mốc bằng `selftest` hoặc `snapshot` (restore không tự chụp mốc).
 4. Cuối cùng chạy `verify.sh` của buổi đích.
+
+Dò snapshot dựa vào mã thoát của `multipass info <vm>.<snapshot>`: 0 là có, 2 là không có. Mã khác (daemon không trả lời, lỗi lạ), hoặc không đọc được danh sách VM, thì `restore` và `snapshot` **dừng với lỗi**, kể cả khi có `--yes`; không bao giờ coi lỗi dò là "không có mốc" để rơi sang nhánh xoá VM.
 
 Buổi trong `ORDER` mà chưa có thư mục script thì bị bỏ qua với thông báo `bỏ qua '<id>' (chưa có script)`.
 
@@ -98,13 +100,27 @@ Ví dụ chương trình `xyz`. Id chương trình chỉ gồm chữ thường, 
 1. **`labs/xyz/env.sh`**: khai các biến `lab` cần.
    - `LAB_PREFIX` (dạng `xyz-`, **không trùng VM nào bạn đang dùng**), `LAB_VMS` (mọi tên bắt đầu bằng tiền tố), `LAB_CP`, `LAB_IMAGE` (mặc định `24.04`).
    - Hàm `lab_vm_spec <tên-vm>` in `"<cpus> <mem> <disk>"`, ví dụ `2 2G 15G`.
-   - Nếu cần nạp image: `LAB_IMAGES` và hàm `lab_build_images`.
+   - Nếu cần nạp image: `LAB_IMAGES`, hàm `lab_build_images`, và `LAB_CTR_NAMESPACE` (namespace containerd nhận image; mặc định `default`, `cka` khai `k8s.io` vì kubelet chỉ đọc namespace đó).
+   - Biến riêng của chương trình (với `cka`: `K8S_INSTALL_MINOR`, `K8S_TARGET_MINOR`) khai luôn ở đây; script buổi được `source` sau `env.sh` nên đọc được. `lib/` không biết tới chúng.
 2. **`labs/xyz/sessions/ORDER`** liệt kê id buổi theo thứ tự học, rồi mỗi buổi **đã phát hành** có thư mục `sessions/<id>/` theo hợp đồng ở trên. Tuỳ chọn thêm `milestones` và `breaks/`; `mocks/<đề>/` chỉ được bỏ khi danh sách `mocks` trong `mocks.js` rỗng, còn mỗi đề đã khai thì cần đủ `setup.sh` và `score.sh`.
-3. **Dữ liệu cho web** trong `webapp/js/data/practice/xyz/`: `program.js` (meta, đề thi, `project`, `stages[].sessions`; `field` phải là id một lĩnh vực có trong `webapp/js/data/fields.js`, và `exam.domains[].weight` phải cộng đúng 100 — PR1), `skills.js`, `mocks.js`, và các tệp `stage-NN.js` chứa buổi học. Xem các tệp trong `webapp/js/data/practice/cka/` làm mẫu; schema và quy tắc nằm ở các bất biến PR1–PR12 trong `webapp/scripts/check-data.mjs`.
+3. **Dữ liệu cho web** trong `webapp/js/data/practice/xyz/`: `program.js`, `skills.js`, `mocks.js`, và các tệp `stage-NN.js` chứa buổi học. Trong `program.js`:
+   - `field` là id một lĩnh vực có trong `webapp/js/data/fields.js` (PR1); `stages[].sessions` là thứ tự học.
+   - `skillAreas: [{ id, label, prefix }]`: các mảng kỹ năng của chương trình. Mỗi kỹ năng trong `skills.js` khai `area` là một `id` ở đây và có id bắt đầu bằng `prefix` đó (PR5); `label` hiện trên bản đồ kỹ năng.
+   - `exam` là **tuỳ chọn**. Chương trình theo chứng chỉ khai `exam` với `domains` (tỷ trọng cộng đúng 100), `passPct`, `durationMin`, `competencies` (PR1). Chương trình theo chủ đề bỏ hẳn `exam`: buổi khai `domain: null`, trang chủ không có khối độ phủ đề thi, số tuần còn lại, tag domain hay ngưỡng đậu, và không có trang mock nếu `mocks` rỗng. Đề mock cần `exam` để chấm theo domain (PR10).
+   - `project` là tuỳ chọn; `env.commands` khai mẫu lệnh mà trang buổi in ra (`up`, `begin`, `restore`, `verify`, `mockStart`, `mockScore`…, chỗ điền `<session>`, `<mock>`). Xem các tệp trong `webapp/js/data/practice/cka/` làm mẫu; schema và quy tắc nằm ở các bất biến PR1–PR12 trong `webapp/scripts/check-data.mjs`.
 4. **Đăng ký** trong `webapp/js/data/practice/index.js`: import các tệp trên và thêm một phần tử `assemble(...)` vào `PROGRAMS`. Phần dùng chung `webapp/js/lib/practice.js` và `webapp/js/views/practice.js` không được chứa tên chương trình cụ thể nào (bất biến PR12).
 5. **Khai số kỳ vọng** (số buổi, số buổi đã phát hành) trong bảng kỳ vọng của `check-data.mjs`, rồi chạy các lệnh kiểm ở mục dưới.
 
-Bất biến PR11 ép thứ tự trong `ORDER` khớp thứ tự chặng trong dữ liệu web, mỗi buổi đã phát hành phải có `apply.sh` và `verify.sh`, và thư mục buổi nào không phải buổi đã phát hành thì bị báo.
+Bất biến PR11 ép thứ tự trong `ORDER` khớp thứ tự chặng trong dữ liệu web, mỗi buổi đã phát hành phải có `apply.sh` và `verify.sh`, và báo: thư mục buổi không phải buổi đã phát hành, thư mục `mocks/<đề>` không có trong `mocks.js`, dòng `milestones` trỏ tới buổi không có hoặc chưa phát hành, và `lab_break <id>` (trong script) hay `./labs/lab break xyz <id>` (trong dữ liệu buổi) không có `breaks/<id>/run.sh`.
+
+### Giới hạn hiện tại của phần dùng chung
+
+Những thứ dưới đây vẫn giả định một kiểu lab nhất định; chương trình mới khác kiểu thì phải sửa `lib/` hoặc phần web, không chỉ thêm dữ liệu:
+
+- **Máy và VM**: Multipass trên macOS, VM Ubuntu, lệnh trong VM chạy qua `bash -lc`. Không có đường cho Docker Compose, kind hay máy từ xa.
+- **Nạp image** (`lab images`): build bằng Docker trên Mac, `docker save`, rồi `sudo ctr -n "$LAB_CTR_NAMESPACE" images import` trong VM. Cần containerd và `ctr` trong VM; runtime khác (Podman, Docker trong VM) chưa có đường.
+- **`ref` của kỹ năng** chỉ trỏ được vào trang Thực hành nhanh (`#/commands`, dữ liệu lệnh/YAML/quy trình nằm ở `webapp/js/data/kubernetes/`), nên chỉ hợp lệ khi lĩnh vực của chương trình bật module `commands` (PR5). Chương trình của lĩnh vực khác để trống `ref`.
+- **Kết quả mock** luôn chấm theo `exam.domains`; chương trình không có đề thi thì không có mock.
 
 ## Kiểm bộ lab
 
@@ -112,7 +128,7 @@ Bất biến PR11 ép thứ tự trong `ORDER` khớp thứ tự chặng trong d
 /bin/bash labs/tests/run.sh      # test CLI lab với multipass và docker giả (stub), không đụng VM thật
 ```
 
-Test này chạy trên `labs/tests/fixtures` và các stub, không gọi `multipass` thật. Kiểm một buổi trên VM thật là việc của `./labs/lab selftest <ct>`, hoặc `verify` sau khi làm buổi đó.
+Test này chạy trên `labs/tests/fixtures` và các stub, không gọi `multipass` thật. CI (`.github/workflows/deploy-pages.yml`, job `check`) chạy nó trên runner Ubuntu với bash 5; script vẫn viết cho bash 3.2 của macOS, bộ test chỉ tránh lệnh riêng của BSD/GNU (stub thử `stat -c` của GNU trước `stat -f` của BSD). Kiểm một buổi trên VM thật là việc của `./labs/lab selftest <ct>`, hoặc `verify` sau khi làm buổi đó.
 
 Kiểm dữ liệu và test đơn vị của phần web, từ gốc repo:
 

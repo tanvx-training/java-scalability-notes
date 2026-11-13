@@ -55,17 +55,18 @@ sửa script — xem [`sources/README.md`](../sources/README.md).
 (D1), liên kết chéo (R1), link lộ trình cùng đường (#3b), lịch 104 tuần (PL1–PL4: mọi tham chiếu
 tuần/mục/tài liệu tồn tại và đúng khoảng; mọi mục `sj-gd*`/`fs-gd*` xuất hiện đúng một lần; 104 tuần
 liên tục, quý/giai đoạn/tuần nghỉ khớp; giờ 6–10 mỗi tuần, ≤ 4 chương đọc), module Thực hành
-(PR1–PR12: chương trình và tỷ trọng domain; id buổi/kỹ năng/chặng/mock không trùng; tham chiếu và
-`requires` hợp lệ; kỹ năng học ở đúng một buổi; phủ đủ năng lực của đề và mảnh project; buổi khung đủ
-trường, buổi đã phát hành đủ nội dung; số buổi theo domain khớp tỷ trọng đề; đề mock; thư mục `labs/`
-khớp dữ liệu; phần dùng chung không nhắc tên chương trình) và số lượng bản ghi theo bảng kỳ vọng.
+(PR1–PR12: chương trình, đề thi tuỳ chọn và tỷ trọng domain khi có; id buổi/kỹ năng/chặng/mock không
+trùng; tham chiếu và `requires` hợp lệ; kỹ năng học ở đúng một buổi, `area` thuộc `skillAreas` của chính
+chương trình; phủ đủ năng lực của đề và mảnh project; buổi khung đủ trường, buổi đã phát hành đủ nội dung;
+số buổi theo domain khớp tỷ trọng đề; đề mock; thư mục `labs/` khớp dữ liệu hai chiều, kể cả mốc snapshot
+và lỗi gây có chủ ý; phần dùng chung không nhắc tên chương trình) và số lượng bản ghi theo bảng kỳ vọng.
 
 Test đơn vị cho logic thuần của module Thực hành (không cần trình duyệt):
 
 ```bash
 node --test "webapp/scripts/tests/*.test.mjs"
 ```
-CI chạy trước khi deploy.
+CI chạy trước khi deploy, cùng bộ test CLI lab `/bin/bash labs/tests/run.sh` (multipass và docker giả, không đụng VM).
 
 ## Deploy GitHub Pages
 
@@ -135,7 +136,11 @@ Thêm buổi thực hành: sửa `js/data/practice/<chương trình>/stage-NN.js
 `hints`, `solution`, `exam`, `tips`, `outcome`, `review`, thêm thư mục script `labs/<chương trình>/sessions/<id>/`
 (`apply.sh` + `verify.sh`, chạy thử trên VM thật), tăng số `practice-published:<chương trình>` trong bảng kỳ vọng
 của `check-data.mjs` (sửa số **trước**), rồi chạy `check-data.mjs`.
-Thêm chương trình thực hành: `program.js` phải khai `field` là id một lĩnh vực có trong `fields.js` và `exam.domains[].weight` cộng đúng 100 (PR1); mỗi đề trong `mocks.js` cần `labs/<id>/mocks/<đề>/{setup.sh,score.sh}` (PR11). Tạo `js/data/practice/<id>/` (`program.js`, `skills.js`, `mocks.js`, các `stage-NN.js`),
+Thêm chương trình thực hành: `program.js` phải khai `field` là id một lĩnh vực có trong `fields.js` (PR1) và
+`skillAreas: [{ id, label, prefix }]` cho các mảng kỹ năng (PR5). `exam` là tuỳ chọn: chương trình theo chứng chỉ khai
+`exam.domains` (tỷ trọng cộng đúng 100), `passPct`, `durationMin`; chương trình theo chủ đề bỏ hẳn `exam`, khi đó trang
+không hiện độ phủ đề thi, số tuần còn lại, tag domain, ngưỡng đậu, và không có trang mock nếu không có đề. Mỗi đề trong
+`mocks.js` cần `exam` và `labs/<id>/mocks/<đề>/{setup.sh,score.sh}` (PR10, PR11). Tạo `js/data/practice/<id>/` (`program.js`, `skills.js`, `mocks.js`, các `stage-NN.js`),
 đăng ký trong `js/data/practice/index.js`, khai số kỳ vọng trong `check-data.mjs`, và tạo phần chạy trên máy
 tại `labs/<id>/` — các bước chi tiết ở [`../labs/README.md`](../labs/README.md). `lib/practice.js` và
 `views/practice.js` dùng chung, không được nhắc tên chương trình nào (PR12).

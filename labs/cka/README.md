@@ -13,6 +13,8 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 | CNI | Calico **v3.33.0**, manifest `calico.yaml` (không dùng operator); Tigera ghi là đã kiểm thử với 1.35/1.36/1.37 | `sessions/s07/apply.sh` (`CALICO_VERSION`) |
 | Pod CIDR | `10.244.0.0/16` (không dùng `192.168.0.0/16` mặc định của Calico vì dải đó chứa mạng Multipass `192.168.252.0/24`); Calico tự lấy CIDR từ cấu hình kubeadm, `init-cp.sh` kiểm IPPool | `sessions/s07/apply.sh` |
 | Service CIDR | mặc định của kubeadm `10.96.0.0/12` | — |
+| kube-proxy | chế độ mặc định của kubeadm (`mode: ""` trong ConfigMap `kube-proxy`), tức **iptables**: log ghi `Using iptables Proxier`, rule Service đọc được bằng `sudo iptables -t nat -S \| grep <service>` (kiểm trên cluster lab 1.36.6 ngày 2026-11-14) | — |
+| Image ứng dụng | nạp vào namespace containerd `k8s.io` (`LAB_CTR_NAMESPACE`), nơi kubelet tìm image | `env.sh` |
 
 ## Mốc snapshot
 
