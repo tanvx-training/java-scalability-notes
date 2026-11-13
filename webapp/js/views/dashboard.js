@@ -11,6 +11,8 @@ import { recentItems, streakInfo } from "../lib/activity.js";
 import { roadmapStats, docsStats, flashStats, quizStats, examStats, matrixStats, interviewStats, fieldSummary, trackStats } from "../lib/stats.js";
 import { fieldProgress } from "../lib/guides.js";
 import { planSummary, fmtRange } from "../lib/plan.js";
+import { programsOfField } from "../data/practice/index.js";
+import { practiceState, nextSession, orderedSessions } from "../lib/practice.js";
 
 // Tiến độ đại diện: lộ trình nếu có, không thì tài liệu đã đọc.
 function fieldPct(id) {
@@ -49,6 +51,7 @@ export function render(root) {
 
   // ---- Tuần này (kế hoạch 104 tuần, toàn cục) ----
   page.append(planCard());
+  page.append(...practiceCards(fieldKey));
 
   // ---- Con đường của bạn ----
   page.append(fieldKey === SPINE.field ? spineCard() : pathCard(fieldKey));
@@ -235,6 +238,20 @@ function planCard() {
     h("div", { class: "flex mt-2", style: "gap:10px" },
       h("div", { class: `progress thin grow${progress.complete ? " green" : ""}`, title: "Tiến độ tuần" }, h("span", { style: `width:${progress.pct}%` })),
       h("div", { class: `progress thin grow${hp >= 80 ? " green" : hp >= 60 ? " amber" : ""}`, title: "Giờ học / mục tiêu" }, h("span", { style: `width:${hp}%` }))));
+}
+
+// Thẻ 🛠️ Buổi thực hành kế tiếp — mỗi chương trình thực hành của lĩnh vực hiện tại một thẻ.
+function practiceCards(fieldKey) {
+  const state = practiceState();
+  return programsOfField(fieldKey).map((p) => {
+    const list = orderedSessions(p);
+    const next = nextSession(p, state.done);
+    const n = next ? list.findIndex((s) => s.id === next.id) + 1 : list.length;
+    return h("a", { class: "card card-link plan-dash mb-4", href: `#/practice/${p.id}` },
+      h("div", { class: "card-head" },
+        h("strong", {}, next ? `🛠️ Buổi thực hành kế tiếp: ${next.title}` : `🛠️ ${p.label}: đã xong chương trình`),
+        h("span", { class: "faint" }, next ? `Buổi ${n} / ${list.length}` : `${list.length} / ${list.length}`)));
+  });
 }
 
 function streakCard(st) {

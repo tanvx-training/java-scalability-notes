@@ -202,7 +202,8 @@ export const NAV_GROUPS = [
   // Nhóm global: mục có `global: true` hiện ở MỌI lĩnh vực (module thuộc GLOBAL_MODULES),
   // navFor() giữ lại chúng dù không nằm trong FIELDS[].modules.
   { title: "Kế hoạch", items: [
-      { id: "planner",    label: "Kế hoạch tuần",   icon: "🗓️", href: "#/planner", global: true } ] },
+      { id: "planner",    label: "Kế hoạch tuần",   icon: "🗓️", href: "#/planner", global: true },
+      { id: "practice",   label: "Thực hành",       icon: "🛠️", href: "#/practice", global: true } ] },
   { title: "Tổng quan", items: [
       { id: "dashboard",  label: "Bảng điều khiển", icon: "🏠", href: "#/" },
       { id: "guide",      label: "Hướng dẫn học",   icon: "🧭", href: "#/guide" },
@@ -225,9 +226,9 @@ export function isField(id) {
 }
 
 // Module toàn cục: có ở MỌI lĩnh vực, không cần dữ liệu riêng. "settings" vào từ
-// chân sidebar; "planner" (Kế hoạch tuần, lịch 104 tuần) là mục nav `global: true`.
+// chân sidebar; "planner" (Kế hoạch tuần, lịch 104 tuần) và "practice" (Thực hành) là mục nav `global: true`.
 // Không khai trong FIELDS[].modules để bất biến #5/#7 không phải biết tới nó.
-export const GLOBAL_MODULES = ["planner", "settings"];
+export const GLOBAL_MODULES = ["planner", "practice", "settings"];
 
 export function moduleAllowed(fieldId, moduleId) {
   if (!isField(fieldId)) return false;

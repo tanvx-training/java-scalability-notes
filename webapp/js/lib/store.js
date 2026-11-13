@@ -93,3 +93,7 @@ export const store = {
 // plan.config           : { start?: "YYYY-MM-DD", hoursTarget?: number }   (Kế hoạch tuần)
 // plan.log              : [ { id, date, h, kind, note } ]                  (nhật ký giờ học)
 // plan.rituals          : { [`w<n>`]: { [ritualId]: epoch ms } }           (review tuần / quý)
+// practice.done         : { [`<program>:<session>`]: epoch ms }            (buổi thực hành đã xong)
+// practice.tasks        : { [`<program>:<session>:<task>`]: true }         (nhiệm vụ đã tick)
+// practice.notes        : { [`<program>:<session>`]: "ghi chú cuối buổi" }
+// practice.mock         : [ { program, mock, date, total, byDomain } ]     (kết quả đề mock)

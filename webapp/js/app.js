@@ -23,6 +23,8 @@ import * as tracker from "./views/tracker.js";
 import * as settings from "./views/settings.js";
 import * as guide from "./views/guide.js";
 import * as planner from "./views/planner.js";
+import * as practice from "./views/practice.js";
+import { fieldOfProgram } from "./data/practice/index.js";
 
 const routes = {
   dashboard,
@@ -39,6 +41,7 @@ const routes = {
   settings,
   guide,
   planner,
+  practice,
 };
 
 // Khôi phục "chế độ gọn" (ẩn sidebar, mật độ cao) nếu người dùng đã bật.
@@ -279,6 +282,7 @@ function navigate() {
   if (name === "docs" && params[0]) owner = fieldOfDoc(params[0]);
   if (name === "roadmap" && params[0]) owner = fieldOfTrack(params[0]);
   if (name === "tracker" && params[0]) owner = fieldOfMatrixModule(params[0]);
+  if (name === "practice" && params[0]) owner = fieldOfProgram(params[0]);
   if (owner) setCurrentField(owner);
   // Sidebar luôn đồng bộ với lĩnh vực hiện tại — tìm kiếm/bộ chọn có thể đã đổi nó.
   renderSidebar();
