@@ -12,6 +12,7 @@ import { h, pageHead, sectionTitle, codeNode, emptyState, inlineMd, mdInto, toas
 import { createStopwatch, createCountdown } from "../lib/timer.js";
 import { pushRecent } from "../lib/activity.js";
 import { goTo } from "../lib/search.js";
+import { renderMermaidBlocks } from "../lib/mermaid.js";
 import { PROGRAMS, getProgram } from "../data/practice/index.js";
 import {
   RESERVED_SEGMENTS, findSession, findMock, orderedSessions, isPublished, isDone, doneCount, nextSession,
@@ -274,7 +275,12 @@ const REF_HREF = { command: "#/commands", snippet: "#/commands/yaml", playbook: 
 function block(title, ...body) {
   return h("div", { class: "card mb-4" }, h("div", { class: "card-head" }, h("strong", {}, title)), body);
 }
-function md(text, cls = "prose") { const n = h("div", { class: cls }); mdInto(n, text); return n; }
+function md(text, cls = "prose") {
+  const n = h("div", { class: cls });
+  mdInto(n, text);
+  renderMermaidBlocks(n); // async; chờ n được gắn vào trang rồi mới thay bằng SVG
+  return n;
+}
 function reveal(title, ...body) {
   return h("details", { class: "reveal" }, h("summary", {}, title), h("div", { class: "reveal-body" }, body));
 }

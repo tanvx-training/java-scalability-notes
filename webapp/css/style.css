@@ -1643,3 +1643,9 @@ dialog.modal .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; 
 .pr-q.marked { border-color: var(--amber, var(--accent)); box-shadow: 0 0 0 1px var(--amber, var(--accent)); }
 .pr-err { color: var(--red); margin-top: 6px; }
 .pr-mock-clock { font-size: 20px; margin-left: 12px; }
+/* Không để nhãn dài đẩy trang vượt khung (nút prev/next, nút vào buổi, danh sách buổi) */
+.page .btn { max-width: 100%; }
+.pr-nav .btn, .page .card .btn-primary, .pr-sessions a { white-space: normal; text-align: left; }
+.pr-nav > a { flex: 1 1 240px; min-width: 0; }
+.pr-sessions li { overflow-wrap: anywhere; }
+.pr-stage summary .grow { min-width: 0; overflow-wrap: anywhere; }
