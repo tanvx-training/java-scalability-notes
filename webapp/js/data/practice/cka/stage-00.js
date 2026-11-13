@@ -42,7 +42,7 @@ Quyền: \`700\` cho \`~/.ssh\`, \`600\` cho \`authorized_keys\` và khoá bí m
 
 VM Multipass **không có mật khẩu** cho user \`ubuntu\` và tắt đăng nhập bằng mật khẩu, nên \`ssh-copy-id\` không chạy được. Bạn phải tự chép khoá công khai sang — ở đây qua máy Mac, vì Mac vào được mọi VM bằng \`multipass exec\`.
 
-**Phân giải tên.** \`getent hosts <tên>\` hỏi đúng thứ tự mà mọi chương trình (ssh, curl, Java) dùng: \`/etc/hosts\` trước, rồi DNS (theo \`/etc/nsswitch.conf\`). \`ping\` cũng đi qua nsswitch nên đọc \`/etc/hosts\` (nhưng nó còn đòi máy kia trả lời ICMP); \`nslookup\` và \`dig\` thì hỏi thẳng DNS, **bỏ qua** \`/etc/hosts\` — đừng dùng chúng để kiểm tên khai trong hosts.
+**Phân giải tên.** \`getent hosts <tên>\` hỏi đúng thứ tự mà mọi chương trình (ssh, curl, Java) dùng: \`/etc/hosts\` trước, rồi DNS (theo \`/etc/nsswitch.conf\`). \`ping\` cũng đi qua nsswitch (nhưng còn đòi máy kia trả lời ICMP). \`nslookup\`/\`dig\` thì **không** đi qua nsswitch mà hỏi thẳng máy chủ DNS ghi trong \`/etc/resolv.conf\`. Trên Ubuntu đó là stub \`systemd-resolved\` (\`127.0.0.53\`), vốn tự trả lời từ \`/etc/hosts\` (\`ReadEtcHosts=yes\` mặc định) — nên trên VM lab \`nslookup cka-w1\` vẫn ra đúng IP, nhưng ở máy mà resolv.conf trỏ thẳng một DNS khác thì có thể không. Kiểm tên bằng \`getent hosts\`, đúng đường mà ssh, curl, Java dùng.
 
 **Bẫy riêng của VM cloud:** đọc dòng đầu \`/etc/hosts\` trên VM — cloud-init ghi rằng tệp được **sinh lại mỗi lần khởi động** (\`manage_etc_hosts: True\`). Sửa \`/etc/hosts\` có tác dụng ngay nhưng mất sau reboot; muốn bền phải sửa cả mẫu \`/etc/cloud/templates/hosts.debian.tmpl\`.
 
@@ -83,7 +83,7 @@ Cuối cùng, tập để ý **ai sở hữu tệp bạn sửa**: \`/etc/hosts\`
       "Dòng hosts dạng `192.168.x.y cka-w1`. Không xoá dòng `127.0.1.1 <tên máy>` sẵn có; chỉ thêm ba dòng mới ở cuối. Lấy IP thật từ `./labs/lab status cka`, IP trên máy bạn khác ví dụ.",
       "Không có mật khẩu nên không dùng được `ssh-copy-id`. Nối hai lệnh exec qua pipe trên Mac: `multipass exec cka-cp -- cat /home/ubuntu/.ssh/id_ed25519.pub | multipass exec cka-w1 -- bash -c 'cat >> ~/.ssh/authorized_keys'`. Dùng `>>` (nối thêm), không phải `>` (ghi đè sẽ xoá khoá của Multipass và bạn mất `multipass shell`).",
       "`ssh -o BatchMode=yes` cấm mọi câu hỏi tương tác: nếu chưa từng trả lời `yes` cho khoá host thì nó báo `Host key verification failed`. Ssh tay một lần, hoặc `ssh-keyscan cka-w1 >> ~/.ssh/known_hosts`.",
-      "`Permission denied (publickey)`: xem lý do trên worker bằng `sudo journalctl -u ssh -n 20` — `bad ownership or modes` nghĩa là `~/.ssh` hay `authorized_keys` cho người khác ghi hoặc sai chủ (đưa về `700`/`600`, chủ `ubuntu`). Không có dòng đó thì thường là khoá chưa được chép vào đúng `authorized_keys` của user `ubuntu`. Cẩn thận: `multipass shell`/`exec` cũng đăng nhập bằng khoá trong chính tệp này — làm hỏng quyền là mất luôn đường vào VM.",
+      "`Permission denied (publickey)`: xem lý do trên worker bằng `sudo journalctl -u ssh -n 20` — `bad ownership or modes` nghĩa là thư mục home, `~/.ssh` hay `authorized_keys` cho người khác ghi hoặc sai chủ (đưa về `700`/`600`, chủ `ubuntu`). Không có dòng đó thì thường là khoá chưa được chép vào đúng `authorized_keys` của user `ubuntu`. Cẩn thận: `multipass shell`/`exec` cũng đăng nhập bằng khoá trong chính tệp này — làm hỏng quyền là mất luôn đường vào VM.",
     ],
     solution: `**1. Khai tên ba máy** — làm giống hệt trên cả ba VM. Ví dụ với IP lấy từ \`./labs/lab status cka\`:
 
@@ -142,7 +142,7 @@ Lời giải chuẩn tự động nằm ở \`labs/cka/sessions/s01/apply.sh\` (
     tips: [
       "Đặt `ubuntu@cka-cp` làm \"nhà\": mọi việc bắt đầu và kết thúc ở đó. Nhìn dấu nhắc trước khi gõ.",
       "Dùng `>>` khi thêm khoá vào `authorized_keys`; `>` ghi đè sẽ xoá khoá Multipass và khoá bạn khỏi `multipass shell`.",
-      "`getent hosts` là cách kiểm phân giải tên đúng nhất; `nslookup` không đọc `/etc/hosts` nên có thể nói sai.",
+      "`getent hosts` là cách kiểm phân giải tên đúng nhất. `nslookup`/`dig` bỏ qua nsswitch; trên Ubuntu chúng chỉ thấy `/etc/hosts` nhờ stub `systemd-resolved` — đừng dựa vào điều đó (trong Pod, `/etc/resolv.conf` trỏ CoreDNS và câu trả lời có thể khác).",
       "Khi một tệp có dòng chú thích kiểu \"tệp này được sinh tự động\", tìm nguồn sinh ra nó trước khi sửa.",
     ],
     outcome: {
@@ -592,7 +592,7 @@ apt-mark showhold             # jq
 |---|---|---|
 | Card nào, IP gì? | \`ip -br addr\` | tên card (\`enp0s1\`), trạng thái, IP/độ dài prefix |
 | Gói đi ra ngoài qua đâu? | \`ip route\`, \`ip route get 1.1.1.1\` | dòng \`default via <gateway> dev <card>\` |
-| Hỏi DNS ai? | \`resolvectl status\` hoặc \`resolvectl dns\` | \`/etc/resolv.conf\` chỉ ghi \`127.0.0.53\` — đó là **stub** của systemd-resolved trên chính máy; DNS thật nằm ở \`DNS Servers:\` của card |
+| Hỏi DNS ai? | \`resolvectl status\` hoặc \`resolvectl dns\` | \`/etc/resolv.conf\` chỉ ghi \`127.0.0.53\` — đó là **stub** của systemd-resolved trên chính máy; máy chủ DNS thật (DHCP cấp) nằm ở \`DNS Servers:\` của card; \`Current DNS Server:\` là cái stub đang dùng lúc này |
 | Ai đang nghe cổng nào? | \`sudo ss -tlnp\` | \`t\` TCP, \`l\` đang nghe, \`n\` số, \`p\` tiến trình (cần root) |
 | Tới được dịch vụ kia không? | \`nc -zv -w2 host port\`, \`curl -sv http://host:port/\` | \`succeeded\` / \`refused\` / timeout |
 
@@ -628,7 +628,7 @@ apt-mark showhold             # jq
     stateIn: `Đầu ra s03 trên cka-cp: user \`shop\`, dịch vụ \`shop-heartbeat\` đang chạy, \`jq\` được hold; mạng của ba VM ở nguyên trạng thái mặc định của Multipass (chưa netns, chưa rule iptables nào do bạn thêm). \`./labs/lab begin cka s04\` kiểm đầu vào bằng verify của s03. Làm trên cka-cp; netns và iptables cần \`sudo\`.`,
     stateOut: "Trên cka-cp có namespace shop-a, shop-b nối veth ping được nhau, chain SHOP-DEMO có một rule, và ~/drills/s04/answers.env ghi đúng gateway, DNS, tiến trình nghe cổng 22.",
     tasks: [
-      { id: "t1", text: "Đọc mạng của cka-cp và ghi vào `~/drills/s04/answers.env` (user `ubuntu`) ba dòng: `DEFAULT_GW=<gateway mặc định>`, `DNS_SERVER=<DNS thật, IPv4, không phải 127.0.0.53>`, `SSH_PORT_PID_NAME=<pid>/sshd` (tiến trình sshd đang nghe cổng 22)." },
+      { id: "t1", text: "Đọc mạng của cka-cp và ghi vào `~/drills/s04/answers.env` (user `ubuntu`) ba dòng: `DEFAULT_GW=<gateway mặc định>`, `DNS_SERVER=<máy chủ DNS cấu hình cho card mạng, địa chỉ IPv4, không phải 127.0.0.53>`, `SSH_PORT_PID_NAME=<pid>/sshd` (tiến trình sshd đang nghe cổng 22)." },
       { id: "t2", text: "Thử kết nối: `nc -zv -w2 127.0.0.1 22` (succeeded), `nc -zv -w2 127.0.0.1 9999` (refused), `curl -sI https://pkgs.k8s.io | head -1` (ra Internet được)." },
       { id: "t3", text: "Tạo hai namespace `shop-a`, `shop-b`; một cặp veth `veth-a`/`veth-b`; đưa `veth-a` vào `shop-a`, `veth-b` vào `shop-b`." },
       { id: "t4", text: "Gán `10.200.0.1/24` cho `veth-a`, `10.200.0.2/24` cho `veth-b`, bật cả hai card (và `lo`) rồi ping hai chiều. So `ip route` trong namespace với bảng route của node." },
@@ -637,7 +637,7 @@ apt-mark showhold             # jq
       { id: "t7", text: "Dừng `nc -lk` (Ctrl-c). Trên Mac: `./labs/lab verify cka s04` phải đạt 9/9." },
     ],
     hints: [
-      "Gateway: `ip route show default` — từ thứ ba. DNS thật: `resolvectl dns enp0s1` (hoặc khối `Link … DNS Servers:` trong `resolvectl status`) — lấy địa chỉ IPv4; `Current DNS Server` có thể là một địa chỉ IPv6 `fe80::…`.",
+      "Gateway: `ip route show default` — từ thứ ba. DNS của card: `resolvectl dns enp0s1` (hoặc khối `Link … DNS Servers:` trong `resolvectl status`) — lấy địa chỉ IPv4. `Current DNS Server` có thể là địa chỉ IPv6 `fe80::…`: stub đã chuyển sang server đó (xem Cách xử lý).",
       "Cổng 22 có hai tiến trình trong `sudo ss -tlnp`: `systemd` (pid 1, giữ socket của `ssh.socket`) và `sshd`. Đáp án là của `sshd`, dạng `pid/tên` như cột của `netstat -p`, ví dụ `1013/sshd` (PID khác trên máy bạn).",
       "Lệnh trong namespace: `ip netns exec shop-a <lệnh>` hoặc viết tắt `ip -n shop-a <lệnh ip>`. Card mới tạo luôn ở trạng thái DOWN: `ip -n shop-a link set veth-a up`.",
       "Ping không qua: kiểm từng đầu `ip -n shop-a -br addr` (có IP? UP?) và đầu kia. Hai IP phải cùng mạng `/24` thì kernel mới tự có route `10.200.0.0/24 dev veth-a`.",
@@ -660,7 +660,9 @@ SSH_PORT_PID_NAME=1013/sshd
 EOF
 \`\`\`
 
-Thay bằng giá trị trên máy bạn (PID của sshd đổi sau mỗi lần khởi động). Trên Multipass, gateway và DNS thường là cùng một địa chỉ (máy Mac làm cả router lẫn DNS cho VM) — đó là sự trùng hợp của môi trường, không phải quy luật.
+Thay bằng giá trị trên máy bạn (PID của sshd đổi sau mỗi lần khởi động). Trên Multipass, DHCP của Mac thường cấp cùng một địa chỉ cho gateway và DNS — đó là sự trùng hợp của môi trường, không phải quy luật.
+
+Thử xem máy chủ đó có trả lời thật không: \`dig +short @192.168.252.1 pkgs.k8s.io\`. Trên máy soạn bài này nó trả \`connection refused\` — Mac không phục vụ DNS ở địa chỉ IPv4 đó — và \`journalctl -u systemd-resolved\` cho thấy stub đã chuyển sang server IPv6 \`fe80::…\` (chính là \`Current DNS Server\`): \`dig +short @fe80::…%enp0s1 pkgs.k8s.io\` trả lời bình thường. Máy bạn có thể khác. Đây đúng là cách chẩn đoán DNS: hỏi thẳng từng server bằng \`dig @server\`, đừng tin cấu hình. Đáp án \`DNS_SERVER\` của bài vẫn là địa chỉ IPv4 cấu hình cho card.
 
 **2. Hai "Pod" nối bằng veth** (\`sudo -i\`):
 
@@ -711,7 +713,7 @@ Mọi thứ ở mục 2 và 3 **mất khi reboot** — đúng như Pod mất net
         {
           text: "Trên cka-w1 (ssh từ cka-cp): ghi ra tên card mạng chính, IP của nó, gateway mặc định và DNS server thật. Giới hạn 2 phút.",
           timeLimitMin: 2,
-          solution: "```bash\nssh cka-w1\nip -br addr | grep -v '^lo'\nip route show default\nresolvectl dns\nexit\n```\nGateway là từ thứ ba của dòng `default via …`; DNS thật là IPv4 trong `resolvectl dns`, không phải `127.0.0.53` của `/etc/resolv.conf`.",
+          solution: "```bash\nssh cka-w1\nip -br addr | grep -v '^lo'\nip route show default\nresolvectl dns\nexit\n```\nGateway là từ thứ ba của dòng `default via …`; DNS của card là IPv4 trong `resolvectl dns`, không phải `127.0.0.53` của `/etc/resolv.conf`.",
         },
         {
           text: "Trên cka-cp: chứng minh tiến trình nào đang nghe cổng 22 và cho biết nó do unit systemd nào quản lý. Giới hạn 2 phút.",
@@ -738,7 +740,7 @@ Lưu ý: namespace và rule iptables không bền — sau khi tắt/bật VM, \`
       projectDelta: "Chưa đổi gì trong shop; bạn đã dựng bằng tay mô hình thu nhỏ của mạng Pod (netns + veth) và của Service (chain iptables được nhảy tới) — hai thứ sẽ đọc lại trên cluster ở chặng 5.",
     },
     review: [
-      { q: "Vì sao `/etc/resolv.conf` ghi `127.0.0.53` mà đáp án DNS_SERVER lại khác? Lệnh nào cho DNS thật?", a: "`127.0.0.53` là stub của systemd-resolved trên chính máy; nó chuyển tiếp tới DNS thật ghi trong `resolvectl dns` (hoặc `resolvectl status`)." },
+      { q: "Vì sao `/etc/resolv.conf` ghi `127.0.0.53` mà đáp án DNS_SERVER lại khác? Lệnh nào cho máy chủ DNS thật?", a: "`127.0.0.53` là stub của systemd-resolved trên chính máy; nó chuyển tiếp tới các máy chủ DNS ghi trong `resolvectl dns` (hoặc `resolvectl status`)." },
       { q: "Refused và timeout khác nhau thế nào khi chẩn đoán?", a: "Refused: gói tới nơi nhưng không ai nghe cổng (hoặc bị REJECT). Timeout: gói mất trên đường (route sai hoặc bị DROP)." },
       { q: "Bốn lệnh tối thiểu nối hai netns bằng veth là gì (trước khi gán IP)?", a: "`ip netns add shop-a`, `ip netns add shop-b`, `ip link add veth-a type veth peer name veth-b`, rồi `ip link set veth-a netns shop-a` và `ip link set veth-b netns shop-b`." },
       { q: "Tạo chain `SHOP-DEMO` có rule mà gói vẫn không bị chặn. Thiếu gì?", a: "Không có rule nào nhảy tới chain: cần `iptables -I INPUT -j SHOP-DEMO` (giống kube-proxy móc KUBE-SERVICES vào PREROUTING/OUTPUT)." },
@@ -797,14 +799,14 @@ containerd chia dữ liệu theo **namespace của containerd** (không liên qu
 **Bài tập nền (10 phút, sau khi cài xong ở nhiệm vụ 2):**
 1. \`systemctl status containerd\` và \`journalctl -u containerd -n 20 --no-pager\`.
 2. \`sudo ctr namespaces ls\` trước và sau khi nạp image.
-3. \`sudo crictl info | jq -c '[.status.conditions[] | {type, status}]'\` — \`RuntimeReady: true\` nhưng \`NetworkReady: false\` (chưa có CNI: lý do node \`NotReady\` ở chặng 1). Rồi \`sudo crictl info | jq '.config.cni.confDir, .config.containerd.runtimes.runc.options.SystemdCgroup'\` — \`"/etc/cni/net.d"\` và \`false\`: thư mục CNI và cgroup driver mà chặng 1 sẽ sửa (\`jq\` đã cài ở s03).
+3. \`sudo crictl info | jq -c '[.status.conditions[] | {type, status}]'\` in nguyên văn \`[{"type":"RuntimeReady","status":true},{"type":"NetworkReady","status":false},{"type":"ContainerdHasNoDeprecationWarnings","status":true}]\` — runtime sẵn sàng nhưng mạng thì chưa (chưa có CNI: lý do node \`NotReady\` ở chặng 1). Rồi \`sudo crictl info | jq '.config.cni.confDir, .config.containerd.runtimes.runc.options.SystemdCgroup'\` in hai dòng \`"/etc/cni/net.d"\` và \`false\`: thư mục CNI và cgroup driver mà chặng 1 sẽ sửa (\`jq\` đã cài ở s03).
 4. \`ps -o pid,user,cmd -C containerd\` — containerd cũng chỉ là một tiến trình chạy bằng root.
 
 Đọc thêm: phần Container & Docker trong [Kiến thức nền tảng](#/docs/prerequisites).`,
     },
     mindset: `Với người làm Java, đây là buổi gỡ "phép màu" của container. Khi bạn chạy \`shop/catalog:1.0\`, trên node chỉ có **một tiến trình \`java\`** — \`ps\` thấy nó, \`kill\` giết được nó, nó chạy bằng uid 10001 như \`USER\` trong Dockerfile. Thứ làm nó "là container" là ba lớp mà kernel gắn vào: namespace (nhìn thấy gì), cgroup (được dùng bao nhiêu), và rootfs từ image (tệp nào).
 
-**JVM đọc cgroup — nếu nhìn thấy nó.** Image shop chạy \`java -XX:MaxRAMPercentage=75\`. JDK 10 (và 8u191) bắt đầu đọc giới hạn cgroup v1; đọc \`memory.max\` của cgroup v2 — chế độ duy nhất trên Ubuntu 24.04 — cần JDK 15+, 11.0.16+ hoặc 8u372+ (image shop dùng JDK 25). Khi đọc được, JVM lấy 75% trần làm heap tối đa. Nhưng nó chỉ đọc được khi cây cgroup được gắn vào trong container. Hôm nay bạn sẽ đo bằng tay: \`ctr run --memory-limit 512 MiB\` trần thì kernel vẫn áp giới hạn mà JVM vẫn tính heap theo 3 GB RAM của VM (≈2,2 GB) — đúng kiểu lỗi kinh điển "heap to hơn limit, bị OOM giết". Gắn \`/sys/fs/cgroup\` vào thì heap co về 384 MiB. Kubernetes luôn gắn cho container của Pod, nên ở chặng 3, \`resources.limits.memory\` vừa là trần của kernel vừa là thứ JVM dùng để tính heap; \`OOMKilled\` là kernel thực thi trần đó. Bài [Tomcat Thread Pool: pool size bao nhiêu là đủ?](#/docs/java-07) có phần container-aware JVM và CFS throttling (giới hạn CPU) — đọc sau buổi này sẽ thấy rất cụ thể.
+**JVM đọc cgroup — nếu nhìn thấy nó.** Image shop chạy \`java -XX:MaxRAMPercentage=75\`. JDK 10 (và 8u191) bắt đầu đọc giới hạn cgroup v1; đọc \`memory.max\` của cgroup v2 — chế độ mặc định trên Ubuntu 24.04 — cần JDK 15+, 11.0.16+ hoặc 8u372+ (image shop dùng JDK 25). Khi đọc được, JVM lấy 75% trần làm heap tối đa. Nhưng nó chỉ đọc được khi cây cgroup được gắn vào trong container. Hôm nay bạn sẽ đo bằng tay (containerd/ctr 2.2.1 trên cka-cp): spec mặc định của \`ctr run\` gắn \`/sys\` (sysfs, chỉ đọc) nhưng **không** gắn cgroup và không tạo cgroup namespace, nên trong container \`/sys/fs/cgroup\` rỗng. Với \`--memory-limit 512 MiB\`, kernel vẫn áp giới hạn mà JVM vẫn tính heap theo 3 GB RAM của VM (≈2,2 GB) — đúng kiểu lỗi kinh điển "heap to hơn limit, bị OOM giết". Gắn \`/sys/fs/cgroup\` vào thì heap co về 384 MiB. Container của Pod do containerd tạo qua CRI thì được gắn cgroup sẵn (bạn sẽ kiểm lại bên trong Pod ở chặng 3), nên ở chặng 3, \`resources.limits.memory\` vừa là trần của kernel vừa là thứ JVM dùng để tính heap; \`OOMKilled\` là kernel thực thi trần đó. Bài [Tomcat Thread Pool: pool size bao nhiêu là đủ?](#/docs/java-07) có phần container-aware JVM và CFS throttling (giới hạn CPU) — đọc sau buổi này sẽ thấy rất cụ thể.
 
 **Vì sao crictl quan trọng hơn ctr.** Từ chặng 1, mọi container trên node do kubelet tạo qua CRI; \`crictl ps\` là "\`docker ps\` của node". Hôm nay bạn sẽ thấy \`crictl ps\` **không** hiện container \`catalog\` chạy bằng \`ctr\` — vì nó không phải Pod do CRI tạo. Phân biệt được hai lớp này giúp bạn khỏi bối rối khi apiserver chết và \`kubectl\` không trả lời: bạn vẫn \`crictl ps -a\` và \`crictl logs\` được.
 
@@ -927,7 +929,7 @@ ctr -n k8s.io run --rm --memory-limit 536870912 \\
 #   = 402653184    (384 MiB = 75% của 512 MiB)
 \`\`\`
 
-Lần 2 là bài học quan trọng nhất buổi: kernel **vẫn áp** trần 512 MiB (\`memory.max\` của cgroup), nhưng \`ctr run\` không gắn \`/sys/fs/cgroup\` vào trong container nên JVM không đọc được trần, cho heap tới 2,2 GB — heap lớn dần là bị kernel giết (OOM). Lần 3 gắn cây cgroup vào thì JVM đọc được \`memory.max\` và tự co heap. Kubernetes (containerd qua CRI) luôn tạo cgroup namespace riêng và gắn \`/sys/fs/cgroup\` cho container của Pod, nên trong Pod JVM thấy đúng limit — đây chính là cơ chế đứng sau \`resources.limits.memory\` và \`OOMKilled\` ở chặng 3.
+Lần 2 là bài học quan trọng nhất buổi: kernel **vẫn áp** trần 512 MiB (\`memory.max\` của cgroup), nhưng spec mặc định của \`ctr run\` (containerd 2.2.1: kiểm bằng \`ctr oci spec | jq '.mounts[].destination'\`) chỉ gắn \`/sys\` dạng sysfs chỉ đọc, không gắn cgroup — trong container \`grep -c cgroup /proc/self/mountinfo\` ra \`0\`, \`/sys/fs/cgroup\` rỗng — nên JVM không đọc được trần, cho heap tới 2,2 GB — heap lớn dần là bị kernel giết (OOM). Lần 3 gắn cây cgroup vào thì JVM đọc được \`memory.max\` và tự co heap. Container của Pod do containerd tạo qua CRI thì có cgroup namespace riêng và \`/sys/fs/cgroup\` được gắn sẵn, nên trong Pod JVM thấy đúng limit (chặng 3 bạn sẽ chạy lại phép đo này bên trong Pod) — đây chính là cơ chế đứng sau \`resources.limits.memory\` và \`OOMKilled\` ở chặng 3.
 
 Lời giải tự động: \`labs/cka/sessions/s05/apply.sh\` (bước 1–3 ở \`files/install-containerd.sh\`, bước 5 ở \`files/run-catalog.sh\`).`,
     exam: {
