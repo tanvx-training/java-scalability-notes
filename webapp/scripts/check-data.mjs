@@ -110,6 +110,10 @@ const EXPECTED = {
     "docs:flashsale": 10,
     // 6 track fs-gd0..5 = 96 buổi + 69 tiêu chí nghiệm thu (18 + 27 + 27 + 33 + 29 + 31).
     "roadmap-items:flashsale": 165,
+    // Module Thực hành — chương trình CKA: 53 buổi (11 chặng). Số buổi đã phát
+    // hành TĂNG DẦN theo từng đợt nội dung; sửa ở đây TRƯỚC khi phát hành buổi.
+    "practice-sessions:cka": 53,
+    "practice-published:cka": 0,
   },
 };
 
@@ -1265,6 +1269,350 @@ await check("PL4 — Giờ mỗi tuần trong ngưỡng 6–10 (tuần nghỉ �
   expect(!bad.length, bad.join("; "));
 });
 
+// ---- PR — Module Thực hành (js/data/practice/) ----
+//
+// Chương trình thực hành là dạng dữ liệu riêng (chương trình → chặng → buổi →
+// kỹ năng, cộng project, đề mock và thư mục script lab). Id buổi/nhiệm vụ/mock
+// là khoá lưu tiến độ và tên thư mục script, nên một tham chiếu gõ sai không
+// văng lỗi trong app — chỉ âm thầm làm mất một kỹ năng, một mảnh project hay
+// một buổi khỏi thứ tự. Nạp trong try: thiếu dữ liệu thì PROGRAMS rỗng và
+// bảng kỳ vọng báo đỏ, thay vì cả script chết giữa chừng.
+const { orderedSessions, isPublished, RESERVED_SEGMENTS } = await import("../js/lib/practice.js");
+let PROGRAMS = [];
+try {
+  ({ PROGRAMS } = await import("../js/data/practice/index.js"));
+} catch (err) {
+  console.log(`  (không nạp được js/data/practice/index.js: ${err.message})`);
+}
+const { commands: kubeCommands } = await import("../js/data/kubernetes/commands.js");
+const { adminCommands } = await import("../js/data/kubernetes/commands-admin.js");
+const { snippets: kubeSnippets } = await import("../js/data/kubernetes/snippets.js");
+const { playbooks: kubePlaybooks } = await import("../js/data/kubernetes/playbooks.js");
+const PRACTICE_REF_IDS = {
+  command: new Set([...kubeCommands, ...adminCommands].map((c) => c.id)),
+  snippet: new Set(kubeSnippets.map((s) => s.id)),
+  playbook: new Set(kubePlaybooks.map((p) => p.id)),
+};
+const LABS = join(WEBAPP, "..", "labs");
+const SKILL_KINDS = ["command", "yaml", "procedure", "concept", "docs", "path"];
+// Mảng kỹ năng → tiền tố id (Global Constraints của module Thực hành).
+const SKILL_AREA_PREFIX = { kubernetes: "k-", vim: "vim-", linux: "lx-", network: "net-" };
+const SESSION_KINDS = ["lesson", "mock"];
+const sessionKind = (s) => s.kind ?? "lesson";
+const nonEmptyStr = (v) => typeof v === "string" && v.trim().length > 0;
+const strList = (v, n) => Array.isArray(v) && v.length >= n && v.every(nonEmptyStr);
+// Vị trí của từng buổi theo thứ tự chặng (stages[].sessions) — id buổi là định danh mờ.
+const orderIndex = (p) => new Map(orderedSessions(p).map((s, i) => [s.id, i]));
+
+await check("PR1 — chương trình: id duy nhất, field tồn tại, tổng tỷ trọng domain = 100", () => {
+  const bad = [];
+  const dup = dupes(PROGRAMS.map((p) => p.id));
+  if (dup.length) bad.push(`id chương trình trùng: ${dup.join(", ")}`);
+  for (const p of PROGRAMS) {
+    if (!FIELDS[p.field]) bad.push(`${p.id}: field "${p.field}" không tồn tại`);
+    const sum = (p.exam?.domains ?? []).reduce((a, d) => a + d.weight, 0);
+    if (sum !== 100) bad.push(`${p.id}: tổng exam.domains[].weight = ${sum}`);
+    for (const key of ["practice-sessions", "practice-published"]) {
+      if (!(`${key}:${p.id}` in EXPECTED.counts)) bad.push(`EXPECTED.counts thiếu "${key}:${p.id}"`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR2 — id buổi/kỹ năng/chặng/mock không trùng; mỗi buổi thuộc đúng một chặng", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const sessions = p.sessions ?? [];
+    for (const [label, arr] of [["buổi", sessions], ["kỹ năng", p.skills ?? []],
+                                ["chặng", p.stages ?? []], ["mock", p.mocks ?? []]]) {
+      const dup = dupes(arr.map((x) => x.id));
+      if (dup.length) bad.push(`${p.id}: id ${label} trùng: ${dup.join(", ")}`);
+    }
+    const ids = new Set(sessions.map((s) => s.id));
+    const stageOf = new Map();
+    for (const st of p.stages ?? []) {
+      for (const sid of st.sessions ?? []) {
+        if (!ids.has(sid)) bad.push(`${p.id}/${st.id}: buổi "${sid}" không tồn tại`);
+        if (stageOf.has(sid)) bad.push(`${p.id}: buổi ${sid} nằm ở cả ${stageOf.get(sid)} và ${st.id}`);
+        else stageOf.set(sid, st.id);
+      }
+    }
+    for (const s of sessions) {
+      if (RESERVED_SEGMENTS.includes(s.id)) bad.push(`${p.id}: id buổi "${s.id}" là đoạn route dành riêng`);
+      if (!stageOf.has(s.id)) bad.push(`${p.id}: buổi ${s.id} không thuộc chặng nào`);
+      else if (stageOf.get(s.id) !== s.stage) {
+        bad.push(`${p.id}: buổi ${s.id} khai stage "${s.stage}" nhưng nằm trong ${stageOf.get(s.id)}`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR3 — tham chiếu của buổi trỏ tới thứ có thật; năng lực cùng domain với buổi", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const sessionIds = new Set((p.sessions ?? []).map((s) => s.id));
+    const skillIds = new Set((p.skills ?? []).map((k) => k.id));
+    const pieceIds = new Set((p.project?.pieces ?? []).map((x) => x.id));
+    const domainIds = new Set((p.exam?.domains ?? []).map((d) => d.id));
+    const comps = new Map((p.exam?.competencies ?? []).map((c) => [c.id, c]));
+    for (const c of comps.values()) {
+      if (!domainIds.has(c.domain)) bad.push(`${p.id}: năng lực ${c.id} có domain lạ "${c.domain}"`);
+    }
+    for (const s of p.sessions ?? []) {
+      const at = `${p.id}/${s.id}`;
+      for (const r of s.requires ?? []) if (!sessionIds.has(r)) bad.push(`${at}: requires "${r}" không tồn tại`);
+      if (s.domain && !domainIds.has(s.domain)) bad.push(`${at}: domain "${s.domain}" không tồn tại`);
+      if (!s.domain && (s.competencies ?? []).length) bad.push(`${at}: domain rỗng nhưng có competencies`);
+      for (const cid of s.competencies ?? []) {
+        const c = comps.get(cid);
+        if (!c) bad.push(`${at}: năng lực "${cid}" không tồn tại`);
+        else if (s.domain && c.domain !== s.domain) bad.push(`${at}: năng lực ${cid} thuộc ${c.domain}, buổi thuộc ${s.domain}`);
+      }
+      for (const x of s.pieces ?? []) if (!pieceIds.has(x)) bad.push(`${at}: mảnh project "${x}" không tồn tại`);
+      for (const k of s.skills ?? []) if (!skillIds.has(k.skill)) bad.push(`${at}: kỹ năng "${k.skill}" không tồn tại`);
+      for (const k of s.uses ?? []) if (!skillIds.has(k)) bad.push(`${at}: uses "${k}" không tồn tại`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR4 — requires chỉ trỏ tới buổi đứng trước (không vòng)", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const idx = orderIndex(p);
+    for (const s of p.sessions ?? []) {
+      for (const r of s.requires ?? []) {
+        if (idx.has(r) && idx.has(s.id) && idx.get(r) >= idx.get(s.id)) {
+          bad.push(`${p.id}/${s.id}: requires "${r}" không đứng trước`);
+        }
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR5 — kỹ năng học ở đúng một buổi, dùng lại sau đó; kind/area/ref hợp lệ", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const idx = orderIndex(p);
+    const learnedAt = new Map();
+    for (const s of orderedSessions(p)) {
+      const mine = (s.skills ?? []).map((k) => k.skill);
+      const dup = dupes(mine);
+      if (dup.length) bad.push(`${p.id}/${s.id}: kỹ năng khai lặp: ${dup.join(", ")}`);
+      const dupUse = dupes(s.uses ?? []);
+      if (dupUse.length) bad.push(`${p.id}/${s.id}: uses lặp: ${dupUse.join(", ")}`);
+      for (const k of new Set(mine)) {
+        if (learnedAt.has(k)) bad.push(`${p.id}: kỹ năng ${k} được học ở cả ${learnedAt.get(k)} và ${s.id}`);
+        else learnedAt.set(k, s.id);
+      }
+    }
+    for (const s of orderedSessions(p)) {
+      for (const k of s.uses ?? []) {
+        const at = learnedAt.get(k);
+        if (at === undefined) continue; // không được học ở đâu — báo ở dưới
+        if (idx.get(at) >= idx.get(s.id)) bad.push(`${p.id}/${s.id}: uses "${k}" nhưng ${k} học ở ${at} (không đứng trước)`);
+      }
+    }
+    for (const k of p.skills ?? []) {
+      const at = `${p.id}/${k.id}`;
+      if (!learnedAt.has(k.id)) bad.push(`${at}: không buổi nào dạy kỹ năng này`);
+      if (!SKILL_KINDS.includes(k.kind)) bad.push(`${at}: kind "${k.kind}" lạ`);
+      if (!(k.area in SKILL_AREA_PREFIX)) bad.push(`${at}: area "${k.area}" lạ`);
+      else if (!k.id.startsWith(SKILL_AREA_PREFIX[k.area])) bad.push(`${at}: area ${k.area} cần tiền tố "${SKILL_AREA_PREFIX[k.area]}"`);
+      if (!nonEmptyStr(k.label)) bad.push(`${at}: label rỗng`);
+      if (k.ref != null) {
+        const ids = PRACTICE_REF_IDS[k.ref.type];
+        if (!ids) bad.push(`${at}: ref.type "${k.ref.type}" lạ`);
+        else if (!ids.has(k.ref.id)) bad.push(`${at}: ref ${k.ref.type} "${k.ref.id}" không tồn tại`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR6 — mọi năng lực curriculum được phủ; mọi mảnh project hoàn thành ở đúng một buổi", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const covered = new Set((p.sessions ?? []).flatMap((s) => s.competencies ?? []));
+    for (const c of p.exam?.competencies ?? []) {
+      if (!covered.has(c.id)) bad.push(`${p.id}: năng lực ${c.id} không buổi nào phủ`);
+    }
+    for (const piece of p.project?.pieces ?? []) {
+      const by = (p.sessions ?? []).filter((s) => (s.pieces ?? []).includes(piece.id)).map((s) => s.id);
+      if (by.length !== 1) bad.push(`${p.id}: mảnh ${piece.id} hoàn thành ở ${by.length} buổi (${by.join(", ")})`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR7 — buổi khung có đủ trường bắt buộc", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    for (const s of p.sessions ?? []) {
+      const at = `${p.id}/${s.id ?? "?"}`;
+      const kind = sessionKind(s);
+      if (!SESSION_KINDS.includes(kind)) { bad.push(`${at}: kind "${kind}" lạ`); continue; }
+      for (const k of ["id", "stage", "title", "stateIn", "stateOut"]) {
+        if (!nonEmptyStr(s[k])) bad.push(`${at}: thiếu ${k}`);
+      }
+      if (!("domain" in s)) bad.push(`${at}: thiếu domain (null nếu ngoài đề thi)`);
+      for (const k of ["competencies", "requires", "uses", "pieces", "skills"]) {
+        if (!Array.isArray(s[k])) bad.push(`${at}: ${k} phải là mảng`);
+      }
+      if (!["skeleton", "published"].includes(s.status)) bad.push(`${at}: status "${s.status}" lạ`);
+      if (!strList(s.goals, 1)) bad.push(`${at}: goals cần ≥1 chuỗi không rỗng`);
+      if (!(s.skills ?? []).every((k) => nonEmptyStr(k?.skill) && nonEmptyStr(k?.level))) {
+        bad.push(`${at}: mỗi skills[] cần skill + level`);
+      }
+      if (kind === "lesson") {
+        if (!Number.isInteger(s.durationMin) || s.durationMin < 60 || s.durationMin > 90) {
+          bad.push(`${at}: durationMin=${s.durationMin} ngoài 60–90`);
+        }
+        if ((s.skills ?? []).length < 2) bad.push(`${at}: cần ≥2 kỹ năng học mới`);
+      } else if (!Number.isInteger(s.durationMin) || s.durationMin <= 0) {
+        bad.push(`${at}: durationMin=${s.durationMin} không hợp lệ`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR8 — buổi đã phát hành có đủ nội dung; link #/docs, #/roadmap trong buổi tồn tại", () => {
+  const bad = [];
+  const docIds = new Set(docs.map((d) => d.id));
+  const itemsOf = new Map(tracks.map((t) => [t.id, new Set(t.weeks.flatMap((w) => w.items.map((i) => i.id)))]));
+  for (const p of PROGRAMS) {
+    for (const s of p.sessions ?? []) {
+      const at = `${p.id}/${s.id}`;
+      // Link nội bộ: quét toàn bộ buổi (refs, markdown, lời giải…), buổi khung cũng vậy.
+      const text = JSON.stringify(s);
+      for (const m of text.matchAll(/#\/docs\/([A-Za-z0-9_-]+)/g)) {
+        if (!docIds.has(m[1])) bad.push(`${at}: #/docs/${m[1]} không tồn tại`);
+      }
+      for (const m of text.matchAll(/#\/roadmap\/([A-Za-z0-9_-]+)(?:\/([A-Za-z0-9_-]+))?/g)) {
+        const items = itemsOf.get(m[1]);
+        if (!items) bad.push(`${at}: #/roadmap/${m[1]} không có track`);
+        else if (m[2] && !items.has(m[2])) bad.push(`${at}: #/roadmap/${m[1]}/${m[2]} không có mục`);
+      }
+      if (!isPublished(s)) continue;
+      if (!nonEmptyStr(s.mindset)) bad.push(`${at}: thiếu mindset`);
+      const refs = s.refs ?? [];
+      if (!refs.every((r) => nonEmptyStr(r?.label) && nonEmptyStr(r?.href))) bad.push(`${at}: refs cần label + href`);
+      if (!refs.some((r) => String(r?.href ?? "").startsWith("#/"))) bad.push(`${at}: refs cần ≥1 link trong app (#/…)`);
+      const tasks = s.tasks ?? [];
+      if (tasks.length < 3 || !tasks.every((t) => nonEmptyStr(t?.id) && nonEmptyStr(t?.text))) bad.push(`${at}: tasks cần ≥3 mục có id + text`);
+      const dupTask = dupes(tasks.map((t) => t?.id));
+      if (dupTask.length) bad.push(`${at}: id nhiệm vụ trùng: ${dupTask.join(", ")}`);
+      if (!strList(s.hints, 2)) bad.push(`${at}: hints cần ≥2`);
+      if (!nonEmptyStr(s.solution)) bad.push(`${at}: thiếu solution`);
+      if (s.domain && !strList(s.exam?.patterns, 1)) bad.push(`${at}: exam.patterns cần ≥1`);
+      if (!(Number.isFinite(s.exam?.timeTargetMin) && s.exam.timeTargetMin > 0)) bad.push(`${at}: thiếu exam.timeTargetMin`);
+      if (!strList(s.tips, 2)) bad.push(`${at}: tips cần ≥2`);
+      for (const k of ["md", "verifyOutput", "projectDelta"]) {
+        if (!nonEmptyStr(s.outcome?.[k])) bad.push(`${at}: thiếu outcome.${k}`);
+      }
+      const review = s.review ?? [];
+      if (review.length < 3 || review.length > 5 || !review.every((r) => nonEmptyStr(r?.q) && nonEmptyStr(r?.a))) {
+        bad.push(`${at}: review cần 3–5 câu có q + a`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR9 — số buổi theo domain lệch ≤ 8 điểm % so với tỷ trọng đề", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const withDomain = (p.sessions ?? []).filter((s) => s.domain);
+    if (!withDomain.length) continue;
+    for (const d of p.exam?.domains ?? []) {
+      const share = (withDomain.filter((s) => s.domain === d.id).length * 100) / withDomain.length;
+      if (Math.abs(share - d.weight) > 8) bad.push(`${p.id}: ${d.id} ${share.toFixed(1)}% buổi, đề ${d.weight}%`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR10 — đề mock: id câu không trùng, domain hợp lệ, trọng số lệch ≤ 5 điểm %", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const domains = p.exam?.domains ?? [];
+    const domainIds = new Set(domains.map((d) => d.id));
+    for (const m of p.mocks ?? []) {
+      const at = `${p.id}/${m.id}`;
+      const qs = m.questions ?? [];
+      const dup = dupes(qs.map((q) => q.id));
+      if (dup.length) bad.push(`${at}: id câu trùng: ${dup.join(", ")}`);
+      for (const q of qs) if (!domainIds.has(q.domain)) bad.push(`${at}/${q.id}: domain "${q.domain}" lạ`);
+      const total = qs.reduce((a, q) => a + (q.weight ?? 0), 0);
+      if (!total) { bad.push(`${at}: tổng weight = 0`); continue; }
+      for (const d of domains) {
+        const share = (qs.filter((q) => q.domain === d.id).reduce((a, q) => a + q.weight, 0) * 100) / total;
+        if (Math.abs(share - d.weight) > 5) bad.push(`${at}: ${d.id} ${share.toFixed(1)}%, đề ${d.weight}%`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+await check("PR11 — thư mục lab khớp dữ liệu (ORDER, script buổi đã phát hành, mock)", () => {
+  const bad = [];
+  for (const p of PROGRAMS) {
+    const dir = join(LABS, p.id);
+    const orderFile = join(dir, "sessions", "ORDER");
+    const want = orderedSessions(p).map((s) => s.id);
+    if (!existsSync(orderFile)) {
+      bad.push(`thiếu labs/${p.id}/sessions/ORDER`);
+    } else {
+      const got = readFileSync(orderFile, "utf8").split("\n").map((l) => l.trim())
+        .filter((l) => l && !l.startsWith("#"));
+      if (got.join(" ") !== want.join(" ")) {
+        const at = want.findIndex((id, k) => got[k] !== id);
+        const i = at < 0 ? want.length : at; // chỉ lệch độ dài: ORDER thừa dòng ở cuối
+        bad.push(`labs/${p.id}/sessions/ORDER lệch thứ tự chặng từ vị trí ${i + 1} ` +
+          `(ORDER "${got[i] ?? "∅"}", dữ liệu "${want[i] ?? "∅"}"; ${got.length} vs ${want.length} dòng)`);
+      }
+    }
+    const published = new Set((p.sessions ?? []).filter(isPublished).map((s) => s.id));
+    for (const id of published) {
+      for (const f of ["verify.sh", "apply.sh"]) {
+        if (!existsSync(join(dir, "sessions", id, f))) bad.push(`thiếu labs/${p.id}/sessions/${id}/${f}`);
+      }
+    }
+    const sdir = join(dir, "sessions");
+    if (existsSync(sdir)) {
+      for (const e of readdirSync(sdir, { withFileTypes: true })) {
+        if (e.isDirectory() && !published.has(e.name)) {
+          bad.push(`labs/${p.id}/sessions/${e.name} không phải buổi đã phát hành`);
+        }
+      }
+    }
+    for (const m of p.mocks ?? []) {
+      for (const f of ["setup.sh", "score.sh"]) {
+        if (!existsSync(join(dir, "mocks", m.id, f))) bad.push(`thiếu labs/${p.id}/mocks/${m.id}/${f}`);
+      }
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
+// Phần chung của module Thực hành không được biết tới chương trình cụ thể nào
+// (spec A5) — mọi thứ riêng của một chương trình nằm trong data/practice/<id>/.
+await check("PR12 — lib/practice.js và views/practice.js không nhắc tên chương trình", () => {
+  const bad = [];
+  for (const rel of ["js/lib/practice.js", "js/views/practice.js"]) {
+    const full = join(WEBAPP, rel);
+    if (!existsSync(full)) continue;
+    const text = readFileSync(full, "utf8");
+    for (const word of ["cka", "kubernetes"]) {
+      if (new RegExp(word, "i").test(text)) bad.push(`${rel} chứa "${word}"`);
+    }
+  }
+  expect(!bad.length, bad.join("; "));
+});
+
 // Bảng kỳ vọng
 await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
   const actual = {};
@@ -1286,6 +1634,10 @@ await check("Số lượng bản ghi khớp bảng kỳ vọng", () => {
       (actual[`matrix-topics:${f}`] ?? 0) + m.modules.flatMap((x) => x.topics).length;
     actual[`matrix-criteria:${f}`] = (actual[`matrix-criteria:${f}`] ?? 0)
       + m.modules.flatMap((x) => x.topics).flatMap((t) => t.checklist).length;
+  }
+  for (const p of PROGRAMS) {
+    actual[`practice-sessions:${p.id}`] = (p.sessions ?? []).length;
+    actual[`practice-published:${p.id}`] = (p.sessions ?? []).filter(isPublished).length;
   }
   const bad = Object.entries(EXPECTED.counts)
     .filter(([k, v]) => (actual[k] ?? 0) !== v)
