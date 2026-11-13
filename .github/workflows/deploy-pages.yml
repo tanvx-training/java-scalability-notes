@@ -35,6 +35,9 @@ jobs:
       - name: Check data integrity
         run: node webapp/scripts/check-data.mjs
 
+      - name: Unit tests
+        run: node --test "webapp/scripts/tests/*.test.mjs"
+
   deploy:
     needs: check
     runs-on: ubuntu-latest
