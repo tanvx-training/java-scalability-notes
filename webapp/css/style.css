@@ -1640,3 +1640,6 @@ dialog.modal .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; 
 .pr-skills .pr-group th { text-align: left; font-size: 13px; background: var(--surface-2); }
 .pr-drill-clock { margin-left: 8px; font-weight: 400; }
 .pr-nav { gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+.pr-q.marked { border-color: var(--amber, var(--accent)); box-shadow: 0 0 0 1px var(--amber, var(--accent)); }
+.pr-err { color: var(--red); margin-top: 6px; }
+.pr-mock-clock { font-size: 20px; margin-left: 12px; }

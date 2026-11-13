@@ -3,23 +3,23 @@
 //
 // Route: #/practice                 → danh sách chương trình (một chương trình thì vào thẳng)
 //        #/practice/<p>             → trang chủ chương trình
-//        #/practice/<p>/skills      → bản đồ kỹ năng        (Task 5)
-//        #/practice/<p>/project     → project               (Task 5)
-//        #/practice/<p>/mock[/<m>]  → đề mock               (Task 6)
-//        #/practice/<p>/<sessionId> → một buổi              (Task 5)
+//        #/practice/<p>/skills      → bản đồ kỹ năng
+//        #/practice/<p>/project     → project
+//        #/practice/<p>/mock[/<m>]  → danh sách đề mock / một đề
+//        #/practice/<p>/<sessionId> → một buổi
 
 import { h, pageHead, sectionTitle, codeNode, emptyState, inlineMd, mdInto, toast } from "../lib/ui.js";
-import { createStopwatch } from "../lib/timer.js";
+import { createStopwatch, createCountdown } from "../lib/timer.js";
 import { pushRecent } from "../lib/activity.js";
 import { goTo } from "../lib/search.js";
 import { PROGRAMS, getProgram } from "../data/practice/index.js";
 import {
   RESERVED_SEGMENTS, findSession, findMock, orderedSessions, isPublished, isDone, doneCount, nextSession,
   stageProgress, domainCoverage, projectPieces, reviewFor, weeksLeft, practiceState, sessionKey, taskKey,
-  neighbors, missingRequires, setDone, setTask, setNote,
+  neighbors, missingRequires, setDone, setTask, setNote, skillIndex, parseMockResult, addMockResult,
 } from "../lib/practice.js";
 
-// Hàm dọn của trang đang mở (timer…). Task 5/6 đăng ký qua onCleanup().
+// Hàm dọn của trang đang mở (timer…), đăng ký qua onCleanup().
 let cleanups = [];
 export const onCleanup = (fn) => { cleanups.push(fn); };
 export function cleanup() {
@@ -42,22 +42,6 @@ export function render(root, params = []) {
   const session = findSession(program, sub);
   if (!session) return renderMissing(root, pid, `Không có buổi “${sub}” trong chương trình này.`);
   return renderSession(root, program, session);
-}
-
-// ---------- Chỗ Task 5 / Task 6 sẽ điền thân ----------
-
-function underConstruction(root, program, title) {
-  const page = h("div", { class: "page" },
-    crumbs(program, title),
-    emptyState("🚧", "Trang này đang xây", "Sẽ có ở đợt sau.",
-      h("a", { class: "btn", href: `#/practice/${program.id}` }, "← Về trang chủ chương trình")));
-  root.append(page);
-}
-function renderSkills(root, program) { underConstruction(root, program, "Kỹ năng"); }                         // Task 5
-function renderProject(root, program) { underConstruction(root, program, "Project"); }                       // Task 5
-function renderMock(root, program, mockId) {                                                                  // Task 6
-  if (mockId && !findMock(program, mockId)) return renderMissing(root, program.id, `Không có đề mock “${mockId}”.`);
-  underConstruction(root, program, mockId ? `Đề ${mockId}` : "Đề mock");
 }
 
 // ---------- Tiện ích ----------
@@ -358,6 +342,19 @@ function renderSession(root, program, session) {
     return;
   }
 
+  if (session.kind === "mock") {
+    // Buổi mock là trang mỏng: dẫn sang danh sách đề, không có khối bài học.
+    add(stateBlock("📥 Trạng thái đầu vào", session.stateIn), stateBlock("📤 Trạng thái đầu ra", session.stateOut));
+    page.append(block("⏱️ Làm đề mock",
+      h("p", { class: "muted mt0" }, "Buổi này làm trọn một đề thi thử bấm giờ trên cluster lab, rồi dán dòng kết quả vào app để xem điểm theo domain."),
+      h("a", { class: "btn btn-primary", href: `#/practice/${program.id}/mock` }, "Mở danh sách đề mock →")));
+    page.append(finishBlock(program, session, state));
+    page.append(sessionNav(program, session));
+    pushRecentSession(program, session, idx);
+    root.append(page);
+    return;
+  }
+
   if (session.foundation) {
     page.append(block(`🧱 Nền tảng cần cho buổi này${session.foundation.area ? ` · ${AREA_LABEL[session.foundation.area] || session.foundation.area}` : ""}`, md(session.foundation.md)));
   }
@@ -485,4 +482,229 @@ function sessionNav(program, session) {
     ? h("a", { class: `btn ${cls}`, href: `#/practice/${program.id}/${s.id}` }, `${label} ${s.title}`)
     : h("span");
   return h("div", { class: "flex pr-nav" }, link(prev, "←", "btn-ghost"), h("span", { class: "grow" }), link(next, "→", "btn-ghost"));
+}
+
+// ---------- Bản đồ kỹ năng ----------
+
+const KIND_LABEL = Object.fromEntries(SKILL_GROUPS);
+const areaLabel = (program, area) => (area === program.field ? program.label : AREA_LABEL[area] || area);
+const sessionLink = (program, id) => {
+  const s = findSession(program, id);
+  if (!s) return null;
+  return h("a", { href: `#/practice/${program.id}/${id}`, title: s.title }, `Buổi ${indexOfSession(program, id) + 1}`);
+};
+const joinNodes = (nodes) => nodes.flatMap((n, i) => (i ? [", ", n] : [n]));
+
+function renderSkills(root, program) {
+  const rows = skillIndex(program, program.skills || []);
+  const kinds = SKILL_GROUPS.map(([k]) => k).filter((k) => rows.some((r) => r.skill.kind === k));
+  const areas = [...new Set(rows.map((r) => r.skill.area))];
+  const sel = { kind: null, area: null };
+
+  const kindBar = h("div", { class: "chip-row" });
+  const areaBar = h("div", { class: "chip-row mt-2" });
+  const total = h("p", { class: "faint small" });
+  const tbody = h("tbody");
+
+  const chip = (label, on, fn) => h("button", { type: "button", class: `chip${on ? " on" : ""}`, onclick: fn }, label);
+  const paint = () => {
+    kindBar.replaceChildren(chip("Tất cả loại", !sel.kind, () => { sel.kind = null; paint(); }),
+      ...kinds.map((k) => chip(KIND_LABEL[k], sel.kind === k, () => { sel.kind = sel.kind === k ? null : k; paint(); })));
+    areaBar.replaceChildren(chip("Tất cả mảng", !sel.area, () => { sel.area = null; paint(); }),
+      ...areas.map((a) => chip(areaLabel(program, a), sel.area === a, () => { sel.area = sel.area === a ? null : a; paint(); })));
+    const shown = rows.filter((r) => (!sel.kind || r.skill.kind === sel.kind) && (!sel.area || r.skill.area === sel.area));
+    total.textContent = `${shown.length} kỹ năng`;
+    tbody.replaceChildren(...shown.map(({ skill, learnedIn, usedIn }) => {
+      const learned = learnedIn ? sessionLink(program, learnedIn) : null;
+      const used = usedIn.map((id) => sessionLink(program, id)).filter(Boolean);
+      return h("tr", {},
+        h("td", {}, skillLink(program, skill), h("div", { class: "faint small" }, `${KIND_LABEL[skill.kind] || skill.kind} · ${areaLabel(program, skill.area)}`)),
+        h("td", {}, learned || h("span", { class: "faint" }, "—")),
+        h("td", {}, used.length ? joinNodes(used) : h("span", { class: "faint" }, "—")));
+    }));
+    if (!shown.length) tbody.append(h("tr", {}, h("td", { colspan: 3, class: "faint" }, "Không có kỹ năng nào khớp bộ lọc.")));
+  };
+  paint();
+
+  root.append(h("div", { class: "page" },
+    crumbs(program, "Kỹ năng"),
+    pageHead("🧩 Bản đồ kỹ năng", "Mục lục mọi kỹ năng của chương trình: học ở buổi nào, dùng lại ở buổi nào.", `${program.label} · Kỹ năng`),
+    h("div", { class: "card mb-4" }, kindBar, areaBar),
+    total,
+    h("div", { class: "table-wrap" },
+      h("table", { class: "table pr-skills" },
+        h("thead", {}, h("tr", {}, h("th", {}, "Kỹ năng"), h("th", {}, "Học ở"), h("th", {}, "Dùng lại ở"))),
+        tbody))));
+}
+
+// ---------- Project ----------
+
+function renderProject(root, program) {
+  const state = practiceState();
+  const pieces = projectPieces(program, state.done);
+  const page = h("div", { class: "page" },
+    crumbs(program, "Project"),
+    pageHead("🏗️ Project xuyên suốt", "Hệ thống lớn dần qua từng chặng.", `${program.label} · Project`),
+    h("div", { class: "card mb-4" }, h("p", { class: "mt0 mb0", html: inlineMd(program.project.summary) })));
+  const add = (...n) => page.append(...n.filter(Boolean));
+  if (program.project.architectureMd) add(block("🧭 Kiến trúc", md(program.project.architectureMd)));
+
+  const body = h("tbody", {}, pieces.map(({ piece, have }) => {
+    const sid = piece.sinceSession;
+    const link = sid ? sessionLink(program, sid) : null;
+    const s = sid ? findSession(program, sid) : null;
+    return h("tr", {},
+      h("td", {}, piece.label),
+      h("td", {}, link ? [link, s ? ` · ${s.title}` : ""] : h("span", { class: "faint" }, "—")),
+      h("td", {}, have ? h("span", { class: "badge badge-green" }, "✓ đã có") : h("span", { class: "faint" }, "chưa")));
+  }));
+  add(block("🧱 Các mảnh của project",
+    h("div", { class: "table-wrap" }, h("table", { class: "table" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Mảnh"), h("th", {}, "Hoàn thành ở buổi"), h("th", {}, "Trạng thái"))), body))));
+
+  const stages = (program.stages || []).filter((st) => st.projectMilestone);
+  if (stages.length) {
+    add(block("🚩 Mốc từng chặng", h("ul", { class: "pr-list" }, stages.map((st) =>
+      h("li", {}, h("strong", {}, st.title), ": ", h("span", { html: inlineMd(st.projectMilestone) }))))));
+  }
+  root.append(page);
+}
+
+// ---------- Đề mock ----------
+
+const pctOf = (got, max) => (max > 0 ? Math.round((got / max) * 100) : 0);
+const mockCmd = (program, mock, which) => {
+  const c = (program.env && program.env.commands) || {};
+  const tpl = c[which === "start" ? "mockStart" : "mockScore"];
+  return tpl ? fill(tpl, { mock: mock.id }) : `./lab mock ${program.id} ${mock.id} ${which}`;
+};
+
+function scoreTable(program, rec) {
+  const pass = rec.total >= program.exam.passPct;
+  const rows = program.exam.domains.filter((d) => rec.byDomain[d.id]).map((d) => {
+    const v = rec.byDomain[d.id];
+    return h("tr", {}, h("td", {}, `${d.label} (${d.weight}%)`), h("td", {}, `${v.got} / ${v.max}`), h("td", {}, `${pctOf(v.got, v.max)}%`));
+  });
+  return h("div", {},
+    h("div", { class: "flex mb-2" },
+      h("span", { class: `badge badge-${pass ? "green" : "amber"}` }, `${rec.total}%`),
+      h("span", { class: "muted small" }, pass ? `Đạt ngưỡng ${program.exam.passPct}%` : `Chưa đạt ngưỡng ${program.exam.passPct}%`)),
+    h("div", { class: "table-wrap" }, h("table", { class: "table" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Domain"), h("th", {}, "Điểm"), h("th", {}, "Tỷ lệ"))),
+      h("tbody", {}, rows))));
+}
+
+function mockHistory(program, state) {
+  const mine = (state.mock || []).filter((m) => m.program === program.id).slice().reverse();
+  if (!mine.length) return null;
+  const doms = program.exam.domains;
+  return block("📈 Lịch sử các lần làm",
+    h("div", { class: "table-wrap" }, h("table", { class: "table" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Ngày"), h("th", {}, "Đề"), h("th", {}, "Tổng"),
+        doms.map((d) => h("th", { title: d.label }, d.label.split(" ")[0])))),
+      h("tbody", {}, mine.map((r) => h("tr", {},
+        h("td", {}, r.date), h("td", {}, h("a", { href: `#/practice/${program.id}/mock/${r.mock}` }, r.mock)),
+        h("td", {}, h("span", { class: `badge badge-${r.total >= program.exam.passPct ? "green" : "amber"}` }, `${r.total}%`)),
+        doms.map((d) => { const v = r.byDomain[d.id]; return h("td", {}, v ? `${pctOf(v.got, v.max)}%` : "—"); })))))));
+}
+
+function renderMock(root, program, mockId) {
+  if (!mockId) return renderMockIndex(root, program);
+  const mock = findMock(program, mockId);
+  if (!mock) return renderMissing(root, program.id, `Không có đề mock “${mockId}”.`);
+  return renderMockPage(root, program, mock);
+}
+
+function renderMockIndex(root, program) {
+  const mocks = program.mocks || [];
+  const page = h("div", { class: "page" },
+    crumbs(program, "Đề mock"),
+    pageHead("⏱️ Đề mock", `Đề thi thử bấm giờ, đậu từ ${program.exam.passPct}% trong ${program.exam.durationMin} phút.`, `${program.label} · Mock`));
+  const add = (...n) => page.append(...n.filter(Boolean));
+  if (!mocks.length) {
+    add(emptyState("⏱️", "Đề mock phát hành ở đợt cuối", "Hoàn thành các buổi trước rồi quay lại làm đề tổng duyệt."));
+  } else {
+    add(h("div", { class: "grid grid-2 mb-4" }, mocks.map((m) =>
+      h("a", { class: "card card-link card-accent", href: `#/practice/${program.id}/mock/${m.id}` },
+        h("div", { class: "card-head" }, h("strong", {}, m.title), h("span", { class: "faint" }, `${m.durationMin} phút`)),
+        h("p", { class: "muted small mt0 mb0" }, `${(m.questions || []).length} câu`)))));
+  }
+  add(mockHistory(program, practiceState()));
+  root.append(page);
+}
+
+function renderMockPage(root, program, mock) {
+  const questions = mock.questions || [];
+  const page = h("div", { class: "page" },
+    crumbs(program, mock.title),
+    pageHead(`⏱️ ${mock.title}`, `${mock.durationMin} phút · ${questions.length} câu · đậu từ ${program.exam.passPct}%`, `${program.label} · Mock`));
+  const add = (...n) => page.append(...n.filter(Boolean));
+
+  add(block("📋 Trước khi làm",
+    h("div", { class: "chip-row mb-3" }, program.exam.domains.map((d) => h("span", { class: "badge badge-blue" }, `${d.label} ${d.weight}%`))),
+    h("p", { class: "muted small mt0" }, "Dựng đề trên cluster lab:"), cmd(mockCmd(program, mock, "start"))));
+
+  // Đồng hồ: gắn el vào DOM trước khi start() (timer tự dừng nếu el chưa gắn).
+  const clockSlot = h("span", { class: "pr-mock-clock" });
+  const startBtn = h("button", { class: "btn btn-primary", type: "button" }, "▶ Bắt đầu đếm giờ");
+  startBtn.addEventListener("click", () => {
+    startBtn.disabled = true;
+    const cd = createCountdown({ totalSec: mock.durationMin * 60, onEnd: () => toast("Hết giờ. Chấm đề và dán dòng kết quả bên dưới.", "info", 6000) });
+    clockSlot.append(cd.el);
+    cd.start();
+    onCleanup(cd.stop);
+  });
+  add(h("div", { class: "card mb-4" }, h("div", { class: "flex" }, startBtn, clockSlot)));
+
+  // Đánh dấu câu chỉ giữ trong bộ nhớ trang.
+  const marked = new Set();
+  const markCount = h("span", { class: "faint" });
+  const solutionSlots = new Map();
+  const list = h("div", {}, questions.map((q, i) => {
+    const dom = program.exam.domains.find((d) => d.id === q.domain);
+    const box = h("input", { type: "checkbox" });
+    const card = h("div", { class: "card mb-3 pr-q" });
+    box.addEventListener("change", () => {
+      if (box.checked) marked.add(q.id); else marked.delete(q.id);
+      card.classList.toggle("marked", box.checked);
+      markCount.textContent = marked.size ? `${marked.size} câu đã đánh dấu` : "";
+    });
+    const slot = h("div", {});
+    solutionSlots.set(q.id, slot);
+    card.append(...[
+      h("div", { class: "card-head" }, h("strong", {}, `Câu ${i + 1}`),
+        h("span", { class: "chip-row" },
+          dom ? h("span", { class: "badge badge-blue" }, dom.label) : null,
+          h("span", { class: "badge" }, `${q.weight}%`))),
+      q.context ? h("p", { class: "small muted mt0" }, `Làm việc trên: ${q.context}`) : null,
+      md(q.text),
+      h("label", { class: "small muted flex mt-2" }, box, " Đánh dấu để quay lại"),
+      slot].filter(Boolean));
+    return card;
+  }));
+  add(h("div", { class: "card-head" }, h("strong", {}, "📝 Danh sách câu"), markCount), list);
+
+  // Dán kết quả.
+  const input = h("input", { class: "input grow", type: "text", placeholder: "devprep-mock:v1:…", "aria-label": "Dòng kết quả mock" });
+  const err = h("p", { class: "pr-err small mb0", role: "alert" });
+  const out = h("div", { class: "mt-3" });
+  const submit = () => {
+    const r = parseMockResult(input.value, program);
+    err.textContent = r.ok ? "" : r.error;
+    if (!r.ok) return;
+    addMockResult(r.record);
+    out.replaceChildren(h("strong", {}, "Điểm lần này"), scoreTable(program, r.record));
+    for (const q of questions) {
+      const slot = solutionSlots.get(q.id);
+      if (slot && q.solution) slot.replaceChildren(reveal("🔓 Lời giải", md(q.solution)));
+    }
+    input.value = "";
+  };
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  add(block("📥 Kết quả",
+    h("p", { class: "muted small mt0" }, "Sau khi làm xong, chấm đề rồi dán dòng kết quả in ra:"), cmd(mockCmd(program, mock, "score")),
+    h("div", { class: "flex mt-2" }, input, h("button", { class: "btn btn-primary", type: "button", onclick: submit }, "Lưu kết quả")),
+    err, out));
+  add(h("a", { class: "btn btn-ghost btn-sm", href: `#/practice/${program.id}/mock` }, "← Danh sách đề mock"));
+  root.append(page);
 }

@@ -18,6 +18,7 @@ import { commands } from "../data/kubernetes/commands.js";
 import { adminCommands } from "../data/kubernetes/commands-admin.js";
 import { snippets } from "../data/kubernetes/snippets.js";
 import { playbooks } from "../data/kubernetes/playbooks.js";
+import { PROGRAMS } from "../data/practice/index.js";
 
 export function normalize(s) {
   return String(s ?? "")
@@ -35,6 +36,8 @@ const TYPES = {
   cmd:      { label: "Lệnh",         order: 4 },
   yaml:     { label: "YAML mẫu",     order: 5 },
   card:     { label: "Flashcard",    order: 6 },
+  practice: { label: "Buổi thực hành", order: 7 },
+  skill:    { label: "Kỹ năng",      order: 8 },
 };
 
 let index = null;
@@ -79,6 +82,24 @@ function buildIndex() {
     const topic = TOPICS[c.topic]?.label ?? c.topic;
     add({ type: "card", icon: "🃏", title: stripMd(c.front), sub: topic,
       field: fieldOfRecord(c), href: "#/flashcards", text: `${c.front} ${topic}` });
+  }
+  const KIND = { command: "Lệnh", yaml: "YAML", procedure: "Quy trình", concept: "Khái niệm", docs: "Trang docs", path: "File và đường dẫn" };
+  for (const p of PROGRAMS) {
+    let n = 0;
+    for (const st of p.stages ?? []) {
+      for (const id of st.sessions ?? []) {
+        const s = (p.sessions ?? []).find((x) => x.id === id);
+        if (!s) continue;
+        n++;
+        add({ type: "practice", icon: p.icon, title: s.title, sub: `${p.label} · Buổi ${n} · ${st.title}`,
+          field: p.field, href: `#/practice/${p.id}/${s.id}`,
+          text: `${s.title} ${(s.goals ?? []).join(" ")} ${st.title} ${p.label}` });
+      }
+    }
+    for (const k of p.skills ?? []) {
+      add({ type: "skill", icon: "🧩", title: stripMd(k.label), sub: `${p.label} · ${KIND[k.kind] ?? k.kind}`,
+        field: p.field, href: `#/practice/${p.id}/skills`, text: `${k.label} ${k.kind} ${k.area}` });
+    }
   }
   return items;
 }

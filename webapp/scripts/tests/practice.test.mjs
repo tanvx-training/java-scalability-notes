@@ -112,3 +112,33 @@ test("mock line rejections", () => {
     assert.ok(r.error, line);
   }
 });
+
+test("addMockResult keeps every paste, even on the same day", () => {
+  const mem = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+    setItem: (k, v) => mem.set(k, String(v)),
+    removeItem: (k) => mem.delete(k),
+    key: (i) => [...mem.keys()][i] ?? null,
+    get length() { return mem.size; },
+  };
+  try {
+    const line = "devprep-mock:v1:tst:m1:2026-11-13:a=40/60,b=30/40";
+    for (let i = 0; i < 2; i++) {
+      const r = P.parseMockResult(line, p);
+      assert.equal(r.ok, true);
+      P.addMockResult(r.record);
+    }
+    const list = P.practiceState().mock;
+    assert.equal(list.length, 2);
+    assert.deepEqual(list[0], list[1]);
+    assert.equal(list[0].total, 70);
+  } finally {
+    delete globalThis.localStorage;
+  }
+});
+
+test("findMock with unknown id is null", () => {
+  assert.equal(P.findMock(p, "m9"), null);
+  assert.equal(P.findMock({ id: "x" }, "m1"), null);
+});
