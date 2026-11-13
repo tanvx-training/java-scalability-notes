@@ -1,7 +1,6 @@
 // Chặng 1 — Dựng cluster bằng kubeadm.
-// ĐANG LÀM: s06 đã phát hành (script chạy xanh trên VM thật). s07–s09 có nội dung NHÁP nhưng còn status "skeleton":
-// script chưa chạy xanh trên VM (máy Mac quá tải bộ nhớ làm control plane không ổn định), verifyOutput còn chỗ trống.
-// Bản nháp dựa trên: kubeadm/kubelet/kubectl 1.36.6, containerd 2.2.1, Calico v3.33.0.
+// Bốn buổi đã phát hành; script lab ở labs/cka/sessions/s06…s09 và labs/cka/breaks/st1-node-notready
+// (đã chạy thật trên VM Multipass: kubeadm/kubelet/kubectl 1.36.6, containerd 2.2.1, Calico v3.33.0).
 // outcome.verifyOutput chép từ output thật của `./labs/lab verify cka sNN` (IP, ngày chứng chỉ trên máy bạn sẽ khác).
 
 export const sessions = [
@@ -245,7 +244,7 @@ Kết quả phải là 39/39: 12 dòng mỗi node (trong đó sysctl được ki
     domain: "architecture",
     competencies: ["ar-kubeadm"],
     requires: ["s06"],
-    status: "skeleton",
+    status: "published",
     pieces: ["cluster"],
     goals: [
       "Chạy kubeadm init với pod CIDR không chồng mạng node và dùng được kubectl bằng user ubuntu.",
@@ -341,7 +340,8 @@ kubectl apply -f calico.yaml
 kubectl -n kube-system get pods -w       # Ctrl-c khi calico-node, calico-kube-controllers, coredns Running
 kubectl get nodes                        # cka-cp Ready
 kubectl get ippools.crd.projectcalico.org default-ipv4-ippool -o jsonpath='{.spec.cidr}{"\\n"}'   # 10.244.0.0/16
-ls /etc/cni/net.d/                       # 10-calico.conflist  calico-kubeconfig
+sudo ls /etc/cni/net.d/                  # 10-calico.conflist  calico-kubeconfig  (thư mục chỉ root đọc được)
+ls /opt/cni/bin/                         # calico, calico-ipam (Calico chép vào) cạnh bridge, host-local… của gói kubernetes-cni
 \`\`\`
 
 Vì sao v3.33.0: tài liệu của Calico ghi bản này được kiểm thử với Kubernetes 1.35, 1.36, 1.37 — vừa với cluster 1.36 hôm nay và bản 1.37 sau buổi nâng cấp. Luôn ghim phiên bản trong URL; \`master\` hay "latest" thì mỗi lần cài ra một thứ khác.
@@ -351,7 +351,7 @@ Vì sao v3.33.0: tài liệu của Calico ghi bản này được kiểm thử v
 \`\`\`bash
 sudo kubeadm token create --print-join-command
 # kubeadm join 192.168.252.29:6443 --token <6 ký tự>.<16 ký tự> --discovery-token-ca-cert-hash sha256:<64 ký tự hex>
-sudo kubeadm token list                  # TTL 23h… của token vừa tạo
+sudo kubeadm token list                  # token vừa tạo: TTL 23h (mặc định 24 giờ); token của init có DESCRIPTION riêng
 \`\`\`
 
 Token và hash trên máy bạn khác hoàn toàn. Hash chỉ đổi khi CA đổi; token thì tạo mới tuỳ ý.
@@ -361,7 +361,8 @@ Token và hash trên máy bạn khác hoàn toàn. Hash chỉ đổi khi CA đ�
 \`\`\`bash
 ssh cka-w1
 sudo kubeadm join 192.168.252.29:6443 --token … --discovery-token-ca-cert-hash sha256:…
-# … This node has joined the cluster
+# [kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap
+# This node has joined the cluster:
 exit
 # lặp lại với cka-w2, rồi trên cka-cp:
 kubectl get nodes -o wide                # ba node Ready, VERSION v1.36.x, INTERNAL-IP là IP Multipass
@@ -388,7 +389,7 @@ Worker **không** cần \`admin.conf\`: kubelet của nó dùng \`/etc/kubernete
         {
           text: "Cho biết pod CIDR mà Calico đang cấp, dải IP Pod của từng node (block mà Calico giao cho node) và IP của một Pod CoreDNS. Giới hạn 4 phút.",
           timeLimitMin: 4,
-          solution: "```bash\nkubectl get ippools.crd.projectcalico.org -o custom-columns=NAME:.metadata.name,CIDR:.spec.cidr\nkubectl get blockaffinities.crd.projectcalico.org -o custom-columns=NODE:.spec.node,CIDR:.spec.cidr\nkubectl -n kube-system get pods -l k8s-app=kube-dns -o wide\n```\nCalico chia pod CIDR thành block /26 và giao cho từng node; IP của Pod CoreDNS phải nằm trong block của node chứa nó. (Calico không dùng `node.spec.podCIDR` của Kubernetes cho việc cấp IP.)",
+          solution: "```bash\nkubectl get ippools.crd.projectcalico.org -o custom-columns=NAME:.metadata.name,CIDR:.spec.cidr\nkubectl get blockaffinities.crd.projectcalico.org -o custom-columns=NODE:.spec.node,CIDR:.spec.cidr\nkubectl -n kube-system get pods -l k8s-app=kube-dns -o wide\n```\nCalico chia pod CIDR thành block /26 và giao cho từng node; IP của Pod CoreDNS phải nằm trong block của node chứa nó. Calico IPAM không dùng `node.spec.podCIDR` mà controller-manager gán: trên máy soạn bài cka-cp có `podCIDR` `10.244.0.0/24`, nhưng block Calico của nó là `10.244.160.0/26` và hai Pod CoreDNS có IP `10.244.160.1`, `10.244.160.3`.",
         },
       ],
     },
@@ -406,7 +407,7 @@ Worker **không** cần \`admin.conf\`: kubelet của nó dùng \`/etc/kubernete
 \`\`\`
 
 Dòng cuối do verify tự làm: tạo namespace tạm, đặt một Pod busybox lên \`cka-w1\` và một lên \`cka-w2\`, ping từ Pod này sang IP của Pod kia (qua đường hầm IPIP của Calico), rồi xoá namespace.`,
-      verifyOutput: "__S07_VERIFY__",
+      verifyOutput: "lab: kiểm s07\n  ✓ kubectl chạy được bằng user ubuntu trên cka-cp\n  ✓ node cka-cp Ready, kubelet v1.36\n  ✓ node cka-w1 Ready, kubelet v1.36\n  ✓ node cka-w2 Ready, kubelet v1.36\n  ✓ calico-node Running và Ready trên cka-cp\n  ✓ calico-node Running và Ready trên cka-w1\n  ✓ calico-node Running và Ready trên cka-w2\n  ✓ Pod trên cka-w1 ping được Pod trên cka-w2\n  → 8/8 đạt",
       projectDelta: "Mảnh **Cluster kubeadm** đã có: ba node Ready, mạng Pod chạy giữa các node. Từ chặng 2, shop sẽ chạy thành Deployment trên hai worker thay vì container `ctr` trên control plane.",
     },
     review: [
@@ -427,7 +428,7 @@ Dòng cuối do verify tự làm: tạo namespace tạm, đặt một Pod busybo
     domain: "architecture",
     competencies: ["ar-ext"],
     requires: ["s07"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
       "Tìm ra trong 5 phút các giá trị cấu hình cốt lõi: data-dir etcd, advertise address, pod CIDR, service CIDR, cgroup driver, ngày hết hạn chứng chỉ apiserver.",
@@ -570,8 +571,11 @@ Không có namespace thì Pod vào \`default\`. Lưu là xong — không \`kubec
 \`\`\`bash
 exit
 kubectl get pods -o wide                       # web-static-cka-w1  1/1 Running … cka-w1
-kubectl delete pod web-static-cka-w1; kubectl get pods   # biến mất rồi xuất hiện lại sau vài giây
-ssh cka-w1 sudo crictl ps --name web           # container vẫn chạy — kubelet không dừng nó
+kubectl delete pod web-static-cka-w1; sleep 3; kubectl get pods
+# web-static-cka-w1   0/1   Pending   0   3s      ← một mirror pod MỚI (AGE 3s), trạng thái cập nhật sau vài giây
+ssh cka-w1 sudo crictl pods --name web-static  # cùng POD ID như trước khi xoá, ATTEMPT 0 — container không bị đụng
+ssh cka-w1 "sudo journalctl -u kubelet --since '-2 min' | grep -i mirror"
+# … "Creating a mirror pod for static pod" pod="default/web-static-cka-w1"
 \`\`\`
 
 \`kubectl delete\` chỉ xoá mirror pod; container thật do kubelet giữ theo tệp manifest. Muốn dừng: \`sudo mv /etc/kubernetes/manifests/web-static.yaml /tmp/\` trên cka-w1.
@@ -631,7 +635,7 @@ Lời giải tự động: \`labs/cka/sessions/s08/apply.sh\` (giá trị đọc
 \`\`\`
 
 Verify tự đọc sáu giá trị trên cluster bằng chính lệnh trong Cách xử lý rồi so với tệp của bạn (giá trị dưới đây là của máy soạn bài).`,
-      verifyOutput: "__S08_VERIFY__",
+      verifyOutput: "lab: kiểm s08\n  ✓ answers.env: ETCD_DATA_DIR=/var/lib/etcd\n  ✓ answers.env: APISERVER_ADVERTISE_ADDRESS=192.168.252.29\n  ✓ answers.env: POD_CIDR=10.244.0.0/16\n  ✓ answers.env: SERVICE_CIDR=10.96.0.0/12\n  ✓ answers.env: KUBELET_CGROUP_DRIVER=systemd\n  ✓ answers.env: APISERVER_CERT_EXPIRY=2027-11-13\n  ✓ Pod web-static-cka-w1 Running\n  ✓ ~/.bashrc có source <(kubectl completion bash)\n  ✓ ~/.bashrc có complete -F __start_kubectl k\n  ✓ shell tương tác: complete -p k dùng __start_kubectl\n  → 10/10 đạt",
       projectDelta: "Cluster của shop giờ có \"bản đồ\": bạn biết control plane nằm ở tệp nào, ai có quyền gì qua kubeconfig, và kubelet nối với containerd/Calico ra sao — nền cho buổi sự cố s09 và cho mọi câu troubleshooting control plane sau này.",
     },
     review: [
@@ -652,7 +656,7 @@ Verify tự đọc sáu giá trị trên cluster bằng chính lệnh trong Các
     domain: "troubleshooting",
     competencies: ["ts-nodes"],
     requires: ["s08"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
       "Đưa hai worker NotReady về Ready trong 20 phút mà không biết trước lỗi gì.",
@@ -767,7 +771,10 @@ Hai hình dạng khác nhau = hai lỗi khác nhau.
 \`\`\`bash
 ssh cka-w1
 sudo journalctl -u kubelet -n 20 --no-pager
-# __S09_JOURNAL__
+# Nov 13 23:43:34 cka-w1 systemd[1]: Started kubelet.service - kubelet: The Kubernetes Node Agent.
+# Nov 13 23:43:34 cka-w1 kubelet[8777]: E1113 23:43:34.781752    8777 run.go:72] "command failed" err="failed to load kubelet config file, path: /var/lib/kubelet/kubelet-config.yaml, error: … open /var/lib/kubelet/kubelet-config.yaml: no such file or directory"
+# Nov 13 23:43:34 cka-w1 systemd[1]: kubelet.service: Main process exited, code=exited, status=1/FAILURE
+# Nov 13 23:43:44 cka-w1 systemd[1]: kubelet.service: Scheduled restart job, restart counter is at 6.
 \`\`\`
 
 kubelet cố đọc \`/var/lib/kubelet/kubelet-config.yaml\` — một tệp không tồn tại. Tệp chuẩn là \`/var/lib/kubelet/config.yaml\`.
@@ -780,7 +787,7 @@ systemctl cat kubelet
 # … EnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env
 # … EnvironmentFile=-/etc/default/kubelet
 # … ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
-sudo cat /var/lib/kubelet/kubeadm-flags.env      # chỉ có các flag kubeadm sinh ra
+sudo cat /var/lib/kubelet/kubeadm-flags.env      # KUBELET_KUBEADM_ARGS=""  (kubeadm 1.36 để trống trên lab)
 cat /etc/default/kubelet
 # KUBELET_EXTRA_ARGS=--config=/var/lib/kubelet/kubelet-config.yaml   ← thủ phạm
 \`\`\`
@@ -851,7 +858,7 @@ Rồi \`./labs/lab verify cka s09\`. Lời giải tự động \`labs/cka/sessio
 \`\`\`
 
 Dòng cuối do verify tự làm: tạo một Deployment 2 replica với anti-affinity bắt buộc theo hostname trong namespace tạm, chờ cả hai replica sẵn sàng trên đúng hai worker, rồi xoá namespace. Chặng 1 xong: mốc \`st1-done\`.`,
-      verifyOutput: "__S09_VERIFY__",
+      verifyOutput: "lab: kiểm s09\n  ✓ node cka-cp Ready\n  ✓ node cka-w1 Ready\n  ✓ node cka-w2 Ready\n  ✓ cka-w1: kubelet active\n  ✓ cka-w1: kubelet enabled\n  ✓ cka-w2: kubelet active\n  ✓ cka-w2: kubelet enabled\n  ✓ Deployment thử 2 replica chạy trên hai worker\n  → 8/8 đạt",
       projectDelta: "Cluster của shop đã qua sự cố đầu tiên và có quy trình chẩn đoán node để dùng lại. Chặng 1 xong (mốc `st1-done`): chặng 2 bắt đầu đưa gateway, catalog, order lên thành Deployment.",
     },
     review: [
