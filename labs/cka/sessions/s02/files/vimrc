@@ -1,0 +1,6 @@
+" ~/.vimrc cho YAML — gõ lại được trong 30 giây ở đầu giờ thi
+set expandtab tabstop=2 shiftwidth=2 softtabstop=2
+set autoindent
+set number
+set ruler
+syntax on

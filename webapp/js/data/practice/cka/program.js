@@ -94,7 +94,7 @@ export const program = {
     summary:
       "Hệ thống \"shop\" gồm ba service Spring Boot viết sẵn — `gateway` (cửa vào, gọi hai service kia), " +
       "`catalog` (đọc sản phẩm từ PostgreSQL) và `order` (ghi đơn hàng, gọi `catalog`) — cùng một PostgreSQL. " +
-      "Anh không viết Java trong buổi học: mỗi chặng đưa hệ thống tiến thêm một bước trên cluster 3 node tự dựng bằng kubeadm, " +
+      "Bạn không viết Java trong buổi học: mỗi chặng đưa hệ thống tiến thêm một bước trên cluster 3 node tự dựng bằng kubeadm, " +
       "tới trạng thái cuối cài bằng Helm chart, có Ingress và Gateway API, NetworkPolicy mặc định chặn, RBAC cho hai vai " +
       "\"dev\" và \"ops\", PostgreSQL trên StatefulSet giữ dữ liệu, requests/limits và HPA, đã qua một lần nâng cấp cluster " +
       "và một lần khôi phục etcd.",

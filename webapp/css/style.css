@@ -1649,3 +1649,7 @@ dialog.modal .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; 
 .pr-nav > a { flex: 1 1 240px; min-width: 0; }
 .pr-sessions li { overflow-wrap: anywhere; }
 .pr-stage summary .grow { min-width: 0; overflow-wrap: anywhere; }
+/* Buổi đã phát hành: đường dẫn/lệnh dài trong code inline và nhãn "Cần: …" phải xuống dòng ở màn hẹp */
+.pr-task > span, .pr-list li, .reveal-body p { min-width: 0; overflow-wrap: anywhere; }
+.prose :not(pre) > code { overflow-wrap: anywhere; }
+.chip-row a.badge { white-space: normal; max-width: 100%; }

@@ -1,0 +1,14 @@
+[Unit]
+Description=shop heartbeat (ghi một dòng log mỗi 10 giây)
+After=network-online.target
+
+[Service]
+User=shop
+Group=shop
+WorkingDirectory=/opt/shop
+ExecStart=/opt/shop/heartbeat.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

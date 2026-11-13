@@ -1,0 +1,37 @@
+# Manifest của catalog đang hỏng ở bốn chỗ. Sửa bằng vim, đừng gõ lại từ đầu.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  labels:
+    app: catlog
+spec:
+	replicas: 2
+  selector:
+    matchLabels:
+      app: catlog
+  template:
+    metadata:
+      labels:
+        app: catlog
+        tier: backend
+    spec:
+      containers:
+        - name: catalog
+          image: shop/catalog:1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+ExitOnOutOfMemoryError"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            memory: 768Mi
+status:
+  availableReplicas: 2
+  readyReplicas: 2
+  replicas: 2
+  updatedReplicas: 2
