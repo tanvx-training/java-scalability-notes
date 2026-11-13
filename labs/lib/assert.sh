@@ -3,7 +3,7 @@
 #   expect_ok    "<nhãn>" <lệnh…>              đạt khi lệnh trả 0
 #   expect_fail  "<nhãn>" <lệnh…>              đạt khi lệnh trả khác 0
 #   expect_eq    "<nhãn>" "<kỳ vọng>" <lệnh…>  đạt khi stdout (cắt khoảng trắng đầu/cuối) bằng kỳ vọng
-#   expect_match "<nhãn>" "<regex>" <lệnh…>    đạt khi gộp stdout+stderr khớp regex (grep -E)
+#   expect_match "<nhãn>" "<regex>" <lệnh…>    đạt khi gộp stdout+stderr khớp regex (grep -E); expect_eq và expect_match còn đòi lệnh trả 0
 #   assert_summary                             in "  → a/b đạt", trả 0 khi đủ
 # Bộ đếm là biến của shell hiện tại: mỗi lần lab chạy một script trong subshell mới thì đếm lại từ 0.
 
@@ -37,13 +37,15 @@ expect_eq() {
   local label="$1" want="$2" got rc=0; shift 2
   got="$("$@" 2>/dev/null)" || rc=$?
   got="$(printf '%s' "$got" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-  if [ "$got" = "$want" ]; then _assert_pass "$label"; else _assert_fail "$label" "$(_assert_short "$got")"; fi
+  if [ "$rc" -ne 0 ]; then _assert_fail "$label" "mã $rc: $(_assert_short "$got")"
+  elif [ "$got" = "$want" ]; then _assert_pass "$label"; else _assert_fail "$label" "$(_assert_short "$got")"; fi
 }
 
 expect_match() {
-  local label="$1" re="$2" out; shift 2
-  out="$("$@" 2>&1)" || true
-  if printf '%s\n' "$out" | grep -Eq -- "$re"; then _assert_pass "$label"; else _assert_fail "$label" "$(_assert_short "$out")"; fi
+  local label="$1" re="$2" out rc=0; shift 2
+  out="$("$@" 2>&1)" || rc=$?
+  if [ "$rc" -ne 0 ]; then _assert_fail "$label" "mã $rc: $(_assert_short "$out")"
+  elif printf '%s\n' "$out" | grep -Eq -- "$re"; then _assert_pass "$label"; else _assert_fail "$label" "$(_assert_short "$out")"; fi
 }
 
 assert_summary() {

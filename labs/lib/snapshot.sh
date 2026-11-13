@@ -46,9 +46,11 @@ start_all() {
   wait_running
 }
 
-# snapshot_take <tên>: dừng, chụp mọi VM (thay snapshot cùng tên nếu có), bật lại
+# snapshot_take <tên>: dừng, xoá snapshot cùng tên trên mọi VM, chụp mọi VM, bật lại.
+# Xoá hết bản cũ trước khi chụp để một lần lỗi giữa chừng không để lại tên mốc chứa các trạng thái lẫn lộn.
 snapshot_take() {
-  local name="$1" v
+  local name="$1" v hint
+  hint="VM có thể đang dừng, chạy: ./lab up $LAB_PROGRAM"
   snap_name_ok "$name" || die "tên snapshot '$name' không hợp lệ (chỉ chữ thường, số, dấu gạch)"
   for v in $LAB_VMS; do
     [ -n "$(vm_state "$v")" ] || die "VM $v chưa tạo, chạy: ./lab up $LAB_PROGRAM"
@@ -57,16 +59,28 @@ snapshot_take() {
   stop_running
   for v in $LAB_VMS; do
     if mp info "$v.$name" --format csv >/dev/null 2>&1; then
-      mp delete --purge "$v.$name" >/dev/null || die "không xoá được snapshot cũ $v.$name"
+      mp delete --purge "$v.$name" >/dev/null || die "không xoá được snapshot cũ $v.$name ($hint)"
     fi
-    mp snapshot "$v" --name "$name" >/dev/null || die "không chụp được snapshot $v.$name"
   done
-  start_all
+  for v in $LAB_VMS; do
+    mp snapshot "$v" --name "$name" >/dev/null || die "không chụp được snapshot $v.$name, mốc '$name' có thể chưa đủ ($hint)"
+  done
+  mp start $LAB_VMS >/dev/null || die "không khởi động lại được VM sau khi chụp ($hint)"
+  wait_running
 }
 
 cmd_snapshot() {
   [ $# -eq 1 ] || die "cách dùng: ./lab snapshot $LAB_PROGRAM <tên>"
+  local v old=""
   check_list
+  snap_name_ok "$1" || die "tên snapshot '$1' không hợp lệ (chỉ chữ thường, số, dấu gạch)"
+  for v in $LAB_VMS; do
+    mp info "$v.$1" --format csv >/dev/null 2>&1 && old="$old $v"
+  done
+  if [ -n "$old" ] && [ "$YES" -ne 1 ]; then
+    echo "Snapshot '$1' đã có trên:$old"
+    confirm "Ghi đè snapshot '$1'?" || die "đã huỷ, không đổi gì"
+  fi
   snapshot_take "$1"
   info "đã chụp snapshot '$1'"
 }

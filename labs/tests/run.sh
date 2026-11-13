@@ -217,7 +217,7 @@ sess_case; FAIL=a1/verify; export FAIL; run_lab "" check tst a2
 check "check tst a2 hỏng: mã 1" $a
 
 sess_case; run_lab "" begin tst a2
-[ "$RC" -eq 0 ]; a=$?; trace_is "a1/verify a2/setup b1/run"; b=$?
+[ "$RC" -eq 0 ]; a=$?; tail -n 3 "$TRACE" | head -n 2 | tr "\n" " " | grep -q "^a2/setup b1/run "; b=$?
 check "begin tst a2: check, setup.sh, lab_break chạy breaks/b1/run.sh" $((a+b))
 sess_case; FAIL=a1/verify; export FAIL; run_lab "" begin tst a2
 [ "$RC" -eq 1 ]; a=$?; trace_is "a1/verify"; b=$?; has "$ERR" 'lab restore tst a1'; c=$?
@@ -302,9 +302,35 @@ sess_case; run_lab "" snapshot tst manual-1
 has "$MP_LOG" '^snapshot tst-a --name manual-1$'; c=$?; has "$MP_LOG" '^snapshot tst-b --name manual-1$'; d=$?
 has "$MP_LOG" '^start tst-a tst-b$'; e=$?
 check "snapshot tst manual-1: stop, snapshot từng VM, start" $((a+b+c+d+e))
-sess_case; MP_SNAPS="tst-a.manual-1"; export MP_SNAPS; run_lab "" snapshot tst manual-1
-has "$MP_LOG" '^delete --purge tst-a.manual-1$'; a=$?
-check "snapshot trùng tên: xoá bản cũ trước khi chụp" $a
+sess_case; MP_SNAPS="tst-a.manual-1 tst-b.manual-1"; export MP_SNAPS; run_lab "" snapshot tst manual-1 --yes
+has "$MP_LOG" '^delete --purge tst-a.manual-1$'; a=$?; has "$MP_LOG" '^delete --purge tst-b.manual-1$'; b=$?
+[ "$(grep -n '^delete' "$MP_LOG" | tail -n 1 | cut -d: -f1)" -lt "$(grep -n '^snapshot' "$MP_LOG" | head -n 1 | cut -d: -f1)" ]; c=$?
+check "snapshot trùng tên --yes: xoá bản cũ trên mọi VM trước khi chụp" $((a+b+c))
+sess_case; MP_SNAPS="tst-a.manual-1"; export MP_SNAPS; run_lab "n
+" snapshot tst manual-1
+[ "$RC" -ne 0 ]; a=$?; ! has "$MP_LOG" '^delete\|^snapshot\|^stop'; b=$?
+check "snapshot trùng tên, trả lời n: không đổi gì" $((a+b))
+sess_case; MP_SNAPS="tst-a.manual-1"; export MP_SNAPS; run_lab "y
+" snapshot tst manual-1
+[ "$RC" -eq 0 ]; a=$?; has "$MP_LOG" '^snapshot tst-a --name manual-1$'; b=$?
+check "snapshot trùng tên, trả lời y: ghi đè" $((a+b))
+sess_case; MP_FAIL=snapshot; export MP_FAIL; run_lab "" snapshot tst manual-1
+[ "$RC" -eq 1 ]; a=$?; has "$ERR" 'VM có thể đang dừng'; b=$?
+check "snapshot lỗi: thông báo lab: nhắc VM có thể đang dừng" $((a+b))
+sess_case; MP_SNAPS="$SNAPS_A1"; export MP_SNAPS; run_lab "" selftest tst --yes
+[ "$(grep -c 'Ghi đè' "$ERR")" = 0 ]; a=$?
+check "selftest chụp mốc không hỏi ghi đè" $a
+sess_case; run_lab "" up tst junk
+[ "$RC" -eq 1 ]; a=$?; has "$ERR" "^lab: 'up' không nhận đối số thừa"; b=$?; log_empty; c=$?
+check "up tst junk: từ chối, log rỗng" $((a+b+c))
+for c in down status destroy; do
+  sess_case; run_lab "" $c tst junk
+  [ "$RC" -eq 1 ]; a=$?; log_empty; b=$?
+  check "$c tst junk: từ chối" $((a+b))
+done
+sess_case; run_lab "" begin tst a2
+tail -n 1 "$TRACE" | grep -q 'sessions/a2$'; a=$?
+check "SESSION_DIR không rò sau lab_break trong setup.sh" $a
 sess_case; run_lab "" snapshot tst 'bad name;x'
 [ "$RC" -eq 1 ]; a=$?; ! has "$MP_LOG" '^snapshot'; b=$?
 check "snapshot tên không hợp lệ: từ chối" $((a+b))
@@ -348,6 +374,9 @@ check "assert: ok/fail/match/eq cùng đạt" $((a+b))
 new_case; assert_run 'expect_ok a false; expect_fail b true; expect_match c "^y$" echo x; assert_summary'
 [ "$RC" -eq 1 ]; a=$?; has "$OUT" '✗ a (thực tế: mã 1'; b=$?; has "$OUT" '✗ b'; c=$?; has "$OUT" '✗ c (thực tế: x)'; d=$?; has "$OUT" '→ 0/3 đạt'; e=$?
 check "assert: ok/fail/match sai đều in ✗" $((a+b+c+d+e))
+new_case; assert_run 'expect_eq a x sh -c "echo x; exit 3"; expect_match b x sh -c "echo x; exit 4"; assert_summary'
+[ "$RC" -eq 1 ]; a=$?; has "$OUT" '✗ a (thực tế: mã 3'; b=$?; has "$OUT" '✗ b (thực tế: mã 4'; c=$?
+check "assert: expect_eq/expect_match coi mã thoát khác 0 là ✗" $((a+b+c))
 new_case; assert_run 'expect_ok a true; expect_eq b 1 echo 2; expect_ok c true; assert_summary'
 [ "$RC" -eq 1 ]; a=$?; has "$OUT" '→ 2/3 đạt'; b=$?
 check "assert_summary trả 1 khi có ít nhất một ✗" $((a+b))

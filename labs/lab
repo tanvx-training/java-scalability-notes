@@ -28,7 +28,7 @@ Lệnh:
   check <ct> <buổi>        kiểm đầu vào của buổi (không sửa gì)
   begin <ct> <buổi>        check rồi chạy setup.sh của buổi
   verify <ct> <buổi>       kiểm kết quả của buổi
-  restore <ct> <buổi>      đưa VM về trạng thái đầu vào của buổi (mốc gần nhất hoặc dựng lại)
+  restore <ct> <buổi>      đưa VM về trạng thái sau khi hoàn thành buổi (mốc gần nhất hoặc dựng lại)
   break <ct> <mã-lỗi>      gây lỗi có chủ ý để luyện sự cố
   mock <ct> <đề> start|score   bắt đầu hoặc chấm đề mock (score in dòng devprep-mock:v1)
   selftest <ct> [--from <buổi>]  chạy apply + verify mọi buổi trên VM sạch
@@ -157,6 +157,9 @@ main() {
   [ $# -ge 1 ] || die "thiếu tên chương trình, ví dụ: ./labs/lab $cmd <chương trình>"
   load_program "$1"
   shift
+  case "$cmd" in
+    up|down|status|destroy) [ $# -eq 0 ] || die "'$cmd' không nhận đối số thừa '$*'" ;;
+  esac
   require_cmd multipass "$MP_HINT"
   "cmd_$cmd" "$@"
 }

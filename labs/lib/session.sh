@@ -55,11 +55,12 @@ require_running() {
 # run_script <e|n> <tệp> <SESSION_DIR>: source trong subshell; e = bật set -e. Trả mã thoát của script.
 run_script() {
   local mode="$1" f="$2"
-  export SESSION_DIR="$3" LAB_PROGRAM LAB_CP LAB_VMS LAB_ROOT
+  export LAB_PROGRAM LAB_CP LAB_VMS LAB_ROOT
+  # SESSION_DIR đặt bên trong subshell để không rò sang script gọi (vd. setup.sh gọi lab_break)
   if [ "$mode" = e ]; then
-    ( set -e; . "$f" ) </dev/null
+    ( export SESSION_DIR="$3"; set -e; . "$f" ) </dev/null
   else
-    ( . "$f" ) </dev/null
+    ( export SESSION_DIR="$3"; . "$f" ) </dev/null
   fi
 }
 
