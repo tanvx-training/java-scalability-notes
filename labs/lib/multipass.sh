@@ -119,10 +119,12 @@ vm_state() { vm_field "$1" 2; }
 #    `vm … 2>/dev/null` hay `vm … >/dev/null 2>&1`: cả hai luôn đi qua một pipe (cat chuyển tiếp).
 #  - Lệnh trong VM thoát mã 4 (trùng mã "retry" của multipass) thì multipass chạy lại lệnh mãi
 #    (vd. `systemctl is-active <unit chưa có>`): mã 4 được đổi thành 104, mã khác giữ nguyên.
-#    Lệnh chạy trong subshell để `exit 4` bên trong lệnh cũng bị bắt.
+#    Lệnh chạy trong subshell để `exit 4` bên trong lệnh cũng bị bắt; `set --` xoá tham số vị trí của
+#    wrapper để `$1`, `$#` trong lệnh không bị lẫn.
 vm() {
   local name="$1"; shift
-  mp exec "$name" -- bash -lc '(eval "$1"); r=$?; [ "$r" -eq 4 ] && r=104; exit "$r"' _ "$*" > >(cat) 2> >(cat >&2)
+  mp exec "$name" -- bash -lc 'c=$1; set --; (eval "$c"); r=$?; [ "$r" -eq 4 ] && r=104; exit "$r"' _ "$*" \
+    > >(cat) 2> >(cat >&2)
 }
 
 # vm_put <nguồn> <tên> <đích>

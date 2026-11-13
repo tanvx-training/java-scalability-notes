@@ -38,11 +38,11 @@ export const sessions = [
 | Khoá **host** của máy đích | \`/etc/ssh/ssh_host_*_key\` trên máy đích; dấu vân tay được máy nguồn nhớ trong \`~/.ssh/known_hosts\` | Máy nguồn chắc mình đang nói chuyện đúng máy (lần đầu ssh hỏi \`yes/no\` chính là câu này) |
 | Khoá **user** của bạn | \`~/.ssh/id_ed25519\` (bí mật) và \`~/.ssh/id_ed25519.pub\` (công khai) trên máy nguồn | Máy đích nhận bạn là ai: nó so khoá công khai với từng dòng trong \`~/.ssh/authorized_keys\` của user đích |
 
-Quyền là bắt buộc: \`~/.ssh\` phải \`700\`, \`authorized_keys\` và khoá bí mật \`600\`. Rộng hơn thì \`sshd\` lặng lẽ bỏ qua khoá và đòi mật khẩu.
+Quyền: \`700\` cho \`~/.ssh\`, \`600\` cho \`authorized_keys\` và khoá bí mật là giá trị an toàn nên dùng. \`sshd\` (\`StrictModes yes\`) từ chối khoá khi home, \`~/.ssh\` hoặc \`authorized_keys\` **cho người khác ghi** hoặc **sai chủ**, và ghi lý do vào journal: \`Authentication refused: bad ownership or modes for file …\`. Trên VM này đăng nhập bằng mật khẩu đã tắt, nên phía bạn chỉ thấy \`Permission denied (publickey)\`. (\`755\`/\`644\` vẫn được chấp nhận; Ubuntu còn cho phép nhóm ghi khi nhóm là nhóm riêng của user.) Còn khoá bí mật mở quá rộng thì chính **ssh client** từ chối dùng: \`WARNING: UNPROTECTED PRIVATE KEY FILE!\`.
 
 VM Multipass **không có mật khẩu** cho user \`ubuntu\` và tắt đăng nhập bằng mật khẩu, nên \`ssh-copy-id\` không chạy được. Bạn phải tự chép khoá công khai sang — ở đây qua máy Mac, vì Mac vào được mọi VM bằng \`multipass exec\`.
 
-**Phân giải tên.** \`getent hosts <tên>\` hỏi đúng thứ tự mà mọi chương trình (ssh, curl, Java) dùng: \`/etc/hosts\` trước, rồi DNS (theo \`/etc/nsswitch.conf\`). Đừng thử bằng \`ping\` hay \`nslookup\`: \`nslookup\` bỏ qua \`/etc/hosts\`.
+**Phân giải tên.** \`getent hosts <tên>\` hỏi đúng thứ tự mà mọi chương trình (ssh, curl, Java) dùng: \`/etc/hosts\` trước, rồi DNS (theo \`/etc/nsswitch.conf\`). \`ping\` cũng đi qua nsswitch nên đọc \`/etc/hosts\` (nhưng nó còn đòi máy kia trả lời ICMP); \`nslookup\` và \`dig\` thì hỏi thẳng DNS, **bỏ qua** \`/etc/hosts\` — đừng dùng chúng để kiểm tên khai trong hosts.
 
 **Bẫy riêng của VM cloud:** đọc dòng đầu \`/etc/hosts\` trên VM — cloud-init ghi rằng tệp được **sinh lại mỗi lần khởi động** (\`manage_etc_hosts: True\`). Sửa \`/etc/hosts\` có tác dụng ngay nhưng mất sau reboot; muốn bền phải sửa cả mẫu \`/etc/cloud/templates/hosts.debian.tmpl\`.
 
@@ -83,7 +83,7 @@ Cuối cùng, tập để ý **ai sở hữu tệp bạn sửa**: \`/etc/hosts\`
       "Dòng hosts dạng `192.168.x.y cka-w1`. Không xoá dòng `127.0.1.1 <tên máy>` sẵn có; chỉ thêm ba dòng mới ở cuối. Lấy IP thật từ `./labs/lab status cka`, IP trên máy bạn khác ví dụ.",
       "Không có mật khẩu nên không dùng được `ssh-copy-id`. Nối hai lệnh exec qua pipe trên Mac: `multipass exec cka-cp -- cat /home/ubuntu/.ssh/id_ed25519.pub | multipass exec cka-w1 -- bash -c 'cat >> ~/.ssh/authorized_keys'`. Dùng `>>` (nối thêm), không phải `>` (ghi đè sẽ xoá khoá của Multipass và bạn mất `multipass shell`).",
       "`ssh -o BatchMode=yes` cấm mọi câu hỏi tương tác: nếu chưa từng trả lời `yes` cho khoá host thì nó báo `Host key verification failed`. Ssh tay một lần, hoặc `ssh-keyscan cka-w1 >> ~/.ssh/known_hosts`.",
-      "Vẫn bị đòi mật khẩu/`Permission denied (publickey)`: trên worker kiểm `ls -ld ~/.ssh` (700) và `ls -l ~/.ssh/authorized_keys` (600, chủ `ubuntu`). Xem `sudo journalctl -u ssh -n 20` trên worker để biết sshd từ chối vì sao.",
+      "`Permission denied (publickey)`: xem lý do trên worker bằng `sudo journalctl -u ssh -n 20` — `bad ownership or modes` nghĩa là `~/.ssh` hay `authorized_keys` cho người khác ghi hoặc sai chủ (đưa về `700`/`600`, chủ `ubuntu`). Không có dòng đó thì thường là khoá chưa được chép vào đúng `authorized_keys` của user `ubuntu`. Cẩn thận: `multipass shell`/`exec` cũng đăng nhập bằng khoá trong chính tệp này — làm hỏng quyền là mất luôn đường vào VM.",
     ],
     solution: `**1. Khai tên ba máy** — làm giống hệt trên cả ba VM. Ví dụ với IP lấy từ \`./labs/lab status cka\`:
 
@@ -160,7 +160,7 @@ Kết quả phải là 11/11 (IP trên máy bạn khác ví dụ dưới).`,
       { q: "Vì sao `ssh-copy-id` không dùng được với VM Multipass, và bạn đã chép khoá bằng cách nào?", a: "User `ubuntu` không có mật khẩu và sshd tắt đăng nhập bằng mật khẩu. Chép qua Mac: `multipass exec cka-cp -- cat …/id_ed25519.pub | multipass exec cka-w1 -- bash -c 'cat >> ~/.ssh/authorized_keys'`." },
       { q: "Sửa `/etc/hosts` trên VM xong, reboot thì mất. Vì sao, sửa ở đâu?", a: "cloud-init có `manage_etc_hosts: true`, dựng lại `/etc/hosts` mỗi lần boot từ `/etc/cloud/templates/hosts.debian.tmpl`. Sửa cả mẫu đó." },
       { q: "`ssh -o BatchMode=yes cka-w1` báo `Host key verification failed`. Thiếu gì?", a: "Khoá host của cka-w1 chưa có trong `~/.ssh/known_hosts` của cka-cp. Ssh tay một lần trả lời `yes`, hoặc `ssh-keyscan cka-w1 >> ~/.ssh/known_hosts`." },
-      { q: "Quyền đúng của `~/.ssh` và `~/.ssh/authorized_keys` là gì?", a: "`700` cho thư mục, `600` cho tệp, chủ là user đích. Rộng hơn thì sshd bỏ qua khoá." },
+      { q: "Quyền nên dùng cho `~/.ssh` và `authorized_keys` là gì, và sshd từ chối khoá khi nào?", a: "`700` cho thư mục, `600` cho tệp, chủ là user đích. sshd (StrictModes) từ chối khi home, `~/.ssh` hay `authorized_keys` cho người khác ghi hoặc sai chủ, và ghi `Authentication refused: bad ownership or modes …` vào journal (`journalctl -u ssh`). Khoá bí mật mở quá rộng thì ssh client từ chối dùng." },
     ],
   },
 
@@ -330,7 +330,7 @@ Làm lại bộ năm bài từ đầu: \`rm ~/drills/s02/broken.yaml\` rồi \`.
       "Gõ `:set paste` *trước* khi vào Insert mode rồi mới dán; dán xong `:set nopaste` để autoindent hoạt động lại.",
       "`u` không sợ: hoàn tác từng bước, `Ctrl-r` làm lại. Sửa hỏng thì `u` chứ đừng `:q!` rồi làm lại cả tệp.",
       "Biết số dòng khối cần thụt? `:27,32>` nhanh hơn chọn Visual. `:set number` (có trong vimrc) để đọc số dòng.",
-      "`export do=…` không có dấu cách quanh `=`; có dấu cách bash sẽ hiểu là chạy lệnh `do`.",
+      "`export do=…` không có dấu cách quanh `=`. Viết `export do = \"…\"` thì bash báo lỗi `not a valid identifier` cho dấu `=` và `$do` thành rỗng — lệnh `k run … $do` sau đó tạo thật tài nguyên thay vì in YAML.",
     ],
     outcome: {
       md: `Trên cka-cp có ba dotfile phòng thi và tệp \`~/drills/s02/broken.yaml\` đã thành manifest Deployment hợp lệ, **khớp nội dung** với bản chuẩn \`labs/cka/sessions/s02/files/expected.yaml\` (so sau khi chuẩn hoá, nên khác chú thích hay kiểu nháy không sao). Trên Mac:
@@ -389,6 +389,8 @@ Restart=on-failure
 [Install]              # "enable" nghĩa là gắn vào target nào lúc boot
 WantedBy=multi-user.target
 \`\`\`
+
+\`After=\` chỉ xếp **thứ tự** khởi động, không kéo unit kia lên: muốn thật sự chờ mạng phải viết cặp \`Wants=network-online.target\` + \`After=network-online.target\`. Dịch vụ heartbeat không cần mạng nên bỏ cả hai.
 
 Bốn động từ khác nhau, hay bị lẫn: \`start\` (chạy ngay), \`enable\` (tự chạy khi boot — tạo symlink vào \`multi-user.target.wants\`), \`enable --now\` (cả hai), \`daemon-reload\` (đọc lại tệp unit sau khi bạn sửa — quên bước này thì systemd vẫn chạy bản cũ). Hỏi trạng thái: \`systemctl status\`, \`is-active\`, \`is-enabled\`, \`systemctl cat <unit>\` (in tệp unit cùng mọi drop-in).
 
@@ -470,7 +472,6 @@ chown shop:shop /opt/shop/heartbeat.sh && chmod 750 /opt/shop/heartbeat.sh
 \`\`\`ini
 [Unit]
 Description=shop heartbeat (ghi một dòng log mỗi 10 giây)
-After=network-online.target
 
 [Service]
 User=shop
@@ -516,7 +517,7 @@ apt-mark showhold             # jq
         "Node `NotReady`: `ssh <node>`, `sudo -i`, `systemctl status kubelet`, `journalctl -u kubelet -n 50` — đọc câu lỗi rồi sửa tệp cấu hình hay drop-in, `daemon-reload`, `restart`.",
         "kubelet \"không lên sau reboot\": dịch vụ chưa `enable`.",
         "Câu nâng cấp cluster: `apt-mark unhold kubeadm` → cài đúng bản → `apt-mark hold kubeadm`; tương tự cho kubelet và kubectl.",
-        "Câu đọc log của thành phần control plane chạy dưới systemd hoặc của containerd: `journalctl -u containerd`.",
+        "Câu đọc log của thứ chạy dưới systemd trên node — kubelet và containerd (`journalctl -u kubelet`, `journalctl -u containerd`). Control plane của cluster kubeadm thì chạy dạng static pod, log đọc bằng `kubectl logs` hoặc `crictl logs`.",
       ],
       timeTargetMin: 4,
       drills: [
@@ -637,7 +638,7 @@ apt-mark showhold             # jq
     ],
     hints: [
       "Gateway: `ip route show default` — từ thứ ba. DNS thật: `resolvectl dns enp0s1` (hoặc khối `Link … DNS Servers:` trong `resolvectl status`) — lấy địa chỉ IPv4; `Current DNS Server` có thể là một địa chỉ IPv6 `fe80::…`.",
-      "Cổng 22 có hai tiến trình trong `sudo ss -tlnp`: `systemd` (pid 1, giữ socket của `ssh.socket`) và `sshd`. Đáp án là của `sshd`, dạng `pid/tên` như cột của `netstat -p`, ví dụ `1031/sshd`.",
+      "Cổng 22 có hai tiến trình trong `sudo ss -tlnp`: `systemd` (pid 1, giữ socket của `ssh.socket`) và `sshd`. Đáp án là của `sshd`, dạng `pid/tên` như cột của `netstat -p`, ví dụ `1013/sshd` (PID khác trên máy bạn).",
       "Lệnh trong namespace: `ip netns exec shop-a <lệnh>` hoặc viết tắt `ip -n shop-a <lệnh ip>`. Card mới tạo luôn ở trạng thái DOWN: `ip -n shop-a link set veth-a up`.",
       "Ping không qua: kiểm từng đầu `ip -n shop-a -br addr` (có IP? UP?) và đầu kia. Hai IP phải cùng mạng `/24` thì kernel mới tự có route `10.200.0.0/24 dev veth-a`.",
       "Xoá theo số dòng: `iptables -L SHOP-DEMO -n --line-numbers` rồi `iptables -D SHOP-DEMO 2`. `verify` đếm số rule trong `iptables -S SHOP-DEMO`: phải đúng một.",
@@ -649,17 +650,17 @@ ip -br addr                         # enp0s1 UP 192.168.x.y/24
 ip route show default               # default via 192.168.x.1 dev enp0s1 …
 cat /etc/resolv.conf                # nameserver 127.0.0.53  ← stub cục bộ, không phải đáp án
 resolvectl dns enp0s1               # Link 2 (enp0s1): 192.168.x.1 fe80::…
-sudo ss -tlnp 'sport = :22'         # users:(("sshd",pid=1031,…),("systemd",pid=1,…))
+sudo ss -tlnp 'sport = :22'         # users:(("sshd",pid=1013,…),("systemd",pid=1,…))
 
 mkdir -p ~/drills/s04
 cat > ~/drills/s04/answers.env <<'EOF'
 DEFAULT_GW=192.168.252.1
 DNS_SERVER=192.168.252.1
-SSH_PORT_PID_NAME=1031/sshd
+SSH_PORT_PID_NAME=1013/sshd
 EOF
 \`\`\`
 
-Thay bằng giá trị trên máy bạn. Trên Multipass, gateway và DNS thường là cùng một địa chỉ (máy Mac làm cả router lẫn DNS cho VM) — đó là sự trùng hợp của môi trường, không phải quy luật.
+Thay bằng giá trị trên máy bạn (PID của sshd đổi sau mỗi lần khởi động). Trên Multipass, gateway và DNS thường là cùng một địa chỉ (máy Mac làm cả router lẫn DNS cho VM) — đó là sự trùng hợp của môi trường, không phải quy luật.
 
 **2. Hai "Pod" nối bằng veth** (\`sudo -i\`):
 
@@ -796,14 +797,14 @@ containerd chia dữ liệu theo **namespace của containerd** (không liên qu
 **Bài tập nền (10 phút, sau khi cài xong ở nhiệm vụ 2):**
 1. \`systemctl status containerd\` và \`journalctl -u containerd -n 20 --no-pager\`.
 2. \`sudo ctr namespaces ls\` trước và sau khi nạp image.
-3. \`sudo crictl info | head -20\` — phần \`config\` cho thấy cgroup driver và thư mục CNI (chặng 1 sẽ sửa).
+3. \`sudo crictl info | jq -c '[.status.conditions[] | {type, status}]'\` — \`RuntimeReady: true\` nhưng \`NetworkReady: false\` (chưa có CNI: lý do node \`NotReady\` ở chặng 1). Rồi \`sudo crictl info | jq '.config.cni.confDir, .config.containerd.runtimes.runc.options.SystemdCgroup'\` — \`"/etc/cni/net.d"\` và \`false\`: thư mục CNI và cgroup driver mà chặng 1 sẽ sửa (\`jq\` đã cài ở s03).
 4. \`ps -o pid,user,cmd -C containerd\` — containerd cũng chỉ là một tiến trình chạy bằng root.
 
 Đọc thêm: phần Container & Docker trong [Kiến thức nền tảng](#/docs/prerequisites).`,
     },
     mindset: `Với người làm Java, đây là buổi gỡ "phép màu" của container. Khi bạn chạy \`shop/catalog:1.0\`, trên node chỉ có **một tiến trình \`java\`** — \`ps\` thấy nó, \`kill\` giết được nó, nó chạy bằng uid 10001 như \`USER\` trong Dockerfile. Thứ làm nó "là container" là ba lớp mà kernel gắn vào: namespace (nhìn thấy gì), cgroup (được dùng bao nhiêu), và rootfs từ image (tệp nào).
 
-**JVM đọc cgroup — nếu nhìn thấy nó.** Image shop chạy \`java -XX:MaxRAMPercentage=75\`. Từ JDK 10, JVM biết mình ở trong container: nó đọc \`memory.max\` của cgroup và lấy 75% làm trần heap. Nhưng nó chỉ đọc được khi cây cgroup được gắn vào trong container. Hôm nay bạn sẽ đo bằng tay: \`ctr run --memory-limit 512 MiB\` trần thì kernel vẫn áp giới hạn mà JVM vẫn tính heap theo 3 GB RAM của VM (≈2,2 GB) — đúng kiểu lỗi kinh điển "heap to hơn limit, bị OOM giết". Gắn \`/sys/fs/cgroup\` vào thì heap co về 384 MiB. Kubernetes luôn gắn cho container của Pod, nên ở chặng 3, \`resources.limits.memory\` vừa là trần của kernel vừa là thứ JVM dùng để tính heap; \`OOMKilled\` là kernel thực thi trần đó. Bài [Tomcat Thread Pool: pool size bao nhiêu là đủ?](#/docs/java-07) có phần container-aware JVM và CFS throttling (giới hạn CPU) — đọc sau buổi này sẽ thấy rất cụ thể.
+**JVM đọc cgroup — nếu nhìn thấy nó.** Image shop chạy \`java -XX:MaxRAMPercentage=75\`. JDK 10 (và 8u191) bắt đầu đọc giới hạn cgroup v1; đọc \`memory.max\` của cgroup v2 — chế độ duy nhất trên Ubuntu 24.04 — cần JDK 15+, 11.0.16+ hoặc 8u372+ (image shop dùng JDK 25). Khi đọc được, JVM lấy 75% trần làm heap tối đa. Nhưng nó chỉ đọc được khi cây cgroup được gắn vào trong container. Hôm nay bạn sẽ đo bằng tay: \`ctr run --memory-limit 512 MiB\` trần thì kernel vẫn áp giới hạn mà JVM vẫn tính heap theo 3 GB RAM của VM (≈2,2 GB) — đúng kiểu lỗi kinh điển "heap to hơn limit, bị OOM giết". Gắn \`/sys/fs/cgroup\` vào thì heap co về 384 MiB. Kubernetes luôn gắn cho container của Pod, nên ở chặng 3, \`resources.limits.memory\` vừa là trần của kernel vừa là thứ JVM dùng để tính heap; \`OOMKilled\` là kernel thực thi trần đó. Bài [Tomcat Thread Pool: pool size bao nhiêu là đủ?](#/docs/java-07) có phần container-aware JVM và CFS throttling (giới hạn CPU) — đọc sau buổi này sẽ thấy rất cụ thể.
 
 **Vì sao crictl quan trọng hơn ctr.** Từ chặng 1, mọi container trên node do kubelet tạo qua CRI; \`crictl ps\` là "\`docker ps\` của node". Hôm nay bạn sẽ thấy \`crictl ps\` **không** hiện container \`catalog\` chạy bằng \`ctr\` — vì nó không phải Pod do CRI tạo. Phân biệt được hai lớp này giúp bạn khỏi bối rối khi apiserver chết và \`kubectl\` không trả lời: bạn vẫn \`crictl ps -a\` và \`crictl logs\` được.
 

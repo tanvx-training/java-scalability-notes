@@ -474,6 +474,15 @@ env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" MP_EXEC_RUN=1 /b
 has "$OUT" '^rc3=3$'; d=$?; has "$OUT" '^ok$'; e=$?; has "$OUT" '^rc0=0$'; f=$?
 check "vm: mã 4 của lệnh trong VM đổi thành 104, mã khác giữ nguyên, lệnh chạy đúng một lần" $((a+b+c+d+e+f))
 
+# ---- vm: lệnh trong VM không thấy tham số vị trí của wrapper ($1, $#) ----
+new_case
+RC=0
+env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" MP_LOG="$MP_LOG" MP_EXEC_RUN=1 /bin/bash -c '
+  . "$1/lib/core.sh"; . "$1/lib/multipass.sh"; load_program tst
+  vm tst-a "echo n=\$# a=[\$1]"' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
+has "$OUT" '^n=0 a=\[\]$'; a=$?
+check "vm: \$# = 0 và \$1 rỗng bên trong lệnh chạy trong VM" $a
+
 # ---- Lint: lib và lab không chứa chương trình cụ thể ----
 hits="$(grep -ril "cka\|kubernetes" "$LABS/lib" "$LABS/lab" 2>/dev/null)"
 [ -z "$hits" ]; check "lib/lab không chứa 'cka' hay 'kubernetes'" $?

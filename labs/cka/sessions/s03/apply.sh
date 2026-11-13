@@ -10,7 +10,7 @@ install -o root -g root -m 644 /tmp/shop-heartbeat.service /etc/systemd/system/s
 rm -f /tmp/heartbeat.sh /tmp/shop-heartbeat.service
 systemctl daemon-reload
 systemctl enable --now shop-heartbeat.service
-export DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 apt-get -o DPkg::Lock::Timeout=300 install -y -q jq >/dev/null
 apt-mark hold jq >/dev/null
 # chờ tới khi journal có ít nhất 2 dòng của service (mỗi dòng cách 10 giây)

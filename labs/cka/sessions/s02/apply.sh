@@ -3,6 +3,7 @@
 vm "$LAB_CP" "mkdir -p ~/drills/s02"
 vm_put "$SESSION_DIR/files/vimrc" "$LAB_CP" /home/ubuntu/.vimrc
 vm_put "$SESSION_DIR/files/tmux.conf" "$LAB_CP" /home/ubuntu/.tmux.conf
+# Từng dòng của files/bashrc-exam được thêm riêng nếu ~/.bashrc chưa có đúng dòng đó (chạy được từ trạng thái dở dang)
 vm_put "$SESSION_DIR/files/bashrc-exam" "$LAB_CP" /tmp/bashrc-exam
-vm "$LAB_CP" "grep -q '^alias k=kubectl' ~/.bashrc || cat /tmp/bashrc-exam >> ~/.bashrc; rm -f /tmp/bashrc-exam"
+vm "$LAB_CP" "while IFS= read -r line; do grep -qxF -- \"\$line\" ~/.bashrc || printf '%s\n' \"\$line\" >> ~/.bashrc; done < /tmp/bashrc-exam; rm -f /tmp/bashrc-exam"
 vm_put "$SESSION_DIR/files/expected.yaml" "$LAB_CP" /home/ubuntu/drills/s02/broken.yaml

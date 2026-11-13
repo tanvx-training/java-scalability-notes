@@ -1,6 +1,5 @@
 [Unit]
 Description=shop heartbeat (ghi một dòng log mỗi 10 giây)
-After=network-online.target
 
 [Service]
 User=shop

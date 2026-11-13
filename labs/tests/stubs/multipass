@@ -20,14 +20,15 @@ case "$sub" in
     [ -f "$run" ] && cat "$run"
     ;;
   exec)
-    # multipass 1.16.3 thật treo (quay CPU) khi stderr là /dev/null mà lệnh trong VM ghi ra stderr: ghi dấu để test bắt
-    # (stdout là /dev/null cũng treo như vậy)
-    if [ -n "${MP_LOG:-}" ] && [ "$(stat -L -f '%d:%i' /dev/fd/3 3>&2 2>/dev/null)" = "$(stat -L -f '%d:%i' /dev/null)" ]; then
-      echo "EXEC-STDERR-NULL $2" >> "$MP_LOG"
-    fi
-    { out_id="$(stat -L -f '%d:%i' /dev/fd/4 2>/dev/null)"; } 4>&1   # fd 4 = stdout thật, ngoài $(…)
-    if [ -n "${MP_LOG:-}" ] && [ "$out_id" = "$(stat -L -f '%d:%i' /dev/null)" ]; then
-      echo "EXEC-STDOUT-NULL $2" >> "$MP_LOG"
+    # multipass 1.16.3 thật treo (quay CPU) khi stdout hoặc stderr là /dev/null: ghi dấu để test bắt.
+    # fd_id: "thiết bị:inode" của một tệp; `stat -f` là dạng BSD (macOS), `stat -c` là dạng GNU (Linux CI).
+    fd_id() { stat -L -f '%d:%i' "$1" 2>/dev/null || stat -L -c '%d:%i' "$1" 2>/dev/null; }
+    if [ -n "${MP_LOG:-}" ]; then
+      null_id="$(fd_id /dev/null)"
+      err_id="$(fd_id /dev/fd/3 3>&2)"                 # fd 2 bên trong $(…) vẫn là stderr thật
+      { out_id="$(fd_id /dev/fd/4)"; } 4>&1            # fd 4 = stdout thật, lấy ngoài $(…)
+      [ "$err_id" = "$null_id" ] && echo "EXEC-STDERR-NULL $2" >> "$MP_LOG"
+      [ "$out_id" = "$null_id" ] && echo "EXEC-STDOUT-NULL $2" >> "$MP_LOG"
     fi
     # MP_NOCTR: các tên VM chưa có containerd (`command -v ctr` thất bại)
     case "$*" in *"command -v ctr"*) for n in ${MP_NOCTR:-}; do [ "$2" = "$n" ] && exit 1; done ;; esac
