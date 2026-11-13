@@ -42,8 +42,13 @@ print_status() {
   done
 }
 
+check_list() {
+  mp list --format csv >/dev/null 2>&1 || die "không đọc được danh sách VM từ multipass"
+}
+
 cmd_up() {
   local v s spec cpus mem disk
+  check_list
   for v in $LAB_VMS; do
     s="$(vm_state "$v")"
     case "$s" in
@@ -68,7 +73,8 @@ cmd_up() {
 }
 
 wait_running() {
-  local waited=0 limit="${LAB_WAIT_SECS:-300}" v ok
+  local waited=0 limit="${LAB_WAIT_SECS:-300}" poll="${LAB_POLL_SECS:-3}" v ok
+  case "$limit$poll" in *[!0-9]*|'') die "LAB_WAIT_SECS và LAB_POLL_SECS phải là số nguyên không âm" ;; esac
   while :; do
     ok=1
     for v in $LAB_VMS; do
@@ -76,10 +82,10 @@ wait_running() {
     done
     [ "$ok" -eq 1 ] && return 0
     [ "$waited" -ge "$limit" ] && die "hết ${limit}s mà VM chưa Running, xem './labs/lab status $LAB_PROGRAM'"
-    sleep "${LAB_POLL_SECS:-3}"
-    waited=$((waited + ${LAB_POLL_SECS:-3}))
+    sleep "$poll"
+    waited=$((waited + poll))
     # tránh vòng lặp vô hạn khi poll = 0
-    [ "${LAB_POLL_SECS:-3}" -eq 0 ] && waited=$((waited + 1))
+    [ "$poll" -eq 0 ] && waited=$((waited + 1))
   done
 }
 
@@ -93,6 +99,7 @@ existing_vms() {
 
 cmd_down() {
   local list v
+  check_list
   list=""
   for v in $LAB_VMS; do
     [ "$(vm_state "$v")" = Running ] && list="$list $v"
@@ -102,10 +109,11 @@ cmd_down() {
   mp stop $list >/dev/null || die "không dừng được VM"
 }
 
-cmd_status() { print_status; }
+cmd_status() { check_list; print_status; }
 
 cmd_destroy() {
   local list v
+  check_list
   list="$(existing_vms)"
   [ -n "$list" ] || { info "không có VM nào của '$LAB_PROGRAM' để xoá"; return 0; }
   echo "Sẽ xoá hẳn các VM:"

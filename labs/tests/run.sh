@@ -50,12 +50,16 @@ guard_direct() { # guard_direct <args…>: gọi mp trực tiếp qua lib với 
 for args in "delete cp1" "restore w1.snap" "delete tst-a cp1" "stop w2" "start --all" "delete --all" \
             "purge" "snapshot w1" "exec cp1 -- ls" "transfer f cp1:/tmp" "info w1:x" "delete --purge cp1" \
             "launch --name cp1 24.04" "delete" "start" "frobnicate tst-a" "delete tst-a.snap cp1.snap" \
-            "delete -- cp1" "stop --cpus 2 cp1"; do
+            "delete -- cp1" "stop --cpus 2 cp1" \
+            "stop -c cp1 tst-a" "exec -n cp1 tst-a -- ls" "restore -d cp1.snap tst-a.snap" \
+            "delete -pa tst-a" "delete -ap tst-a" "delete --all" "delete --bogus tst-a" \
+            "launch --name=cp1 24.04" "launch --bridged --name tst-a 24.04" "stop -t 1 tst-a" \
+            "delete --purge=1 tst-a"; do
   new_case; guard_direct $args
   [ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
   check "mp $args: từ chối, log rỗng" $((a+b))
 done
-for args in "stop tst-a" "restore tst-a.snap" "info tst-a tst-b" "exec tst-a -- ls cp1" "transfer f tst-a:/tmp" "delete --purge tst-a"; do
+for args in "stop tst-a" "restore tst-a.snap" "info tst-a tst-b" "exec tst-a -- ls cp1" "transfer f tst-a:/tmp" "delete --purge tst-a" "delete -p tst-a" "list --format csv" "launch --name tst-a --cpus 1 --memory 1G --disk 5G 24.04" "exec -n tst-a -- ls" "restore -d tst-a.snap"; do
   new_case; guard_direct $args
   [ "$RC" -eq 0 ]; a=$?; [ "$(wc -l < "$MP_LOG" | tr -d ' ')" = 1 ]; b=$?
   check "mp $args: cho phép, một lời gọi" $((a+b))
@@ -146,6 +150,36 @@ check "không có multipass: lỗi, mã 1" $((a+b))
 new_case; RC=0; (cd / && env PATH="$STUBPATH" LAB_ROOT="$HERE/fixtures" /bin/bash "$LAB" status tst >"$OUT" 2>"$ERR") || RC=$?
 [ "$RC" -eq 0 ]; a=$?
 check "chạy từ thư mục khác" $a
+
+# prefix_ok / guard_vm hoạt động độc lập với load_program
+RC=0; new_case
+env PATH="$STUBPATH" /bin/bash -c '. "$1/lib/core.sh"; . "$1/lib/multipass.sh"; LAB_PREFIX="a-
+b-"; mp stop a-x' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+check "LAB_PREFIX nhiều dòng: từ chối" $((a+b))
+
+new_case; RC=0
+env PATH="$STUBPATH" /bin/bash -c '. "$1/lib/core.sh"; . "$1/lib/multipass.sh"; mp stop tst-a' _ "$LABS" >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+check "chưa load_program: mp từ chối" $((a+b))
+
+new_case; mkdir -p "$WORK/fx/vv"; printf 'LAB_PREFIX="vv-"\nLAB_VMS="vv-a vv-B"\nLAB_CP="vv-a"\nlab_vm_spec() { echo "1 1G 1G"; }\n' > "$WORK/fx/vv/env.sh"
+RC=0; env PATH="$STUBPATH" LAB_ROOT="$WORK/fx" /bin/bash "$LAB" up vv >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -ne 0 ]; a=$?; log_empty; b=$?
+check "LAB_VMS tên không hợp lệ: từ chối" $((a+b))
+
+new_case; RC=0; MP_LIST='tst-a,Running,1.1.1.1,,x,""'; export MP_LIST
+printf '%s' "" | env PATH="$STUBPATH" LAB_WAIT_SECS=abc /bin/bash "$LAB" up tst >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" '^lab: '; b=$?; ! has "$ERR" 'syntax\|arithmetic'; c=$?
+check "LAB_WAIT_SECS không phải số: thông báo lab:" $((a+b+c))
+
+new_case; MP_FAIL=list; export MP_FAIL; run_lab "" up tst
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" '^lab: không đọc được danh sách'; b=$?; ! has "$MP_LOG" '^launch'; c=$?
+check "mp list lỗi: up chết, không launch" $((a+b+c))
+run_lab "y
+" destroy tst --yes
+[ "$RC" -ne 0 ]; a=$?; ! has "$MP_LOG" '^delete'; b=$?
+check "mp list lỗi: destroy chết, không delete" $((a+b))
 
 # ---- Lint: lib và lab không chứa chương trình cụ thể ----
 hits="$(grep -ril "cka\|kubernetes" "$LABS/lib" "$LABS/lab" 2>/dev/null)"

@@ -5,49 +5,70 @@
 # guard_vm <tên|tên.snapshot|tên:đường-dẫn>
 guard_vm() {
   local raw="$1" name
-  [ -n "${LAB_PREFIX:-}" ] || die "chưa nạp chương trình (LAB_PREFIX rỗng), từ chối thao tác VM '$raw'"
+  prefix_ok "${LAB_PREFIX:-}" || die "chưa nạp chương trình hoặc LAB_PREFIX không hợp lệ, từ chối thao tác VM '$raw'"
   name="${raw%%[.:]*}"
   case "$name" in
+    *[!a-z0-9-]*) die "từ chối thao tác VM '$raw': tên không hợp lệ" ;;
     "$LAB_PREFIX"?*) return 0 ;;
   esac
   die "từ chối thao tác VM '$raw': tên không bắt đầu bằng '$LAB_PREFIX'"
+}
+
+# mp_opt_kind <lệnh con> <tuỳ chọn>: in "flag" hoặc "value"; lỗi nếu tuỳ chọn không được phép.
+# Danh sách cho phép theo từng lệnh con (đối chiếu `multipass help <lệnh>`); mặc định là từ chối.
+# Không nhận dạng gộp (-pa) hay dạng --opt=value.
+mp_opt_kind() {
+  case "$1:$2" in
+    *:-v) echo flag ;;
+    launch:--name|launch:--cpus|launch:--memory|launch:--disk|launch:--timeout) echo value ;;
+    start:--timeout) echo value ;;
+    stop:--force) echo flag ;;
+    delete:--purge|delete:-p) echo flag ;;
+    list:--format|info:--format) echo value ;;
+    exec:-n|exec:--no-map-working-directory) echo flag ;;
+    exec:-d|exec:--working-directory) echo value ;;
+    transfer:-r|transfer:--recursive|transfer:-p|transfer:--parents) echo flag ;;
+    snapshot:--name|snapshot:-n|snapshot:--comment) echo value ;;
+    restore:--destructive|restore:-d) echo flag ;;
+    *) return 1 ;;
+  esac
 }
 
 # mp <lệnh con> [đối số…]: kiểm toàn bộ đối số TRƯỚC khi gọi multipass.
 mp() {
   [ $# -gt 0 ] || die "mp: thiếu lệnh con"
   local sub="$1"; shift
-  local checked=0 arg skip=0 rest=0 expect_name=0 a
+  local checked=0 a kind pending=""   # pending: "" | skip | name
 
   case "$sub" in
-    list|info|start|stop|restart|delete|recover|exec|launch|transfer|snapshot|restore) ;;
+    list|info|start|stop|delete|recover|exec|launch|transfer|snapshot|restore|restart) ;;
     *) die "mp: không cho phép lệnh con '$sub'" ;;
   esac
 
   for a in "$@"; do
-    if [ "$rest" -eq 1 ]; then continue; fi          # sau `--` là lệnh chạy trong VM
-    if [ "$skip" -eq 1 ]; then skip=0; continue; fi  # giá trị của tuỳ chọn
-    if [ "$expect_name" -eq 1 ]; then expect_name=0; guard_vm "$a"; checked=$((checked+1)); continue; fi
+    case "$pending" in
+      skip) pending=""; continue ;;
+      name) pending=""; guard_vm "$a"; checked=$((checked+1)); continue ;;
+      rest) continue ;;                                # sau `--` là lệnh chạy trong VM
+    esac
     case "$a" in
-      --) if [ "$sub" = exec ]; then rest=1; continue; else die "mp: '--' không hợp lệ với '$sub'"; fi ;;
-      --all|-a) die "mp: từ chối '$a' (sẽ chạm VM không thuộc chương trình)" ;;
-      --name|-n)
-        if [ "$sub" = launch ]; then expect_name=1; else skip=1; fi ;;
-      --name=*|-n=*)
-        if [ "$sub" = launch ]; then guard_vm "${a#*=}"; checked=$((checked+1)); fi ;;
-      --cpus|-c|--memory|-m|--disk|-d|--format|--timeout|--cloud-init|--network|--mount|--bridged|--snapshot|--comment) skip=1 ;;
-      -*) ;;                                          # cờ không có giá trị
+      --)
+        [ "$sub" = exec ] || die "mp: '--' không hợp lệ với '$sub'"
+        pending=rest ;;
+      -*)
+        kind="$(mp_opt_kind "$sub" "$a")" || die "mp: tuỳ chọn '$a' không được phép với '$sub'"
+        if [ "$kind" = value ]; then
+          if [ "$sub:$a" = "launch:--name" ]; then pending=name; else pending=skip; fi
+        fi ;;
       *)
         case "$sub" in
-          launch) ;;                                  # ảnh nền, không phải tên instance
-          list) ;;
-          transfer)
-            case "$a" in *:*) guard_vm "$a"; checked=$((checked+1)) ;; esac ;;
+          launch|list) ;;                              # ảnh nền / không có tên
+          transfer) case "$a" in *:*) guard_vm "$a"; checked=$((checked+1)) ;; esac ;;
           *) guard_vm "$a"; checked=$((checked+1)) ;;
         esac ;;
     esac
   done
-  [ "$expect_name" -eq 0 ] || die "mp: --name thiếu giá trị"
+  case "$pending" in name|skip) die "mp: tuỳ chọn cuối thiếu giá trị" ;; esac
 
   # Lệnh nào cũng cần ít nhất một tên instance đã qua kiểm (trừ list).
   if [ "$sub" != list ] && [ "$checked" -eq 0 ]; then
