@@ -14,6 +14,14 @@ export const program = {
   label: "CKA",
   icon: "🛠️",
   name: "Thực hành CKA: dựng và vận hành một hệ thống Spring Boot trên cluster kubeadm",
+  // Mảng kỹ năng: mỗi kỹ năng trong skills.js khai `area` là một id ở đây, và id kỹ năng phải bắt đầu bằng
+  // `prefix` của mảng đó (check-data PR5). `label` hiện trên bản đồ kỹ năng và khối nền tảng của buổi.
+  skillAreas: [
+    { id: "kubernetes", label: "Kubernetes", prefix: "k-" },
+    { id: "vim", label: "vim", prefix: "vim-" },
+    { id: "linux", label: "Linux", prefix: "lx-" },
+    { id: "network", label: "Network", prefix: "net-" },
+  ],
   exam: {
     k8sVersion: "1.37",
     curriculum: {

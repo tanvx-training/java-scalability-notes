@@ -15,7 +15,7 @@ import { goTo } from "../lib/search.js";
 import { renderMermaidBlocks } from "../lib/mermaid.js";
 import { PROGRAMS, getProgram } from "../data/practice/index.js";
 import {
-  RESERVED_SEGMENTS, findSession, findMock, orderedSessions, isPublished, isDone, doneCount, nextSession,
+  RESERVED_SEGMENTS, findSession, findMock, orderedSessions, isPublished, isDone, doneCount, nextSession, hasExam, skillAreaLabel,
   stageProgress, domainCoverage, projectPieces, reviewFor, weeksLeft, practiceState, sessionKey, taskKey,
   neighbors, missingRequires, setDone, setTask, setNote, skillIndex, parseMockResult, addMockResult,
 } from "../lib/practice.js";
@@ -106,6 +106,9 @@ function renderHome(root, program) {
   const n = doneCount(program, state.done);
   const pct = total ? Math.round((n / total) * 100) : 0;
   const next = nextSession(program, state.done);
+  const exam = hasExam(program);
+  // Chương trình có đề thi thì hiện nhịp tới ngày thi; chương trình theo chủ đề thì chỉ hiện tiến độ.
+  const pace = n >= total ? "đã xong" : exam ? `còn khoảng ${weeksLeft(program, state.done)} tuần ở nhịp 3 buổi/tuần` : null;
 
   const page = h("div", { class: "page" });
   page.append(
@@ -115,26 +118,34 @@ function renderHome(root, program) {
       h("div", { class: "flex" },
         h("strong", {}, `${n} / ${total} buổi`),
         h("div", { class: `progress grow${pct >= 100 ? " green" : ""}` }, h("span", { style: `width:${pct}%` })),
-        h("span", { class: "faint" }, n >= total ? "đã xong" : `còn khoảng ${weeksLeft(program, state.done)} tuần ở nhịp 3 buổi/tuần`)),
+        pace ? h("span", { class: "faint" }, pace) : null),
       h("div", { class: "chip-row mt-3" },
         h("a", { class: "chip", href: `#/practice/${program.id}/skills` }, "🧩 Bản đồ kỹ năng"),
-        h("a", { class: "chip", href: `#/practice/${program.id}/project` }, "🏗️ Project"),
-        h("a", { class: "chip", href: `#/practice/${program.id}/mock` }, "⏱️ Đề mock"))));
+        hasProject(program) ? h("a", { class: "chip", href: `#/practice/${program.id}/project` }, "🏗️ Project") : null,
+        hasMockPage(program) ? h("a", { class: "chip", href: `#/practice/${program.id}/mock` }, "⏱️ Đề mock") : null)));
 
   page.append(todayBlock(program, state, next));
-  page.append(projectBlock(program, state));
+  if (hasProject(program)) page.append(projectBlock(program, state));
   page.append(stagesBlock(program, state, next));
-  page.append(coverageBlock(program, state));
-  const mock = latestMock(program, state);
-  if (mock) page.append(mockBlock(program, mock));
+  if (exam) {
+    page.append(coverageBlock(program, state));
+    const mock = latestMock(program, state);
+    if (mock) page.append(mockBlock(program, mock));
+  }
   root.append(page);
 }
+
+const hasProject = (program) => !!(program.project && (program.project.summary || (program.project.pieces || []).length));
+// Trang đề mock: có đề, hoặc chương trình có đề thi (đề sẽ phát hành sau).
+const hasMockPage = (program) => (program.mocks || []).length > 0 || hasExam(program);
 
 function todayBlock(program, state, next) {
   const box = h("div", { class: "card card-accent mb-4" });
   if (!next) {
     box.append(h("div", { class: "card-head" }, h("strong", {}, "🎉 Đã xong toàn bộ chương trình")),
-      h("p", { class: "muted mt0 mb0" }, "Mọi buổi đều đã hoàn thành. Làm các đề mock để tổng duyệt trước ngày thi."));
+      h("p", { class: "muted mt0 mb0" }, hasMockPage(program)
+        ? "Mọi buổi đều đã hoàn thành. Làm các đề mock để tổng duyệt trước ngày thi."
+        : "Mọi buổi đều đã hoàn thành."));
     return box;
   }
   const idx = indexOfSession(program, next.id) + 1;
@@ -155,14 +166,10 @@ function todayBlock(program, state, next) {
   }
 
   const { prev } = prevOf(program, next.id);
-  const c = program.env.commands;
-  const step1 = [
-    cmd(c.up),
-    cmd(fill(c.begin, { session: next.id })),
-  ];
-  const note = prev ? h("p", { class: "muted small mt-2 mb0" },
-    "Nếu lệch trạng thái, đưa cluster về cuối buổi trước:",
-    cmd(fill(c.restore, { session: prev.id }))) : null;
+  const step1 = [labCmd(program, "up"), labCmd(program, "begin", { session: next.id })].filter(Boolean).map(cmd);
+  const restore = prev ? labCmd(program, "restore", { session: prev.id }) : null;
+  const note = restore ? h("p", { class: "muted small mt-2 mb0" },
+    "Nếu lệch trạng thái, đưa lab về cuối buổi trước:", cmd(restore)) : null;
 
   const rf = reviewFor(program, next.id);
   const savedNote = prev ? state.notes[sessionKey(program.id, prev.id)] : null;
@@ -178,7 +185,7 @@ function todayBlock(program, state, next) {
   const step3 = h("a", { class: "btn btn-primary", href: `#/practice/${program.id}/${next.id}` }, `Bắt đầu buổi ${idx} →`);
 
   box.append(h("div", { class: "stepper" },
-    step("1", "Khởi động cluster", step1, note),
+    step("1", "Khởi động lab", step1, note),
     step("2", "Ôn nhanh buổi trước (5 phút)", step2),
     step("3", "Vào buổi", [step3])));
   return box;
@@ -202,7 +209,7 @@ function projectBlock(program, state) {
   const firstMissing = pieces.findIndex((p) => !p.have);
   return h("div", { class: "card mb-4" },
     h("div", { class: "card-head" }, h("strong", {}, "🏗️ Project đang lớn dần"), h("span", { class: "faint" }, `${have}/${pieces.length} phần`)),
-    h("p", { class: "muted small mt0", html: inlineMd(program.project.summary) }),
+    program.project.summary ? h("p", { class: "muted small mt0", html: inlineMd(program.project.summary) }) : null,
     h("div", { class: "chip-row" }, pieces.map((p, i) =>
       h("span", { class: `badge ${p.have ? "badge-green" : i === firstMissing ? "badge-blue" : ""}`, style: p.have || i === firstMissing ? null : "opacity:.55" },
         p.have ? `✓ ${p.piece.label}` : p.piece.label))),
@@ -241,7 +248,8 @@ function stagesBlock(program, state, next) {
 function coverageBlock(program, state) {
   return h("div", { class: "card mb-4" },
     h("div", { class: "card-head" }, h("strong", {}, "🎓 Độ phủ đề thi"),
-      h("span", { class: "faint" }, `đậu từ ${program.exam.passPct}% · ${program.exam.durationMin} phút`)),
+      h("span", { class: "faint" }, [passPctOf(program) == null ? null : `đậu từ ${passPctOf(program)}%`,
+        typeof program.exam.durationMin === "number" ? `${program.exam.durationMin} phút` : null].filter(Boolean).join(" · "))),
     domainCoverage(program, state.done).map(({ domain, done, total }) => {
       const pct = total ? Math.round((done / total) * 100) : 0;
       return h("div", { class: "pr-cov" },
@@ -258,12 +266,9 @@ function latestMock(program, state) {
 }
 
 function mockBlock(program, rec) {
-  const pass = rec.total >= program.exam.passPct;
   return h("div", { class: "card mb-4" },
     h("div", { class: "card-head" }, h("strong", {}, "⏱️ Điểm mock gần nhất"), h("span", { class: "faint" }, `${rec.mock} · ${rec.date}`)),
-    h("div", { class: "flex" },
-      h("span", { class: `badge badge-${pass ? "green" : "amber"}` }, `${rec.total}%`),
-      h("span", { class: "muted small" }, pass ? `Đạt ngưỡng ${program.exam.passPct}%` : `Chưa đạt ngưỡng ${program.exam.passPct}%`)),
+    h("div", { class: "flex" }, passBadge(program, rec.total)),
     h("a", { class: "btn btn-ghost btn-sm mt-3", href: `#/practice/${program.id}/mock` }, "Mở đề mock"));
 }
 
@@ -273,7 +278,6 @@ const SKILL_GROUPS = [
   ["command", "⌨️ Lệnh"], ["yaml", "📄 YAML"], ["procedure", "🧭 Quy trình"],
   ["concept", "💡 Khái niệm"], ["docs", "🔖 Trang docs"], ["path", "📁 File và đường dẫn"],
 ];
-const AREA_LABEL = { vim: "vim", linux: "Linux", network: "Network" }; // khu vực khác hiện đúng mã khu vực
 // Cùng đích với lib/search.js: loại ref → trang Thực hành nhanh.
 const REF_HREF = { command: "#/commands", snippet: "#/commands/yaml", playbook: "#/commands/playbooks" };
 
@@ -367,7 +371,7 @@ function renderSession(root, program, session) {
   }
 
   if (session.foundation) {
-    page.append(block(`🧱 Nền tảng cần cho buổi này${session.foundation.area ? ` · ${AREA_LABEL[session.foundation.area] || session.foundation.area}` : ""}`, md(session.foundation.md)));
+    page.append(block(`🧱 Nền tảng cần cho buổi này${session.foundation.area ? ` · ${skillAreaLabel(program, session.foundation.area)}` : ""}`, md(session.foundation.md)));
   }
   page.append(block("🧠 Tư duy", md(session.mindset)));
   if ((session.refs || []).length) {
@@ -379,7 +383,7 @@ function renderSession(root, program, session) {
   add(stateBlock("📥 Trạng thái đầu vào", session.stateIn));
   page.append(tasksBlock(program, session, state));
   page.append(hintsBlock(session));
-  page.append(examBlock(program, session));
+  add(examBlock(program, session));
   if ((session.tips || []).length) {
     page.append(block("⚡ Tips", h("ul", { class: "pr-list" }, session.tips.map((t) => h("li", { html: inlineMd(t) })))));
   }
@@ -422,12 +426,15 @@ function hintsBlock(session) {
 function examBlock(program, session) {
   const domain = domainOf(program, session);
   const ex = session.exam || {};
-  const box = block(`🎓 Trong đề thi${domain ? ` · ${domain.label} ${domain.weight}%` : ""}`);
+  const exam = hasExam(program);
+  // Chương trình không có đề thi: chỉ hiện khối khi buổi có câu luyện hay dạng câu để làm.
+  if (!exam && !(ex.patterns || []).length && !(ex.drills || []).length && !ex.timeTargetMin) return null;
+  const box = block(exam ? `🎓 Trong đề thi${domain ? ` · ${domain.label} ${domain.weight}%` : ""}` : "🏋️ Luyện tập");
   if ((ex.patterns || []).length) {
     box.append(h("p", { class: "muted small mt0" }, "Dạng câu thường gặp:"),
       h("ul", { class: "pr-list" }, ex.patterns.map((t) => h("li", { html: inlineMd(t) }))));
   }
-  if (ex.timeTargetMin) box.append(h("p", { class: "small" }, `⏱ Thời gian mục tiêu trong phòng thi: `, h("strong", {}, `${ex.timeTargetMin} phút`), " cho mỗi câu dạng này."));
+  if (ex.timeTargetMin) box.append(h("p", { class: "small" }, exam ? "⏱ Thời gian mục tiêu trong phòng thi: " : "⏱ Thời gian mục tiêu: ", h("strong", {}, `${ex.timeTargetMin} phút`), " cho mỗi câu dạng này."));
   (ex.drills || []).forEach((d, i) => {
     const slot = h("span", { class: "pr-drill-clock" });
     const det = h("details", { class: "reveal" },
@@ -500,7 +507,7 @@ function sessionNav(program, session) {
 // ---------- Bản đồ kỹ năng ----------
 
 const KIND_LABEL = Object.fromEntries(SKILL_GROUPS);
-const areaLabel = (program, area) => (area === program.field ? program.label : AREA_LABEL[area] || area);
+const areaLabel = skillAreaLabel;
 const sessionLink = (program, id) => {
   const s = findSession(program, id);
   if (!s) return null;
@@ -557,9 +564,14 @@ function renderProject(root, program) {
   const pieces = projectPieces(program, state.done);
   const page = h("div", { class: "page" },
     crumbs(program, "Project"),
-    pageHead("🏗️ Project xuyên suốt", "Hệ thống lớn dần qua từng chặng.", `${program.label} · Project`),
-    h("div", { class: "card mb-4" }, h("p", { class: "mt0 mb0", html: inlineMd(program.project.summary) })));
+    pageHead("🏗️ Project xuyên suốt", "Hệ thống lớn dần qua từng chặng.", `${program.label} · Project`));
   const add = (...n) => page.append(...n.filter(Boolean));
+  if (!hasProject(program)) {
+    add(emptyState("🏗️", "Chương trình này không có project xuyên suốt"));
+    root.append(page);
+    return;
+  }
+  if (program.project.summary) add(h("div", { class: "card mb-4" }, h("p", { class: "mt0 mb0", html: inlineMd(program.project.summary) })));
   if (program.project.architectureMd) add(block("🧭 Kiến trúc", md(program.project.architectureMd)));
 
   const body = h("tbody", {}, pieces.map(({ piece, have }) => {
@@ -591,16 +603,23 @@ const mockCmd = (program, mock, which) => {
   return text ? cmd(text) : null;
 };
 
+// Ngưỡng đậu của đề thi; null nếu chương trình không khai.
+const passPctOf = (program) => (program.exam && typeof program.exam.passPct === "number" ? program.exam.passPct : null);
+const passBadge = (program, total) => {
+  const pp = passPctOf(program);
+  const pass = pp == null || total >= pp;
+  return [h("span", { class: `badge badge-${pass ? "green" : "amber"}` }, `${total}%`),
+    pp == null ? null : h("span", { class: "muted small" }, pass ? `Đạt ngưỡng ${pp}%` : `Chưa đạt ngưỡng ${pp}%`)];
+};
+const examDomains = (program) => (hasExam(program) ? program.exam.domains : []);
+
 function scoreTable(program, rec) {
-  const pass = rec.total >= program.exam.passPct;
-  const rows = program.exam.domains.filter((d) => rec.byDomain[d.id]).map((d) => {
+  const rows = examDomains(program).filter((d) => rec.byDomain[d.id]).map((d) => {
     const v = rec.byDomain[d.id];
     return h("tr", {}, h("td", {}, `${d.label} (${d.weight}%)`), h("td", {}, `${v.got} / ${v.max}`), h("td", {}, `${pctOf(v.got, v.max)}%`));
   });
   return h("div", {},
-    h("div", { class: "flex mb-2" },
-      h("span", { class: `badge badge-${pass ? "green" : "amber"}` }, `${rec.total}%`),
-      h("span", { class: "muted small" }, pass ? `Đạt ngưỡng ${program.exam.passPct}%` : `Chưa đạt ngưỡng ${program.exam.passPct}%`)),
+    h("div", { class: "flex mb-2" }, passBadge(program, rec.total)),
     h("div", { class: "table-wrap" }, h("table", { class: "table" },
       h("thead", {}, h("tr", {}, h("th", {}, "Domain"), h("th", {}, "Điểm"), h("th", {}, "Tỷ lệ"))),
       h("tbody", {}, rows))));
@@ -609,14 +628,15 @@ function scoreTable(program, rec) {
 function mockHistory(program, state) {
   const mine = (state.mock || []).filter((m) => m.program === program.id).slice().reverse();
   if (!mine.length) return null;
-  const doms = program.exam.domains;
+  const doms = examDomains(program);
+  const pp = passPctOf(program);
   return block("📈 Lịch sử các lần làm",
     h("div", { class: "table-wrap" }, h("table", { class: "table" },
       h("thead", {}, h("tr", {}, h("th", {}, "Ngày"), h("th", {}, "Đề"), h("th", {}, "Tổng"),
         doms.map((d) => h("th", { title: d.label }, d.label.split(" ")[0])))),
       h("tbody", {}, mine.map((r) => h("tr", {},
         h("td", {}, r.date), h("td", {}, h("a", { href: `#/practice/${program.id}/mock/${r.mock}` }, r.mock)),
-        h("td", {}, h("span", { class: `badge badge-${r.total >= program.exam.passPct ? "green" : "amber"}` }, `${r.total}%`)),
+        h("td", {}, h("span", { class: `badge badge-${pp == null || r.total >= pp ? "green" : "amber"}` }, `${r.total}%`)),
         doms.map((d) => { const v = r.byDomain[d.id]; return h("td", {}, v ? `${pctOf(v.got, v.max)}%` : "—"); })))))));
 }
 
@@ -627,14 +647,24 @@ function renderMock(root, program, mockId) {
   return renderMockPage(root, program, mock);
 }
 
+function examLine(program) {
+  const e = program.exam || {};
+  const parts = [];
+  if (typeof e.passPct === "number") parts.push(`đậu từ ${e.passPct}%`);
+  if (typeof e.durationMin === "number") parts.push(`trong ${e.durationMin} phút`);
+  return parts.length ? `Đề thi thử bấm giờ, ${parts.join(" ")}.` : "Đề thi thử bấm giờ.";
+}
+
 function renderMockIndex(root, program) {
   const mocks = program.mocks || [];
   const page = h("div", { class: "page" },
     crumbs(program, "Đề mock"),
-    pageHead("⏱️ Đề mock", `Đề thi thử bấm giờ, đậu từ ${program.exam.passPct}% trong ${program.exam.durationMin} phút.`, `${program.label} · Mock`));
+    pageHead("⏱️ Đề mock", examLine(program), `${program.label} · Mock`));
   const add = (...n) => page.append(...n.filter(Boolean));
   if (!mocks.length) {
-    add(emptyState("⏱️", "Đề mock phát hành ở đợt cuối", "Hoàn thành các buổi trước rồi quay lại làm đề tổng duyệt."));
+    add(hasExam(program)
+      ? emptyState("⏱️", "Đề mock phát hành ở đợt cuối", "Hoàn thành các buổi trước rồi quay lại làm đề tổng duyệt.")
+      : emptyState("⏱️", "Chương trình này không có đề mock"));
   } else {
     add(h("div", { class: "grid grid-2 mb-4" }, mocks.map((m) =>
       h("a", { class: "card card-link card-accent", href: `#/practice/${program.id}/mock/${m.id}` },
@@ -649,12 +679,15 @@ function renderMockPage(root, program, mock) {
   const questions = mock.questions || [];
   const page = h("div", { class: "page" },
     crumbs(program, mock.title),
-    pageHead(`⏱️ ${mock.title}`, `${mock.durationMin} phút · ${questions.length} câu · đậu từ ${program.exam.passPct}%`, `${program.label} · Mock`));
+    pageHead(`⏱️ ${mock.title}`,
+      [`${mock.durationMin} phút`, `${questions.length} câu`, passPctOf(program) == null ? null : `đậu từ ${passPctOf(program)}%`].filter(Boolean).join(" · "),
+      `${program.label} · Mock`));
   const add = (...n) => page.append(...n.filter(Boolean));
 
+  const startCmd = mockCmd(program, mock, "start");
   add(block("📋 Trước khi làm",
-    h("div", { class: "chip-row mb-3" }, program.exam.domains.map((d) => h("span", { class: "badge badge-blue" }, `${d.label} ${d.weight}%`))),
-    mockCmd(program, mock, "start") ? [h("p", { class: "muted small mt0" }, "Dựng đề trên lab:"), mockCmd(program, mock, "start")] : null));
+    h("div", { class: "chip-row mb-3" }, examDomains(program).map((d) => h("span", { class: "badge badge-blue" }, `${d.label} ${d.weight}%`))),
+    startCmd ? [h("p", { class: "muted small mt0" }, "Dựng đề trên lab:"), startCmd] : null));
 
   // Đồng hồ: gắn el vào DOM trước khi start() (timer tự dừng nếu el chưa gắn).
   const clockSlot = h("span", { class: "pr-mock-clock" });
@@ -673,7 +706,7 @@ function renderMockPage(root, program, mock) {
   const markCount = h("span", { class: "faint" });
   const solutionSlots = new Map();
   const list = h("div", {}, questions.map((q, i) => {
-    const dom = program.exam.domains.find((d) => d.id === q.domain);
+    const dom = examDomains(program).find((d) => d.id === q.domain);
     const box = h("input", { type: "checkbox" });
     const card = h("div", { class: "card mb-3 pr-q" });
     box.addEventListener("change", () => {
@@ -704,7 +737,7 @@ function renderMockPage(root, program, mock) {
     const r = parseMockResult(input.value, program);
     err.textContent = r.ok ? "" : r.error;
     if (!r.ok) return;
-    addMockResult(r.record);
+    if (!addMockResult(r.record)) toast("Dòng kết quả này đã lưu trước đó, không lưu thêm lần nữa.", "info", 4000);
     out.replaceChildren(h("strong", {}, "Điểm lần này"), scoreTable(program, r.record));
     for (const q of questions) {
       const slot = solutionSlots.get(q.id);

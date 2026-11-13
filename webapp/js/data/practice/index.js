@@ -22,7 +22,9 @@ import { sessions as cka10 } from "./cka/stage-10.js";
 
 function assemble(meta, stageFiles, skills, mocks) {
   const sessions = stageFiles.flat();
-  const pieces = meta.project.pieces.map((piece) => ({
+  // project và exam là tuỳ chọn: chương trình theo chủ đề có thể không có đề thi hay project xuyên suốt.
+  if (!meta.project) return { ...meta, sessions, skills, mocks };
+  const pieces = (meta.project.pieces || []).map((piece) => ({
     ...piece,
     sinceSession: (sessions.find((s) => (s.pieces || []).includes(piece.id)) || {}).id || null,
   }));

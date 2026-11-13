@@ -28,6 +28,17 @@ export function orderedSessions(program) {
 
 export const isPublished = (session) => !!session && session.status === "published";
 
+// Chương trình có đề thi (exam.domains không rỗng) hay chỉ là chương trình theo chủ đề.
+// Không có đề thi thì không có độ phủ đề, ngưỡng đậu, domain của buổi hay kết quả mock.
+export const hasExam = (program) =>
+  !!(program && program.exam && Array.isArray(program.exam.domains) && program.exam.domains.length);
+
+// Nhãn hiển thị của một mảng kỹ năng, lấy từ program.skillAreas; mảng không khai thì hiện đúng mã.
+export function skillAreaLabel(program, areaId) {
+  const a = ((program && program.skillAreas) || []).find((x) => x && x.id === areaId);
+  return a && a.label ? a.label : areaId;
+}
+
 export function isDone(program, sessionId, done) {
   const s = findSession(program, sessionId);
   return !!s && isPublished(s) && !!(done || {})[sessionKey(program.id, sessionId)];
@@ -70,6 +81,7 @@ export function domainCoverage(program, done) {
 }
 
 export function weeksLeft(program, done, perWeek = 3) {
+  if (!(perWeek > 0)) return null;
   const left = orderedSessions(program).length - doneCount(program, done);
   return Math.ceil(left / perWeek);
 }
@@ -124,6 +136,7 @@ export function parseMockResult(line, program) {
   if (f[1] !== "v1") return fail(`Phiên bản không hỗ trợ: ${f[1]}.`);
   const [, , programId, mockId, date, rest] = f;
   if (programId !== program.id) return fail(`Kết quả thuộc chương trình khác: ${programId}.`);
+  if (!hasExam(program)) return fail("Chương trình này không có đề thi nên không nhận kết quả mock.");
   if (!findMock(program, mockId)) return fail(`Không có đề mock ${mockId}.`);
   if (!validDate(date)) return fail(`Ngày không hợp lệ: ${date}.`);
   const byDomain = {};
@@ -145,25 +158,51 @@ export function parseMockResult(line, program) {
   return { ok: true, record: { program: programId, mock: mockId, date, total, byDomain } };
 }
 
+// ---- Chuẩn hoá trạng thái đã lưu ----
+// localStorage có thể chứa giá trị sai hình dạng (tệp nhập tay hay của app khác qua importAll): null, mảng,
+// chuỗi, số… Mọi lần đọc đều qua đây để trang Thực hành không bao giờ văng lỗi vì dữ liệu lưu.
+const isObj = (v) => v != null && typeof v === "object" && !Array.isArray(v);
+const isCount = (v) => typeof v === "number" && Number.isFinite(v) && v >= 0;
+const normMap = (v) => (isObj(v) ? v : {});
+function normNotes(v) {
+  const out = {};
+  for (const [k, x] of Object.entries(normMap(v))) if (typeof x === "string") out[k] = x;
+  return out;
+}
+export function isMockRecord(r) {
+  return isObj(r) && typeof r.program === "string" && typeof r.mock === "string" && typeof r.date === "string"
+    && typeof r.total === "number" && Number.isFinite(r.total) && isObj(r.byDomain)
+    && Object.values(r.byDomain).every((v) => isObj(v) && isCount(v.got) && isCount(v.max));
+}
+const normMock = (v) => (Array.isArray(v) ? v.filter(isMockRecord) : []);
+
+// normalizeState({ done, tasks, notes, mock }): giá trị thô (bất kỳ) → đúng hình dạng spec mục 5.7.
+export function normalizeState(raw) {
+  const r = isObj(raw) ? raw : {};
+  return { done: normMap(r.done), tasks: normMap(r.tasks), notes: normNotes(r.notes), mock: normMock(r.mock) };
+}
+
 // ---- Bọc store (nơi duy nhất đọc/ghi) ----
+const NORM = { "practice.done": normMap, "practice.tasks": normMap, "practice.notes": normNotes, "practice.mock": normMock };
+
 export function practiceState() {
-  return {
+  return normalizeState({
     done: store.get("practice.done", {}),
     tasks: store.get("practice.tasks", {}),
     notes: store.get("practice.notes", {}),
     mock: store.get("practice.mock", []),
-  };
+  });
 }
 
-function patch(key, fallback, fn) {
-  const cur = store.get(key, fallback);
+function patch(key, fn) {
+  const cur = NORM[key](store.get(key, null));
   fn(cur);
   store.set(key, cur);
 }
 
 export function setDone(programId, sessionId, on) {
   const k = sessionKey(programId, sessionId);
-  patch("practice.done", {}, (d) => {
+  patch("practice.done", (d) => {
     if (on) d[k] = Date.now();
     else delete d[k];
   });
@@ -172,7 +211,7 @@ export function setDone(programId, sessionId, on) {
 
 export function setTask(programId, sessionId, taskId, on) {
   const k = taskKey(programId, sessionId, taskId);
-  patch("practice.tasks", {}, (t) => {
+  patch("practice.tasks", (t) => {
     if (on) t[k] = true;
     else delete t[k];
   });
@@ -180,12 +219,21 @@ export function setTask(programId, sessionId, taskId, on) {
 
 export function setNote(programId, sessionId, text) {
   const k = sessionKey(programId, sessionId);
-  patch("practice.notes", {}, (n) => {
+  patch("practice.notes", (n) => {
     if (text) n[k] = text;
     else delete n[k];
   });
 }
 
+// Lưu một kết quả mock. Dán lại đúng dòng đã lưu (cùng chương trình, đề, ngày và điểm từng domain) thì bỏ qua.
+// Trả true nếu đã thêm, false nếu là bản trùng.
 export function addMockResult(record) {
-  patch("practice.mock", [], (list) => list.push(record));
+  let added = false;
+  patch("practice.mock", (list) => {
+    const line = formatMockLine(record);
+    if (list.some((r) => formatMockLine(r) === line)) return;
+    list.push(record);
+    added = true;
+  });
+  return added;
 }

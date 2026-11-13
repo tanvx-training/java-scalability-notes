@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as P from "../../js/lib/practice.js";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { makeProgram } from "./fixtures/program.mjs";
+import { makeProgram, makeTopicProgram } from "./fixtures/program.mjs";
 
 const p = makeProgram();
 const ids = (a) => a.map((s) => s.id);
@@ -115,8 +115,9 @@ test("mock line rejections", () => {
   }
 });
 
-test("addMockResult keeps every paste, even on the same day", () => {
-  const mem = new Map();
+// localStorage giả trong bộ nhớ; `seed` là các giá trị THÔ (đã là chuỗi JSON) theo khoá không namespace.
+function withStorage(seed, fn) {
+  const mem = new Map(Object.entries(seed).map(([k, v]) => ["kubeprep." + k, v]));
   globalThis.localStorage = {
     getItem: (k) => (mem.has(k) ? mem.get(k) : null),
     setItem: (k, v) => mem.set(k, String(v)),
@@ -125,19 +126,106 @@ test("addMockResult keeps every paste, even on the same day", () => {
     get length() { return mem.size; },
   };
   try {
-    const line = "devprep-mock:v1:tst:m1:2026-11-13:a=40/60,b=30/40";
-    for (let i = 0; i < 2; i++) {
-      const r = P.parseMockResult(line, p);
-      assert.equal(r.ok, true);
-      P.addMockResult(r.record);
-    }
-    const list = P.practiceState().mock;
-    assert.equal(list.length, 2);
-    assert.deepEqual(list[0], list[1]);
-    assert.equal(list[0].total, 70);
+    return fn((k) => JSON.parse(mem.get("kubeprep." + k)));
   } finally {
     delete globalThis.localStorage;
   }
+}
+
+test("addMockResult: the same line pasted twice is stored once; a different score the same day is kept", () => {
+  withStorage({}, (read) => {
+    const line = "devprep-mock:v1:tst:m1:2026-11-13:a=40/60,b=30/40";
+    const added = [0, 1].map(() => P.addMockResult(P.parseMockResult(line, p).record));
+    assert.deepEqual(added, [true, false]);
+    assert.equal(P.practiceState().mock.length, 1);
+    assert.equal(P.practiceState().mock[0].total, 70);
+    assert.equal(P.addMockResult(P.parseMockResult("devprep-mock:v1:tst:m1:2026-11-13:a=50/60,b=30/40", p).record), true);
+    assert.equal(read("practice.mock").length, 2);
+  });
+});
+
+test("practiceState: wrong-shaped stored values never crash and come back in the right shape", () => {
+  const empty = { done: {}, tasks: {}, notes: {}, mock: [] };
+  for (const raw of ["null", "[]", '"chuỗi"', "42", "true", "{}"]) {
+    const seed = { "practice.done": raw, "practice.tasks": raw, "practice.notes": raw, "practice.mock": raw };
+    withStorage(seed, () => assert.deepEqual(P.practiceState(), empty, raw));
+  }
+  // Giá trị lồng sai kiểu: ghi chú không phải chuỗi, bản ghi mock thiếu hay sai byDomain bị bỏ.
+  const good = { program: "tst", mock: "m1", date: "2026-11-13", total: 70, byDomain: { a: { got: 1, max: 2 } } };
+  const seed = {
+    "practice.done": JSON.stringify({ "tst:x1": 1 }),
+    "practice.notes": JSON.stringify({ "tst:x1": "ghi chú", "tst:x2": { x: 1 }, "tst:x3": null }),
+    "practice.mock": JSON.stringify([good, null, "x", 3, [], { ...good, byDomain: null }, { ...good, byDomain: [] },
+      { ...good, byDomain: { a: "40/60" } }, { ...good, byDomain: { a: { got: "1", max: 2 } } }, { ...good, total: "70" },
+      { ...good, date: 20261113 }]),
+  };
+  withStorage(seed, () => {
+    const st = P.practiceState();
+    assert.deepEqual(st.done, { "tst:x1": 1 });
+    assert.deepEqual(st.notes, { "tst:x1": "ghi chú" });
+    assert.deepEqual(st.mock, [good]);
+    assert.equal(P.isDone(p, "x1", st.done), true);
+  });
+  assert.deepEqual(P.normalizeState(null), empty);
+  assert.deepEqual(P.normalizeState([1, 2]), empty);
+});
+
+test("store wrappers write the right shape, starting from empty or wrong-shaped storage", () => {
+  for (const raw of [undefined, "null", "[1,2]", '"x"', "7"]) {
+    const seed = raw === undefined ? {} : { "practice.done": raw, "practice.tasks": raw, "practice.notes": raw, "practice.mock": raw };
+    withStorage(seed, (read) => {
+      P.setDone("tst", "x1", true);
+      assert.equal(typeof read("practice.done")["tst:x1"], "number");
+      P.setDone("tst", "x1", false);
+      assert.deepEqual(read("practice.done"), {});
+      P.setTask("tst", "x1", "t1", true);
+      assert.deepEqual(read("practice.tasks"), { "tst:x1:t1": true });
+      P.setTask("tst", "x1", "t1", false);
+      assert.deepEqual(read("practice.tasks"), {});
+      P.setNote("tst", "x1", "nhớ lệnh");
+      assert.deepEqual(read("practice.notes"), { "tst:x1": "nhớ lệnh" });
+      P.setNote("tst", "x1", "");
+      assert.deepEqual(read("practice.notes"), {});
+      const rec = P.parseMockResult("devprep-mock:v1:tst:m1:2026-11-13:a=40/60,b=30/40", p).record;
+      assert.equal(P.addMockResult(rec), true);
+      assert.deepEqual(read("practice.mock"), [rec]);
+    });
+  }
+});
+
+test("programme without exam: pure functions work and report no exam", () => {
+  const t = makeTopicProgram();
+  const done = { "topic:y1": 1 };
+  assert.equal(P.hasExam(p), true);
+  assert.equal(P.hasExam(t), false);
+  assert.equal(P.hasExam({ ...t, exam: {} }), false);
+  assert.equal(P.hasExam({ ...t, exam: { domains: [] } }), false);
+  assert.deepEqual(P.domainCoverage(t, done), []);
+  assert.deepEqual(ids(P.orderedSessions(t)), ["y1", "y2"]);
+  assert.equal(P.doneCount(t, done), 1);
+  assert.equal(P.nextSession(t, done).id, "y2");
+  assert.deepEqual(P.stageProgress(t, done).map((r) => [r.stage.id, r.done, r.total]), [["st0", 1, 2]]);
+  assert.deepEqual(P.projectPieces(t, done), []);
+  assert.equal(P.weeksLeft(t, done), 1);
+  assert.equal(P.reviewFor(t, "y2").session.id, "y1");
+  const si = P.skillIndex(t, t.skills);
+  assert.deepEqual([si[0].learnedIn, si[0].usedIn], ["y1", ["y2"]]);
+  const r = P.parseMockResult("devprep-mock:v1:topic:m1:2026-11-13:a=1/2", t);
+  assert.equal(r.ok, false);
+  assert.match(r.error, /không có đề thi/);
+});
+
+test("skillAreaLabel comes from programme data; unknown area shows its id", () => {
+  const t = makeTopicProgram();
+  assert.equal(P.skillAreaLabel(t, "jvm"), "JVM");
+  assert.equal(P.skillAreaLabel(t, "linux"), "linux");
+  assert.equal(P.skillAreaLabel(p, "kubernetes"), "kubernetes");
+  assert.equal(P.skillAreaLabel({ skillAreas: [null, { id: "x" }] }, "x"), "x");
+});
+
+test("weeksLeft with a non-positive pace is null, not Infinity", () => {
+  assert.equal(P.weeksLeft(p, {}, 0), null);
+  assert.equal(P.weeksLeft(p, {}, -1), null);
 });
 
 test("findMock with unknown id is null", () => {

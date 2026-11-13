@@ -4,7 +4,7 @@
 // nghĩa gì khác.
 //
 // kind: command | yaml | procedure | concept | docs | path
-// area: kubernetes (k-) | vim (vim-) | linux (lx-) | network (net-)
+// area: id một mảng trong program.skillAreas — kubernetes (k-) | vim (vim-) | linux (lx-) | network (net-)
 // ref:  mục tương ứng trong Thực hành nhanh (data/kubernetes/commands.js,
 //       commands-admin.js, snippets.js, playbooks.js) — chỉ khai khi có thật.
 

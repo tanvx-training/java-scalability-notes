@@ -38,3 +38,20 @@ export function makeProgram() {
     mocks: [{ id: "m1", title: "Đề 1", durationMin: 120, questions: [] }],
   };
 }
+
+// Chương trình theo chủ đề: không có đề thi, không có project, không có mock, mảng kỹ năng khác hẳn.
+export function makeTopicProgram() {
+  return {
+    id: "topic",
+    field: "java",
+    skillAreas: [{ id: "jvm", label: "JVM", prefix: "jvm-" }],
+    stages: [{ id: "st0", title: "Chặng 0", sessions: ["y1", "y2"] }],
+    sessions: [
+      { ...base, id: "y1", stage: "st0", status: "published", domain: null, requires: [],
+        skills: [{ skill: "jvm-gc", level: "Đọc được log GC" }], review: [{ q: "GC là gì?", a: "Thu gom rác." }] },
+      { ...base, id: "y2", stage: "st0", status: "skeleton", domain: null, requires: ["y1"], uses: ["jvm-gc"] },
+    ],
+    skills: [{ id: "jvm-gc", kind: "concept", area: "jvm", label: "Log GC" }],
+    mocks: [],
+  };
+}

@@ -1277,7 +1277,7 @@ await check("PL4 — Giờ mỗi tuần trong ngưỡng 6–10 (tuần nghỉ �
 // văng lỗi trong app — chỉ âm thầm làm mất một kỹ năng, một mảnh project hay
 // một buổi khỏi thứ tự. Nạp trong try: thiếu dữ liệu thì PROGRAMS rỗng và
 // bảng kỳ vọng báo đỏ, thay vì cả script chết giữa chừng.
-const { orderedSessions, isPublished, RESERVED_SEGMENTS } = await import("../js/lib/practice.js");
+const { orderedSessions, isPublished, hasExam, RESERVED_SEGMENTS } = await import("../js/lib/practice.js");
 let PROGRAMS = [];
 try {
   ({ PROGRAMS } = await import("../js/data/practice/index.js"));
@@ -1288,6 +1288,8 @@ const { commands: kubeCommands } = await import("../js/data/kubernetes/commands.
 const { adminCommands } = await import("../js/data/kubernetes/commands-admin.js");
 const { snippets: kubeSnippets } = await import("../js/data/kubernetes/snippets.js");
 const { playbooks: kubePlaybooks } = await import("../js/data/kubernetes/playbooks.js");
+// ref của kỹ năng mở trang Thực hành nhanh (module "commands"), nên chỉ hợp lệ khi lĩnh vực của chương
+// trình có bật module đó (PR5).
 const PRACTICE_REF_IDS = {
   command: new Set([...kubeCommands, ...adminCommands].map((c) => c.id)),
   snippet: new Set(kubeSnippets.map((s) => s.id)),
@@ -1295,8 +1297,7 @@ const PRACTICE_REF_IDS = {
 };
 const LABS = join(WEBAPP, "..", "labs");
 const SKILL_KINDS = ["command", "yaml", "procedure", "concept", "docs", "path"];
-// Mảng kỹ năng → tiền tố id (Global Constraints của module Thực hành).
-const SKILL_AREA_PREFIX = { kubernetes: "k-", vim: "vim-", linux: "lx-", network: "net-" };
+// Mảng kỹ năng (id, label, tiền tố id) do từng chương trình khai ở program.skillAreas — PR5.
 const SESSION_KINDS = ["lesson", "mock"];
 const sessionKind = (s) => s.kind ?? "lesson";
 const nonEmptyStr = (v) => typeof v === "string" && v.trim().length > 0;
@@ -1304,14 +1305,27 @@ const strList = (v, n) => Array.isArray(v) && v.length >= n && v.every(nonEmptyS
 // Vị trí của từng buổi theo thứ tự chặng (stages[].sessions) — id buổi là định danh mờ.
 const orderIndex = (p) => new Map(orderedSessions(p).map((s, i) => [s.id, i]));
 
-await check("PR1 — chương trình: id duy nhất, field tồn tại, tổng tỷ trọng domain = 100", () => {
+// exam là tuỳ chọn (chương trình theo chủ đề không có đề thi); có thì phải đủ và tỷ trọng cộng đúng 100.
+await check("PR1 — chương trình: id duy nhất, field tồn tại; đề thi (nếu có) đủ trường, tổng tỷ trọng domain = 100", () => {
   const bad = [];
   const dup = dupes(PROGRAMS.map((p) => p.id));
   if (dup.length) bad.push(`id chương trình trùng: ${dup.join(", ")}`);
   for (const p of PROGRAMS) {
     if (!FIELDS[p.field]) bad.push(`${p.id}: field "${p.field}" không tồn tại`);
-    const sum = (p.exam?.domains ?? []).reduce((a, d) => a + d.weight, 0);
-    if (sum !== 100) bad.push(`${p.id}: tổng exam.domains[].weight = ${sum}`);
+    if (p.exam != null) {
+      const domains = p.exam.domains;
+      if (!Array.isArray(domains) || !domains.length) bad.push(`${p.id}: có exam nhưng exam.domains rỗng`);
+      else {
+        if (!domains.every((d) => nonEmptyStr(d?.id) && nonEmptyStr(d?.label) && Number.isFinite(d?.weight))) {
+          bad.push(`${p.id}: mỗi exam.domains[] cần id, label, weight`);
+        }
+        const sum = domains.reduce((a, d) => a + (d?.weight ?? 0), 0);
+        if (sum !== 100) bad.push(`${p.id}: tổng exam.domains[].weight = ${sum}`);
+      }
+      for (const k of ["passPct", "durationMin"]) {
+        if (!(Number.isFinite(p.exam[k]) && p.exam[k] > 0)) bad.push(`${p.id}: exam.${k} cần là số dương`);
+      }
+    }
     for (const key of ["practice-sessions", "practice-published"]) {
       if (!(`${key}:${p.id}` in EXPECTED.counts)) bad.push(`EXPECTED.counts thiếu "${key}:${p.id}"`);
     }
@@ -1415,16 +1429,31 @@ await check("PR5 — kỹ năng học ở đúng một buổi, dùng lại sau �
         if (idx.get(at) >= idx.get(s.id)) bad.push(`${p.id}/${s.id}: uses "${k}" nhưng ${k} học ở ${at} (không đứng trước)`);
       }
     }
+    // Mảng kỹ năng của chính chương trình: id duy nhất, có nhãn và tiền tố id dạng "abc-".
+    const areas = Array.isArray(p.skillAreas) ? p.skillAreas : [];
+    if (!areas.length && (p.skills ?? []).length) bad.push(`${p.id}: thiếu skillAreas (mảng { id, label, prefix })`);
+    for (const a of areas) {
+      if (!nonEmptyStr(a?.id) || !nonEmptyStr(a?.label) || !/^[a-z0-9]+-$/.test(a?.prefix ?? "")) {
+        bad.push(`${p.id}: skillAreas cần id, label và prefix dạng "abc-" (${JSON.stringify(a)})`);
+      }
+    }
+    const dupArea = dupes(areas.map((a) => a?.id));
+    if (dupArea.length) bad.push(`${p.id}: skillAreas trùng id: ${dupArea.join(", ")}`);
+    const dupPrefix = dupes(areas.map((a) => a?.prefix));
+    if (dupPrefix.length) bad.push(`${p.id}: skillAreas trùng prefix: ${dupPrefix.join(", ")}`);
+    const prefixOf = new Map(areas.map((a) => [a?.id, a?.prefix]));
+    const refOk = (FIELDS[p.field]?.modules ?? []).includes("commands");
     for (const k of p.skills ?? []) {
       const at = `${p.id}/${k.id}`;
       if (!learnedAt.has(k.id)) bad.push(`${at}: không buổi nào dạy kỹ năng này`);
       if (!SKILL_KINDS.includes(k.kind)) bad.push(`${at}: kind "${k.kind}" lạ`);
-      if (!(k.area in SKILL_AREA_PREFIX)) bad.push(`${at}: area "${k.area}" lạ`);
-      else if (!k.id.startsWith(SKILL_AREA_PREFIX[k.area])) bad.push(`${at}: area ${k.area} cần tiền tố "${SKILL_AREA_PREFIX[k.area]}"`);
+      if (!prefixOf.has(k.area)) bad.push(`${at}: area "${k.area}" không có trong skillAreas của ${p.id}`);
+      else if (!k.id.startsWith(prefixOf.get(k.area))) bad.push(`${at}: area ${k.area} cần tiền tố "${prefixOf.get(k.area)}"`);
       if (!nonEmptyStr(k.label)) bad.push(`${at}: label rỗng`);
       if (k.ref != null) {
         const ids = PRACTICE_REF_IDS[k.ref.type];
-        if (!ids) bad.push(`${at}: ref.type "${k.ref.type}" lạ`);
+        if (!refOk) bad.push(`${at}: ref cần lĩnh vực "${p.field}" có module Thực hành nhanh (commands)`);
+        else if (!ids) bad.push(`${at}: ref.type "${k.ref.type}" lạ`);
         else if (!ids.has(k.ref.id)) bad.push(`${at}: ref ${k.ref.type} "${k.ref.id}" không tồn tại`);
       }
     }
@@ -1508,7 +1537,7 @@ await check("PR8 — buổi đã phát hành có đủ nội dung; link #/docs, 
       if (!strList(s.hints, 2)) bad.push(`${at}: hints cần ≥2`);
       if (!nonEmptyStr(s.solution)) bad.push(`${at}: thiếu solution`);
       if (s.domain && !strList(s.exam?.patterns, 1)) bad.push(`${at}: exam.patterns cần ≥1`);
-      if (!(Number.isFinite(s.exam?.timeTargetMin) && s.exam.timeTargetMin > 0)) bad.push(`${at}: thiếu exam.timeTargetMin`);
+      if (hasExam(p) && !(Number.isFinite(s.exam?.timeTargetMin) && s.exam.timeTargetMin > 0)) bad.push(`${at}: thiếu exam.timeTargetMin`);
       if (!strList(s.tips, 2)) bad.push(`${at}: tips cần ≥2`);
       for (const k of ["md", "verifyOutput", "projectDelta"]) {
         if (!nonEmptyStr(s.outcome?.[k])) bad.push(`${at}: thiếu outcome.${k}`);
@@ -1540,6 +1569,7 @@ await check("PR10 — đề mock: id câu không trùng, domain hợp lệ, tr�
   for (const p of PROGRAMS) {
     const domains = p.exam?.domains ?? [];
     const domainIds = new Set(domains.map((d) => d.id));
+    if ((p.mocks ?? []).length && !hasExam(p)) bad.push(`${p.id}: có đề mock nhưng không có exam.domains để chấm`);
     for (const m of p.mocks ?? []) {
       const at = `${p.id}/${m.id}`;
       const qs = m.questions ?? [];
@@ -1557,7 +1587,7 @@ await check("PR10 — đề mock: id câu không trùng, domain hợp lệ, tr�
   expect(!bad.length, bad.join("; "));
 });
 
-await check("PR11 — thư mục lab khớp dữ liệu (ORDER, script buổi đã phát hành, mock)", () => {
+await check("PR11 — thư mục lab khớp dữ liệu (ORDER, script buổi đã phát hành, mock, mốc, lỗi gây có chủ ý)", () => {
   const bad = [];
   for (const p of PROGRAMS) {
     const dir = join(LABS, p.id);
@@ -1589,10 +1619,49 @@ await check("PR11 — thư mục lab khớp dữ liệu (ORDER, script buổi đ
         }
       }
     }
+    const mockIds = new Set((p.mocks ?? []).map((m) => m.id));
     for (const m of p.mocks ?? []) {
       for (const f of ["setup.sh", "score.sh"]) {
         if (!existsSync(join(dir, "mocks", m.id, f))) bad.push(`thiếu labs/${p.id}/mocks/${m.id}/${f}`);
       }
+    }
+    // Chiều ngược lại: thư mục đề mock không có trong mocks.js.
+    const mdir = join(dir, "mocks");
+    if (existsSync(mdir)) {
+      for (const e of readdirSync(mdir, { withFileTypes: true })) {
+        if (e.isDirectory() && !mockIds.has(e.name)) bad.push(`labs/${p.id}/mocks/${e.name} không có trong mocks.js`);
+      }
+    }
+    // milestones: mỗi dòng "<id buổi> <tên snapshot>", buổi phải là buổi đã phát hành (có script) trong ORDER.
+    const msFile = join(dir, "milestones");
+    if (existsSync(msFile)) {
+      readFileSync(msFile, "utf8").split("\n").forEach((raw, i) => {
+        const line = raw.trim();
+        if (!line || line.startsWith("#")) return;
+        const [sid, name] = line.split(/\s+/);
+        const at = `labs/${p.id}/milestones:${i + 1}`;
+        if (!want.includes(sid)) bad.push(`${at}: buổi "${sid}" không có trong thứ tự chặng`);
+        else if (!published.has(sid)) bad.push(`${at}: buổi "${sid}" chưa phát hành, mốc không bao giờ được chụp`);
+        if (!/^[a-z0-9-]+$/.test(name ?? "")) bad.push(`${at}: tên snapshot "${name ?? ""}" không hợp lệ`);
+      });
+    }
+    // lab_break <id> trong script, và "./labs/lab break <p> <id>" trong dữ liệu buổi, phải có breaks/<id>/run.sh.
+    const breakRefs = new Map(); // id → nơi nhắc tới
+    const scan = (d, rel) => {
+      if (!existsSync(d)) return;
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const full = join(d, e.name);
+        if (e.isDirectory()) { if (e.name !== "files") scan(full, `${rel}/${e.name}`); continue; }
+        if (!e.name.endsWith(".sh")) continue;
+        for (const m of readFileSync(full, "utf8").matchAll(/^\s*lab_break\s+([^\s;&|]+)/gm)) breakRefs.set(m[1], `${rel}/${e.name}`);
+      }
+    };
+    scan(join(dir, "sessions"), `labs/${p.id}/sessions`);
+    scan(join(dir, "mocks"), `labs/${p.id}/mocks`);
+    const dataText = JSON.stringify(p.sessions ?? []);
+    for (const m of dataText.matchAll(new RegExp(`lab break ${p.id} ([a-z0-9_-]+)`, "g"))) breakRefs.set(m[1], `dữ liệu buổi của ${p.id}`);
+    for (const [id, where] of breakRefs) {
+      if (!existsSync(join(dir, "breaks", id, "run.sh"))) bad.push(`${where}: lỗi "${id}" không có labs/${p.id}/breaks/${id}/run.sh`);
     }
   }
   expect(!bad.length, bad.join("; "));
