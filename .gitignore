@@ -17,3 +17,7 @@ dist/
 
 # Mockup brainstorm — không commit
 .superpowers/brainstorm/
+
+# Driver local: workspace và gói lưu của người học
+labs/*/work/
+labs/*/backups/

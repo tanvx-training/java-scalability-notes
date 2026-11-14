@@ -542,6 +542,123 @@ new_case; MP_LIST="$RUNNING"; export MP_LIST; run_lab "" verify tst
 [ "$RC" -eq 1 ]; a=$?; has "$ERR" '^lab: cách dùng: ./labs/lab verify tst <buổi>$'; b=$?
 check "verify thiếu buổi: dòng cách dùng in ./labs/lab" $((a+b))
 
+# ---- Driver local (chương trình loc): ghi thật, nên mỗi ca chạy trên bản chép của fixture ----
+LOCBIN="$WORK/locbin"; mkdir -p "$LOCBIN"
+for t in mvn java docker; do ln -sf "$HERE/stubs/$t" "$LOCBIN/$t"; done
+LOCN=0
+new_loc() { # new_loc: bản chép mới của fixture loc; không có multipass trên PATH
+  new_case
+  LOCN=$((LOCN+1)); LOCROOT="$WORK/loc.$LOCN"; mkdir -p "$LOCROOT"
+  cp -R "$HERE/fixtures/loc" "$LOCROOT/loc"
+  LOCW="$LOCROOT/loc/work"
+}
+run_loc() { # run_loc <stdin> args…
+  local input="$1"; shift
+  RC=0
+  printf '%s' "$input" | env PATH="$LOCBIN:/usr/bin:/bin" LAB_ROOT="$LOCROOT" /bin/bash "$LAB" "$@" >"$OUT" 2>"$ERR" || RC=$?
+}
+commits() { git -C "$LOCW" rev-list --count HEAD 2>/dev/null || echo 0; }
+
+new_loc; run_loc "" up loc
+[ "$RC" -eq 0 ]; a=$?
+[ "$(commits)" = 1 ]; b=$?
+[ "$(git -C "$LOCW" log -1 --format=%s)" = "lab: bản gốc" ]; c=$?
+[ -f "$LOCW/pom.xml" ] && [ -f "$LOCW/src/A.java" ]; d=$?
+run_loc "" up loc
+[ "$RC" -eq 0 ]; e=$?; [ "$(commits)" = 1 ]; f=$?
+log_empty; g=$?
+check "up loc: kho git một commit 'lab: bản gốc', chạy lại không thêm commit, không gọi multipass" $((a+b+c+d+e+f+g))
+
+new_loc; sed 's/^LAB_REQUIRE=.*/LAB_REQUIRE="git java thieu-lenh-xyz"/' "$HERE/fixtures/loc/env.sh" > "$LOCROOT/loc/env.sh"
+run_loc "" up loc
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" 'thieu-lenh-xyz'; b=$?; [ ! -e "$LOCW" ]; c=$?
+check "up loc thiếu lệnh trong LAB_REQUIRE: lỗi nêu tên lệnh, chưa tạo workspace" $((a+b+c))
+
+new_loc; run_loc "" up loc; run_loc "" status loc
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" "$LOCW"; b=$?; has "$OUT" 'lab: bản gốc'; c=$?
+check "status loc: in đường dẫn workspace và nhãn commit cuối" $((a+b+c))
+
+new_loc; sed 's/^LAB_PORTS=.*/LAB_PORTS="1"/' "$HERE/fixtures/loc/env.sh" > "$LOCROOT/loc/env.sh"
+run_loc "" status loc
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" 'Cổng 1: trống'; b=$?
+check "status loc: in trạng thái cổng trong LAB_PORTS" $((a+b))
+
+new_loc; run_loc "" up loc; echo "x" > "$LOCW/untracked.txt"; run_loc "" destroy loc --yes
+[ "$RC" -eq 0 ]; a=$?; [ ! -e "$LOCW" ]; b=$?
+[ "$(ls "$LOCROOT/loc/backups" | wc -l | tr -d ' ')" = 1 ]; c=$?
+tar tzf "$LOCROOT/loc/backups/"*.tar.gz | grep -q 'work/.git/HEAD'; d=$?
+tar tzf "$LOCROOT/loc/backups/"*.tar.gz | grep -q 'work/untracked.txt'; e=$?
+log_empty; f=$?
+check "destroy loc --yes: work/ biến mất, backups/ đúng một gói có .git và tệp chưa theo dõi" $((a+b+c+d+e+f))
+
+new_loc; run_loc "" up loc; run_loc "n
+" destroy loc
+[ "$RC" -ne 0 ]; a=$?; [ -d "$LOCW/.git" ]; b=$?; [ ! -e "$LOCROOT/loc/backups" ]; c=$?
+check "destroy loc trả lời n: không đổi gì" $((a+b+c))
+
+new_loc; mkdir "$LOCROOT/outside"; echo keep > "$LOCROOT/outside/f"; ln -s "$LOCROOT/outside" "$LOCW"
+run_loc "" up loc; a=$RC
+[ "$a" -ne 0 ]; a=$?
+run_loc "" destroy loc --yes
+[ "$RC" -ne 0 ]; b=$?
+[ "$(ls -A "$LOCROOT/outside")" = f ] && [ ! -e "$LOCROOT/loc/backups" ]; c=$?
+check "work là symlink ra ngoài: up và destroy từ chối, đích không bị đụng" $((a+b+c))
+
+new_loc; mkdir "$LOCROOT/outside"; ln -s "$LOCROOT/outside" "$LOCROOT/loc/backups"
+run_loc "" up loc; run_loc "" destroy loc --yes
+[ "$RC" -ne 0 ]; a=$?; [ -d "$LOCW/.git" ]; b=$?; [ -z "$(ls -A "$LOCROOT/outside")" ]; c=$?
+check "backups là symlink ra ngoài: destroy từ chối, workspace còn" $((a+b+c))
+
+guard_ws() { # guard_ws <đường dẫn> [LAB_WORK_DIR]
+  RC=0
+  env PATH="$LOCBIN:/usr/bin:/bin" LAB_ROOT="$LOCROOT" LAB_WORK_DIR="${2:-}" /bin/bash -c '
+    . "$1/lib/core.sh"; load_program loc; [ -n "$LAB_WORK_DIR" ] || unset LAB_WORK_DIR
+    . "$1/lib/local.sh"; ws_guard "$2"' _ "$LABS" "$1" >"$OUT" 2>"$ERR" || RC=$?
+}
+new_loc
+guard_ws "$LOCW/x"; [ "$RC" -eq 0 ]; a=$?
+guard_ws "$LOCROOT/loc/backups/x.tar.gz"; [ "$RC" -eq 0 ]; b=$?
+guard_ws "$LOCROOT/loc/app"; [ "$RC" -ne 0 ]; c=$?
+guard_ws "$LOCW/../app"; [ "$RC" -ne 0 ]; d=$?
+guard_ws "/etc/passwd"; [ "$RC" -ne 0 ]; e=$?
+guard_ws "$LOCROOT/loc/app" "$WORK/sw"; [ "$RC" -ne 0 ]; f=$?
+check "ws_guard: chỉ nhận work và backups, từ chối app, '..', đường dẫn ngoài" $((a+b+c+d+e+f))
+new_loc
+guard_ws "$WORK/sw/x" "$WORK/sw"; [ "$RC" -eq 0 ]; a=$?
+guard_ws "/etc/x" "/etc"; [ "$RC" -ne 0 ]; b=$?
+check "ws_guard: LAB_WORK_DIR chỉ nhận khi nằm trong thư mục tạm" $((a+b))
+
+new_loc; run_loc "" snapshot loc x
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" "không áp dụng"; b=$?
+run_loc "" images loc
+[ "$RC" -ne 0 ]; c=$?; has "$ERR" "không áp dụng"; d=$?
+run_loc "" mock loc m start
+[ "$RC" -ne 0 ]; e=$?; has "$ERR" "không áp dụng"; f=$?
+log_empty; g=$?
+check "snapshot/images/mock với loc: lỗi 'không áp dụng', không gọi multipass" $((a+b+c+d+e+f+g))
+
+new_loc; sed 's/^LAB_DRIVER=.*/LAB_DRIVER="kvm"/' "$HERE/fixtures/loc/env.sh" > "$LOCROOT/loc/env.sh"
+run_loc "" up loc
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" 'kvm'; b=$?; [ ! -e "$LOCW" ]; c=$?
+check "LAB_DRIVER=kvm: từ chối" $((a+b+c))
+
+new_loc; { cat "$HERE/fixtures/loc/env.sh"; echo 'LAB_COMPOSE_FILE="dc.yml"'; echo 'LAB_COMPOSE_PROJECT="locproj"'; } > "$LOCROOT/loc/env.sh"
+run_loc "" up loc; a=$RC
+has "$DK_LOG" "^compose -f $LOCROOT/loc/dc.yml -p locproj up"; b=$?
+run_loc "" down loc; c=$RC
+has "$DK_LOG" "^compose -f $LOCROOT/loc/dc.yml -p locproj down"; d=$?
+[ "$(count "$DK_LOG" .)" = 2 ]; e=$?
+check "loc có compose: up/down gọi docker compose đúng tệp và project, không gì khác" $((a+c+b+d+e))
+
+new_loc; { cat "$HERE/fixtures/loc/env.sh"; echo 'LAB_COMPOSE_FILE="dc.yml"'; } > "$LOCROOT/loc/env.sh"
+run_loc "" up loc
+[ "$RC" -ne 0 ]; a=$?; [ ! -s "$DK_LOG" ]; b=$?
+check "LAB_COMPOSE_FILE thiếu LAB_COMPOSE_PROJECT: từ chối" $((a+b))
+
+new_loc; run_loc "" down loc
+[ "$RC" -eq 0 ]; a=$?; [ ! -s "$DK_LOG" ]; b=$?
+check "down loc không compose: không làm gì, không gọi docker" $((a+b))
+
 echo "---"
 echo "$((CASES-FAILS))/$CASES ca đạt"
 [ "$FAILS" -eq 0 ]

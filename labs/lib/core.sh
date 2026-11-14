@@ -42,11 +42,18 @@ load_program() {
   # Chỉ dọn biến của hợp đồng chung; biến riêng của chương trình do env.sh của nó tự khai
   # (mỗi lần chạy lab chỉ nạp một chương trình).
   unset LAB_PREFIX LAB_VMS LAB_CP LAB_IMAGE LAB_IMAGES LAB_CTR_NAMESPACE
+  unset LAB_DRIVER LAB_APP_DIR LAB_REQUIRE LAB_PORTS LAB_COMPOSE_FILE LAB_COMPOSE_PROJECT
   unset -f lab_vm_spec lab_build_images 2>/dev/null || true
   # shellcheck disable=SC1090
   . "$LAB_ROOT/$prog/env.sh"
   LAB_PROGRAM="$prog"
   LAB_IMAGE="${LAB_IMAGE:-24.04}"
+  LAB_DRIVER="${LAB_DRIVER:-multipass}"
+  case "$LAB_DRIVER" in
+    multipass) ;;
+    local) load_local_program "$prog"; return 0 ;;
+    *) die "chương trình '$prog': driver '$LAB_DRIVER' không hỗ trợ (chỉ multipass hoặc local)" ;;
+  esac
   [ -n "${LAB_PREFIX:-}" ] || die "chương trình '$prog': LAB_PREFIX rỗng, từ chối"
   prefix_ok "$LAB_PREFIX" \
     || die "chương trình '$prog': LAB_PREFIX '$LAB_PREFIX' không hợp lệ (cần dạng 'tên-')"
@@ -58,4 +65,20 @@ load_program() {
       *) die "chương trình '$prog': VM '$v' không bắt đầu bằng '$LAB_PREFIX', từ chối" ;;
     esac
   done
+}
+
+# load_local_program <tên>: kiểm các khai báo riêng của driver local (đã nạp env.sh)
+load_local_program() {
+  local prog="$1" p
+  LAB_APP_DIR="${LAB_APP_DIR:-app}"
+  case "$LAB_APP_DIR" in
+    /*|..|../*|*/..|*/../*) die "chương trình '$prog': LAB_APP_DIR '$LAB_APP_DIR' phải là đường dẫn tương đối trong chương trình" ;;
+  esac
+  for p in ${LAB_PORTS:-}; do
+    case "$p" in *[!0-9]*) die "chương trình '$prog': cổng '$p' không hợp lệ" ;; esac
+  done
+  if [ -n "${LAB_COMPOSE_FILE:-}" ] || [ -n "${LAB_COMPOSE_PROJECT:-}" ]; then
+    [ -n "${LAB_COMPOSE_FILE:-}" ] && [ -n "${LAB_COMPOSE_PROJECT:-}" ] \
+      || die "chương trình '$prog': LAB_COMPOSE_FILE và LAB_COMPOSE_PROJECT phải đi cùng nhau"
+  fi
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# lab <lệnh> <chương trình> [đối số…]  — quản lý VM Multipass cho chương trình thực hành.
+# lab <lệnh> <chương trình> [đối số…]  — quản lý môi trường thực hành (VM Multipass hoặc workspace git cục bộ).
 LAB_SELF="$0"
 while [ -h "$LAB_SELF" ]; do
   t="$(readlink "$LAB_SELF")"
@@ -14,6 +14,7 @@ export LAB_ROOT
 . "$LAB_HOME/lib/session.sh"
 . "$LAB_HOME/lib/snapshot.sh"
 . "$LAB_HOME/lib/images.sh"
+. "$LAB_HOME/lib/local.sh"
 
 MP_HINT="brew install --cask multipass"
 
@@ -22,10 +23,10 @@ usage() {
 Cách dùng: $LAB_CMD <lệnh> <chương trình> [đối số…]
 
 Lệnh:
-  up <chương trình>        tạo hoặc khởi động các VM, chờ đến khi Running
-  down <chương trình>      dừng các VM (giữ nguyên dữ liệu)
-  status <chương trình>    hiện trạng thái các VM của chương trình
-  destroy <chương trình>   xoá hẳn các VM của chương trình (hỏi trước, --yes để bỏ hỏi)
+  up <chương trình>        tạo hoặc khởi động môi trường (VM chờ đến Running; driver local: tạo workspace git)
+  down <chương trình>      dừng môi trường (giữ nguyên dữ liệu)
+  status <chương trình>    hiện trạng thái (VM, hoặc workspace và cổng với driver local)
+  destroy <chương trình>   xoá hẳn môi trường (hỏi trước, --yes để bỏ hỏi; driver local: lưu gói vào backups/ trước)
   check <ct> <buổi>        kiểm đầu vào của buổi (không sửa gì)
   begin <ct> <buổi>        check rồi chạy setup.sh của buổi
   verify <ct> <buổi>       kiểm kết quả của buổi
@@ -170,8 +171,15 @@ main() {
   case "$cmd" in
     up|down|status|destroy|images) [ $# -eq 0 ] || die "'$cmd' không nhận đối số thừa '$*'" ;;
   esac
-  require_cmd multipass "$MP_HINT"
-  "cmd_$cmd" "$@"
+  case "$LAB_DRIVER" in
+    local)
+      type "local_cmd_$cmd" >/dev/null 2>&1 \
+        || die "lệnh '$cmd' chưa hỗ trợ cho chương trình '$LAB_PROGRAM' (driver local)"
+      "local_cmd_$cmd" "$@" ;;
+    *)
+      require_cmd multipass "$MP_HINT"
+      "cmd_$cmd" "$@" ;;
+  esac
 }
 
 main "$@"
