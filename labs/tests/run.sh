@@ -370,6 +370,9 @@ done
 sess_case; run_lab "" begin tst a2
 tail -n 1 "$TRACE" | grep -q 'sessions/a2$'; a=$?
 check "SESSION_DIR không rò sau lab_break trong setup.sh" $a
+sess_case; run_lab "" begin tst a2; run_lab "" begin tst a2
+[ "$RC" -eq 0 ]; a=$?; [ "$(count "$TRACE" '^a1/verify')" = 2 ] && [ "$(count "$TRACE" '^a2/setup')" = 2 ]; b=$?
+check "begin tst a2 hai lần (multipass): mỗi lần đều check rồi setup.sh như cũ" $((a+b))
 sess_case; run_lab "" snapshot tst 'bad name;x'
 [ "$RC" -eq 1 ]; a=$?; ! has "$MP_LOG" '^snapshot'; b=$?
 check "snapshot tên không hợp lệ: từ chối" $((a+b))
@@ -419,6 +422,9 @@ check "assert: expect_eq/expect_match coi mã thoát khác 0 là ✗" $((a+b+c))
 new_case; assert_run 'expect_ok a true; expect_eq b 1 echo 2; expect_ok c true; assert_summary'
 [ "$RC" -eq 1 ]; a=$?; has "$OUT" '→ 2/3 đạt'; b=$?
 check "assert_summary trả 1 khi có ít nhất một ✗" $((a+b))
+new_case; assert_run 'assert_summary'
+[ "$RC" -eq 1 ]; a=$?; has "$OUT" '✗ không có kiểm tra nào'; b=$?; has "$OUT" '→ 0/0 đạt'; c=$?
+check "assert_summary không có kiểm tra nào (0/0): ✗ kèm lý do, mã 1" $((a+b+c))
 
 # ---- mp: snapshot, restore, info, delete snapshot ----
 for args in "snapshot tst-a --name x" "snapshot tst-a -n x --comment hi" "info tst-a.x --format csv" "delete --purge tst-a.x" "restore --destructive tst-a.x"; do
@@ -744,6 +750,58 @@ run_loc "" begin loc a2
   && [ "$(gw show HEAD~1:src/A.java)" = 'class A { String hello = "world"; }' ]; g=$?
 check "check rồi begin loc a2: check không ghi; begin chạy setup.sh trong workspace, gỡ test retire, code người học nằm trong 'trước buổi a2'" $((a+b+c+d+e+f+g))
 
+# begin/check lại một buổi đã bắt đầu: không chạy verify của buổi trước (test của nó có thể đã bị retire),
+# không chép đè test, không commit; báo cách làm tiếp, chỉ gợi ý restore như cách làm lại từ đầu.
+begun_a2() { # workspace đã qua a1 và đang làm dở a2 (B.java, A2.case do người học sửa, chưa commit)
+  run_loc "" up loc; run_loc "" begin loc a1
+  printf 'class A { String hello = "world"; }\n' > "$LOCW/src/A.java"
+  run_loc "" begin loc a2
+  echo "của tôi" > "$LOCW/src/B.java"; echo "tôi sửa" > "$LOCW/src/test/a2/A2.case"
+}
+new_loc; begun_a2; n0="$(commits)"; m0="$(count "$MVN_LOG" ' -q test')"
+run_loc "" begin loc a2
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" "buổi 'a2' đã bắt đầu"; b=$?; has "$OUT" './labs/lab verify loc a2'; c=$?
+has "$OUT" 'làm lại từ đầu: ./labs/lab restore loc a1 rồi ./labs/lab begin loc a2'; d=$?
+has "$ERR" 'chưa đạt'; [ $? -ne 0 ]; e=$?
+[ "$(commits)" = "$n0" ] && [ "$(count "$MVN_LOG" ' -q test')" = "$m0" ]; f=$?
+[ "$(cat "$LOCW/src/B.java")" = "của tôi" ] && [ "$(cat "$LOCW/src/test/a2/A2.case")" = "tôi sửa" ]; g=$?
+run_loc "" check loc a2
+[ "$RC" -eq 0 ] && has "$OUT" "buổi 'a2' đã bắt đầu"; h=$?
+[ "$(commits)" = "$n0" ] && [ "$(count "$MVN_LOG" ' -q test')" = "$m0" ]; i=$?
+check "begin/check loc a2 lần hai: mã 0, báo đã bắt đầu + verify, không chạy mvn, không commit, tệp đang sửa còn nguyên" $((a+b+c+d+e+f+g+h+i))
+
+new_loc; begun_a2; run_loc "" verify loc a2; n0="$(commits)"; run_loc "" begin loc a2
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" "buổi 'a2' đã bắt đầu"; b=$?; [ "$(commits)" = "$n0" ]; c=$?
+check "begin loc a2 sau khi a2 đã đạt: mã 0, báo đã bắt đầu, không commit" $((a+b+c))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1; n0="$(commits)"; echo "tôi" > "$LOCW/src/A.java"
+run_loc "" begin loc a1
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" "buổi 'a1' đã bắt đầu"; b=$?; [ "$(commits)" = "$n0" ]; c=$?
+[ "$(cat "$LOCW/src/A.java")" = "tôi" ]; d=$?; has "$OUT" 'restore loc'; [ $? -ne 0 ]; e=$?
+check "begin loc a1 (buổi đầu) lần hai: mã 0, không commit, không gợi ý restore (không có buổi trước)" $((a+b+c+d+e))
+
+new_loc; begun_a2; run_loc "" restore loc a1 --yes; run_loc "" begin loc a2
+[ "$RC" -eq 0 ]; a=$?; [ "$(head_subj)" = "lab: đầu buổi a2" ]; b=$?; [ "$(gw log -1 --format=%s HEAD~1)" = "lab: trước buổi a2" ]; c=$?
+[ "$(cat "$LOCW/src/test/a2/A2.case")" = "$(cat "$LS/a2/tests/src/test/a2/A2.case")" ]; d=$?
+has "$OUT" "buổi 'a2' đã bắt đầu"; [ $? -ne 0 ]; e=$?
+check "restore loc a1 rồi begin loc a2: begin bình thường (verify a1, chép lại test, commit mới)" $((a+b+c+d+e))
+
+new_loc; run_loc "" up loc; run_loc "" restore loc a2 --yes; n0="$(commits)"; m0="$(count "$MVN_LOG" ' -q test')"
+run_loc "" begin loc a2
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" "khôi phục về cuối buổi 'a2'"; b=$?; has "$OUT" './labs/lab begin loc a3'; c=$?
+[ "$(commits)" = "$n0" ] && [ "$(count "$MVN_LOG" ' -q test')" = "$m0" ]; d=$?
+run_loc "" begin loc a1
+[ "$RC" -eq 0 ] && has "$OUT" "khôi phục về cuối buổi 'a2'" && [ "$(commits)" = "$n0" ]; e=$?
+check "restore loc a2 rồi begin a2 hoặc a1: mã 0, báo đã khôi phục qua buổi đó, gợi ý begin a3, không chạy gì" $((a+b+c+d+e))
+
+new_loc; begun_a2; printf 'class B { String bee; }\n' > "$LOCW/src/B.java"; cp "$LS/a2/tests/src/test/a2/A2.case" "$LOCW/src/test/a2/"
+run_loc "" begin loc a3; [ "$(head_subj)" = "lab: đầu buổi a3" ]; z=$?
+echo "a3 của tôi" > "$LOCW/src/C.java"; n0="$(commits)"; m0="$(count "$MVN_LOG" ' -q test')"
+run_loc "" begin loc a2
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" "buổi 'a2' đã bắt đầu"; b=$?; has "$OUT" "'a3'"; c=$?
+[ "$(commits)" = "$n0" ] && [ "$(count "$MVN_LOG" ' -q test')" = "$m0" ] && [ "$(cat "$LOCW/src/C.java")" = "a3 của tôi" ]; d=$?
+check "begin loc a2 khi a3 đã bắt đầu: mã 0, nhắc buổi đang làm là a3, không chạy gì, code a3 còn nguyên" $((a+b+c+d+z))
+
 new_loc; run_loc "" up loc; run_loc "" begin loc a1
 echo "của tôi" > "$LOCW/src/A.java"; echo "mới" > "$LOCW/notes.txt"
 run_loc "" restore loc a2 --yes
@@ -860,7 +918,8 @@ has "$OUT" "bỏ qua 'a4'"; g=$?; has "$OUT" 'giây'; h=$?
 check "selftest loc: đi a1..a3 trên workspace tạm (đã dọn), 2 lần mvn mỗi buổi, selftest.sh chạy một lần ở cuối, work/ không đổi, in thời gian" $((a+b+c+d+e+f+g+h+i+j))
 printf 'exit 1\n' > "$LOCROOT/loc/selftest.sh"; run_loc "" selftest loc
 [ "$RC" -ne 0 ]; a=$?; has "$ERR" 'selftest.sh'; b=$?
-check "selftest loc: selftest.sh của chương trình lỗi thì selftest lỗi" $((a+b))
+has "$ERR" 'test còn hiệu lực của một buổi trước'; c=$?; has "$ERR" 'labs/README.md'; d=$?
+check "selftest loc: selftest.sh của chương trình lỗi thì selftest lỗi, nói nghĩa và chỉ tới labs/README.md" $((a+b+c+d))
 
 new_loc; export ST_TRACE="$WORK/st.trace"; : > "$ST_TRACE"
 printf 'echo "check $SESSION_DIR" >> "$ST_TRACE"\nlab_mvn -q test\nexpect_test "A có hello" lab.a1.A1Test#greets\nassert_summary\n' > "$LOCROOT/loc/sessions/a2/check.sh"
@@ -942,6 +1001,14 @@ printf '%s\n' "$out" | grep -q '^  ✓ a$'; a=$?
 printf '%s\n' "$out" | grep -q '^  ✗ b (thực tế: không chạy'; b=$?
 printf '%s\n' "$out" | grep -q '^  ✓ c$'; c=$?
 check "expect_test: đổi lab_tests thì đọc lại báo cáo (không dùng bảng cũ)" $((a+b+c))
+
+# LAB_MVN_RAN có sẵn trong môi trường người gọi không được làm verify đọc báo cáo cũ khi script không gọi lab_mvn.
+new_loc; run_loc "" up loc; run_loc "" begin loc a1
+mkdir -p "$LOCW/target/surefire-reports"; cp "$SF/a1-pass.xml" "$LOCW/target/surefire-reports/TEST-old.xml"
+printf 'expect_test "A có hello" "lab.a1.A1Test#greets"\nassert_summary\n' > "$LOCROOT/loc/sessions/a1/verify.sh"
+RC=0; printf '' | env PATH="$LOCBIN:/usr/bin:/bin" LAB_ROOT="$LOCROOT" LAB_MVN_RAN=1 /bin/bash "$LAB" verify loc a1 >"$OUT" 2>"$ERR" || RC=$?
+[ "$RC" -ne 0 ]; a=$?; has "$OUT" '✗ A có hello (thực tế: không chạy'; b=$?; has "$OUT" '✓'; [ $? -ne 0 ]; c=$?
+check "verify với LAB_MVN_RAN=1 từ môi trường, script không gọi lab_mvn, còn báo cáo cũ: ✗ 'không chạy'" $((a+b+c))
 
 new_loc; LOCPATH="$GITFAIL:$LOCBIN:/usr/bin:/bin"; run_loc "" up loc
 [ "$RC" -ne 0 ]; a=$?; [ ! -e "$LOCW" ]; b=$?

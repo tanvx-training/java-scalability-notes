@@ -4,7 +4,7 @@
 #   expect_fail  "<nhãn>" <lệnh…>              đạt khi lệnh trả khác 0
 #   expect_eq    "<nhãn>" "<kỳ vọng>" <lệnh…>  đạt khi stdout (cắt khoảng trắng đầu/cuối) bằng kỳ vọng
 #   expect_match "<nhãn>" "<regex>" <lệnh…>    đạt khi gộp stdout+stderr khớp regex (grep -E); expect_eq và expect_match còn đòi lệnh trả 0
-#   assert_summary                             in "  → a/b đạt", trả 0 khi đủ
+#   assert_summary                             in "  → a/b đạt", trả 0 khi đủ (0/0 là chưa đạt)
 # Bộ đếm là biến của shell hiện tại: mỗi lần lab chạy một script trong subshell mới thì đếm lại từ 0.
 
 ASSERT_OK=0
@@ -48,9 +48,11 @@ expect_match() {
   elif printf '%s\n' "$out" | grep -Eq -- "$re"; then _assert_pass "$label"; else _assert_fail "$label" "$(_assert_short "$out")"; fi
 }
 
+# Không có kiểm tra nào (0/0) là chưa đạt: script không chấm được gì thì không được xanh.
 assert_summary() {
+  [ "$ASSERT_N" -gt 0 ] || echo "  ✗ không có kiểm tra nào chạy (script không gọi expect_* nào trước assert_summary)"
   echo "  → $ASSERT_OK/$ASSERT_N đạt"
-  [ "$ASSERT_OK" -eq "$ASSERT_N" ]
+  [ "$ASSERT_N" -gt 0 ] && [ "$ASSERT_OK" -eq "$ASSERT_N" ]
 }
 
 # ---- Chấm bằng báo cáo JUnit của Maven Surefire (driver local) ----
@@ -61,6 +63,7 @@ assert_summary() {
 # Báo cáo được đọc một lần thành bảng chỉ mục (lớp, phương thức, kết quả) ở expect_test đầu tiên;
 # lab_tests và lab_mvn xoá bảng để lần sau đọc lại.
 LAB_TEST_REPORTS=""
+unset LAB_MVN_RAN   # chỉ lab_mvn của chính script này được đặt; giá trị thừa hưởng từ môi trường không tính
 _LAB_TEST_INDEX=""
 _LAB_TEST_INDEX_OK=0
 

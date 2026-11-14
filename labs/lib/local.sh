@@ -410,16 +410,69 @@ local_cmd_mock() { local_not_applicable mock; }
 #   setup.sh, check.sh  tuỳ chọn như driver multipass
 # Script chạy với thư mục hiện hành là workspace, có WS, SESSION_DIR và các hàm assert; không có vm.
 
+# ws_session_state <id>: buổi <id> đã nằm trong workspace chưa, theo lịch sử commit của lab (đi ngược từ
+# HEAD theo cha thứ nhất, dừng ở mốc đầu tiên gặp được):
+#   "begun <buổi gần nhất>"  gặp 'lab: đầu buổi <id>' trước mọi commit khôi phục; <buổi gần nhất> là buổi
+#                            có 'lab: đầu buổi …' mới nhất (chính <id>, hoặc một buổi sau đã bắt đầu)
+#   "restored <X>"           gặp 'lab: khôi phục về cuối buổi <X>' trước, với <id> đứng tại hoặc trước <X>
+#                            trong ORDER: cây làm việc đã là lời giải tới hết <X>, gồm cả <id>
+#   (rỗng)                   chưa bắt đầu: không gặp mốc nào, hoặc gặp khôi phục về một buổi trước <id>
+#                            (sau `restore <buổi trước>`, `begin <id>` chạy lại bình thường)
+ws_session_state() {
+  local ord
+  ord="$(order_list | tr '\n' ' ')" || return 1
+  ws_git log --first-parent --format=%s HEAD 2>/dev/null | awk -v id="$1" -v ord="$ord" '
+    BEGIN { n = split(ord, o, " "); for (i = 1; i <= n; i++) if (!(o[i] in pos)) pos[o[i]] = i
+            b = "lab: đầu buổi "; r = "lab: khôi phục về cuối buổi " }
+    index($0, b) == 1 && latest == "" { latest = substr($0, length(b) + 1) }
+    $0 == b id { print "begun " latest; exit }
+    index($0, r) == 1 {
+      x = substr($0, length(r) + 1)
+      if ((x in pos) && (id in pos) && pos[id] <= pos[x]) print "restored " x
+      exit
+    }'
+}
+
+# local_already_begun <id> <trạng thái>: báo buổi đã nằm trong workspace, cách làm tiếp và cách làm lại
+local_already_begun() {
+  local id="$1" what="${2%% *}" x="${2#* }" prev next
+  prev="$(session_prev "$id")"
+  if [ "$what" = restored ]; then
+    info "workspace đã được khôi phục về cuối buổi '$x' (đã gồm buổi '$id'), không làm lại gì"
+    next="$(order_list | awk -v t="$x" 'f { print; exit } $0 == t { f = 1 }')"
+    [ -z "$next" ] || info "buổi tiếp theo: $LAB_CMD begin $LAB_PROGRAM $next"
+  else
+    info "buổi '$id' đã bắt đầu trong workspace (commit 'lab: đầu buổi $id'), không chạy lại kiểm đầu vào, không chép lại test"
+    if [ "$x" != "$id" ]; then
+      info "buổi đang làm gần nhất là '$x': làm tiếp rồi chạy $LAB_CMD verify $LAB_PROGRAM $x"
+    else
+      info "làm tiếp trên code hiện có rồi chạy: $LAB_CMD verify $LAB_PROGRAM $id"
+    fi
+  fi
+  if [ -n "$prev" ]; then
+    info "chỉ khi muốn làm lại từ đầu: $LAB_CMD restore $LAB_PROGRAM $prev rồi $LAB_CMD begin $LAB_PROGRAM $id (code hiện tại được giữ trong nhánh backup/*)"
+  fi
+  return 0
+}
+
 local_cmd_check() {
   [ $# -eq 1 ] || die "cách dùng: $LAB_CMD check $LAB_PROGRAM <buổi>"
-  local rc=0
+  local rc=0 state
+  require_session "$1"
+  ws_enter
+  state="$(ws_session_state "$1")"
+  [ -z "$state" ] || { local_already_begun "$1" "$state"; return 0; }
   check_input "$1" || rc=$?
   return "$rc"
 }
 
 local_cmd_begin() {
   [ $# -eq 1 ] || die "cách dùng: $LAB_CMD begin $LAB_PROGRAM <buổi>"
-  local id="$1" prev rc=0
+  local id="$1" prev rc=0 state
+  require_session "$id"
+  ws_enter
+  state="$(ws_session_state "$id")"
+  [ -z "$state" ] || { local_already_begun "$id" "$state"; return 0; }
   check_input "$id" || rc=$?
   if [ "$rc" -ne 0 ]; then
     prev="$(session_prev "$id")"
@@ -559,7 +612,7 @@ local_cmd_selftest() {
   if [ -f "$st" ]; then
     info "chạy selftest.sh của chương trình trên workspace cuối chuỗi"
     ( ws_enter && run_script n "$st" "$(dirname "$st")" ) \
-      || die "selftest dừng: selftest.sh của chương trình lỗi (sau buổi cuối)"
+      || die "selftest dừng: selftest.sh của chương trình lỗi sau buổi cuối, tức lời giải của một buổi đã làm hỏng test còn hiệu lực của một buổi trước (verify từng buổi vẫn xanh lúc chấm); cách tìm buổi gây ra: mục \"selftest của driver local\" trong labs/README.md"
   fi
   info "selftest xong, $n buổi đạt, tổng thời gian $(( $(date +%s) - started )) giây"
 }

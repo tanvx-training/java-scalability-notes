@@ -55,7 +55,7 @@ Test vẫn xanh; đó là Mockito tự gắn agent ByteBuddy lúc chạy. `verif
 ./labs/lab verify ssia s01      # chấm; đạt hết thì commit "lab: xong buổi s01"
 ```
 
-Rồi bấm "Đánh dấu hoàn thành" trên trang buổi và sang buổi sau bằng `./labs/lab begin ssia s02`. `begin` kiểm workspace đang ở trạng thái cuối buổi trước (chạy `verify` của buổi đó); chưa đạt thì nó gợi ý `./labs/lab restore ssia <buổi trước>`.
+Rồi bấm "Đánh dấu hoàn thành" trên trang buổi và sang buổi sau bằng `./labs/lab begin ssia s02`. `begin` kiểm workspace đang ở trạng thái cuối buổi trước (chạy `verify` của buổi đó); chưa đạt thì nó gợi ý `./labs/lab restore ssia <buổi trước>`. Hôm sau quay lại giữa buổi, chạy lại `./labs/lab begin ssia <buổi đang làm>` (hay `check`) là an toàn: lab chỉ báo buổi đã bắt đầu và nhắc lệnh `verify`, không chạy lại kiểm đầu vào, không đụng tệp bạn đang sửa; đừng `restore` chỉ vì muốn làm tiếp.
 
 Chạy service bằng tay, trong `labs/ssia/work/`:
 
@@ -82,6 +82,8 @@ git -C labs/ssia/work restore --source=backup/20261114-122534 -- notes.txt order
 ```
 
 Lệnh `restore --source` cuối cùng lấy đúng các tệp đó về cây làm việc (chưa commit), các tệp khác giữ nguyên.
+
+Tệp bị chính gitignore chung của bạn bỏ qua (`core.excludesFile`, thường là `~/.config/git/ignore`) không vào commit nào nên **không có** trong nhánh `backup/*`: `restore` để chúng nằm nguyên tại chỗ (trừ khi nằm trong `target/` cạnh `pom.xml` hoặc trùng đường dẫn với một tệp của lời giải), và `destroy` vẫn đóng chúng vào gói.
 
 **2. Các commit `lab: …` do `begin`, `break`, `verify` tạo.** `begin` commit `lab: trước buổi <id>` trước khi chép test, `break` commit `lab: trước sự cố <mã>` trước khi gây lỗi, `verify` commit `lab: xong buổi <id>` khi đạt (và `lab: trước khi chấm <id>` với buổi chép test lúc chấm). Tìm commit theo nhãn rồi lấy tệp như trên:
 
