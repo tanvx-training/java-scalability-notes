@@ -158,7 +158,7 @@ export const skills = [
   { id: "k-pod-failure-reasons", kind: "concept", area: "kubernetes", label: "ImagePullBackOff, ErrImageNeverPull, CrashLoopBackOff, CreateContainerConfigError — đọc lý do ở đâu" },
   { id: "k-get-pod-yaml", kind: "command", area: "kubernetes", label: "k get pod <pod> -o yaml", ref: cmd("c086") },
   { id: "k-replace-force", kind: "command", area: "kubernetes", label: "k replace -f pod.yaml --force", ref: cmd("c084") },
-  { id: "vim-show-whitespace", kind: "command", area: "vim", label: ":set list — thấy tab lẫn trong YAML (^I)" },
+  { id: "vim-show-whitespace", kind: "command", area: "vim", label: ":set list (listchars có nbsp), cat -A — thấy tab, khoảng trắng cuối dòng, NBSP lẫn trong YAML" },
   { id: "k-debug-container", kind: "command", area: "kubernetes", label: "k debug -it <pod> --image=busybox --target=<container>", ref: cmd("ca025") },
 
   // ── s17 Requests, limits, QoS, JVM ──

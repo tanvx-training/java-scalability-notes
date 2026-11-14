@@ -83,7 +83,9 @@ except Exception: cron_img = "?"
 print(f"CRON_IMAGE={cron_img}")
 ro = [p for p in pods if p["metadata"]["name"] == "report-once"]
 if ro:
-    p = ro[0]; print(f"REPORT={c0(p['spec']).get('image')} {p.get('status', {}).get('phase')}")
+    p = ro[0]; cmd = " ".join((c0(p["spec"]).get("command") or []) + (c0(p["spec"]).get("args") or []))
+    path = "/api/orders" if "gateway:8080/api/orders" in cmd else "lệnh không gọi gateway:8080/api/orders"
+    print(f"REPORT={c0(p['spec']).get('image')} {path} {p.get('status', {}).get('phase')}")
 else: print("REPORT=không có Pod report-once")
 
 bad = []

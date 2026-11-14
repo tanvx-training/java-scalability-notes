@@ -1,5 +1,6 @@
 // Chặng 2 — Workload: chạy ba service shop.
-// s10–s12 đã phát hành; script lab ở labs/cka/sessions/s10…s12 (đã chạy thật trên VM Multipass: Kubernetes 1.36.6,
+// s10–s12 đã phát hành; s13, s14 có đủ nội dung nhưng còn status "skeleton" cho tới khi chạy lại trên VM (task 2).
+// Script lab ở labs/cka/sessions/s10…s16 (s10–s14 đã chạy thật trên VM Multipass, s15–s16 chưa: Kubernetes 1.36.6,
 // image shop 1.0, H2 trong bộ nhớ). outcome.verifyOutput chép từ output thật của `./labs/lab verify cka sNN`
 // (node, IP, tên ReplicaSet trên máy bạn sẽ khác). Các buổi còn lại là buổi khung: đủ trường cấu trúc (check-data PR7).
 
@@ -820,21 +821,21 @@ Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp 
     ],
   },
 
-  // ───────────────────────────── s13 (khung) ─────────────────────────────
+  // ───────────────────────────── s13 ─────────────────────────────
   {
     id: "s13",
     stage: "st2",
     title: "Probe, vòng đời Pod và graceful shutdown",
-    durationMin: 75,
+    durationMin: 80,
     domain: "workloads",
     competencies: ["wl-selfheal"],
     requires: ["s12"],
     status: "skeleton",
     pieces: ["probes"],
     goals: [
-      "Gắn liveness, readiness, startup probe vào ba service theo endpoint Actuator tương ứng.",
-      "Chứng minh readiness hỏng thì Pod bị rút khỏi Service mà không bị restart, liveness hỏng thì bị restart.",
-      "Cấu hình preStop và terminationGracePeriodSeconds để Pod dừng không rớt request.",
+      "Gắn startupProbe, livenessProbe, readinessProbe vào ba service theo endpoint Actuator tương ứng, và cho gateway chờ catalog bằng init container.",
+      "Chứng minh trên một Deployment nháp: readiness hỏng thì Pod bị rút khỏi Service mà không bị restart, liveness hỏng thì bị restart.",
+      "Cấu hình preStop và terminationGracePeriodSeconds khớp với graceful shutdown của Spring Boot để Pod dừng không rớt request.",
     ],
     skills: [
       { skill: "k-probes-yaml", level: "Viết được không tra" },
@@ -845,9 +846,261 @@ Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp 
       { skill: "k-init-container", level: "Viết được có tra" },
     ],
     uses: ["k-describe-pod", "k-labels-selectors", "k-port-forward", "vim-paste-mode", "lx-ps-proc"],
-    stateIn: "Đầu ra s12: ba service chạy, cấu hình từ ConfigMap/Secret, chưa có probe.",
-    stateOut: "Ba Deployment có đủ ba probe trỏ vào Actuator và graceful shutdown; endpoints chỉ chứa Pod Ready.",
+    foundation: null,
+    mindset: `**Ba probe, ba câu hỏi khác nhau.** kubelet hỏi container ba câu, mỗi câu một hậu quả:
+
+| Probe | Câu hỏi | Trả lời "không" thì | Ở shop trỏ vào |
+|---|---|---|---|
+| \`startupProbe\` | Đã khởi động xong chưa? | Chờ tiếp; hết \`failureThreshold × periodSeconds\` thì giết container. Trong lúc nó chưa đạt, hai probe kia **chưa chạy** | \`/actuator/health/liveness\` |
+| \`livenessProbe\` | Còn sống không, hay kẹt tới mức phải khởi động lại? | kubelet giết container (SIGTERM, rồi SIGKILL khi hết grace), tạo lại theo \`restartPolicy\` | \`/actuator/health/liveness\` |
+| \`readinessProbe\` | Có nhận request được không? | Pod bị đánh dấu không Ready, địa chỉ của nó trong EndpointSlice thành \`ready: false\`, Service ngừng gửi request tới. **Không** restart | \`/actuator/health/readiness\` |
+
+Spring Boot đã chia sẵn đúng hai nhóm đó. Image shop bật \`management.endpoint.health.probes.enabled: true\` nên \`/actuator/health\` trả \`{"groups":["liveness","readiness"],"status":"UP"}\` (bạn đã thấy ở s10). \`liveness\` phản ánh \`LivenessState\` của ứng dụng (\`CORRECT\`/\`BROKEN\`), \`readiness\` phản ánh \`ReadinessState\` (\`ACCEPTING_TRAFFIC\`/\`REFUSING_TRAFFIC\`). Điều quan trọng: theo mặc định Spring **không** đưa kiểm tra database vào nhóm liveness. Đó là chủ ý: database chết mà liveness đỏ thì kubelet sẽ restart mọi Pod cùng lúc, chẳng sửa được gì mà còn thêm tải lúc database hồi lại. Phụ thuộc bên ngoài, nếu có, thuộc về readiness.
+
+**Vì sao cần startupProbe: đo trên lab.** Lúc cluster bận (ba JVM khởi động cùng lúc trên worker 2 vCPU, load của cka-cp lên 13), log của catalog ghi \`Started CatalogApplication in 59.984 seconds (process running for 93.439)\`, trong khi lúc rảnh chỉ khoảng 5 giây. Một livenessProbe thuần với \`initialDelaySeconds\` vài chục giây sẽ giết JVM trước khi nó kịp lên, Pod rơi vào vòng restart không bao giờ xong. startupProbe cho thời gian khởi động một ngân sách riêng (ở đây \`periodSeconds: 5\`, \`failureThreshold: 30\` = 150 giây) mà không làm liveness chậm phát hiện sự cố về sau. Cũng vì máy lab nhỏ mà liveness/readiness của buổi này đặt \`timeoutSeconds: 3\` thay vì 1 giây mặc định: một JVM đang GC hay đang tranh CPU trả lời chậm hơn 1 giây không có nghĩa là nó chết.
+
+**Dừng tử tế: ba đồng hồ phải khớp nhau.** Khi Pod bị xoá (rollout, scale xuống, drain node), hai việc xảy ra **song song**: kubelet bắt đầu dừng container, còn EndpointSlice controller rút địa chỉ Pod khỏi Service và kube-proxy trên từng node cập nhật iptables. Việc thứ hai mất một lúc; nếu JVM đóng cổng ngay, những request đến trong khoảng đó gặp \`connection refused\`.
+
+\`\`\`text
+t=0      Pod bị xoá ─┬─ EndpointSlice bỏ địa chỉ → kube-proxy cập nhật iptables trên mọi node (vài giây)
+                     └─ kubelet chạy preStop: sleep 10
+t=10s    preStop xong → SIGTERM tới PID 1 (java) → Spring: "Commencing graceful shutdown", chờ request đang chạy
+t≤30s    spring.lifecycle.timeout-per-shutdown-phase: 20s hết → Spring đóng hẳn
+t=45s    terminationGracePeriodSeconds hết → SIGKILL nếu còn sống
+\`\`\`
+
+Image shop đã có \`server.shutdown=graceful\` và \`timeout-per-shutdown-phase: 20s\`; phần của Kubernetes là \`preStop\` (cho iptables kịp cập nhật trước khi app ngừng nhận kết nối) và \`terminationGracePeriodSeconds\` ≥ preStop + 20 giây (mặc định 30 giây là **không đủ** cho 10 + 20 và một chút dư). Grace period được tính từ lúc xoá, **bao gồm** thời gian preStop. Đo trên lab: xoá một Pod catalog lúc 19:49:25.45, log ghi \`Commencing graceful shutdown. Waiting for active requests to complete\` lúc 19:49:35.89 (đúng sau preStop 10 giây), \`Graceful shutdown complete\` 40 ms sau đó, \`kubectl delete\` trả về lúc 19:49:37.79. Không có preStop, một vòng curl 5 lần/giây trong lúc \`rollout restart\` gateway mất 1 request trên 182 (mã \`000\`: không có phản hồi); có preStop thì 200/200 (buổi sau bạn tự đo).
+
+**Init container: chờ phụ thuộc trước khi chạy.** \`initContainers\` chạy tuần tự, mỗi cái phải thoát 0 thì cái sau (và cuối cùng là container chính) mới chạy; trong lúc đó \`kubectl get pod\` hiện \`Init:0/1\`. Gateway không làm gì được nếu catalog chưa sẵn sàng, nên một init container \`wait-catalog\` gọi readiness của catalog qua Service cho tới khi được. Đây không thay thế được readiness của chính gateway: catalog có thể chết *sau* khi gateway đã chạy.`,
+    refs: [
+      { label: "Bài lộ trình CKAD: Liveness probe — httpGet, exec, tcpSocket", href: "#/roadmap/ckad/w5-1" },
+      { label: "Bài lộ trình CKAD: Readiness & Startup probe — hiểu rõ sự khác biệt", href: "#/roadmap/ckad/w5-2" },
+      { label: "Bài lộ trình CKAD: Probe parameters — initialDelaySeconds, periodSeconds, failureThreshold", href: "#/roadmap/ckad/w5-3" },
+      { label: "Bài lộ trình CKAD: Pod lifecycle & phases", href: "#/roadmap/ckad/w2-1" },
+      { label: "Bài lộ trình CKAD: Multi-container Pods — init containers", href: "#/roadmap/ckad/w2-2" },
+      { label: "CKA Study Guide, chương 11 — Deployment và ReplicaSet", href: "#/docs/ckabook-11" },
+      { label: "CKA Study Guide, chương 21 — Xử lý sự cố ứng dụng", href: "#/docs/ckabook-21" },
+      { label: "Thực hành nhanh: YAML probe, init container; k explain", href: "#/commands" },
+      { label: "kubernetes.io: Configure Liveness, Readiness and Startup Probes", href: "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/" },
+      { label: "kubernetes.io: Pod Lifecycle — container states, termination of Pods", href: "https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/" },
+      { label: "kubernetes.io: Container Lifecycle Hooks (preStop)", href: "https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/" },
+      { label: "kubernetes.io: Init Containers", href: "https://kubernetes.io/docs/concepts/workloads/pods/init-containers/" },
+      { label: "Spring Boot: Kubernetes Probes (Actuator)", href: "https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes" },
+      { label: "Spring Boot: Graceful Shutdown", href: "https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html" },
+    ],
+    stateIn: `Đầu ra s12: ba Deployment \`gateway\` (1), \`catalog\` (2), \`order\` (1) trong \`shop\`, cấu hình từ \`shop-config\`, \`gateway-files\` và \`db-cred\`, chưa có probe; manifest ở \`~/shop/\`. \`./labs/lab begin cka s13\` kiểm đầu vào bằng verify của s12. Init container dùng \`busybox:1.37\`, kéo từ Docker Hub: node cần Internet.`,
+    stateOut: "Ba Deployment có startupProbe/livenessProbe (/actuator/health/liveness), readinessProbe (/actuator/health/readiness), preStop sleep 10 và terminationGracePeriodSeconds 45; gateway có init container wait-catalog; EndpointSlice chỉ chứa địa chỉ Pod Ready; ~/drills/s13/answers.env.",
+    tasks: [
+      { id: "t1", text: "Tra trường trước khi viết: `k explain pod.spec.containers.livenessProbe`, rồi `k explain pod.spec.containers.livenessProbe.periodSeconds` và `k explain pod.spec.terminationGracePeriodSeconds`. Ghi `PROBE_PERIOD_DEFAULT=<số giây>` (periodSeconds mặc định) vào `~/drills/s13/answers.env`. `k explain deploy.spec.template.spec.containers.lifecycle --recursive | less` để thấy preStop có những dạng nào." },
+      { id: "t2", text: "Thí nghiệm readiness trên Deployment nháp: `k -n shop create deploy probe-lab --image=shop/catalog:1.0 --port=8080 $do > ~/drills/s13/probe-lab.yaml`, thêm **chỉ** `readinessProbe` httpGet path `/actuator/health/khong-co` cổng 8080; apply, `k -n shop expose deploy probe-lab --port=8080`. Sau một phút: READY, RESTARTS, `k -n shop get endpointslices -l kubernetes.io/service-name=probe-lab -o yaml` (xem `conditions.ready`), Events của Pod. Ghi `READINESS_RESTARTS=<số lần restart>`." },
+      { id: "t3", text: "Thí nghiệm liveness: sửa `probe-lab.yaml` cho readiness về `/actuator/health/readiness`, thêm `livenessProbe` path `/actuator/health/khong-co` (`initialDelaySeconds: 60`); apply và theo dõi `k -n shop get pod -l app=probe-lab -w`. Khi RESTARTS ≥ 1: ghi `LIVENESS_RESTARTS_GE1=yes` và `LIVENESS_EXIT_CODE=<exitCode trong lastState.terminated>` (`k get pod … -o jsonpath` hoặc `describe`). Xoá Deployment và Service `probe-lab`." },
+      { id: "t4", text: "Gắn probe cho ba service: trong `~/shop/catalog.yaml`, `order.yaml`, `gateway.yaml` thêm `startupProbe` và `livenessProbe` → `/actuator/health/liveness`, `readinessProbe` → `/actuator/health/readiness`, cổng 8080. Chọn số sao cho JVM có tới 150 giây để khởi động (startupProbe) và liveness không giết một JVM chỉ đang chậm (dán khối YAML với `:set paste`). Apply catalog, order trước." },
+      { id: "t5", text: "Dừng tử tế: cũng trong ba tệp, thêm `lifecycle.preStop` ngủ 10 giây và `terminationGracePeriodSeconds` đủ cho preStop + 20 giây shutdown của Spring (đọc `timeout-per-shutdown-phase` trong `labs/cka/app/*/src/main/resources/application.yml` hoặc trong README của app). Xoá một Pod catalog trong khi `k -n shop logs -f` nó ở cửa sổ khác: ghi lại thời điểm `Commencing graceful shutdown` so với lúc bạn gõ `delete`." },
+      { id: "t6", text: "Init container: thêm vào `~/shop/gateway.yaml` một init container tên `wait-catalog` (image `busybox:1.37`) lặp `wget` tới `http://catalog:8080/actuator/health/readiness` cho tới khi được. Apply, xem `k -n shop get pod -l app=gateway -w` (cột STATUS `Init:0/1` → `PodInitializing` → `Running`) và `k -n shop logs <pod> -c wait-catalog`." },
+      { id: "t7", text: "Kiểm: `k -n shop get pod` — ba Deployment đủ replica Ready, `k -n shop get endpointslices` mọi địa chỉ `ready`. Trên Mac: `./labs/lab verify cka s13` phải đạt 14/14 (verify so cả ba tệp trong `~/shop/` với Deployment đang chạy)." },
+    ],
+    hints: [
+      "`k explain` nhận đường dẫn của resource đã có: `pod.spec.containers.readinessProbe.httpGet`. Với Deployment thì đi qua `deploy.spec.template.spec.…`. `--recursive` in cả cây trường mà không có mô tả.",
+      "Readiness sai: Pod `Running` nhưng `0/1`, RESTARTS đứng yên, Event `Readiness probe failed: …`. Liveness sai: Event `Container catalog failed liveness probe, will be restarted`.",
+      "Bước thí nghiệm readiness đừng thêm liveness: nếu cluster đang bận, Spring có thể khởi động lâu hơn `initialDelaySeconds` của liveness và bạn sẽ thấy restart vì lý do khác.",
+      "`exitCode: 143` = 128 + 15: tiến trình thoát vì SIGTERM. Liveness hỏng không phải SIGKILL ngay: kubelet dừng container như khi xoá Pod (có preStop và grace period).",
+      "preStop chạy **trong** grace period: preStop 10 giây + Spring 20 giây đã là 30, bằng đúng mặc định — chọn lớn hơn, ví dụ 45.",
+      "Gateway kẹt `Init:0/1`: `k -n shop logs <pod> -c wait-catalog` cho thấy vòng chờ; kiểm `k -n shop get endpointslices -l kubernetes.io/service-name=catalog`.",
+      "Gỡ trường bằng `kubectl patch --type json -p '[{\"op\":\"remove\",\"path\":\"/spec/template/spec/containers/0/lifecycle\"}]'` khi muốn thử lại mà không sửa tệp; nhớ apply lại tệp sau đó.",
+    ],
+    solution: `Output là của máy soạn bài; tên Pod, IP và thời điểm trên máy bạn sẽ khác.
+
+**1. k explain**
+
+\`\`\`bash
+k explain pod.spec.containers.livenessProbe.periodSeconds
+#     How often (in seconds) to perform the probe. Default to 10 seconds. Minimum
+#     value is 1.
+k explain pod.spec.terminationGracePeriodSeconds | tail -3
+#     … Set this value longer than the expected
+#     cleanup time for your process. Defaults to 30 seconds.
+mkdir -p ~/drills/s13 && echo PROBE_PERIOD_DEFAULT=10 > ~/drills/s13/answers.env
+\`\`\`
+
+**2. Readiness sai: rút khỏi Service, không restart**
+
+\`\`\`bash
+k -n shop create deploy probe-lab --image=shop/catalog:1.0 --port=8080 $do > ~/drills/s13/probe-lab.yaml
+vim ~/drills/s13/probe-lab.yaml      # thêm dưới ports: của container
+\`\`\`
+
+\`\`\`yaml
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/khong-co
+            port: 8080
+          periodSeconds: 5
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/drills/s13/probe-lab.yaml && k -n shop expose deploy probe-lab --port=8080
+k -n shop get pod -l app=probe-lab
+# probe-lab-…   0/1   Running   0   …
+k -n shop get endpointslices -l kubernetes.io/service-name=probe-lab -o jsonpath='{.items[0].endpoints[*].conditions.ready}'; echo
+# false
+echo READINESS_RESTARTS=0 >> ~/drills/s13/answers.env
+\`\`\`
+
+Địa chỉ Pod **vẫn có** trong EndpointSlice nhưng \`ready: false\`; kube-proxy chỉ đưa địa chỉ ready vào iptables, nên Service \`probe-lab\` không có đích nào. Container không bị đụng tới.
+
+**3. Liveness sai: restart**
+
+\`\`\`bash
+vim ~/drills/s13/probe-lab.yaml      # readiness về /actuator/health/readiness, thêm:
+#        livenessProbe:
+#          httpGet: {path: /actuator/health/khong-co, port: 8080}
+#          initialDelaySeconds: 60
+#          periodSeconds: 5
+#          failureThreshold: 2
+k apply -f ~/drills/s13/probe-lab.yaml
+k -n shop get pod -l app=probe-lab -w
+k -n shop get events --sort-by=.lastTimestamp | grep probe-lab | tail -3
+#   Normal    Killing     pod/probe-lab-…   Container catalog failed liveness probe, will be restarted
+k -n shop get pod -l app=probe-lab -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}'; echo   # 143
+printf 'LIVENESS_RESTARTS_GE1=yes\\nLIVENESS_EXIT_CODE=143\\n' >> ~/drills/s13/answers.env
+k -n shop delete deploy,svc probe-lab
+\`\`\`
+
+Ba trạng thái container trong \`status.containerStatuses\`: \`waiting\` (chưa chạy: kéo image, CrashLoopBackOff…), \`running\`, \`terminated\` (có \`exitCode\`, \`reason\`). Sau restart, lần chạy trước nằm ở \`lastState.terminated\`.
+
+**4 và 5. Probe và dừng tử tế cho ba service**
+
+Khối dưới đây thêm vào container của mỗi tệp trong \`~/shop/\` (\`:set paste\` trước khi dán); \`terminationGracePeriodSeconds\` thuộc \`spec.template.spec\`, ngang hàng \`containers:\`.
+
+\`\`\`yaml
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+      - …
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 5
+          failureThreshold: 30          # tới 150 giây để JVM lên
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sleep", "10"]
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/catalog.yaml -f ~/shop/order.yaml
+k -n shop rollout status deploy/catalog; k -n shop rollout status deploy/order
+\`\`\`
+
+Image shop có \`sleep\` (Ubuntu), nên \`exec\` dùng được. Trang Container Lifecycle Hooks trên kubernetes.io còn mô tả dạng \`preStop: {sleep: {seconds: 10}}\` không cần binary nào trong image; verify chấp nhận cả hai. Grace 45 = preStop 10 + Spring 20 + dư 15.
+
+Xoá một Pod catalog và xem log (dòng thật trên lab):
+
+\`\`\`bash
+k -n shop logs -f catalog-544847b966-p6788 --timestamps    # cửa sổ 1
+date +%T; k -n shop delete pod catalog-544847b966-p6788; date +%T   # cửa sổ 2
+# 19:49:25 … pod "catalog-544847b966-p6788" deleted … 19:49:37
+# 19:49:35.893 … GracefulShutdown : Commencing graceful shutdown. Waiting for active requests to complete
+# 19:49:35.931 … GracefulShutdown : Graceful shutdown complete
+# 19:49:35.953 … HikariPool-1 - Shutdown initiated...
+\`\`\`
+
+Mười giây giữa \`delete\` và \`Commencing graceful shutdown\` là preStop: trong lúc đó Pod đã \`Terminating\`, đã rời EndpointSlice, nhưng JVM vẫn nhận kết nối. SIGTERM tới PID 1 của container, chính là \`java\` (ENTRYPOINT của image là \`sh -c "exec java …"\`: \`exec\` thay shell bằng JVM, nên tín hiệu không bị shell nuốt): \`k -n shop exec deploy/catalog -- cat /proc/1/cmdline | tr '\\\\0' ' '\` cho thấy PID 1 là \`java\`, không phải \`sh\`.
+
+**6. Init container cho gateway**
+
+\`\`\`yaml
+    spec:
+      terminationGracePeriodSeconds: 45
+      initContainers:
+      - name: wait-catalog
+        image: busybox:1.37
+        command: ["sh", "-c", "until wget -q -T 2 -O /dev/null http://catalog:8080/actuator/health/readiness; do echo chờ catalog; sleep 2; done"]
+      containers:
+      - image: shop/gateway:1.0
+        …   # cùng khối probe + lifecycle như trên
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/gateway.yaml
+k -n shop get pod -l app=gateway -w      # STATUS đi qua Init:0/1 → PodInitializing → Running; READY 0/1 rồi 1/1
+k -n shop logs -l app=gateway -c wait-catalog
+\`\`\`
+
+READY \`0/1\` sau \`Running\` là lúc startupProbe/readinessProbe chưa đạt: Spring còn đang khởi động. Từ buổi này, \`Ready\` mới thật sự có nghĩa là app đã nghe cổng.
+
+**7. Kiểm**
+
+\`\`\`bash
+k -n shop get endpointslices -o jsonpath='{range .items[*].endpoints[*]}{.addresses[0]} {.conditions.ready}{"\\n"}{end}'
+\`\`\`
+
+Lời giải tự động: \`labs/cka/sessions/s13/apply.sh\` (manifest đầy đủ trong \`labs/cka/sessions/s13/files/\`).`,
+    exam: {
+      patterns: [
+        "\"Thêm liveness probe kiểu httpGet/exec/tcpSocket vào Pod/Deployment X, kiểm mỗi N giây\" — viết trong YAML rồi `apply`; Pod không sửa probe tại chỗ được: `replace --force`.",
+        "\"Pod không bao giờ Ready\" — `describe pod`: Event `Readiness probe failed`, so path/cổng probe với cổng app thật nghe.",
+        "\"Pod restart liên tục dù app chạy được\" — liveness quá gắt (`initialDelaySeconds`/`timeoutSeconds` nhỏ) hoặc trỏ sai; thêm startupProbe.",
+        "\"Thêm init container chờ Service X\" — `initContainers` với `until nslookup/wget …; do sleep 2; done`.",
+      ],
+      timeTargetMin: 6,
+      drills: [
+        {
+          text: "Trong 4 phút: Pod `tcp-check` (namespace `shop`, image `shop/order:1.0`) có `readinessProbe` kiểu `tcpSocket` cổng 8080 và `livenessProbe` kiểu `exec` chạy `cat /app/app.jar` mỗi 15 giây. Chứng minh Pod Ready, rồi xoá.",
+          timeLimitMin: 4,
+          solution: "```bash\nk -n shop run tcp-check --image=shop/order:1.0 --port=8080 $do > tcp.yaml\n# thêm vào container:\n#   readinessProbe: {tcpSocket: {port: 8080}, periodSeconds: 5}\n#   livenessProbe: {exec: {command: [cat, /app/app.jar]}, periodSeconds: 15}\nk apply -f tcp.yaml\nk -n shop wait --for=condition=Ready pod/tcp-check --timeout=120s\nk -n shop delete pod tcp-check $now\n```\n`tcpSocket` chỉ kiểm cổng mở; Tomcat mở cổng trước khi Spring báo `ACCEPTING_TRAFFIC`, nên với app Spring, httpGet tới readiness chính xác hơn.",
+        },
+        {
+          text: "Trong 2 phút, không mở tài liệu: in mặc định của `failureThreshold` và `timeoutSeconds` của một probe.",
+          timeLimitMin: 2,
+          solution: "```bash\nk explain pod.spec.containers.readinessProbe.failureThreshold   # Defaults to 3\nk explain pod.spec.containers.readinessProbe.timeoutSeconds     # Defaults to 1 second\n```",
+        },
+      ],
+    },
+    tips: [
+      "Chỉ cần nhớ đường dẫn bắt đầu: `k explain pod.spec.containers.livenessProbe` rồi đi tiếp bằng dấu chấm — nhanh hơn tìm trên kubernetes.io.",
+      "Đề cho sẵn một liveness \"đúng\" mà Pod vẫn restart: xem `timeoutSeconds` (mặc định 1 giây) và có startupProbe chưa.",
+      "Readiness sai không bao giờ làm tăng RESTARTS; RESTARTS tăng là liveness, startupProbe, hay chính app tự thoát (`k logs --previous`).",
+      "preStop + shutdown của app phải nhỏ hơn `terminationGracePeriodSeconds`, nếu không kubelet gửi SIGKILL giữa chừng (exit code 137).",
+      "Ngại sửa nhiều Deployment một lúc: sửa tệp rồi `k apply -f ~/shop/` một lần; đừng `kubectl edit` mà quên tệp.",
+    ],
+    outcome: {
+      md: `Ba service của shop có probe trỏ vào Actuator, dừng tử tế khi bị xoá, và gateway chỉ khởi động khi catalog đã sẵn sàng. Từ buổi này \`Ready\` mới là "app đã nhận request". Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s13
+\`\`\`
+
+Verify đọc probe, preStop và grace period của ba Deployment (cổng có tên cũng được), so với \`~/shop/*.yaml\` qua \`apply --dry-run=server\`, đếm địa chỉ ready trong EndpointSlice, và kiểm \`probe-lab\` đã xoá.`,
+      verifyOutput: "", // CẦN ĐO: chép từ `restore cka s13` sau khi chạy 14 dòng (bản 12 dòng đã đạt, xem task-2-report.md)
+      projectDelta: "Mảnh project **probes** hoàn thành: ba Deployment có startup/liveness/readiness probe nối với nhóm health của Actuator, preStop + grace period khớp graceful shutdown của Spring, gateway có init container chờ catalog. Buổi sau dựa vào đó để rollout gateway lên 2.0 mà không rớt request.",
+    },
+    review: [
+      { q: "Readiness và liveness cùng hỏng, hậu quả khác nhau thế nào?", a: "Readiness hỏng: Pod không Ready, địa chỉ trong EndpointSlice thành `ready: false`, Service ngừng gửi request; container không bị restart. Liveness hỏng: kubelet giết container (SIGTERM → exit 143) và tạo lại theo restartPolicy." },
+      { q: "Vì sao không đưa kiểm tra database vào livenessProbe?", a: "Database chết thì mọi Pod cùng đỏ liveness, kubelet restart tất cả cùng lúc mà không sửa được gì, còn dồn tải lúc database hồi lại. Phụ thuộc bên ngoài thuộc về readiness (hoặc để app tự xử lý); liveness chỉ trả lời \"tiến trình này có kẹt không\"." },
+      { q: "startupProbe giải quyết việc gì mà initialDelaySeconds của liveness không làm tốt?", a: "Cho thời gian khởi động một ngân sách riêng (failureThreshold × periodSeconds) mà không làm liveness chậm phát hiện sự cố sau đó. Trên lab, Spring có lúc mất 93 giây mới lên khi cluster bận; initialDelay cố định hoặc quá ngắn (vòng restart) hoặc quá dài (phát hiện chậm)." },
+      { q: "Pod bị xoá: preStop, SIGTERM, terminationGracePeriodSeconds xảy ra theo thứ tự nào, và vì sao cần preStop?", a: "Xoá → (song song: rút khỏi EndpointSlice/iptables) preStop chạy → SIGTERM tới PID 1 → app graceful shutdown → hết grace period thì SIGKILL. preStop giữ app nhận kết nối trong lúc kube-proxy trên các node chưa kịp bỏ địa chỉ Pod; thiếu nó, đo trên lab có request `000` trong lúc rollout." },
+      { q: "Pod gateway đứng ở `Init:0/1`. Xem gì?", a: "`k logs <pod> -c wait-catalog` (log của init container), rồi xem thứ nó chờ: Service/EndpointSlice của catalog có địa chỉ ready chưa." },
+    ],
   },
+
+  // ───────────────────────────── s14 ─────────────────────────────
   {
     id: "s14",
     stage: "st2",
@@ -860,8 +1113,8 @@ Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp 
     pieces: [],
     goals: [
       "Nâng gateway từ 1.0 lên 2.0 bằng set image, theo dõi bằng rollout status, ghi change-cause cho từng revision.",
-      "Chọn maxSurge/maxUnavailable để rollout không rớt request trong khi một vòng curl chạy liên tục.",
-      "Rollback về đúng revision chỉ định khi bản mới hỏng.",
+      "Chọn maxSurge/maxUnavailable để rollout không rớt request, và chứng minh bằng một vòng curl chạy suốt lúc rollout.",
+      "Rollback về đúng revision chỉ định khi bản mới hỏng, rồi roll lại lên 2.0.",
     ],
     skills: [
       { skill: "k-set-image", level: "Gõ được không tra" },
@@ -874,9 +1127,199 @@ Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp 
       { skill: "k-rollback-flow", level: "Dưới 3 phút" },
     ],
     uses: ["k-probes-yaml", "k-graceful-shutdown", "net-curl-nc", "k-describe-pod"],
-    stateIn: "Đầu ra s13: ba service bản 1.0 có probe.",
-    stateOut: "gateway đang chạy 2.0 qua rollout không lỗi; lịch sử revision có change-cause; đã thử rollback và roll lại lên 2.0.",
+    foundation: null,
+    mindset: `**Rolling update là thứ bạn đã làm tay với một nhóm instance sau load balancer.** Deploy kiểu cũ cho một cụm Spring Boot sau Nginx hay ELB: rút một máy khỏi pool, dừng JVM, cài jar mới, khởi động, chờ health check xanh, đưa vào pool, sang máy kế. Deployment làm đúng vòng đó, chỉ khác ở chỗ nó **thêm Pod mới trước rồi mới bớt Pod cũ**, và "health check xanh" chính là readinessProbe bạn gắn ở s13. Thiếu probe tốt, Kubernetes coi một Pod là xong ngay khi container chạy, và một phiên bản hỏng vẫn thay sạch Pod cũ.
+
+Mỗi lần template Pod đổi (image, env, probe…), Deployment tạo một **ReplicaSet mới** và tăng dần nó, giảm dần ReplicaSet cũ. Hai số điều khiển nhịp:
+
+| | Nghĩa | gateway 2 replica, \`maxUnavailable: 0\`, \`maxSurge: 1\` |
+|---|---|---|
+| \`maxSurge\` | Được có thêm tối đa bao nhiêu Pod **trên** số replica | tối đa 3 Pod cùng lúc |
+| \`maxUnavailable\` | Được thiếu tối đa bao nhiêu Pod **dưới** số replica | luôn có ≥ 2 Pod Ready |
+
+Mặc định là \`25%\` / \`25%\` (làm tròn: surge lên, unavailable xuống), với 1 replica nghĩa là surge 1, unavailable 0. Với 2 replica và \`maxUnavailable: 0\`, controller chỉ xoá một Pod cũ khi một Pod mới đã Ready: đổi lại rollout chậm hơn và cần chỗ cho một Pod thừa trên worker. \`Recreate\` thì xoá hết rồi mới tạo: có downtime, dùng khi hai phiên bản không được chạy song song (đổi schema không tương thích).
+
+**Không rớt request cần cả ba thứ:** \`maxUnavailable: 0\` (luôn đủ Pod), readinessProbe (Pod mới chỉ nhận request khi Spring đã sẵn sàng), preStop + graceful shutdown (Pod cũ ngừng nhận kết nối mới trước khi đóng cổng). Đo trên lab với vòng \`curl\` 5 lần/giây tới ClusterIP của gateway: đủ cả ba thì 200/200 request \`200\` trong lúc lên 2.0; bỏ preStop, cùng phép đo khi \`rollout restart\` mất 1 request trên 182 (\`000\`: không có phản hồi).
+
+**Blue/green, canary và rolling khác nhau ở chỗ ai giữ "công tắc".** Rolling update để controller trộn dần v1 và v2 sau cùng một Service: rẻ, nhưng có lúc cả hai phiên bản cùng phục vụ (API phải tương thích hai chiều) và quay lui cũng là một rollout. Blue/green dựng đủ v2 song song rồi đổi selector của Service (hoặc Ingress) một lần: chuyển và quay lui tức thì, tốn gấp đôi tài nguyên trong lúc chuyển (xem bài \`w3-5\` trong lộ trình CKAD và chương 9 của *Optimizing Cloud Native Java*). Canary chia một phần nhỏ lưu lượng cho v2 trước. Deployment chỉ có sẵn \`RollingUpdate\` và \`Recreate\`; hai kiểu kia bạn dựng bằng nhiều Deployment + nhãn.
+
+**Revision và rollback.** \`kubectl rollout history\` liệt kê ReplicaSet theo annotation \`deployment.kubernetes.io/revision\`; cột CHANGE-CAUSE lấy từ annotation \`kubernetes.io/change-cause\` của Deployment lúc revision đó được tạo (cờ \`--record\` đã bị bỏ, nên tự \`kubectl annotate\`). \`rollout undo --to-revision=N\` không "quay ngược thời gian": nó chép template của revision N thành template hiện tại, ReplicaSet cũ được dùng lại và **nhận số revision mới nhất**, số N biến mất khỏi danh sách. ReplicaSet cũ chỉ còn tới \`revisionHistoryLimit\` (mặc định 10).`,
+    refs: [
+      { label: "Bài lộ trình CKA Study Guide: Deployment — rolling update, rollback và thay thế replica", href: "#/roadmap/ckabook/cb-w3-3" },
+      { label: "Bài lộ trình CKAD: Rolling updates & rollbacks (rollout status/undo/history)", href: "#/roadmap/ckad/w3-3" },
+      { label: "Bài lộ trình CKAD: Strategies — RollingUpdate (maxSurge/maxUnavailable) vs Recreate", href: "#/roadmap/ckad/w3-4" },
+      { label: "Bài lộ trình CKAD: Blue/Green và Canary bằng labels + services", href: "#/roadmap/ckad/w3-5" },
+      { label: "Bài lộ trình Kubernetes in Action: Deployment, rollout và rollback", href: "#/roadmap/k8sbook/kb-w8-1" },
+      { label: "Bài lộ trình Kubernetes in Action: Canary, A/B, Blue/Green", href: "#/roadmap/k8sbook/kb-w8-2" },
+      { label: "CKA Study Guide, chương 11 — Deployment và ReplicaSet", href: "#/docs/ckabook-11" },
+      { label: "Optimizing Cloud Native Java, chương 9 — Triển khai Java trên Cloud (blue/green, canary)", href: "#/docs/ocnj-09" },
+      { label: "Thực hành nhanh: set image, rollout status/history/undo/restart", href: "#/commands" },
+      { label: "kubernetes.io: Deployments — Updating, Rolling Back, Strategy", href: "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/" },
+      { label: "kubernetes.io: kubectl rollout", href: "https://kubernetes.io/docs/reference/kubectl/generated/kubectl_rollout/" },
+    ],
+    stateIn: `Đầu ra s13: ba Deployment bản 1.0 có ba probe, preStop và grace period; gateway 1 replica. Image \`shop/gateway:2.0\` đã nạp sẵn trên các node từ s09 (\`./labs/lab images cka\` nếu thiếu). \`./labs/lab begin cka s14\` kiểm đầu vào bằng verify của s13.`,
+    stateOut: "gateway 2 replica chạy shop/gateway:2.0, RollingUpdate maxUnavailable 0 / maxSurge 1; lịch sử revision có change-cause, có revision image hỏng đã rollback; ~/drills/s14/curl.log toàn 200; ~/shop/gateway.yaml khớp.",
+    tasks: [
+      { id: "t1", text: "Trong `~/shop/gateway.yaml`: `replicas: 2` và `strategy` RollingUpdate với `maxUnavailable: 0`, `maxSurge: 1` (vẫn image 1.0). Apply, `k -n shop rollout status deploy/gateway`. Ghi change-cause cho revision hiện tại: `k -n shop annotate deploy/gateway kubernetes.io/change-cause=\"2 replica, maxUnavailable 0\"`." },
+      { id: "t2", text: "Vòng curl: ở một cửa sổ tmux trên cka-cp, lấy ClusterIP của Service gateway rồi chạy một vòng `curl -s -o /dev/null -m 2 -w '%{http_code}\\n' http://<ClusterIP>:8080/api/info >> ~/drills/s14/curl.log; sleep 0.2` không dừng. Để nó chạy suốt bước 3." },
+      { id: "t3", text: "Cửa sổ kia: `k -n shop set image deploy/gateway gateway=shop/gateway:2.0`, ngay sau đó annotate change-cause `lên 2.0`, rồi `k -n shop rollout status deploy/gateway` và `k -n shop get rs -l app=gateway -w` để thấy hai ReplicaSet đổi số. Chờ thêm 15 giây sau khi rollout xong rồi mới dừng vòng curl (Ctrl-c). `sort ~/drills/s14/curl.log | uniq -c`: phải chỉ có `200`, ít nhất 30 dòng." },
+      { id: "t4", text: "Bản hỏng: `set image` lên `shop/gateway:2.1` (tag không có), annotate `thử 2.1`. `rollout status --timeout=30s` báo gì? `k -n shop get pod -l app=gateway`: Pod cũ có bị xoá không, vì sao? `k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/info` vẫn trả version nào?" },
+      { id: "t5", text: "`k -n shop rollout history deploy/gateway`, rồi `… --revision=<n>` để xem template của từng revision. Ghi `BROKEN_REVISION=<revision của image 2.1>` vào `~/drills/s14/answers.env`. Rollback về **revision của 1.0 mới nhất** bằng `rollout undo --to-revision=<n>`, annotate change-cause; xem lại history: số revision đó đi đâu?" },
+      { id: "t6", text: "Roll lại lên 2.0 (`set image`, change-cause `lên lại 2.0`), chờ rollout xong. Sửa `~/shop/gateway.yaml` cho khớp (image 2.0) và `k apply -f ~/shop/gateway.yaml` — không được tạo thêm revision nào (`rollout history` không đổi). Thử `k -n shop rollout restart deploy/catalog` và xem nó có tạo revision mới cho catalog không." },
+      { id: "t7", text: "Trên Mac: `./labs/lab verify cka s14` phải đạt 7/7." },
+    ],
+    hints: [
+      "`set image deploy/gateway gateway=…`: phần trước `=` là **tên container** (xem `k -n shop get deploy gateway -o jsonpath='{.spec.template.spec.containers[*].name}'`), không phải tên Deployment.",
+      "`rollout status` của bản hỏng không bao giờ tự xong: Deployment chỉ đặt condition `Progressing=False` (`ProgressDeadlineExceeded`) sau `progressDeadlineSeconds` (mặc định 600 giây). Dùng `--timeout` và đọc `k get pod`.",
+      "Vòng curl có dòng `000`: curl không nhận được phản hồi trong 2 giây. Kiểm Pod mới đã có readinessProbe chưa, Pod cũ có preStop chưa (`k -n shop get deploy gateway -o yaml | grep -A4 preStop`).",
+      "Annotate change-cause **sau** `set image`: annotation của Deployment được chép sang ReplicaSet hiện hành. Annotate trước thì nó dính vào revision cũ.",
+      "`rollout undo` cảnh báo `Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation`: nhớ sửa tệp và `apply`, nếu không lần `apply -f ~/shop/` sau sẽ kéo Deployment về thứ trong tệp.",
+      "`rollout history --revision=N` in template Pod của revision N: nhanh hơn đoán xem revision nào là 1.0.",
+    ],
+    solution: `Output là của máy soạn bài; tên ReplicaSet, Pod và số revision trên máy bạn sẽ khác.
+
+**1. Hai replica, rolling update không thiếu Pod**
+
+\`\`\`yaml
+# ~/shop/gateway.yaml
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/gateway.yaml && k -n shop rollout status deploy/gateway
+k -n shop annotate deploy/gateway kubernetes.io/change-cause="2 replica, maxUnavailable 0"
+\`\`\`
+
+**2 và 3. Vòng curl trong lúc lên 2.0**
+
+\`\`\`bash
+mkdir -p ~/drills/s14
+IP=$(k -n shop get svc gateway -o jsonpath='{.spec.clusterIP}')
+while :; do curl -s -o /dev/null -m 2 -w '%{http_code}\\n' http://$IP:8080/api/info >> ~/drills/s14/curl.log; sleep 0.2; done   # cửa sổ 1
+\`\`\`
+
+\`\`\`bash
+k -n shop set image deploy/gateway gateway=shop/gateway:2.0     # cửa sổ 2
+k -n shop annotate deploy/gateway kubernetes.io/change-cause="lên 2.0"
+k -n shop rollout status deploy/gateway
+k -n shop get rs -l app=gateway -w
+\`\`\`
+
+Đo trên lab (vòng curl dừng 15 giây sau khi rollout xong):
+
+\`\`\`bash
+sort ~/drills/s14/curl.log | uniq -c
+#     200 200
+\`\`\`
+
+Đừng chạy vòng này trong một subshell có \`set -e\`: \`curl\` lỗi đầu tiên (mã thoát khác 0) giết cả vòng, tệp chỉ còn những dòng 200 trước đó (đã gặp trên lab). Cùng phép đo khi bỏ preStop rồi \`rollout restart\`: \`1 000\`, \`181 200\`.
+
+**4. Bản hỏng**
+
+\`\`\`bash
+k -n shop set image deploy/gateway gateway=shop/gateway:2.1
+k -n shop annotate deploy/gateway kubernetes.io/change-cause="thử 2.1"
+k -n shop rollout status deploy/gateway --timeout=30s     # hết giờ, rollout chưa xong
+k -n shop get pod -l app=gateway                          # hai Pod 2.0 vẫn Running, một Pod mới kẹt kéo image
+k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/info   # vẫn "version":"2.0"
+\`\`\`
+
+Với \`maxUnavailable: 0\`, Pod mới không bao giờ Ready nên không Pod cũ nào bị xoá: shop vẫn phục vụ bản 2.0. Lý do kẹt đọc như ở s10 (\`describe pod\`, Event \`Failed to pull image\`).
+
+**5. History và undo về một revision cụ thể**
+
+\`\`\`bash
+k -n shop rollout history deploy/gateway
+k -n shop rollout history deploy/gateway --revision=3 | grep Image
+echo BROKEN_REVISION=6 > ~/drills/s14/answers.env      # số của revision "thử 2.1" trên máy bạn
+k -n shop rollout undo deploy/gateway --to-revision=4   # revision 1.0 mới nhất
+# Warning: resource deployments/gateway was previously managed with 'kubectl apply'. Rolling back will not update the
+# kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply'
+# operations. Consider using 'kubectl apply' with your previous configuration file instead.
+k -n shop annotate deploy/gateway kubernetes.io/change-cause="undo về revision 4 (1.0)"
+\`\`\`
+
+**6. Lên lại 2.0 và đồng bộ tệp**
+
+\`\`\`bash
+k -n shop set image deploy/gateway gateway=shop/gateway:2.0
+k -n shop annotate deploy/gateway kubernetes.io/change-cause="lên lại 2.0 sau khi 2.1 hỏng"
+k -n shop rollout status deploy/gateway
+sed -i 's|shop/gateway:1.0|shop/gateway:2.0|' ~/shop/gateway.yaml && k apply -f ~/shop/gateway.yaml
+k -n shop rollout history deploy/gateway
+# REVISION  CHANGE-CAUSE
+# 1         <none>
+# 2         <none>
+# 3         <none>
+# 6         thử 2.1
+# 7         undo về revision 4 (1.0)
+# 8         lên lại 2.0 sau khi 2.1 hỏng
+k -n shop get rs -l app=gateway
+# gateway-7d4599bb95   0   0   0   …   shop/gateway:2.1
+# gateway-84cf744666   2   2   2   …   shop/gateway:2.0
+# … bốn ReplicaSet 1.0 cũ, đều 0
+\`\`\`
+
+Revision 4 (1.0) thành 7 lúc undo; revision 5 (2.0 đầu tiên) thành 8 lúc lên lại 2.0, vì template giống hệt nên Deployment dùng lại đúng ReplicaSet \`gateway-84cf744666\`. Change-cause của revision là annotation lúc nó *trở thành* hiện hành, nên "lên 2.0" ban đầu bị ghi đè. \`k apply\` sau cùng không tạo revision: template trong tệp trùng template đang chạy.
+
+\`k -n shop rollout restart deploy/catalog\` thêm annotation \`kubectl.kubernetes.io/restartedAt\` vào template: catalog có thêm một revision, Pod được thay theo đúng nhịp rolling update.
+
+Lời giải tự động: \`labs/cka/sessions/s14/apply.sh\` (manifest cuối trong \`labs/cka/sessions/s14/files/gateway.yaml\`).`,
+    exam: {
+      patterns: [
+        "\"Cập nhật image của Deployment X lên Y, ghi lại change-cause, rồi rollback về bản trước\" — `set image`, `annotate kubernetes.io/change-cause=…`, `rollout undo` (hoặc `--to-revision`).",
+        "\"Đổi chiến lược để luôn có đủ N Pod trong lúc cập nhật\" — `strategy.rollingUpdate.maxUnavailable: 0`, `maxSurge ≥ 1`.",
+        "\"Deployment kẹt nửa chừng sau khi cập nhật\" — `rollout status`, `get rs`, Pod mới: ImagePullBackOff / không Ready; `rollout undo`.",
+        "\"Khởi động lại mọi Pod của Deployment để nạp lại ConfigMap\" — `rollout restart`.",
+      ],
+      timeTargetMin: 5,
+      drills: [
+        {
+          text: "Trong 3 phút: Deployment `order` lên `shop/order:2.0` với change-cause `order 2.0`, xác nhận rollout xong, rồi quay về bản trước bằng một lệnh và chứng minh image là `1.0`.",
+          timeLimitMin: 3,
+          solution: "```bash\nk -n shop set image deploy/order order=shop/order:2.0\nk -n shop annotate deploy/order kubernetes.io/change-cause='order 2.0'\nk -n shop rollout status deploy/order\nk -n shop rollout undo deploy/order\nk -n shop rollout status deploy/order\nk -n shop get deploy order -o jsonpath='{.spec.template.spec.containers[0].image}{\"\\n\"}'   # shop/order:1.0\n```\nVerify của s16 so `order` với `shop/order:1.0`: đừng để nó ở 2.0.",
+        },
+        {
+          text: "Trong 2 phút: tạm dừng rollout của gateway, đổi hai thứ (image và một biến môi trường) rồi tiếp tục để chỉ tạo **một** revision. Đưa mọi thứ về như cũ sau đó.",
+          timeLimitMin: 2,
+          solution: "```bash\nk -n shop rollout pause deploy/gateway\nk -n shop set image deploy/gateway gateway=shop/gateway:1.0\nk -n shop set env deploy/gateway DEMO=1\nk -n shop rollout resume deploy/gateway\nk -n shop rollout history deploy/gateway | tail -2   # một revision mới\nk apply -f ~/shop/gateway.yaml && k -n shop set env deploy/gateway DEMO-\n```\nLúc pause, đổi template không sinh ReplicaSet; resume mới sinh một lần.",
+        },
+      ],
+    },
+    tips: [
+      "Ba lệnh liền nhau sau mỗi thay đổi: `rollout status` → `rollout history` → `get rs`. Kẹt thì `get pod` của ReplicaSet mới.",
+      "`maxUnavailable: 0` mà worker hết chỗ cho Pod thừa thì rollout đứng ở Pending: cần ≥ 1 trong hai số khác 0, và chỗ cho `maxSurge` Pod.",
+      "Rollback nhanh nhất trong phòng thi: `rollout undo` (về revision ngay trước). `--to-revision` khi đề chỉ rõ.",
+      "`rollout restart` chỉ đổi annotation `kubectl.kubernetes.io/restartedAt` trong template: vẫn là một revision mới, đi đúng nhịp maxSurge/maxUnavailable.",
+      "Sau mọi lệnh mệnh lệnh (`set image`, `undo`), đồng bộ lại tệp YAML: nguồn sự thật phải là một.",
+    ],
+    outcome: {
+      md: `gateway chạy 2.0 trên hai replica, lên phiên bản không rớt request nào trong vòng đo của bạn; bạn đã thấy một bản hỏng kẹt lại mà shop vẫn phục vụ, và quay lui về đúng revision. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s14
+\`\`\`
+
+Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, gọi \`/api/info\` qua proxy của apiserver, và đếm mã HTTP trong \`curl.log\` của bạn.`,
+      verifyOutput: "lab: kiểm s14\n  (chờ apiserver và Deployment gateway; lâu nhất vài phút nếu Pod đang khởi động)\n  ✓ gateway: image shop/gateway:2.0, 2/2/2 cập nhật và Available\n  ✓ gateway: strategy RollingUpdate, maxUnavailable 0, maxSurge 1\n  ✓ gateway /api/info trả version 2.0 (qua apiserver proxy)\n  ✓ lịch sử: ≥ 3 revision, có revision image hỏng cũ hơn revision hiện hành, revision hiện hành có change-cause\n  ✓ ~/drills/s14/curl.log: ≥ 30 dòng, mọi dòng 200\n  ✓ ~/shop/gateway.yaml (apply --dry-run=server): image 2.0, replicas 2, maxUnavailable 0, maxSurge 1\n  ✓ answers.env: BROKEN_REVISION là revision của ReplicaSet image hỏng (đọc từ rollout history)\n  → 7/7 đạt",
+      projectDelta: "gateway lên 2.0 bằng rolling update không downtime (2 replica, maxUnavailable 0, maxSurge 1), có lịch sử revision với change-cause và một lần rollback thật. Buổi sau thêm các workload chạy nền: DaemonSet, Job, CronJob.",
+    },
+    review: [
+      { q: "gateway 2 replica, `maxUnavailable: 0`, `maxSurge: 1`. Trong lúc rollout có tối đa bao nhiêu Pod, tối thiểu bao nhiêu Pod Ready?", a: "Tối đa 3 Pod (2 + surge 1), tối thiểu 2 Pod Ready: controller chỉ xoá Pod cũ khi Pod mới đã Ready." },
+      { q: "Rollout image hỏng (tag không có) với `maxUnavailable: 0`: shop có bị gián đoạn không?", a: "Không. Pod mới kẹt ImagePullBackOff, không bao giờ Ready nên không Pod cũ nào bị xoá; `rollout status` treo, Deployment báo `ProgressDeadlineExceeded` sau progressDeadlineSeconds. Rollback bằng `rollout undo`." },
+      { q: "`rollout undo --to-revision=4` xong, `rollout history` không còn revision 4. Vì sao?", a: "Undo chép template của revision 4 thành template hiện tại; ReplicaSet đó được dùng lại và mang số revision mới nhất. Mỗi ReplicaSet chỉ có một số revision." },
+      { q: "Rolling update và blue/green khác nhau ở đâu?", a: "Rolling: một Deployment, controller thay dần Pod sau cùng Service, hai phiên bản cùng phục vụ một lúc, quay lui là một rollout nữa. Blue/green: hai bộ Pod đầy đủ, đổi selector Service/Ingress một lần, chuyển và quay lui tức thì nhưng tốn gấp đôi tài nguyên lúc chuyển." },
+      { q: "Vì sao vòng curl vẫn có thể có lỗi dù đã `maxUnavailable: 0` và readinessProbe?", a: "Lúc Pod cũ bị xoá, kube-proxy trên các node cần vài giây để bỏ địa chỉ của nó; nếu app đóng cổng ngay khi nhận SIGTERM, request trong khoảng đó lỗi. preStop sleep giữ app nhận kết nối cho tới khi iptables cập nhật xong." },
+    ],
   },
+
+  // ───────────────────────────── s15–s16 (khung) ─────────────────────────────
   {
     id: "s15",
     stage: "st2",

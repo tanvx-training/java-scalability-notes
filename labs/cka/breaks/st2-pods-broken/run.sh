@@ -39,12 +39,12 @@ spec:
   restartPolicy: Never
   containers:
   - name: report
-    image: shop/gateway:2.0
+    image: busybox:1.37
     command:
     - sh
     - -c
     - |
-      set -e; o=\$(wget -qO- http://gateway:8080/api/orders); echo \"\$(date -Iseconds) đơn hàng: \$o\"
+      set -e; o=\$(wget -qO- http://gateway:8080/api/oders); echo \"\$(date -Iseconds) đơn hàng: \$o\"
 YAML
 kubectl replace --force -f ~/drills/s16/report-once.yaml 2>/dev/null || kubectl apply -f ~/drills/s16/report-once.yaml
 " >/dev/null 2>&1
