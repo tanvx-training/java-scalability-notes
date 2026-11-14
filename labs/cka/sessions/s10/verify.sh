@@ -34,7 +34,7 @@ dbu="$(vm "$cp" "kubectl -n default logs catalog 2>/dev/null | sed -n 's/.*Hikar
 expect_eq "answers.env: LOG_DB_USER=${dbu:-?} (user trong dòng 'Added connection' của k logs)" "${dbu:-?}" vm "$cp" "$(ans LOG_DB_USER)"
 np="$(vm "$cp" "kubectl get --raw /api/v1/namespaces/default/pods/catalog:8080/proxy/products 2>/dev/null | grep -o '\"id\":' | wc -l" 2>/dev/null)"
 [ "$np" = 0 ] && np=""   # Pod không trả lời: không có giá trị đúng nào để so
-expect_eq "answers.env: PRODUCTS=${np:-?} (số sản phẩm của /products, gọi qua port-forward)" "${np:-?}" vm "$cp" "$(ans PRODUCTS)"
+expect_eq "answers.env: PRODUCTS=${np:-?} (số sản phẩm của /products; verify đếm lại qua apiserver proxy)" "${np:-?}" vm "$cp" "$(ans PRODUCTS)"
 expect_match "answers.env: BAD_REASON là lý do chờ của Pod tag sai (ErrImagePull hoặc ImagePullBackOff)" \
   '^(ErrImagePull|ImagePullBackOff)$' vm "$cp" "$(ans BAD_REASON)"
 assert_summary

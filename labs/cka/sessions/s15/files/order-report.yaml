@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: order-report
+  namespace: shop
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: report
+            image: busybox:1.37
+            command:
+            - sh
+            - -c
+            - |
+              set -e; o=$(wget -qO- http://gateway:8080/api/orders); echo "$(date -Iseconds) đơn hàng: $o"
