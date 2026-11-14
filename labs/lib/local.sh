@@ -293,7 +293,12 @@ EOF
 }
 
 # lab_mvn <đối số…>: xoá mọi báo cáo surefire cũ trong workspace rồi chạy mvn ở đó; trả mã của Maven.
-# Gọi trực tiếp trong verify.sh (không trong $(…)) để expect_test biết Maven vừa chạy.
+# Hai quy tắc khi dùng trong verify.sh / check.sh:
+#   - Gọi đúng một lần mỗi script, trước mọi expect_test: lần gọi sau xoá báo cáo của mọi module, kể cả
+#     báo cáo mà lần gọi trước vừa sinh ra, nên kiểm tra nào dựa vào lần trước sẽ ✗ "không chạy".
+#     Cần nhiều module thì gộp vào một lệnh (-pl a,b -am, -Dtest='lab.<id>.**,…').
+#   - Gọi như một lệnh đứng riêng, không trong $(…) hay pipeline (lab_mvn … | tee …): ở đó nó chạy trong
+#     subshell, LAB_MVN_RAN không về được script nên expect_test coi như Maven chưa chạy (mọi dòng ✗).
 lab_mvn() {
   local w list d rc=0
   _LAB_TEST_INDEX_OK=0   # bảng chỉ mục của expect_test phải đọc lại báo cáo mới
@@ -395,7 +400,9 @@ local_cmd_mock() { local_not_applicable mock; }
 
 # ---- Lệnh theo buổi ----
 # Hợp đồng thư mục buổi (labs/<chương trình>/sessions/<id>/) của driver local:
-#   verify.sh        bắt buộc, kết thúc bằng assert_summary (thường: lab_mvn … rồi expect_test …)
+#   verify.sh        bắt buộc, kết thúc bằng assert_summary (thường: lab_mvn … rồi expect_test …).
+#                    lab_mvn gọi một lần mỗi script, đứng riêng (không trong $(…) hay pipeline), xem lab_mvn.
+#                    Chọn test bằng -Dtest='lab.<id>.**' (hai sao: mọi lớp trong gói và gói con).
 #   solution/        cây tệp chép đè lên workspace; solution.delete: mỗi dòng một đường dẫn cần xoá
 #   apply.sh         tuỳ chọn, chạy sau khi chép solution/. Buổi đã phát hành phải có solution/ hoặc apply.sh
 #   tests/           cây tệp test, chép vào workspace lúc begin; có tệp tests.hidden thì chép lúc verify
@@ -412,13 +419,32 @@ local_cmd_check() {
 
 local_cmd_begin() {
   [ $# -eq 1 ] || die "cách dùng: $LAB_CMD begin $LAB_PROGRAM <buổi>"
-  local id="$1" d prev rc=0
+  local id="$1" prev rc=0
   check_input "$id" || rc=$?
   if [ "$rc" -ne 0 ]; then
     prev="$(session_prev "$id")"
     echo "lab: đầu vào của '$id' chưa đạt, thử: $LAB_CMD restore $LAB_PROGRAM $prev" >&2
     return 1
   fi
+  local_begin_session "$id"
+}
+
+# selftest_input <id>: kiểm đầu vào trong selftest. Verify của buổi trước vừa xanh ngay trước đó nên
+# không chạy lại; check.sh của buổi (nếu có) vẫn chạy để chính nó được thử trên chuỗi lời giải.
+selftest_input() {
+  local id="$1" d rc=0
+  require_session "$id"
+  ws_enter
+  d="$(session_dir "$id")"
+  [ -f "$d/check.sh" ] || return 0
+  info "kiểm đầu vào của '$id' (check.sh)"
+  run_script n "$d/check.sh" "$d" || rc=$?
+  return "$rc"
+}
+
+# local_begin_session <id>: phần ghi của begin, sau khi đầu vào đã đạt (đang ở trong workspace)
+local_begin_session() {
+  local id="$1" d rc=0
   d="$(session_dir "$id")"
   session_check "$id"
   ws_commit "trước buổi $id"
@@ -519,17 +545,21 @@ local_cmd_selftest() {
       continue
     fi
     info "selftest '$id'"
-    ( local_cmd_begin "$id" ) || die "selftest dừng: begin '$id' lỗi"
+    ( selftest_input "$id" ) || die "selftest dừng: đầu vào của '$id' chưa đạt (check.sh)"
+    ( ws_enter && local_begin_session "$id" ) || die "selftest dừng: begin '$id' lỗi"
     if ( local_cmd_verify "$id" ); then
       die "selftest dừng: buổi '$id' đã xanh ngay sau begin (verify phải đỏ trước khi áp lời giải)"
     fi
     ( ws_enter && session_check "$id" build && ws_apply_session "$id" ) || die "selftest dừng: áp lời giải của '$id' lỗi"
     ( local_cmd_verify "$id" ) || die "selftest dừng: lời giải của '$id' không làm verify xanh"
-    if [ -f "$st" ]; then
-      ( ws_enter && run_script n "$st" "$(dirname "$st")" ) \
-        || die "selftest dừng: selftest.sh của chương trình lỗi sau buổi '$id'"
-    fi
     n=$((n+1))
   done
+  # selftest.sh (toàn bộ test còn hiệu lực) chạy một lần trên workspace cuối chuỗi: test của mọi buổi đã
+  # qua vẫn nằm trong workspace nên một lần ở cuối bắt được lời giải nào làm hỏng buổi cũ.
+  if [ -f "$st" ]; then
+    info "chạy selftest.sh của chương trình trên workspace cuối chuỗi"
+    ( ws_enter && run_script n "$st" "$(dirname "$st")" ) \
+      || die "selftest dừng: selftest.sh của chương trình lỗi (sau buổi cuối)"
+  fi
   info "selftest xong, $n buổi đạt, tổng thời gian $(( $(date +%s) - started )) giây"
 }

@@ -728,7 +728,8 @@ check "verify khi Maven đạt nhưng không test nào chạy: mọi dòng ✗" 
 new_loc; run_loc "" up loc; run_loc "" begin loc a1; run_loc "" begin loc a2
 [ "$RC" -ne 0 ]; a=$?; has "$ERR" './labs/lab restore loc a1'; b=$?
 has_subj "lab: trước buổi a2"; [ $? -ne 0 ]; c=$?; [ ! -e "$LOCW/src/test/a2" ]; d=$?
-check "begin loc a2 khi a1 chưa đạt: từ chối, gợi ý './labs/lab restore loc a1', không commit" $((a+b+c+d))
+[ "$(count "$MVN_LOG" ' -q test')" = 1 ]; e=$?
+check "begin loc a2 khi a1 chưa đạt: chạy verify của a1, từ chối, gợi ý './labs/lab restore loc a1', không commit" $((a+b+c+d+e))
 
 new_loc; run_loc "" up loc; run_loc "" begin loc a1
 printf 'class A { String hello = "world"; }\n' > "$LOCW/src/A.java"
@@ -843,19 +844,30 @@ check "break loc b1: commit 'trước sự cố b1' giữ code người học tr
 new_loc; run_loc "" up loc; echo dirty > "$LOCW/src/A.java"; echo u > "$LOCW/u.txt"
 h0="$(gw rev-parse HEAD)"; s0="$(gw status --porcelain)"
 export ST_TRACE="$WORK/st.trace"; : > "$ST_TRACE"
-printf 'echo "$PWD" >> "$ST_TRACE"\n' > "$LOCROOT/loc/selftest.sh"
+printf 'echo "$PWD" >> "$ST_TRACE"; echo "$PWD selftest.sh" >> "$MVN_LOG"\n' > "$LOCROOT/loc/selftest.sh"
 run_loc "" selftest loc
 [ "$RC" -eq 0 ]; a=$?
 [ "$(gw rev-parse HEAD)" = "$h0" ] && [ "$(gw status --porcelain)" = "$s0" ] && [ "$(cat "$LOCW/src/A.java")" = dirty ]; b=$?
 [ -z "$(backups)" ]; c=$?
 has "$MVN_LOG" "^$LOCW "; [ $? -ne 0 ]; d=$?
 tmpw="$(head -n 1 "$MVN_LOG" | cut -d' ' -f1)"; [ -n "$tmpw" ] && [ ! -e "$tmpw" ]; e=$?
-[ "$(count "$ST_TRACE" .)" = 3 ] && [ "$(sort -u "$ST_TRACE")" = "$tmpw" ]; f=$?
+[ "$(count "$ST_TRACE" .)" = 1 ] && [ "$(cat "$ST_TRACE")" = "$tmpw" ]; f=$?
 has "$OUT" "bỏ qua 'a4'"; g=$?; has "$OUT" 'giây'; h=$?
-check "selftest loc: đi a1..a3 trên workspace tạm (đã dọn), selftest.sh chạy sau mỗi buổi, work/ không đổi, in thời gian" $((a+b+c+d+e+f+g+h))
+# Mỗi buổi đúng hai lần Maven (verify đỏ, verify xanh): begin không chạy lại verify của buổi trước;
+# selftest.sh chạy một lần, sau verify cuối cùng.
+[ "$(count "$MVN_LOG" ' -q test')" = 6 ]; i=$?
+[ "$(tail -n 1 "$MVN_LOG")" = "$tmpw selftest.sh" ]; j=$?
+check "selftest loc: đi a1..a3 trên workspace tạm (đã dọn), 2 lần mvn mỗi buổi, selftest.sh chạy một lần ở cuối, work/ không đổi, in thời gian" $((a+b+c+d+e+f+g+h+i+j))
 printf 'exit 1\n' > "$LOCROOT/loc/selftest.sh"; run_loc "" selftest loc
 [ "$RC" -ne 0 ]; a=$?; has "$ERR" 'selftest.sh'; b=$?
 check "selftest loc: selftest.sh của chương trình lỗi thì selftest lỗi" $((a+b))
+
+new_loc; export ST_TRACE="$WORK/st.trace"; : > "$ST_TRACE"
+printf 'echo "check $SESSION_DIR" >> "$ST_TRACE"\nlab_mvn -q test\nexpect_test "A có hello" lab.a1.A1Test#greets\nassert_summary\n' > "$LOCROOT/loc/sessions/a2/check.sh"
+run_loc "" selftest loc
+[ "$RC" -eq 0 ]; a=$?; [ "$(cat "$ST_TRACE")" = "check $LOCROOT/loc/sessions/a2" ]; b=$?
+[ "$(count "$MVN_LOG" ' -q test')" = 7 ]; c=$?
+check "selftest loc: buổi có check.sh thì check.sh vẫn chạy lúc begin (chỉ bỏ verify của buổi trước)" $((a+b+c))
 
 new_loc; printf 'class A { String hello = "world"; }\n' > "$LOCROOT/loc/app/src/A.java"; run_loc "" selftest loc
 [ "$RC" -ne 0 ]; a=$?; has "$ERR" "'a1'"; b=$?; has "$ERR" 'xanh ngay sau begin'; c=$?; [ ! -e "$LOCW" ]; d=$?
