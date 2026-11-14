@@ -24,20 +24,21 @@ export const skills = [
   { id: "cfg-multiple-config-classes", kind: "code", area: "config", label: "Tách cấu hình bảo mật ra nhiều lớp @Configuration" },
   { id: "int-custom-provider-sketch", kind: "concept", area: "internals", label: "AuthenticationProvider tùy chỉnh thay UserDetailsService và PasswordEncoder" },
 
-  // ── s04 UserDetails và GrantedAuthority ──
-  { id: "int-userdetails-contract", kind: "concept", area: "internals", label: "Các phương thức của UserDetails và ý nghĩa của từng cờ tài khoản" },
-  { id: "int-grantedauthority", kind: "concept", area: "internals", label: "GrantedAuthority là một chuỗi quyền; SimpleGrantedAuthority" },
-  { id: "dx-account-status-errors", kind: "command", area: "diagnose", label: "Gọi /orders với user bị disabled/locked và đọc phản hồi cùng log" },
+  // ── s04 UserDetails của shop: thực thể riêng, lớp bọc, và Authentication sau đăng nhập ──
+  { id: "int-userdetails-contract", kind: "concept", area: "internals", label: "UserDetails trên 7.1.2: ba phương thức trừu tượng, bốn cờ default true, provider kiểm cờ nào trước và sau khi so mật khẩu" },
+  { id: "int-grantedauthority", kind: "concept", area: "internals", label: "GrantedAuthority là một chuỗi quyền (SimpleGrantedAuthority); Authentication sau đăng nhập có thêm FactorGrantedAuthority FACTOR_PASSWORD" },
+  { id: "cfg-userdetails-impl", kind: "code", area: "config", label: "Lớp SecurityUser hiện thực UserDetails, bọc thực thể ShopUser của shop" },
+  { id: "int-userdetails-wrapper", kind: "concept", area: "internals", label: "Tách thực thể user khỏi UserDetails; InMemoryUserDetailsManager chép sang User nên principal mất lớp của bạn" },
 
-  // ── s05 Hiện thực UserDetails: tối giản, builder, và gói entity ──
-  { id: "cfg-userdetails-impl", kind: "code", area: "config", label: "Hiện thực UserDetails tối giản cho user của order" },
-  { id: "cfg-user-builder", kind: "code", area: "config", label: "User.withUsername(...).password(...).authorities(...).build()" },
-  { id: "int-userdetails-wrapper", kind: "concept", area: "internals", label: "Bọc entity bằng UserDetails thay vì để một lớp có hai trách nhiệm" },
+  // ── s05 UserDetailsService đọc user từ DB: không tồn tại, bị khoá, bị vô hiệu ──
+  { id: "cfg-userdetailsservice-db", kind: "code", area: "config", label: "UserDetailsService đọc user từ bảng shop_users bằng JdbcClient, trả SecurityUser" },
+  { id: "dx-username-not-found", kind: "procedure", area: "diagnose", label: "Phân biệt username không tồn tại với sai mật khẩu sau Bad credentials: log DEBUG Failed to find user, cause UsernameNotFoundException, cờ hideUserNotFoundExceptions" },
+  { id: "dx-account-status-errors", kind: "command", area: "diagnose", label: "Gọi /orders với user bị khoá, bị vô hiệu, hoặc khi DB lỗi; đọc 401 cùng LockedException / DisabledException / InternalAuthenticationServiceException trong log DEBUG" },
 
-  // ── s06 UserDetailsService và UserDetailsManager: user lưu trong DB ──
-  { id: "cfg-userdetailsservice-db", kind: "code", area: "config", label: "UserDetailsService đọc user từ bảng users của order" },
-  { id: "cfg-userdetailsmanager", kind: "code", area: "config", label: "UserDetailsManager tạo, đổi, xoá user (JdbcUserDetailsManager)" },
-  { id: "dx-username-not-found", kind: "command", area: "diagnose", label: "Đăng nhập với username không có và đọc UsernameNotFoundException / phản hồi" },
+  // ── s06 UserDetailsManager: tạo user, đổi mật khẩu — và JdbcUserDetailsManager có sẵn ──
+  { id: "cfg-userdetailsmanager", kind: "code", area: "config", label: "UserDetailsManager tự viết trên shop_users: createUser, changePassword lấy user từ SecurityContext và kiểm mật khẩu cũ" },
+  { id: "cfg-user-builder", kind: "code", area: "config", label: "User.withUsername(...).password(encoder.encode(...)).authorities(...).build() để tạo UserDetails cho createUser" },
+  { id: "int-jdbcuserdetailsmanager-defaults", kind: "concept", area: "internals", label: "JdbcUserDetailsManager và users.ddl: không lưu khoá, user không authority là không tồn tại, changePassword chỉ kiểm mật khẩu cũ khi có AuthenticationManager" },
 
   // ── s07 PasswordEncoder: contract, tự viết, và các bản có sẵn ──
   { id: "int-passwordencoder-contract", kind: "concept", area: "internals", label: "encode, matches, upgradeEncoding của PasswordEncoder" },
