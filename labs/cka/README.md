@@ -18,7 +18,7 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 
 ## Mốc snapshot
 
-`milestones`: `s05 st0-done`, `s09 st1-done`. Snapshot được chụp lúc VM đã dừng, nên khi khôi phục:
+`milestones`: `s05 st0-done`, `s09 st1-done`, `s16 st2-done`. Snapshot được chụp lúc VM đã dừng, nên khi khôi phục:
 
 - `restore` áp lại `apply.sh` của chính buổi mốc (container `catalog` chạy bằng `ctr` của s05 không bền qua lần tắt VM; khôi phục `st1-done` thì s09 gây lỗi rồi sửa lại).
 - Cluster kubeadm tự lên lại sau khi khởi động: kubelet `enabled`, control plane là static pod. `verify` của s07–s09 chờ có giới hạn (apiserver `/readyz` tối đa 120 giây, node Ready tối đa 180 giây) trước khi kiểm.
@@ -33,8 +33,11 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 | s06 | `check.sh` | chỉ kiểm phần bền của chặng 0 (không đòi container `catalog`) |
 | s09 | `setup.sh` | `lab_break st1-node-notready` (không in ra đã làm gì) |
 | s11 | `check.sh` | như `verify.sh` của s10 nhưng chỉ đòi `POD_IP` trong `answers.env` là một IPv4: Pod lẻ `catalog` được dựng lại sandbox sau khi VM khởi động lại nên IP có thể đổi |
+| s16 | `setup.sh` | `lab_break st2-pods-broken` (không in ra đã làm gì) |
 
 Lỗi có chủ ý: `breaks/st1-node-notready/run.sh` — `cka-w1`: `/etc/default/kubelet` ghi đè `--config` bằng đường dẫn không tồn tại; `cka-w2`: kubelet `stop` + `disable`. Hai worker `NotReady` sau khoảng một phút.
+
+`breaks/st2-pods-broken/run.sh` — sửa `~/shop/{catalog,order,gateway}.yaml` bằng PyYAML (tệp phải là đúng một Deployment; comment mất) rồi apply: catalog tag `1.1` không có (ImagePullBackOff), order `secretKeyRef` khoá `DB_PASS` (CreateContainerConfigError), gateway `JAVA_OPTS` nối hai cờ bằng NBSP U+00A0 (JVM `Unrecognized VM option 'UseSerialGC -XX:MaxRAMPercentage=60'`, CrashLoopBackOff); Pod lẻ `report-once` (`restartPolicy: Never`) gọi `/api/oders` → 404, `Failed`, exit 1. Chạy lại được: đặt lại đúng bốn lỗi. Rollout kẹt nhưng Pod cũ vẫn phục vụ (`maxUnavailable` 0).
 
 ## Thời gian selftest
 
@@ -43,3 +46,5 @@ Lỗi có chủ ý: `breaks/st1-node-notready/run.sh` — `cka-w1`: `/etc/defaul
 ## Tài nguyên máy Mac
 
 Ba VM cần khoảng 7 GB RAM thật. Khi máy Mac thiếu RAM và phải đẩy bộ nhớ VM ra swap, control plane không ổn định. Đã gặp: `kubeadm init` hết giờ ở `wait-control-plane`, apiserver báo `etcd-readiness failed`, `multipass exec` báo `ssh connection failed: Timeout connecting`. Tắt bớt ứng dụng nặng trước khi chạy chặng 1 trở đi. Bộ nhớ trong VM ở trạng thái cuối chặng 1 (cluster 3 node, Calico, static pod `web-static`; đo lúc VM đã chạy 4 phút sau `restore cka s09`), `free -m`: `cka-cp` dùng 919 MB, còn 2036 MB available trên tổng 2956 MB; `cka-w1` dùng 410 MB, còn 1544 MB available trên 1955 MB; `cka-w2` dùng 390 MB, còn 1564 MB available trên 1955 MB. Journal kernel không có dòng OOM nào, PSI memory bằng 0. Hai worker 2 GB còn dư cho shop ở chặng 2.
+
+Bộ nhớ ở cuối chặng 2 (ba service có probe, gateway 2 replica, DaemonSet log-agent, đo sau `apply` s15 ngày 2026-11-14), `free -m`: `cka-cp` dùng 1022 MB, còn 1934 MB available trên 2956 MB; `cka-w1` dùng 1008 MB, còn 947 MB available trên 1955 MB; `cka-w2` dùng 779 MB, còn 1175 MB available trên 1955 MB. Lúc ba JVM khởi động cùng lúc trên worker 2 vCPU (load cka-cp tới 13), Spring Boot mất tới 93 giây mới lên (`Started CatalogApplication in 59.984 seconds (process running for 93.439)`): lý do startupProbe của s13 cho 150 giây và liveness/readiness `timeoutSeconds: 3`. Khi máy Mac phải đẩy bộ nhớ VM ra swap, liveness vẫn có thể giết JVM đang bị treo (đã thấy ba Pod restart cùng lúc, exit 143): đó là nghẽn của máy, không phải lỗi của bài.

@@ -2,15 +2,20 @@
 # EndpointSlice đủ địa chỉ ready, envFrom/volume/secretKeyRef/probe/preStop nguyên, ~/shop/<tên>.yaml khớp); gateway
 # không có JAVA_OPTS; Pod report-once chạy image của CronJob order-report, gọi /api/orders, Succeeded; namespace shop
 # không còn Pod lỗi hay Pod lẻ; answers.env khớp. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
-# Không chờ rollout: người học chạy verify nhiều lần giữa buổi sự cố, nên chỉ chờ (có giới hạn) khi có container đang
-# khởi động thật (ContainerCreating, PodInitializing, hoặc đang chạy mà chưa Ready, như ngay sau khi VM khởi động lại).
+# Không chờ rollout đang kẹt: người học chạy verify nhiều lần giữa buổi sự cố. Có Pod đang hỏng thì đọc ngay; không có
+# Pod hỏng mà Deployment chưa đủ Available (như ngay sau khi VM khởi động lại) thì chờ có giới hạn (tối đa ~3 phút).
 cp="$LAB_CP"
 echo "  (chờ apiserver và các Pod đang khởi động, nếu có)"
 vm "$cp" "for i in \$(seq 1 30); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
+  k='kubectl --request-timeout=10s -n shop'
   for i in \$(seq 1 60); do
-    n=\$(kubectl --request-timeout=10s -n shop get pod -o jsonpath='{range .items[*].status.containerStatuses[*]}{.ready} {.state.running.startedAt}{.state.waiting.reason}{\"\\n\"}{end}' 2>/dev/null \
-      | grep -cE '^false [0-9]|ContainerCreating|PodInitializing')
-    [ \"\$n\" = 0 ] && break; sleep 3
+    # Pod của ba service đang hỏng (đúng lúc buổi sự cố): đọc ngay, không chờ. (Pod Job của CronJob chạy bù sau khi
+    # VM khởi động lại có thể CrashLoopBackOff trong lúc gateway chưa lên: không tính.)
+    \$k get pod -l 'app in (gateway,catalog,order)' -o jsonpath='{range .items[*].status.containerStatuses[*]}{.state.waiting.reason}{\"\\n\"}{end}' 2>/dev/null \\
+      | grep -qE 'CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName' && break
+    # Không Pod nào hỏng: chờ tới khi mọi Deployment đủ Available (vd. ngay sau khi VM khởi động lại).
+    u=\$(\$k get deploy -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null | awk '\$1!=\$2' | grep -c .)
+    [ \"\$u\" = 0 ] && break; sleep 3
   done" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"

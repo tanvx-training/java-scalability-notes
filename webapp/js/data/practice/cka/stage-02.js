@@ -1,8 +1,7 @@
 // Chặng 2 — Workload: chạy ba service shop.
-// s10–s12 đã phát hành; s13, s14 có đủ nội dung nhưng còn status "skeleton" cho tới khi chạy lại trên VM (task 2).
-// Script lab ở labs/cka/sessions/s10…s16 (s10–s14 đã chạy thật trên VM Multipass, s15–s16 chưa: Kubernetes 1.36.6,
+// s10–s16 đã phát hành; script lab ở labs/cka/sessions/s10…s16 (đã chạy thật trên VM Multipass: Kubernetes 1.36.6,
 // image shop 1.0, H2 trong bộ nhớ). outcome.verifyOutput chép từ output thật của `./labs/lab verify cka sNN`
-// (node, IP, tên ReplicaSet trên máy bạn sẽ khác). Các buổi còn lại là buổi khung: đủ trường cấu trúc (check-data PR7).
+// (node, IP, tên ReplicaSet trên máy bạn sẽ khác).
 
 export const sessions = [
   // ───────────────────────────── s10 ─────────────────────────────
@@ -830,7 +829,7 @@ Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp 
     domain: "workloads",
     competencies: ["wl-selfheal"],
     requires: ["s12"],
-    status: "skeleton",
+    status: "published",
     pieces: ["probes"],
     goals: [
       "Gắn startupProbe, livenessProbe, readinessProbe vào ba service theo endpoint Actuator tương ứng, và cho gateway chờ catalog bằng init container.",
@@ -862,7 +861,7 @@ Spring Boot đã chia sẵn đúng hai nhóm đó. Image shop bật \`management
 **Dừng tử tế: ba đồng hồ phải khớp nhau.** Khi Pod bị xoá (rollout, scale xuống, drain node), hai việc xảy ra **song song**: kubelet bắt đầu dừng container, còn EndpointSlice controller rút địa chỉ Pod khỏi Service và kube-proxy trên từng node cập nhật iptables. Việc thứ hai mất một lúc; nếu JVM đóng cổng ngay, những request đến trong khoảng đó gặp \`connection refused\`.
 
 \`\`\`text
-t=0      Pod bị xoá ─┬─ địa chỉ trong EndpointSlice thành ready: false, terminating: true → kube-proxy bỏ nó khỏi đích của Service trên mọi node (vài giây)
+t=0      Pod bị xoá ─┬─ địa chỉ trong EndpointSlice thành ready: false, serving: true, terminating: true → kube-proxy bỏ nó khỏi đích của Service trên mọi node (vài giây)
                      └─ kubelet chạy preStop: sleep 10
 t=10s    preStop xong → SIGTERM tới PID 1 (java) → Spring: "Commencing graceful shutdown", chờ request đang chạy
 t≤30s    spring.lifecycle.timeout-per-shutdown-phase: 20s hết → Spring đóng hẳn
@@ -901,7 +900,7 @@ Image shop đã có \`server.shutdown=graceful\` và \`timeout-per-shutdown-phas
     ],
     hints: [
       "`k explain` nhận đường dẫn của resource đã có: `pod.spec.containers.readinessProbe.httpGet`. Với Deployment thì đi qua `deploy.spec.template.spec.…`. `--recursive` in cả cây trường mà không có mô tả.",
-      "Readiness sai: Pod `Running` nhưng `0/1`, RESTARTS đứng yên, Event `Readiness probe failed: …`. Liveness sai: Event `Container catalog failed liveness probe, will be restarted`.",
+      "Readiness sai: Pod `Running` nhưng `0/1`, RESTARTS đứng yên, Event `Readiness probe failed: …`. Liveness sai: Event `Liveness probe failed: HTTP probe failed with statuscode: 404` rồi `Container catalog failed liveness probe, will be restarted`.",
       "Bước thí nghiệm readiness đừng thêm liveness: nếu cluster đang bận, Spring có thể khởi động lâu hơn `initialDelaySeconds` của liveness và bạn sẽ thấy restart vì lý do khác.",
       "`exitCode: 143` = 128 + 15: tiến trình thoát vì SIGTERM. Liveness hỏng không phải SIGKILL ngay: kubelet dừng container như khi xoá Pod (có preStop và grace period).",
       "preStop chạy **trong** grace period: preStop 10 giây + Spring 20 giây đã là 30, bằng đúng mặc định — chọn lớn hơn, ví dụ 45.",
@@ -960,6 +959,7 @@ vim ~/drills/s13/probe-lab.yaml      # readiness về /actuator/health/readiness
 k apply -f ~/drills/s13/probe-lab.yaml
 k -n shop get pod -l app=probe-lab -w
 k -n shop get events --sort-by=.lastTimestamp | grep probe-lab | tail -3
+#   Warning   Unhealthy   pod/probe-lab-…   Liveness probe failed: HTTP probe failed with statuscode: 404
 #   Normal    Killing     pod/probe-lab-…   Container catalog failed liveness probe, will be restarted
 k -n shop get pod -l app=probe-lab -o jsonpath='{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}'; echo   # 143
 printf 'LIVENESS_RESTARTS_GE1=yes\\nLIVENESS_EXIT_CODE=143\\n' >> ~/drills/s13/answers.env
@@ -1008,7 +1008,7 @@ k apply -f ~/shop/catalog.yaml -f ~/shop/order.yaml
 k -n shop rollout status deploy/catalog; k -n shop rollout status deploy/order
 \`\`\`
 
-Image shop có \`sleep\` (Ubuntu), nên \`exec\` dùng được. Trang Container Lifecycle Hooks trên kubernetes.io còn mô tả dạng \`preStop: {sleep: {seconds: 10}}\` không cần binary nào trong image; verify chấp nhận cả hai. Grace 45 = preStop 10 + Spring 20 + dư 15.
+Image shop có \`sleep\` (Ubuntu), nên \`exec\` dùng được. Kubernetes 1.36 nhận cả dạng \`preStop: {sleep: {seconds: 10}}\` (đã thử bằng \`--dry-run=server\` trên lab), không cần binary nào trong image; verify chấp nhận cả hai. Grace 45 = preStop 10 + Spring 20 + dư 15.
 
 Xoá một Pod catalog và xem log (dòng thật trên lab):
 
@@ -1021,7 +1021,7 @@ date +%T; k -n shop delete pod catalog-544847b966-p6788; date +%T   # cửa sổ
 # 19:49:35.953 … HikariPool-1 - Shutdown initiated...
 \`\`\`
 
-Mười giây giữa \`delete\` và \`Commencing graceful shutdown\` là preStop: trong lúc đó Pod đã \`Terminating\`, địa chỉ của nó trong EndpointSlice đã thành \`ready: false\`, \`terminating: true\` (kube-proxy không gửi request mới tới nữa), nhưng JVM vẫn nhận kết nối. SIGTERM tới PID 1 của container, chính là \`java\` (ENTRYPOINT của image là \`sh -c "exec java …"\`: \`exec\` thay shell bằng JVM, nên tín hiệu không bị shell nuốt): \`k -n shop exec deploy/catalog -- cat /proc/1/cmdline | tr '\\0' ' '\` cho thấy PID 1 là \`java\`, không phải \`sh\`.
+Mười giây giữa \`delete\` và \`Commencing graceful shutdown\` là preStop: trong lúc đó Pod đã \`Terminating\`, địa chỉ của nó trong EndpointSlice đã thành \`ready: false\`, \`terminating: true\` (kube-proxy không gửi request mới tới nữa), nhưng JVM vẫn nhận kết nối. Đo trên lab: địa chỉ Pod catalog vừa xoá hiện \`{"ready":false,"serving":true,"terminating":true}\` từ t+0 tới t+10 giây, rồi biến khỏi EndpointSlice khi object Pod bị xoá hẳn (t+17 giây). \`serving: true\` nghĩa là readiness của chính Pod vẫn đạt: nó chỉ đang dừng. SIGTERM tới PID 1 của container, chính là \`java\` (ENTRYPOINT của image là \`sh -c "exec java …"\`: \`exec\` thay shell bằng JVM, nên tín hiệu không bị shell nuốt): \`k -n shop exec deploy/catalog -- cat /proc/1/cmdline | tr '\\0' ' '\` in \`java -XX:MaxRAMPercentage=75 -jar /app/app.jar\`: PID 1 là \`java\`, không phải \`sh\`.
 
 **6. Init container cho gateway**
 
@@ -1088,7 +1088,7 @@ Lời giải tự động: \`labs/cka/sessions/s13/apply.sh\` (manifest đầy �
 \`\`\`
 
 Verify đọc probe, preStop và grace period của ba Deployment (cổng có tên cũng được), so với \`~/shop/*.yaml\` qua \`apply --dry-run=server\`, đếm địa chỉ ready trong EndpointSlice, và kiểm \`probe-lab\` đã xoá.`,
-      verifyOutput: "", // CẦN ĐO: chép từ `restore cka s13` sau khi chạy 14 dòng (bản 12 dòng đã đạt, xem task-2-report.md)
+      verifyOutput: "lab: kiểm s13\n  (chờ apiserver và ba Deployment; lâu nhất vài phút nếu Pod đang khởi động)\n  ✓ gateway: startup/liveness → /actuator/health/liveness:8080, readiness → /actuator/health/readiness:8080; 1/1/1 Available, EndpointSlice 1/1 địa chỉ ready\n  ✓ catalog: startup/liveness → /actuator/health/liveness:8080, readiness → /actuator/health/readiness:8080; 2/2/2 Available, EndpointSlice 2/2 địa chỉ ready\n  ✓ order: startup/liveness → /actuator/health/liveness:8080, readiness → /actuator/health/readiness:8080; 1/1/1 Available, EndpointSlice 1/1 địa chỉ ready\n  ✓ gateway: preStop có, terminationGracePeriodSeconds khai rõ và ≥ preStop + 20 giây\n  ✓ catalog: preStop có, terminationGracePeriodSeconds khai rõ và ≥ preStop + 20 giây\n  ✓ order: preStop có, terminationGracePeriodSeconds khai rõ và ≥ preStop + 20 giây\n  ✓ gateway: initContainer wait-catalog\n  ✓ ~/shop/gateway.yaml (apply --dry-run=server): probe, preStop, grace khớp Deployment đang chạy\n  ✓ ~/shop/catalog.yaml (apply --dry-run=server): probe, preStop, grace khớp Deployment đang chạy\n  ✓ ~/shop/order.yaml (apply --dry-run=server): probe, preStop, grace khớp Deployment đang chạy\n  ✓ answers.env: READINESS_RESTARTS=0 (readiness sai không restart); probe-lab đã xoá\n  ✓ answers.env: LIVENESS_RESTARTS_GE1=yes (liveness sai thì kubelet restart container)\n  ✓ answers.env: LIVENESS_EXIT_CODE=143 (lastState.terminated của container bị liveness giết: SIGTERM)\n  ✓ answers.env: PROBE_PERIOD_DEFAULT=10 (k explain …livenessProbe.periodSeconds)\n  → 14/14 đạt",
       projectDelta: "Mảnh project **probes** hoàn thành: ba Deployment có startup/liveness/readiness probe nối với nhóm health của Actuator, preStop + grace period khớp graceful shutdown của Spring, gateway có init container chờ catalog. Buổi sau dựa vào đó để rollout gateway lên 2.0 mà không rớt request.",
     },
     review: [
@@ -1109,7 +1109,7 @@ Verify đọc probe, preStop và grace period của ba Deployment (cổng có t�
     domain: "workloads",
     competencies: ["wl-deploy-rollout"],
     requires: ["s13"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
       "Nâng gateway từ 1.0 lên 2.0 bằng set image, theo dõi bằng rollout status, ghi change-cause cho từng revision.",
@@ -1319,7 +1319,7 @@ Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, g
     ],
   },
 
-  // ───────────────────────────── s15–s16 (khung) ─────────────────────────────
+  // ───────────────────────────── s15 ─────────────────────────────
   {
     id: "s15",
     stage: "st2",
@@ -1328,12 +1328,12 @@ Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, g
     domain: "workloads",
     competencies: ["wl-selfheal"],
     requires: ["s14"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Chạy một DaemonSet thu log trên mọi node, kể cả control plane bằng toleration.",
-      "Chạy Job nạp dữ liệu mẫu cho catalog với completions/backoffLimit, và CronJob báo cáo đơn hàng mỗi 5 phút.",
-      "Chạy CronJob ngay lập tức bằng create job --from để kiểm mà không chờ lịch.",
+      "Chạy DaemonSet log-agent có một Pod trên mọi node, kể cả control plane nhờ toleration, đọc /var/log của node qua hostPath chỉ đọc.",
+      "Chạy Job seed tạo đơn hàng mẫu qua gateway (POST /api/orders) với completions/backoffLimit, và CronJob order-report gọi GET /api/orders mỗi 5 phút.",
+      "Chạy CronJob ngay bằng create job --from để kiểm mà không chờ lịch; đọc lý do một Job thất bại khi chạm backoffLimit.",
     ],
     skills: [
       { skill: "k-daemonset-yaml", level: "Viết được có tra" },
@@ -1344,9 +1344,264 @@ Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, g
       { skill: "k-job-from-cronjob", level: "Gõ được không tra" },
     ],
     uses: ["k-run-dry-yaml", "k-logs", "k-get-wide", "k-explain"],
-    stateIn: "Đầu ra s14.",
-    stateOut: "DaemonSet log-agent có một Pod trên mỗi node; Job seed Complete; CronJob order-report đã chạy thành công ít nhất một lần.",
+    foundation: null,
+    mindset: `**Ba controller, ba kiểu "đủ".** Deployment muốn *N bản sao chạy mãi*. DaemonSet muốn *đúng một Pod trên mỗi node khớp điều kiện*: thêm node là thêm Pod, không có \`replicas\`. Job muốn *N lần chạy thành công rồi dừng*: Pod thoát 0 là xong việc, không phải sự cố. CronJob là "máy tạo Job" theo lịch cron.
+
+| Ở thế giới Java | Ở Kubernetes |
+|---|---|
+| Agent cài trên mọi máy (Filebeat, node exporter, JMX agent của hạ tầng) | DaemonSet |
+| \`main()\` chạy một lần: migration, nạp dữ liệu, batch Spring Batch | Job |
+| \`@Scheduled(cron = …)\` hay crontab trên một máy "đặc biệt" | CronJob |
+
+\`@Scheduled\` trong một service có 2 replica chạy **hai lần**; CronJob tách lịch ra khỏi số replica của app, và \`concurrencyPolicy: Forbid\` chặn hai lần chạy chồng nhau.
+
+**DaemonSet và control plane.** cka-cp mang taint \`node-role.kubernetes.io/control-plane:NoSchedule\`: Pod không có toleration tương ứng không được xếp lên đó. Agent thu log cần chạy *cả* ở đó, nên thêm toleration (taint/toleration học kỹ ở chặng 3). \`hostPath\` mount thư mục của node vào Pod — mạnh và nguy hiểm, nên \`readOnly: true\`.
+
+**Job: restartPolicy, completions, backoffLimit.** Pod của Job phải có \`restartPolicy\` \`OnFailure\` (kubelet chạy lại container trong cùng Pod) hoặc \`Never\` (Job controller tạo Pod mới, Pod lỗi ở lại để bạn đọc log). \`backoffLimit\` (mặc định 6) là số lần thử lại trước khi Job bỏ cuộc với condition \`Failed\`, lý do \`BackoffLimitExceeded\`. Trên lab, \`seed-bad\` (\`backoffLimit: 1\`) dừng với \`BackoffLimitExceeded\` chỉ vài giây sau khi tạo. Buổi này dùng \`OnFailure\` cho \`seed\` và \`order-report\` để không để lại Pod Failed (s16 chấm "không Pod lỗi nào trong shop").
+
+**Dữ liệu H2 mất khi order khởi động lại.** \`seed\` tạo 3 đơn hàng trong H2 của Pod order; Pod order bị tạo lại là mất. Vì thế verify chấm Job \`succeeded=3\`, không đếm đơn hàng. PostgreSQL đến ở s24.`,
+    refs: [
+      { label: "Bài lộ trình CKA: DaemonSets — vì sao chạy được trên mọi node", href: "#/roadmap/cka/cka-w4-7" },
+      { label: "Bài lộ trình CKAD: Jobs — completions, parallelism, backoffLimit, activeDeadlineSeconds", href: "#/roadmap/ckad/w3-6" },
+      { label: "Bài lộ trình CKAD: CronJobs — cron syntax, concurrencyPolicy, successfulJobsHistoryLimit", href: "#/roadmap/ckad/w3-7" },
+      { label: "CKA Study Guide, chương 11 — Deployment và ReplicaSet", href: "#/docs/ckabook-11" },
+      { label: "CKA Study Guide, chương 15 — Volume (hostPath)", href: "#/docs/ckabook-15" },
+      { label: "Thực hành nhanh: create job/cronjob, job --from, YAML DaemonSet/Job/CronJob", href: "#/commands" },
+      { label: "kubernetes.io: DaemonSet", href: "https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/" },
+      { label: "kubernetes.io: Jobs", href: "https://kubernetes.io/docs/concepts/workloads/controllers/job/" },
+      { label: "kubernetes.io: CronJob", href: "https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/" },
+    ],
+    stateIn: `Đầu ra s14: gateway 2.0 (2 replica), catalog (2), order (1), có probe; manifest ở \`~/shop/\`. Buổi này kéo \`busybox:1.37\` từ Docker Hub (node nào đã chạy init container của gateway ở s13 thì đã có sẵn; cka-cp kéo lần đầu). \`./labs/lab begin cka s15\` kiểm đầu vào bằng verify của s14.`,
+    stateOut: "DaemonSet log-agent có một Pod Ready trên mỗi node (cả cka-cp); Job seed Complete 3/3; CronJob order-report (*/5, giữ 2/1 Job) đã có lastSuccessfulTime; Job order-report-manual Complete; manifest ở ~/shop/{log-agent,seed,order-report}.yaml; ~/drills/s15/answers.env.",
+    tasks: [
+      { id: "t1", text: "DaemonSet không có lệnh `create`: sinh khung bằng `k -n shop create deploy log-agent --image=busybox:1.37 $do > ~/shop/log-agent.yaml`, đổi `kind: DaemonSet`, xoá `replicas`, `strategy`, `status`. Container `agent` chạy vòng `while true; do echo \"$(date -Iseconds) $NODE_NAME $(ls /var/log/pods | wc -l) thư mục log Pod\"; sleep 60; done`, `NODE_NAME` lấy từ `fieldRef: spec.nodeName`, mount `hostPath /var/log` vào `/var/log` với `readOnly: true`. Apply: `k -n shop get ds,pod -l app=log-agent -o wide` — bao nhiêu Pod, trên node nào?" },
+      { id: "t2", text: "Thêm toleration cho taint `node-role.kubernetes.io/control-plane` (`k describe node cka-cp | grep Taints` để thấy nó) rồi apply lại; DESIRED/READY phải là 3. `k -n shop logs -l app=log-agent --prefix`." },
+      { id: "t3", text: "Job: `k -n shop create job seed --image=busybox:1.37 $do -- sh -c '…'` > `~/shop/seed.yaml` (lệnh: `wget -qO- --header 'Content-Type: application/json' --post-data '{\"productId\":1,\"qty\":2}' http://gateway:8080/api/orders`), thêm `completions: 3`, `backoffLimit: 2`, `restartPolicy: OnFailure`. Apply, `k -n shop get job seed -w`, `k -n shop logs job/seed`, rồi `k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/orders`." },
+      { id: "t4", text: "CronJob: `k -n shop create cronjob order-report --image=busybox:1.37 --schedule='*/5 * * * *' $do -- sh -c '…'` > `~/shop/order-report.yaml` (lệnh gọi `GET /api/orders`, in kèm thời điểm, `set -e` để wget lỗi thì Job lỗi), thêm `concurrencyPolicy: Forbid`, `successfulJobsHistoryLimit: 2`, `failedJobsHistoryLimit: 1`, `restartPolicy: OnFailure`. Apply." },
+      { id: "t5", text: "Không chờ lịch: `k -n shop create job order-report-manual --from=cronjob/order-report`, chờ Complete, đọc log. `k -n shop get job order-report-manual -o yaml | grep -A6 ownerReferences` — Job này thuộc về ai? `k -n shop get cronjob order-report` — LAST SCHEDULE và `.status.lastSuccessfulTime`. Lưu bằng chứng: `k -n shop get job order-report-manual -o yaml > ~/drills/s15/order-report-manual.yaml` (CronJob dọn Job này theo `successfulJobsHistoryLimit`: verify chấm tệp, không chấm Job còn sống)." },
+      { id: "t6", text: "Tình huống hỏng: Job `seed-bad` gọi sai đường dẫn (`http://gateway:8080/api/order`), `backoffLimit: 1`, `restartPolicy: Never` (mặc định của `create job`). Theo dõi Pod và Job; `k -n shop describe job seed-bad` — condition và lý do? Ghi `BROKEN_JOB_REASON=<lý do>` vào `~/drills/s15/answers.env`, đọc log Pod lỗi, rồi xoá Job." },
+      { id: "t7", text: "Trên Mac: `./labs/lab verify cka s15` phải đạt 7/7." },
+    ],
+    hints: [
+      "DaemonSet DESIRED 2 trên cluster 3 node: Pod không xếp được lên cka-cp vì taint. Toleration `operator: Exists` + `effect: NoSchedule` với đúng `key`.",
+      "`$do` của `create job/cronjob` đặt lệnh sau `--`; các trường `completions`, `backoffLimit`, `successfulJobsHistoryLimit` phải tự thêm vào YAML (`k explain job.spec`, `k explain cronjob.spec`).",
+      "Template của Job bất biến (kể cả khi Job đang chạy): sửa tệp xong phải `k delete job seed` rồi apply lại.",
+      "Thứ tự trong CronJob: `spec.jobTemplate.spec.template.spec.containers` — ba tầng `spec`. Lệch một tầng thì apply báo `unknown field`.",
+      "Job lỗi mà không thấy Pod lỗi: với `OnFailure` container chạy lại trong cùng Pod (xem RESTARTS); với `Never` mỗi lần thử là một Pod mới.",
+    ],
+    solution: `Output là của máy soạn bài; tên Pod, uid và thời điểm trên máy bạn sẽ khác.
+
+**1 và 2. DaemonSet log-agent**
+
+\`\`\`bash
+k -n shop create deploy log-agent --image=busybox:1.37 $do > ~/shop/log-agent.yaml
+vim ~/shop/log-agent.yaml      # kind: DaemonSet; xoá replicas, strategy, status
+k describe node cka-cp | grep Taints
+# Taints:             node-role.kubernetes.io/control-plane:NoSchedule
+\`\`\`
+
+\`\`\`yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: log-agent
+  namespace: shop
+  labels:
+    app: log-agent
+spec:
+  selector:
+    matchLabels:
+      app: log-agent
+  template:
+    metadata:
+      labels:
+        app: log-agent
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: agent
+        image: busybox:1.37
+        command:
+        - sh
+        - -c
+        - while true; do echo "$(date -Iseconds) $NODE_NAME $(ls /var/log/pods | wc -l) thư mục log Pod"; sleep 60; done
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+          type: Directory
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/log-agent.yaml
+k -n shop get ds log-agent
+# NAME        DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+# log-agent   3         3         3       3            3           <none>          29s
+k -n shop get pod -l app=log-agent -o wide       # một Pod trên mỗi node cka-cp, cka-w1, cka-w2
+k -n shop logs -l app=log-agent --prefix
+# [pod/log-agent-cvpwd/agent] 2026-11-14T14:11:39+00:00 cka-cp 10 thư mục log Pod
+# [pod/log-agent-mt8sr/agent] 2026-11-14T14:11:34+00:00 cka-w1 9 thư mục log Pod
+\`\`\`
+
+Không có toleration thì DESIRED chỉ là 2: DaemonSet controller bỏ qua node mà Pod không tolerate. \`$NODE_NAME\` đến từ downward API (\`fieldRef: spec.nodeName\`). Giờ trong log là UTC: image busybox không có dữ liệu múi giờ, khác giờ \`+07\` của VM.
+
+**3. Job seed**
+
+\`\`\`bash
+k -n shop create job seed --image=busybox:1.37 $do -- sh -c "wget -qO- --header 'Content-Type: application/json' --post-data '{\"productId\":1,\"qty\":2}' http://gateway:8080/api/orders" > ~/shop/seed.yaml
+vim ~/shop/seed.yaml           # spec: completions: 3, parallelism: 1, backoffLimit: 2; template.spec.restartPolicy: OnFailure
+k apply -f ~/shop/seed.yaml
+k -n shop get job seed
+# NAME   STATUS     COMPLETIONS   DURATION   AGE
+# seed   Complete   3/3           10s        29s
+k -n shop logs job/seed
+# Found 3 pods, using pod/seed-24w24
+# {"id":1,"productId":1,"qty":2,"createdAt":"2026-11-14T14:11:35.551407Z"}
+k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/orders
+# [{"id":1,…},{"id":2,…},{"id":3,"productId":1,"qty":2,"createdAt":"2026-11-14T14:11:41.905443Z"}]
+\`\`\`
+
+order trả \`201 Created\` cho POST; busybox \`wget\` coi đó là thành công. Job Complete mang hai condition \`SuccessCriteriaMet=True\` và \`Complete=True\`. Đơn hàng nằm trong H2 của Pod order: Pod order khởi động lại là mất, Job vẫn \`Complete\`.
+
+**4. CronJob order-report**
+
+\`\`\`bash
+k -n shop create cronjob order-report --image=busybox:1.37 --schedule='*/5 * * * *' $do \\
+  -- sh -c 'set -e; o=$(wget -qO- http://gateway:8080/api/orders); echo "$(date -Iseconds) đơn hàng: $o"' > ~/shop/order-report.yaml
+vim ~/shop/order-report.yaml
+\`\`\`
+
+\`\`\`yaml
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: report
+            image: busybox:1.37
+            command:
+            - sh
+            - -c
+            - |
+              set -e; o=$(wget -qO- http://gateway:8080/api/orders); echo "$(date -Iseconds) đơn hàng: $o"
+\`\`\`
+
+Lệnh có \`: \` (\`đơn hàng: \`) nên phải là khối \`|\` hoặc chuỗi có nháy: viết trơn sau \`- \`, YAML hiểu nó là một cặp khoá/giá trị.
+
+**5. Chạy ngay bằng create job --from**
+
+\`\`\`bash
+k -n shop create job order-report-manual --from=cronjob/order-report
+k -n shop wait --for=condition=Complete job/order-report-manual
+k -n shop logs job/order-report-manual
+# 2026-11-14T14:11:45+00:00 đơn hàng: [{"id":1,"productId":1,"qty":2,…},…]
+k -n shop get job order-report-manual -o yaml > ~/drills/s15/order-report-manual.yaml
+grep -A6 -E '^  annotations:|ownerReferences' ~/drills/s15/order-report-manual.yaml
+#   annotations:
+#     cronjob.kubernetes.io/instantiate: manual
+#   ownerReferences:
+#   - apiVersion: batch/v1
+#     controller: true
+#     kind: CronJob
+#     name: order-report
+#     uid: 743620ec-bb16-4f88-a8e5-b637f68ed458
+k -n shop get cronjob order-report
+# NAME           SCHEDULE      TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+# order-report   */5 * * * *   <none>     False     0        <none>          29s
+k -n shop get cronjob order-report -o jsonpath='{.status}'; echo
+# {"lastSuccessfulTime":"2026-11-14T14:11:47Z"}
+k -n shop get events --field-selector involvedObject.kind=CronJob
+# Warning   UnexpectedJob   cronjob/order-report   Saw a job that the controller did not create or forgot: order-report-manual
+\`\`\`
+
+Job chạy tay **thuộc về** CronJob (\`ownerReferences\` với \`controller: true\`): xoá CronJob là xoá cả nó. Nó cập nhật \`lastSuccessfulTime\` nhưng không đụng \`LAST SCHEDULE\` (chỉ lần chạy theo lịch mới ghi); Event \`UnexpectedJob\` là CronJob controller nhận ra một Job nó không tự tạo. Và vì nó thuộc về CronJob, nó cũng bị **dọn theo** \`successfulJobsHistoryLimit\`. Đo trên lab: \`order-report-manual\` tạo lúc 21:13; lần chạy theo lịch 21:15 thành công, lần 21:20 (ngay sau khi VM khởi động lại, gateway chưa lên) thất bại nên không tính; lần 21:25 thành công là Job thành công thứ ba, và CronJob xoá Job cũ nhất — chính \`order-report-manual\`. Vì vậy verify chấm tệp YAML bạn lưu, không chấm Job còn sống.
+
+**6. Tình huống hỏng: chạm backoffLimit**
+
+\`\`\`bash
+k -n shop create job seed-bad --image=busybox:1.37 $do -- sh -c 'wget -qO- http://gateway:8080/api/order' > ~/drills/s15/seed-bad.yaml
+sed -i 's/^spec:$/spec:\\n  backoffLimit: 1/' ~/drills/s15/seed-bad.yaml
+k apply -f ~/drills/s15/seed-bad.yaml
+k -n shop get events --sort-by=.metadata.creationTimestamp | grep seed-bad
+#   Normal    SuccessfulCreate       job/seed-bad   Created pod: seed-bad-k5mkj
+#   …
+#   Warning   BackoffLimitExceeded   job/seed-bad   Job has reached the specified backoff limit
+k -n shop get job seed-bad -o jsonpath='{.status.conditions[?(@.type=="Failed")].reason}'; echo   # BackoffLimitExceeded
+k -n shop logs -l job-name=seed-bad          # lý do wget thoát
+echo BROKEN_JOB_REASON=BackoffLimitExceeded > ~/drills/s15/answers.env
+k -n shop delete job seed-bad
+\`\`\`
+
+Đường dẫn \`/api/order\` không có trên gateway, \`wget\` thoát khác 0. Trên lab Job dừng với \`BackoffLimitExceeded\` chỉ vài giây sau khi tạo. Với \`restartPolicy: Never\` (mặc định của \`create job\`) Pod lỗi ở lại để đọc log cho tới khi bạn xoá Job.
+
+Lời giải tự động: \`labs/cka/sessions/s15/apply.sh\` (manifest trong \`labs/cka/sessions/s15/files/\`).`,
+    exam: {
+      patterns: [
+        "\"Tạo DaemonSet chạy trên mọi node, kể cả control plane\" — khung từ `create deploy $do`, đổi kind, thêm toleration.",
+        "\"Tạo Job chạy N lần, tối đa M lần thử lại\" — `create job $do`, thêm `completions`, `backoffLimit`.",
+        "\"Tạo CronJob chạy mỗi X phút, chỉ giữ K Job thành công\" — `create cronjob --schedule`, thêm `successfulJobsHistoryLimit`.",
+        "\"Chạy CronJob ngay bây giờ\" — `create job <tên> --from=cronjob/<cron>`.",
+      ],
+      timeTargetMin: 6,
+      drills: [
+        {
+          text: "Trong 3 phút: Job `pi` (namespace `shop`, image `busybox:1.37`) in `ok` 2 lần song song (`completions: 2`, `parallelism: 2`), tự xoá 60 giây sau khi xong (`ttlSecondsAfterFinished`).",
+          timeLimitMin: 3,
+          solution: "```bash\nk -n shop create job pi --image=busybox:1.37 $do -- echo ok > pi.yaml\n# thêm vào spec: completions: 2, parallelism: 2, ttlSecondsAfterFinished: 60\nk apply -f pi.yaml\nk -n shop wait --for=condition=Complete job/pi\nk -n shop logs -l job-name=pi\n```\n`ttlSecondsAfterFinished` cho TTL controller xoá Job (và Pod của nó) sau khi xong.",
+        },
+        {
+          text: "Trong 2 phút: tạm dừng CronJob `order-report` không xoá nó, rồi bật lại.",
+          timeLimitMin: 2,
+          solution: "```bash\nk -n shop patch cronjob order-report -p '{\"spec\":{\"suspend\":true}}'\nk -n shop get cronjob order-report          # SUSPEND True\nk -n shop patch cronjob order-report -p '{\"spec\":{\"suspend\":false}}'\n```",
+        },
+      ],
+    },
+    tips: [
+      "Không có `create daemonset`: sinh Deployment bằng `$do` rồi đổi `kind`, xoá `replicas` và `strategy`.",
+      "`create job --from=cronjob/x` là cách kiểm CronJob trong phòng thi: không ai chờ 5 phút.",
+      "Đọc log của Job: `k logs job/<tên>` (một Pod của Job) hoặc `k logs -l job-name=<tên>`.",
+      "Đề yêu cầu múi giờ thì thêm `spec.timeZone` (vd. `Asia/Ho_Chi_Minh`); không khai thì cột TIMEZONE của `k get cronjob` là `<none>`. Giờ trong log của busybox là UTC.",
+    ],
+    outcome: {
+      md: `shop có thêm ba workload chạy nền: một agent trên mọi node, một Job nạp đơn hàng mẫu, một CronJob báo cáo. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s15
+\`\`\`
+
+Verify đếm Pod log-agent trên từng node, đọc completions/backoffLimit/succeeded của Job seed, lịch và giới hạn lịch sử của CronJob, ownerReference của Job chạy tay, và kiểm \`seed-bad\` đã xoá.`,
+      verifyOutput: "lab: kiểm s15\n  (chờ apiserver và DaemonSet log-agent; lâu nhất vài phút nếu Pod đang khởi động)\n  ✓ DaemonSet log-agent: desired = ready = 3, một Pod Ready trên mỗi node (cka-cp cka-w1 cka-w2)\n  ✓ log-agent: image busybox ghim tag (không latest), hostPath /var/log mount chỉ đọc\n  ✓ Job seed: completions 3, backoffLimit 2, succeeded 3, lệnh POST /api/orders qua gateway\n  ✓ CronJob order-report: */5 * * * *, giữ 2/1 Job, concurrencyPolicy Forbid, GET /api/orders qua gateway, đã có lastSuccessfulTime\n  ✓ ~/drills/s15/order-report-manual.yaml: Job tạo từ CronJob order-report (ownerReference, instantiate=manual), Complete\n  ✓ ~/shop/log-agent.yaml, seed.yaml, order-report.yaml qua apply --dry-run=server, khớp cluster\n  ✓ answers.env: BROKEN_JOB_REASON=BackoffLimitExceeded; Job seed-bad đã xoá\n  → 7/7 đạt",
+      projectDelta: "shop có DaemonSet log-agent, Job seed và CronJob order-report. Buổi sau là buổi sự cố của chặng 2: một số Pod của shop không chạy.",
+    },
+    review: [
+      { q: "DaemonSet trên cluster 3 node chỉ có 2 Pod. Vì sao, sửa thế nào?", a: "cka-cp có taint `node-role.kubernetes.io/control-plane:NoSchedule`; Pod không tolerate nên không được xếp lên. Thêm toleration với key đó, `operator: Exists`, `effect: NoSchedule`." },
+      { q: "`restartPolicy: OnFailure` và `Never` của Job khác nhau thế nào khi lệnh lỗi?", a: "OnFailure: kubelet chạy lại container trong cùng Pod (RESTARTS tăng). Never: Job controller tạo Pod mới cho mỗi lần thử, Pod lỗi ở lại với trạng thái Error để đọc log. Cả hai đều tính vào backoffLimit." },
+      { q: "Vì sao không dùng `@Scheduled` trong order để báo cáo đơn hàng?", a: "Mỗi replica chạy lịch riêng: 2 replica là 2 lần. CronJob tách lịch khỏi số replica và có concurrencyPolicy chặn chạy chồng." },
+      { q: "Kiểm một CronJob mà không chờ lịch thế nào?", a: "`k create job <tên> --from=cronjob/<cron>`: tạo Job từ jobTemplate của CronJob ngay lập tức." },
+    ],
   },
+
+  // ───────────────────────────── s16 ─────────────────────────────
   {
     id: "s16",
     stage: "st2",
@@ -1355,12 +1610,12 @@ Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, g
     domain: "troubleshooting",
     competencies: ["ts-logs"],
     requires: ["s15"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Đưa ba Pod hỏng ba kiểu khác nhau về Running trong 20 phút.",
-      "Đọc đúng chỗ: trạng thái Pod, Events, log lần chạy trước, YAML thật đang chạy.",
-      "Sửa trường bất biến của Pod bằng replace --force thay vì xoá tay rồi tạo lại.",
+      "Đưa bốn workload hỏng bốn kiểu khác nhau của shop về Running/Succeeded trong 20 phút mà không biết trước lỗi gì.",
+      "Đi đúng quy trình: trạng thái Pod → Events → log lần chạy trước → YAML thật đang chạy, rồi mới sửa — sửa ở tệp trong ~/shop/.",
+      "Sửa trường bất biến của Pod bằng replace --force; thấy được ký tự trắng lạ trong YAML bằng vim và cat -A.",
     ],
     skills: [
       { skill: "k-logs-previous", level: "Thành phản xạ" },
@@ -1372,7 +1627,227 @@ Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, g
       { skill: "k-debug-container", level: "Gõ được có tra" },
     ],
     uses: ["k-describe-pod", "k-logs", "k-cm-envfrom-volume", "k-probes-yaml", "vim-move-jump"],
-    stateIn: "Đầu ra s15 cộng `./labs/lab break`: một số Pod của shop rơi vào ImagePullBackOff, CrashLoopBackOff, CreateContainerConfigError.",
-    stateOut: "Mọi Pod của shop Running và Ready, cấu hình đúng như cuối s15.",
+    foundation: {
+      area: "vim",
+      md: `**Thấy ký tự mà mắt không thấy.** YAML và biến môi trường hỏng vì những ký tự trông như dấu cách: tab (YAML cấm tab ở thụt lề), khoảng trắng cuối dòng, và **NBSP** (U+00A0, "dấu cách không ngắt") hay đi theo khi chép lệnh từ trang web, chat hay tài liệu Word. Với shell và JVM, NBSP không phải dấu cách: hai cờ nối bằng NBSP là **một** đối số.
+
+**1. Trong vim.** Từ s02 bạn đã dùng \`:set list\` để thấy tab (\`^I\`) và \`:retab\`. Mặc định \`listchars\` chỉ có \`eol:$\` nên **NBSP không hiện gì**: phải khai thêm:
+
+\`\`\`vim
+:set list listchars=tab:>-,trail:~,nbsp:+,eol:$
+\`\`\`
+
+Tab thành \`>---\`, khoảng trắng cuối dòng thành \`~\`, NBSP thành \`+\`. Đứng trên một ký tự, \`ga\` in mã của nó (trên lab, với NBSP: \`< > 160, Hex 00a0, Oct 240, Digr NS\`). Tìm mọi NBSP: \`/\\%xa0\`; thay bằng dấu cách: \`:%s/\\%xa0/ /g\`. \`:set nolist\` để tắt.
+
+**2. Ngoài vim.** \`cat -A tệp\` in tab là \`^I\`, cuối dòng là \`$\`, byte ngoài ASCII dạng \`M-…\` (NBSP, hai byte \`c2 a0\` trong UTF-8, hiện là \`M-BM- \`). \`grep -nP '\\xa0|\\t' tệp\` chỉ ra dòng. Với một biến môi trường trong container: \`printenv JAVA_OPTS | od -An -tx1\` in từng byte — NBSP trong UTF-8 là hai byte \`c2 a0\`.
+
+**Bài tập nền (5 phút, trên cka-cp trước khi \`begin\`):** \`printf 'a:\\tb\\nc: d \\ne:\\xc2\\xa0f\\n' > /tmp/ws.yaml\`, mở bằng vim, bật \`list\` như trên và chỉ ra ba ký tự lạ; rồi \`cat -A /tmp/ws.yaml\`.`,
+    },
+    mindset: `**Pod không chạy có bốn chỗ để hỏng, và mỗi chỗ để lại dấu ở một nơi khác.** Trình tự một Pod đi qua: được xếp lên node → kubelet kéo image → kubelet dựng cấu hình container (env, volume, Secret/ConfigMap) → tiến trình chạy → probe. Hỏng ở bước nào, cột STATUS nói bước đó:
+
+| STATUS | Hỏng ở | Dấu vết ở đâu |
+|---|---|---|
+| \`Pending\` (không node) | xếp lịch | Events: \`FailedScheduling\` (chặng 3) |
+| \`ErrImagePull\` / \`ImagePullBackOff\` / \`ErrImageNeverPull\` | kéo image | Events: \`Failed to pull image …\` |
+| \`CreateContainerConfigError\` | dựng cấu hình | Events: \`couldn't find key … in Secret …\`; \`logs\` trống vì tiến trình chưa từng chạy |
+| \`CrashLoopBackOff\`, \`Error\` | tiến trình thoát | \`logs --previous\` (lần chạy vừa chết), \`lastState.terminated.exitCode\` |
+| \`Running\` nhưng \`0/1\` | probe | Events: \`Readiness probe failed\` (s13) |
+
+**Quy trình, không đoán** (giống s09, chỉ khác tầng):
+1. **Trạng thái:** \`k -n shop get pod -o wide\` — Pod nào, STATUS gì, RESTARTS bao nhiêu, của ReplicaSet nào.
+2. **Events:** \`k -n shop get events --sort-by=.metadata.creationTimestamp\` cho cả namespace (Event phát qua \`events.k8s.io\` có thể không có \`lastTimestamp\`), hoặc cuối \`describe pod\` cho một Pod.
+3. **Log lần trước:** \`k logs <pod> --previous\` khi container đã chết ít nhất một lần; \`logs\` không có \`--previous\` là lần đang chạy (có thể còn trống).
+4. **YAML đang chạy:** \`k get pod <pod> -o yaml\` / \`k get deploy <tên> -o yaml\` — so với thứ bạn *nghĩ* đã apply. Chỗ khác nhau là nghi phạm.
+
+**Rolling update che lỗi.** Với \`maxUnavailable: 0\` (gateway) hay mặc định 25% làm tròn xuống (catalog 2, order 1 → 0), Pod mới hỏng không bao giờ Ready nên Pod cũ còn nguyên: shop vẫn trả lời, \`get deploy\` vẫn \`AVAILABLE\` đủ. Dấu hiệu là \`UP-TO-DATE\` thiếu và một ReplicaSet mới có Pod không Ready. Đo trên lab ngay sau sự cố: \`k -n shop get deploy\` ghi \`2/2   1   2\` (READY, UP-TO-DATE, AVAILABLE) cho catalog và gateway, \`1/1   1   1\` cho order: chỉ cột UP-TO-DATE và một Pod mới không Ready lộ ra lỗi. Đừng vì shop còn chạy mà bỏ qua: Deployment không tự rollback (\`ProgressDeadlineExceeded\` chỉ là một condition), lần scale lên hay HPA chia replica mới cả vào ReplicaSet hỏng, rollout kế tiếp chồng lên template hỏng, và \`k apply -f ~/shop/\` đưa lỗi trở lại.
+
+**Sửa ở nguồn.** Sự cố hôm nay đến từ \`~/shop/*.yaml\` bị sửa rồi apply. Sửa bằng \`k edit\`/\`k set\` làm cluster lành nhưng lần \`k apply -f ~/shop/\` sau sẽ đưa lỗi trở lại. Sửa tệp, apply tệp. Pod lẻ thì nguồn là tệp của nó; trường bất biến (\`command\`, \`env\`, cổng…) chỉ đổi được bằng xoá và tạo lại: \`k replace --force -f\`.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Debug application — CrashLoopBackOff, ImagePullBackOff…", href: "#/roadmap/cka/cka-w8-5" },
+      { label: "Bài lộ trình CKA Study Guide: Xử lý sự cố Pod và container", href: "#/roadmap/ckabook/cb-w6-1" },
+      { label: "Bài lộ trình CKAD: Logging — kubectl logs (--previous, -f)", href: "#/roadmap/ckad/w5-4" },
+      { label: "Bài lộ trình CKAD: Debug workflow — describe → events → logs → exec", href: "#/roadmap/ckad/w5-5" },
+      { label: "Bài lộ trình CKAD: Lỗi phổ biến — ImagePullBackOff, CrashLoopBackOff, Pending, OOMKilled", href: "#/roadmap/ckad/w5-7" },
+      { label: "CKA Study Guide, chương 21 — Xử lý sự cố ứng dụng", href: "#/docs/ckabook-21" },
+      { label: "Thực hành nhanh: logs --previous, events --sort-by, replace --force, kubectl debug", href: "#/commands" },
+      { label: "kubernetes.io: Debug Pods", href: "https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/" },
+      { label: "kubernetes.io: Debug Running Pods (kubectl debug, --copy-to)", href: "https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/" },
+      { label: "kubernetes.io: Determine the Reason for Pod Failure", href: "https://kubernetes.io/docs/tasks/debug/debug-application/determine-reason-pod-failure/" },
+    ],
+    stateIn: `Đầu ra s15 (gateway 2.0 ×2, catalog ×2, order ×1, có probe; log-agent, Job seed, CronJob order-report). Trên Mac chạy \`./labs/lab begin cka s16\`: lệnh kiểm đầu vào rồi **gây sự cố**: "một đồng nghiệp" sửa vài tệp trong \`~/shop/\` rồi apply, và tạo một Pod báo cáo lẻ \`report-once\` từ \`~/drills/s16/report-once.yaml\`. Ba tệp trong \`~/shop/\` được ghi lại bằng một công cụ YAML: comment và cách viết danh sách có thể đổi, nội dung vẫn là của bạn cộng chỗ bị sửa. Không nói đã làm gì. Bấm giờ 20 phút. Đừng đọc \`labs/cka/breaks/\` trước khi làm xong.`,
+    stateOut: "Ba Deployment về đúng image và số replica cuối s15, cấu hình (envFrom, secretKeyRef, probe, preStop) nguyên vẹn, gateway không có JAVA_OPTS (như cuối s15); ~/shop/*.yaml khớp cluster; Pod report-once Succeeded; không Pod lỗi nào trong shop; ~/drills/s16/answers.env.",
+    tasks: [
+      { id: "t1", text: "Trạng thái: `k -n shop get pod -o wide`, `k -n shop get deploy,rs`. Ghi ra giấy từng Pod không Running/Ready: STATUS, RESTARTS, thuộc ReplicaSet nào. Shop còn trả lời không (`k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/info`)? Vì sao?" },
+      { id: "t2", text: "Events: `k -n shop get events --sort-by=.metadata.creationTimestamp | tail -30`. Với mỗi Pod hỏng, tìm Event `Warning` của nó và xếp vào một hàng của bảng trong phần Tư duy." },
+      { id: "t3", text: "Pod đã chết ít nhất một lần: `k -n shop logs <pod> --previous`. Đọc kỹ thông báo: nó nói về một cờ hay hai cờ? So với giá trị `JAVA_OPTS` trong `k -n shop get deploy gateway -o yaml`. Rồi `cat -A ~/shop/gateway.yaml | grep JAVA` và mở tệp bằng vim với `:set list listchars=nbsp:+,tab:>-,trail:~`. Xác nhận trong container: `k -n shop debug <pod hỏng> --copy-to=gw-debug --container=gateway -- sleep 600` rồi `k -n shop exec gw-debug -c gateway -- sh -c 'printenv JAVA_OPTS | od -An -tx1'`. Ghi `BAD_CHAR=<hai byte hex của ký tự lạ>`; thoát và xoá `gw-debug`." },
+      { id: "t4", text: "YAML đang chạy: với mỗi Deployment hỏng, `k -n shop get deploy <tên> -o yaml` so với trạng thái cuối s15 (image, khoá Secret, biến môi trường; các ReplicaSet cũ trong `k -n shop get rs -o wide` giữ template cũ). Đưa cả ba về **đúng cấu hình cuối s15**: sửa **tệp** `~/shop/*.yaml` (gateway cuối s15 không có `JAVA_OPTS`: xoá hẳn biến đó), `k apply -f ~/shop/`, `k -n shop rollout status` từng Deployment." },
+      { id: "t5", text: "Pod `report-once`: `k -n shop logs report-once`, `k -n shop get pod report-once -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}'` — ghi `REPORT_EXIT_CODE=<mã>`. Thử sửa lệnh bằng `k -n shop edit pod report-once`: đọc lỗi. Sửa `~/drills/s16/report-once.yaml` rồi `k replace --force -f ~/drills/s16/report-once.yaml`; Pod phải `Completed`." },
+      { id: "t6", text: "Dọn: `k -n shop get pod` không còn Pod nào Error/BackOff/ConfigError, không còn Pod lẻ nào ngoài `report-once`. Ghi thời gian bạn đã dùng. Trên Mac: `./labs/lab verify cka s16` phải đạt 8/8 (chạy lại bao nhiêu lần cũng được: verify không chờ rollout đang kẹt)." },
+    ],
+    hints: [
+      "Bốn Pod hỏng, bốn STATUS khác nhau: đừng sửa theo thói quen. Mỗi STATUS chỉ thẳng tới một hàng trong bảng của phần Tư duy.",
+      "`CreateContainerConfigError`: container chưa từng chạy nên `logs` trống. Event nói đúng khoá nào thiếu ở Secret nào; so với `k -n shop get secret db-cred -o jsonpath='{.data}'`. Sửa tham chiếu, đừng thêm khoá vào Secret.",
+      "Thông báo JVM liệt kê **một** cờ chứa cả hai cờ? Shell chỉ tách đối số ở dấu cách thật, tab và xuống dòng. Ký tự ở giữa trông như dấu cách nhưng không phải.",
+      "`k logs <pod>` của container CrashLoopBackOff có thể trống (lần chạy mới chưa in gì): luôn thử `--previous`.",
+      "Tag image sai: so với tag có trên node (`ssh cka-w1 sudo crictl images | grep shop`) hoặc với các ReplicaSet cũ (`k -n shop get rs -o wide`).",
+      "Pod `Failed` với `restartPolicy: Never` không bao giờ chạy lại, kể cả khi bạn sửa được spec. `replace --force` xoá và tạo lại từ tệp trong một lệnh.",
+    ],
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài; tên Pod, IP và thời điểm sẽ khác.
+
+**Bước 1 — Trạng thái** (cka-cp, ngay sau \`begin\`)
+
+\`\`\`bash
+k -n shop get pod -o wide
+# catalog-7f7777db66-kq8hm    1/1   Running                      0             7m11s   …   cka-w1
+# catalog-868b46c98f-s9mn2    0/1   ErrImagePull                 0             62s     …   cka-w2
+# gateway-555896c66b-459pb    1/1   Running                      0             2m31s   …   cka-w2
+# gateway-c4bcd47b4-4fxpm     0/1   CrashLoopBackOff             3 (27s ago)   61s     …   cka-w1
+# order-5c99488f5c-7lnsz      0/1   CreateContainerConfigError   0             61s     …   cka-w2
+# order-6656b7cb49-7z4tp      1/1   Running                      0             9m35s   …   cka-w1
+# report-once                 0/1   Error                        0             61s     …   cka-w2
+# … log-agent, seed, order-report-manual: Running / Completed
+k -n shop get deploy
+# NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+# catalog   2/2     1            2           11m
+# gateway   2/2     1            2           11m
+# order     1/1     1            1           11m
+\`\`\`
+
+Ba Deployment đều có một Pod mới hỏng (tên ReplicaSet khác Pod cũ) bên cạnh Pod cũ còn chạy: rollout kẹt, shop vẫn trả lời. Bốn STATUS khác nhau là bốn chỗ hỏng khác nhau.
+
+**Bước 2 — Events**
+
+\`\`\`bash
+k -n shop get events --field-selector type=Warning --sort-by=.metadata.creationTimestamp | tail -8
+#   Warning   Failed    pod/order-5c99488f5c-7lnsz     Error: couldn't find key DB_PASS in Secret shop/db-cred
+#   Warning   Failed    pod/catalog-868b46c98f-s9mn2   Failed to pull image "shop/catalog:1.1": failed to pull and unpack image "docker.io/shop/catalog:1.1": failed to resolve image: pull access denied, repository does not exist or may require authorization …
+#   Warning   Failed    pod/catalog-868b46c98f-s9mn2   Error: ErrImagePull
+#   Warning   Failed    pod/catalog-868b46c98f-s9mn2   Error: ImagePullBackOff
+#   Warning   BackOff   pod/gateway-c4bcd47b4-4fxpm    Back-off restarting failed container gateway in pod gateway-c4bcd47b4-4fxpm_shop(…)
+\`\`\`
+
+catalog: tag \`1.1\` không có (các ReplicaSet cũ đều \`1.0\`: \`k -n shop get rs -l app=catalog -o wide\`). order: tham chiếu khoá \`DB_PASS\`, Secret chỉ có \`DB_PASSWORD\` và \`DB_USER\`. gateway: Event chỉ nói container chết, phải đọc log.
+
+**Bước 3 — Log lần trước (gateway)**
+
+\`\`\`bash
+k -n shop logs gateway-c4bcd47b4-4fxpm --previous
+# Defaulted container "gateway" out of: gateway, wait-catalog (init)
+# Unrecognized VM option 'UseSerialGC -XX:MaxRAMPercentage=60'
+# Error: Could not create the Java Virtual Machine.
+# Error: A fatal exception has occurred. Program will exit.
+k -n shop get pod gateway-c4bcd47b4-4fxpm -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode}'; echo   # 1
+\`\`\`
+
+JVM thấy **một** cờ tên \`UseSerialGC -XX:MaxRAMPercentage=60\`: ký tự ở giữa không phải dấu cách mà \`sh\` tách đối số. Nhìn byte:
+
+\`\`\`bash
+k -n shop get deploy gateway -o jsonpath='{..env[?(@.name=="JAVA_OPTS")].value}' | od -c | head -2
+# 0000000   -   X   X   :   +   U   s   e   S   e   r   i   a   l   G   C
+# 0000020 302 240   -   X   X   :   M   a   x   R   A   M   P   e   r   c
+cat -A ~/shop/gateway.yaml | grep -A1 JAVA_OPTS
+#         - name: JAVA_OPTS$
+#           value: -XX:+UseSerialGCM-BM- -XX:MaxRAMPercentage=60$
+\`\`\`
+
+\`302 240\` (bát phân) = \`c2 a0\` (hex) = NBSP trong UTF-8; \`cat -A\` in nó là \`M-BM- \`. \`-o json\` in NBSP nguyên dạng (không thoát thành \`\\u00a0\`), trông y như dấu cách. Trong vim (\`:set list listchars=nbsp:+\`, đứng trên ký tự, \`ga\`): \`< > 160, Hex 00a0, Oct 240, Digr NS\`. Kiểm từ trong container, bằng một bản sao của Pod hỏng chạy lệnh khác thay JVM:
+
+\`\`\`bash
+k -n shop debug gateway-c4bcd47b4-4fxpm --copy-to=gw-debug --container=gateway -- sleep 600
+k -n shop exec gw-debug -c gateway -- sh -c 'printenv JAVA_OPTS | od -An -tx1'
+#  2d 58 58 3a 2b 55 73 65 53 65 72 69 61 6c 47 43
+#  c2 a0 2d 58 58 3a 4d 61 78 52 41 4d 50 65 72 63
+#  65 6e 74 61 67 65 3d 36 30 0a
+k -n shop get pod gw-debug --show-labels        # LABELS <none>: bản sao không lọt vào Service
+k -n shop delete pod gw-debug $now
+printf 'BAD_CHAR=c2a0\n' >> ~/drills/s16/answers.env
+\`\`\`
+
+Bản sao giữ \`restartPolicy: Always\`: lệnh ngắn (\`sh -c '…'\`) thoát là kubelet chạy lại nó, nên dùng \`sleep\` rồi \`exec\`.
+
+**Bước 4 — YAML đang chạy và sửa ở nguồn**
+
+\`\`\`bash
+k -n shop get deploy catalog -o jsonpath='{.spec.template.spec.containers[0].image}'; echo     # shop/catalog:1.1
+k -n shop get deploy order -o yaml | grep -B2 -A3 secretKeyRef
+vim ~/shop/catalog.yaml       # image: shop/catalog:1.0
+vim ~/shop/order.yaml         # key: DB_PASSWORD
+vim ~/shop/gateway.yaml       # xoá hẳn khối env JAVA_OPTS: cuối s15 gateway không có biến này
+k apply -f ~/shop/
+for d in catalog order gateway; do k -n shop rollout status deploy/$d; done
+\`\`\`
+
+"Đồng nghiệp" đã ghi lại tệp bằng một công cụ YAML nên comment và cách viết danh sách trong tệp của bạn có thể đổi; nội dung thì vẫn là của bạn cộng ba chỗ sửa. Đừng sửa order bằng cách thêm khoá \`DB_PASS\` vào Secret: chữa triệu chứng, để lại tham chiếu sai.
+
+**Bước 5 — Pod lẻ report-once**
+
+\`\`\`bash
+k -n shop logs report-once
+# wget: server returned error: HTTP/1.1 404
+k -n shop get pod report-once -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode} {.status.phase}'; echo   # 1 Failed
+echo REPORT_EXIT_CODE=1 >> ~/drills/s16/answers.env
+k -n shop edit pod report-once         # sửa /api/oders → /api/orders, lưu
+# error: pods "report-once" is invalid
+# A copy of your changes has been stored to "/tmp/kubectl-edit-3359457661.yaml"
+# error: Edit cancelled, no valid changes were saved.
+sed -i 's|/api/oders|/api/orders|' ~/drills/s16/report-once.yaml
+k replace --force -f ~/drills/s16/report-once.yaml
+k -n shop get pod report-once            # Completed
+\`\`\`
+
+\`command\` là trường bất biến của Pod; Pod \`Never\` đã \`Failed\` cũng không bao giờ chạy lại. \`replace --force\` xoá và tạo lại từ tệp trong một lệnh (tệp \`/tmp/kubectl-edit-….yaml\` mà \`edit\` để lại cũng dùng được).
+
+**Bước 6 — Xác nhận**
+
+\`\`\`bash
+k -n shop get pod          # không còn ErrImagePull, CrashLoopBackOff, CreateContainerConfigError, Error
+\`\`\`
+
+Rồi \`./labs/lab verify cka s16\`. Lời giải tự động \`labs/cka/sessions/s16/apply.sh\` chạy chính kịch bản gây lỗi rồi áp đúng các cách sửa này.`,
+    exam: {
+      patterns: [
+        "\"Pod X không chạy, tìm nguyên nhân và sửa\" — STATUS → Events → `logs --previous` → `get -o yaml`.",
+        "\"Ghi log của container đã chết vào /opt/…\" — `k logs <pod> -c <container> --previous > /opt/…`.",
+        "\"Liệt kê Events của namespace theo thời gian vào tệp\" — `k get events -n <ns> --sort-by=.metadata.creationTimestamp > …`.",
+        "\"Sửa lệnh/cổng/env của một Pod đang chạy\" — `get -o yaml > f`, sửa, `replace --force -f f`.",
+      ],
+      timeTargetMin: 8,
+      drills: [
+        {
+          text: "Trong 3 phút: gắn một container gỡ lỗi `busybox:1.37` vào một Pod catalog đang chạy (không tạo bản sao) và từ đó gọi `wget -qO- localhost:8080/actuator/health`.",
+          timeLimitMin: 3,
+          solution: "```bash\nk -n shop debug -it <pod catalog> --image=busybox:1.37 --target=catalog -- sh\n# trong shell của container gỡ lỗi:\nwget -qO- localhost:8080/actuator/health\n```\nEphemeral container dùng chung network namespace với Pod (nên `localhost:8080` là catalog) và `--target` cho thấy cả tiến trình của container đích. Nó không xoá được: chỉ mất khi Pod bị thay.",
+        },
+        {
+          text: "Trong 2 phút: in 10 Event mới nhất loại Warning trong namespace `shop`.",
+          timeLimitMin: 2,
+          solution: "```bash\nk -n shop get events --field-selector type=Warning --sort-by=.lastTimestamp | tail -10\n```",
+        },
+      ],
+    },
+    tips: [
+      "Thứ tự cố định: `get pod` → `get events --sort-by` → `logs --previous` → `get -o yaml`. Bốn lệnh, chưa sửa gì.",
+      "Exit code: 1 hay 2 thường là app tự báo lỗi, 127 lệnh không tìm thấy, 137 bị SIGKILL (OOM hoặc hết grace), 143 SIGTERM.",
+      "`--copy-to` của `kubectl debug` tạo một Pod lẻ mới: nhớ xoá sau khi xong.",
+      "Chép lệnh từ web vào YAML: bật `:set list` có `nbsp` trước khi lưu.",
+    ],
+    outcome: {
+      md: `Shop về đúng trạng thái cuối s15 sau sự cố đầu tiên ở tầng workload, và \`~/shop/\` lại là nguồn sự thật. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s16
+\`\`\`
+
+Verify so ba Deployment với trạng thái cuối s15 (image, replica, cấu hình), đòi gateway không có \`JAVA_OPTS\`, so tệp trong \`~/shop/\` với cluster, đọc lệnh và trạng thái của \`report-once\`, rồi quét mọi Pod của \`shop\`. Chặng 2 xong: mốc \`st2-done\`.`,
+      verifyOutput: "lab: kiểm s16\n  (chờ apiserver và các Pod đang khởi động, nếu có)\n  ✓ gateway: shop/gateway:2.0, 2/2/2, rollout xong, EndpointSlice 2/2; envFrom, volume, probe, preStop nguyên; ~/shop/gateway.yaml khớp\n  ✓ catalog: shop/catalog:1.0, 2/2/2, rollout xong, EndpointSlice 2/2; secretKeyRef, probe, preStop nguyên; ~/shop/catalog.yaml khớp\n  ✓ order: shop/order:1.0, 1/1/1, rollout xong, EndpointSlice 1/1; secretKeyRef, probe, preStop nguyên; ~/shop/order.yaml khớp\n  ✓ gateway: không có JAVA_OPTS (như cuối s15)\n  ✓ Pod report-once: image busybox:1.37 (như CronJob order-report), gọi /api/orders, Succeeded\n  ✓ namespace shop: không Pod nào Failed, chờ vì lỗi, hay là Pod lẻ ngoài report-once\n  ✓ answers.env: REPORT_EXIT_CODE=1 (mã thoát của report-once trước khi sửa)\n  ✓ answers.env: BAD_CHAR=c2a0 (hai byte của ký tự lạ trong JAVA_OPTS)\n  → 8/8 đạt",
+      projectDelta: "shop đã qua sự cố đầu tiên ở tầng workload và có quy trình chẩn đoán Pod để dùng lại. Chặng 2 xong (mốc `st2-done`): chặng 3 bắt đầu đặt requests/limits và lập lịch.",
+    },
+    review: [
+      { q: "Bốn bước chẩn đoán một Pod không chạy là gì?", a: "`get pod` (STATUS, RESTARTS) → Events (`get events --sort-by=.lastTimestamp` hoặc `describe`) → `logs --previous` → `get … -o yaml` so với thứ bạn nghĩ đã apply." },
+      { q: "`CreateContainerConfigError` và `CrashLoopBackOff` khác nhau ở đâu, đọc lý do ở đâu?", a: "ConfigError: kubelet không dựng được cấu hình (thiếu Secret/ConfigMap/khoá), tiến trình chưa chạy — đọc Events. CrashLoopBackOff: tiến trình chạy rồi thoát, kubelet lùi dần trước lần chạy sau — đọc `logs --previous` và exitCode." },
+      { q: "Rollout hỏng nhưng shop vẫn trả lời. Vì sao, và vì sao vẫn phải sửa ngay?", a: "Pod mới không Ready nên Pod cũ không bị xoá (maxUnavailable 0). Khi node khởi động lại hay Pod cũ bị thay, chỉ còn template hỏng: shop sập." },
+      { q: "Vì sao không sửa lệnh của Pod `report-once` bằng `kubectl edit`?", a: "`command` là trường bất biến của Pod: API từ chối. Phải xoá và tạo lại, `replace --force -f` làm cả hai trong một lệnh từ tệp." },
+      { q: "JVM báo một cờ lạ trông giống hai cờ đúng nối nhau. Kiểm thế nào?", a: "Có ký tự không phải dấu cách thật (thường NBSP U+00A0) giữa hai cờ. `cat -A`, vim `:set list listchars=nbsp:+`, hoặc `printenv … | od -An -tx1` trong container (thấy `c2 a0`)." },
+    ],
   },
 ];
