@@ -162,7 +162,7 @@ export const skills = [
   { id: "k-debug-container", kind: "command", area: "kubernetes", label: "k debug -it <pod> --image=busybox --target=<container>", ref: cmd("ca025") },
 
   // ── s17 Requests, limits, QoS, JVM ──
-  { id: "k-set-resources", kind: "command", area: "kubernetes", label: "k set resources deploy/catalog --requests=cpu=250m,memory=384Mi --limits=memory=512Mi" },
+  { id: "k-set-resources", kind: "command", area: "kubernetes", label: "k set resources deploy/catalog --requests=cpu=200m,memory=256Mi --limits=memory=384Mi" },
   { id: "k-resources-yaml", kind: "yaml", area: "kubernetes", label: "resources.requests và resources.limits trong Pod spec", ref: yaml("sn-pod-full") },
   { id: "k-qos-classes", kind: "concept", area: "kubernetes", label: "QoS Guaranteed / Burstable / BestEffort và thứ tự bị evict" },
   { id: "k-oomkilled", kind: "command", area: "kubernetes", label: "k get pod <pod> -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason}'" },
@@ -172,13 +172,13 @@ export const skills = [
   // ── s18 Namespace, LimitRange, ResourceQuota ──
   { id: "k-create-ns", kind: "command", area: "kubernetes", label: "k create ns shop", ref: cmd("c008") },
   { id: "k-set-context-ns", kind: "command", area: "kubernetes", label: "k config set-context --current --namespace=shop", ref: cmd("c007") },
-  { id: "k-create-quota", kind: "command", area: "kubernetes", label: "k create quota shop-quota --hard=pods=20,requests.cpu=2,limits.memory=4Gi -n shop", ref: cmd("c045") },
+  { id: "k-create-quota", kind: "command", area: "kubernetes", label: "k -n quota-lab create quota pod-cap --hard=pods=2", ref: cmd("c045") },
   { id: "k-quota-yaml", kind: "yaml", area: "kubernetes", label: "ResourceQuota cho namespace", ref: yaml("sn-resourcequota") },
   { id: "k-limitrange-yaml", kind: "yaml", area: "kubernetes", label: "LimitRange: default, defaultRequest, max", ref: yaml("sn-limitrange") },
   { id: "k-describe-quota", kind: "command", area: "kubernetes", label: "k describe quota,limitrange -n shop" },
 
   // ── s19 nodeSelector, affinity, taint, toleration ──
-  { id: "k-label-node", kind: "command", area: "kubernetes", label: "k label node cka-w2 disktype=ssd", ref: cmd("ca013") },
+  { id: "k-label-node", kind: "command", area: "kubernetes", label: "k label node cka-w2 role=db (role- để gỡ)", ref: cmd("ca013") },
   { id: "k-nodeselector-toleration", kind: "yaml", area: "kubernetes", label: "Pod với nodeSelector và toleration", ref: yaml("sn-pod-nodeselector-toleration") },
   { id: "k-node-affinity", kind: "yaml", area: "kubernetes", label: "nodeAffinity required và preferred", ref: yaml("sn-node-affinity") },
   { id: "k-taint-node", kind: "command", area: "kubernetes", label: "k taint node cka-w2 dedicated=db:NoSchedule (thêm - ở cuối để gỡ)", ref: cmd("ca012") },

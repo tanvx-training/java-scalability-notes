@@ -3,9 +3,9 @@
 # ~/shop/<tên>.yaml có resources và khớp Deployment, ba Deployment Available đúng số replica; oom-lab đã xoá;
 # answers.env khớp. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
-echo "  (chờ apiserver và ba Deployment, nếu đang khởi động: tối đa ~4 phút)"
+echo "  (chờ apiserver và ba Deployment, nếu đang khởi động: tối đa ~6 phút)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
-  for i in \$(seq 1 80); do
+  for i in \$(seq 1 120); do
     u=\$(kubectl --request-timeout=10s -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null | awk '\$1!=\$2' | grep -c .)
     [ \"\$u\" = 0 ] && break; sleep 3
   done" >/dev/null 2>&1 || true

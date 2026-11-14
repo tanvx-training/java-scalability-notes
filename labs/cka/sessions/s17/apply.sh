@@ -24,7 +24,7 @@ fns="pod() { kubectl -n shop get pod -l app=oom-lab --field-selector=status.phas
   up() { for i in \$(seq 1 90); do p=\$(pod); [ -n \"\$p\" ] && kubectl get --raw \"/api/v1/namespaces/shop/pods/\$p:8080/proxy/actuator/health\" 2>/dev/null | grep -q UP && return 0; sleep 2; done; return 1; }
   alloc() { kubectl get --raw \"/api/v1/namespaces/shop/pods/\$(pod):8080/proxy/internal/alloc?mb=\$1\" 2>&1 | tail -n1; }"
 
-echo "s17: oom-lab với -Xmx bằng memory limit, gọi /internal/alloc (khoảng hai phút)"
+echo "s17: oom-lab với -Xmx bằng memory limit, gọi /internal/alloc (khoảng một phút)"
 res="$(vm "$cp" "set -e; $fns
   kubectl -n shop delete deploy oom-lab --ignore-not-found --wait=true >/dev/null
   kubectl -n shop wait --for=delete pod -l app=oom-lab --timeout=120s >/dev/null 2>&1 || true
