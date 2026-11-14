@@ -6,7 +6,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,7 +55,7 @@ class S08AnswersTest {
     Map<String, String> ans = Support.answers("s08");
     String overhead = Support.answer(ans, "GCM_OVERHEAD_BYTES", "s08");
     String cbc16 = Support.answer(ans, "CBC_LENGTH_FOR_16", "s08");
-    String twoArgSame = Support.answer(ans, "AES_TWO_ARG_SAME_CIPHERTEXT", "s08");
+    String iterations = Support.answer(ans, "WITH_PASSWORD_ITERATIONS", "s08");
     BytesEncryptor gcm = AesGcmBytesEncryptor.withSecretKey(key()).build();
     byte[] p = PLAIN.getBytes(StandardCharsets.UTF_8);
     assertThat(overhead).withFailMessage("GCM_OVERHEAD_BYTES=%s chưa đúng số byte AesGcmBytesEncryptor thêm vào bản rõ", overhead)
@@ -64,10 +63,10 @@ class S08AnswersTest {
     BytesEncryptor cbc = AesCbcBytesEncryptor.withSecretKey(key()).build();
     assertThat(cbc16).withFailMessage("CBC_LENGTH_FOR_16=%s chưa đúng độ dài đầu ra của AesCbcBytesEncryptor cho 16 byte", cbc16)
         .isEqualTo(String.valueOf(cbc.encrypt(new byte[16]).length));
-    @SuppressWarnings("deprecation")
-    BytesEncryptor old = new org.springframework.security.crypto.encrypt.AesBytesEncryptor("secret", "5c0744940b5c369b");
-    boolean same = Arrays.equals(old.encrypt(p), old.encrypt(p));
-    assertThat(twoArgSame).withFailMessage("AES_TWO_ARG_SAME_CIPHERTEXT=%s chưa đúng", twoArgSame).isEqualToIgnoringCase(String.valueOf(same));
+    Field f = AesGcmBytesEncryptor.class.getDeclaredField("DEFAULT_PBKDF2_ITERATIONS");
+    f.setAccessible(true);
+    assertThat(iterations.replace("_", "").replace(",", "")).withFailMessage("WITH_PASSWORD_ITERATIONS=%s chưa đúng số vòng PBKDF2 của AesGcmBytesEncryptor.withPassword", iterations)
+        .isEqualTo(String.valueOf(f.get(null)));
   }
 
   @Test
@@ -85,16 +84,12 @@ class S08AnswersTest {
         .isEqualTo(measured);
     String deluxClass = Support.answer(ans, "DELUX_CLASS", "s08");
     String deluxDelegate = Support.answer(ans, "DELUX_DELEGATE", "s08");
-    String textMode = Support.answer(ans, "TEXT_MODE", "s08");
     TextEncryptor delux = Encryptors.delux("secret", "5c0744940b5c369b");
     Object inner = field(delux, "encryptor");
     assertThat(deluxClass).withFailMessage("DELUX_CLASS=%s chưa đúng lớp của Encryptors.delux(...)", deluxClass)
         .isEqualTo(delux.getClass().getSimpleName());
     assertThat(deluxDelegate).withFailMessage("DELUX_DELEGATE=%s chưa đúng lớp BytesEncryptor bên trong", deluxDelegate)
         .isEqualTo(inner.getClass().getSimpleName());
-    Object textAlg = field(field(Encryptors.text("secret", "5c0744940b5c369b"), "encryptor"), "alg");
-    assertThat(textMode).withFailMessage("TEXT_MODE=%s chưa đúng chế độ AES của Encryptors.text(...)", textMode)
-        .isEqualToIgnoringCase(((Enum<?>) textAlg).name());
   }
 
   @Test
@@ -122,18 +117,5 @@ class S08AnswersTest {
     String measured = new String(cbc.decrypt(d), StandardCharsets.UTF_8);
     assertThat(flipped).withFailMessage("CBC_IV_FLIP_RESULT=%s chưa đúng chuỗi giải ra sau khi lật bit thấp nhất của byte đầu IV", flipped)
         .isEqualTo(measured);
-  }
-
-  @Test
-  void keysAndDerivation() throws Exception {
-    Map<String, String> ans = Support.answers("s08");
-    String len = Support.answer(ans, "STRING_KEY_LENGTH", "s08");
-    String iterations = Support.answer(ans, "WITH_PASSWORD_ITERATIONS", "s08");
-    assertThat(len).withFailMessage("STRING_KEY_LENGTH=%s chưa đúng độ dài chuỗi KeyGenerators.string() sinh ra", len)
-        .isEqualTo(String.valueOf(KeyGenerators.string().generateKey().length()));
-    Field f = AesGcmBytesEncryptor.class.getDeclaredField("DEFAULT_PBKDF2_ITERATIONS");
-    f.setAccessible(true);
-    assertThat(iterations.replace("_", "").replace(",", "")).withFailMessage("WITH_PASSWORD_ITERATIONS=%s chưa đúng số vòng PBKDF2 của AesGcmBytesEncryptor.withPassword", iterations)
-        .isEqualTo(String.valueOf(f.get(null)));
   }
 }

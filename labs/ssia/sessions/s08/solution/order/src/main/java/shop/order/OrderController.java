@@ -24,9 +24,25 @@ import org.springframework.web.client.RestClientResponseException;
 public class OrderController {
 
   /** deliveryAddress tuỳ chọn (s08): lưu đã mã hoá, chỉ người đặt đơn đọc được bản rõ. */
-  public record NewOrder(long productId, int qty, String deliveryAddress) {}
+  public record NewOrder(long productId, int qty, String deliveryAddress) {
+    // toString mặc định của record in nguyên địa chỉ; Spring MVC ở DEBUG log thân request bằng toString.
+    @Override
+    public String toString() {
+      return "NewOrder[productId=" + productId + ", qty=" + qty + ", deliveryAddress=" + mask(deliveryAddress) + "]";
+    }
+  }
 
-  public record Order(long id, long productId, int qty, Instant createdAt, String deliveryAddress) {}
+  public record Order(long id, long productId, int qty, Instant createdAt, String deliveryAddress) {
+    @Override
+    public String toString() {
+      return "Order[id=" + id + ", productId=" + productId + ", qty=" + qty + ", createdAt=" + createdAt
+          + ", deliveryAddress=" + mask(deliveryAddress) + "]";
+    }
+  }
+
+  private static String mask(String s) {
+    return s == null ? "null" : "***";
+  }
 
   private final JdbcClient jdbc;
   private final RestClient catalog;
