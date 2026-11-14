@@ -4,7 +4,7 @@ Ba service Spring Boot nhỏ (`gateway`, `catalog`, `order`) và module chung `c
 
 ## Chạy
 
-Cần JDK 21, Maven và git. Tạo workspace, rồi làm việc trong `labs/ssia/work/`:
+Cần JDK, Maven và git. JDK đã chạy được: 21 (Amazon Corretto 21.0.11) và 25 (Microsoft OpenJDK 25.0.4); chi tiết trong `VERSIONS.md`. Trên JDK 25, `mvn test` vẫn xanh nhưng in cảnh báo của Mockito/ByteBuddy (tự gắn agent động). Muốn sạch cảnh báo, chuyển sang JDK 21 trên macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`. Maven dùng `JAVA_HOME`, còn lệnh `java` lấy theo `PATH`; hai thứ có thể là hai JDK khác nhau, nên kiểm bằng `mvn -v` và `java -version`. Tạo workspace, rồi làm việc trong `labs/ssia/work/`:
 
 ```
 ./labs/lab up ssia
@@ -12,6 +12,10 @@ cd labs/ssia/work
 mvn -q test
 mvn -q -pl order -am package -DskipTests && java -jar order/target/order.jar
 ```
+
+Lệnh `mvn -pl order spring-boot:run` không dùng được ở cấu trúc này (`common` không nằm trong reactor nên không phân giải được; thêm `-am` thì lỗi vì `common` không có lớp main). Hãy dùng lệnh `package` rồi `java -jar` ở trên.
+
+`POST /orders` gọi sang `catalog`, nên cần `catalog` đang chạy trên cổng 8081 (`java -jar catalog/target/catalog.jar` sau khi `package`); `GET /orders` và `/actuator/health` thì không cần.
 
 Không có `DB_URL` thì `order` và `catalog` dùng H2 trong bộ nhớ (catalog có sẵn 3 sản phẩm), không cần Docker.
 
