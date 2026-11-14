@@ -28,12 +28,14 @@ Lệnh:
   status <chương trình>    hiện trạng thái (VM, hoặc workspace và cổng với driver local)
   destroy <chương trình>   xoá hẳn môi trường (hỏi trước, --yes để bỏ hỏi; driver local: lưu gói vào backups/ trước)
   check <ct> <buổi>        kiểm đầu vào của buổi (không sửa gì)
-  begin <ct> <buổi>        check rồi chạy setup.sh của buổi
+  begin <ct> <buổi>        check rồi chạy setup.sh của buổi (driver local: commit trước, chép test của buổi)
   verify <ct> <buổi>       kiểm kết quả của buổi
-  restore <ct> <buổi>      đưa VM về trạng thái sau khi hoàn thành buổi (mốc gần nhất hoặc dựng lại)
+  restore <ct> <buổi>      đưa môi trường về trạng thái sau khi hoàn thành buổi (VM: mốc gần nhất hoặc dựng lại;
+                           driver local: dựng lại từ bản gốc, code của bạn vào nhánh backup/<thời điểm>)
   break <ct> <mã-lỗi>      gây lỗi có chủ ý để luyện sự cố
   mock <ct> <đề> start|score   bắt đầu hoặc chấm đề mock (score in dòng devprep-mock:v1)
-  selftest <ct> [--from <buổi>]  chạy apply + verify mọi buổi trên VM sạch
+  selftest <ct> [--from <buổi>]  chạy lời giải + verify mọi buổi trên VM sạch (driver local: trên workspace tạm,
+                           không nhận --from)
   snapshot <ct> <tên>      chụp snapshot mọi VM của chương trình
   images <ct>              build (nếu chưa có) và nạp image ứng dụng vào containerd của từng VM
   help                     in trợ giúp này

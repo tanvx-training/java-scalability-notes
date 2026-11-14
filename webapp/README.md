@@ -24,7 +24,7 @@ Nguồn markdown nằm ở [`../sources/`](../sources/README.md); app đọc b�
 | 🎓 Chứng chỉ K8s · ⚡ Thực hành nhanh · 🧪 Labs · ⏱️ Thi thử | Chỉ lĩnh vực Kubernetes: so sánh 5 chứng chỉ; 130 lệnh, 48 YAML mẫu, 16 quy trình, thẻ trước giờ thi (ghim, lọc, chế độ gọn); 22 lab đề thật; thi thử bấm giờ theo tỷ trọng domain |
 | 🃏 Flashcards · ✅ Trắc nghiệm | 174 thẻ spaced repetition, 220 câu có giải thích — Kubernetes và Lập trình hệ thống |
 | 🎤 Câu hỏi phỏng vấn | **360 câu tự luận** có đáp án mẫu và rubric trên **15 lĩnh vực** (JPA, Java Concurrency in Practice, Optimizing Cloud Native Java, Java Scalability, Modern Java in Action, Effective Java, The Well-Grounded Java Developer, Java Under the Hood, DDIA, PostgreSQL 14 Internals, Kafka, Modern Concurrency, Spring Start Here, Spring Security, Lập trình hệ thống) — mỗi lĩnh vực 6 chủ đề × 4 cấp năng lực (L1 Hiểu lý thuyết → L4 Thiết kế & xử lý sự cố), đúng 6 câu mỗi cấp. Hai pha: trả lời rồi mới lật đáp án; tự tick từng ý `mustCover` rồi tự chấm ba mức; tổng kết tách theo cấp để thấy rụng ở tầng nào. Hợp đồng cứng theo cấp do `check-data.mjs` ép: L2 phải có `code`, L3 phải có `tradeoffs`, L4 phải có `incident` với `symptom`/`scale`/`constraints` |
-| 🛠️ Thực hành | **Toàn cục** (`#/practice`): chương trình thực hành theo buổi, mỗi buổi 60–90 phút làm trên VM thật bằng bộ lệnh [`labs/lab`](../labs/README.md). Trang buổi có mục tiêu, trạng thái đầu vào / đầu ra, nhiệm vụ tick từng bước, gợi ý, lời giải, mẹo thi, kết quả mong đợi (`verify` in gì) và câu ôn; bấm giờ theo mục tiêu thời gian của đề thi; ghi chú riêng từng buổi; trang **kỹ năng** gom kỹ năng học mới và dùng lại ở buổi nào; thi thử bằng đề mock rồi dán dòng `devprep-mock:v1:…` do `./labs/lab mock … score` in ra để lưu điểm theo domain. Buổi khung (chưa phát hành) hiện đề cương nhưng không tính vào tiến độ. Chương trình có sẵn: CKA. Bảng điều khiển của lĩnh vực có thẻ tiến độ Thực hành |
+| 🛠️ Thực hành | **Toàn cục** (`#/practice`): chương trình thực hành theo buổi, mỗi buổi 60–90 phút làm bằng bộ lệnh [`labs/lab`](../labs/README.md), trên VM thật (CKA) hoặc trên workspace git ngay trên máy bạn (Spring Security in Action, JDK + Maven). Trang buổi có mục tiêu, trạng thái đầu vào / đầu ra, nhiệm vụ tick từng bước, gợi ý, lời giải, mẹo thi, kết quả mong đợi (`verify` in gì) và câu ôn; bấm giờ theo mục tiêu thời gian của đề thi; ghi chú riêng từng buổi; trang **kỹ năng** gom kỹ năng học mới và dùng lại ở buổi nào; thi thử bằng đề mock rồi dán dòng `devprep-mock:v1:…` do `./labs/lab mock … score` in ra để lưu điểm theo domain. Buổi khung (chưa phát hành) hiện đề cương nhưng không tính vào tiến độ. Chương trình có sẵn: CKA. Bảng điều khiển của lĩnh vực có thẻ tiến độ Thực hành |
 | 🔍 Tìm kiếm toàn cục | `Ctrl/⌘ K` hoặc `/`: tài liệu, bài học, lab, lệnh, YAML, quy trình, flashcard — **khớp không dấu**, chuyển lĩnh vực tự động khi mở kết quả |
 | ⚙️ Cài đặt & tiến độ | Theme (sáng / tối / hệ thống), cỡ chữ đọc, **xuất / nhập toàn bộ tiến độ** (JSON), dung lượng từng khoá, đặt lại |
 
@@ -129,21 +129,46 @@ webapp/
 ```
 
 Sửa lịch 104 tuần: chỉ sửa `js/data/senior-java/schedule.js` (mỗi tuần một khối `w(n, {...})`, tham chiếu `[weekId, from, to]`), chạy `check-data.mjs` (PL1–PL4), rồi sinh lại bảng tuần trong `sources/senior-java/06-…md` từ dữ liệu.
-Thêm buổi thực hành: sửa `js/data/practice/<chương trình>/stage-NN.js` (khai đủ trường của buổi khung —
-`id`, `stage`, `title`, `durationMin`, `domain`, `competencies`, `requires`, `pieces`, `goals`, `skills`,
-`uses` (mảng), `status` (`"skeleton"` hoặc `"published"`), `stateIn`, `stateOut`), thêm id vào `stages[].sessions` trong `program.js` và vào `labs/<chương trình>/sessions/ORDER`
-(cùng thứ tự). Phát hành một buổi: đổi `status` thành `"published"`, viết đủ `mindset`, `refs`, `tasks`,
-`hints`, `solution`, `exam`, `tips`, `outcome`, `review`, thêm thư mục script `labs/<chương trình>/sessions/<id>/`
-(`apply.sh` + `verify.sh`, chạy thử trên VM thật), tăng số `practice-published:<chương trình>` trong bảng kỳ vọng
-của `check-data.mjs` (sửa số **trước**), rồi chạy `check-data.mjs`.
-Thêm chương trình thực hành: `program.js` phải khai `field` là id một lĩnh vực có trong `fields.js` (PR1) và
-`skillAreas: [{ id, label, prefix }]` cho các mảng kỹ năng (PR5). `exam` là tuỳ chọn: chương trình theo chứng chỉ khai
-`exam.domains` (tỷ trọng cộng đúng 100), `passPct`, `durationMin`; chương trình theo chủ đề bỏ hẳn `exam`, khi đó trang
-không hiện độ phủ đề thi, số tuần còn lại, tag domain, ngưỡng đậu, và không có trang mock nếu không có đề. Mỗi đề trong
-`mocks.js` cần `exam` và `labs/<id>/mocks/<đề>/{setup.sh,score.sh}` (PR10, PR11). Tạo `js/data/practice/<id>/` (`program.js`, `skills.js`, `mocks.js`, các `stage-NN.js`),
-đăng ký trong `js/data/practice/index.js`, khai số kỳ vọng trong `check-data.mjs`, và tạo phần chạy trên máy
-tại `labs/<id>/` — các bước chi tiết ở [`../labs/README.md`](../labs/README.md). `lib/practice.js` và
-`views/practice.js` dùng chung, không được nhắc tên chương trình nào (PR12).
+Thêm buổi hay chương trình thực hành: xem mục [Thêm chương trình thực hành](#thêm-chương-trình-thực-hành) dưới đây.
 Thêm câu hỏi / câu hỏi phỏng vấn / flashcard / lab: sửa tệp tương ứng trong `js/data/<lĩnh vực>/` theo schema ở đầu tệp,
 chạy `check-data.mjs` — không cần đụng view. Thêm lĩnh vực: khai trong `fields.js` (kèm `short`/`unit`), xếp vào một con đường trong `paths.js`, tạo
 `js/data/<id>/docs.js` (có `chapter`/`part`), thêm `fieldGuides[id]` và `trackGuides` cho mỗi track.
+
+## Thêm chương trình thực hành
+
+Dữ liệu của một chương trình nằm ở `js/data/practice/<id>/`: `program.js` (meta, môi trường, project, chặng), `stage-NN.js` (buổi), `skills.js`, `mocks.js`; `js/data/practice/index.js` import và ráp chúng vào `PROGRAMS`. `lib/practice.js` và `views/practice.js` dùng chung, không được nhắc tên chương trình nào (PR12). Quy tắc nằm ở PR1–PR12 trong `scripts/check-data.mjs`; phần quy tắc của các trường mới tách ra `scripts/practice-rules.mjs` để test đơn vị được. Phần chạy trên máy (`labs/<id>/`) theo [`../labs/README.md`](../labs/README.md#thêm-một-chương-trình-thực-hành-mới).
+
+**Thêm một buổi:** khai đủ trường của buổi khung trong `stage-NN.js` — `id`, `stage`, `title`, `durationMin`, `domain` (`null` khi chương trình không có đề thi), `competencies`, `requires`, `pieces`, `goals`, `skills`, `uses` (mảng), `status` (`"skeleton"` hoặc `"published"`), `stateIn`, `stateOut` — rồi thêm id vào `stages[].sessions` trong `program.js` và vào `labs/<id>/sessions/ORDER` (cùng thứ tự, PR11).
+
+**Phát hành một buổi:** đổi `status` thành `"published"`, viết đủ `mindset`, `refs`, `tasks` (≥ 3), `hints` (≥ 2), `solution`, `tips` (≥ 2), `outcome` (`md`, `verifyOutput` là output thật của một lần `verify`, `projectDelta` khi có project), `review` (3–5 câu), và khối luyện tập: `exam` nếu chương trình có đề thi, `work` nếu không (xem dưới). Thêm thư mục `labs/<id>/sessions/<buổi>/` theo driver (`multipass`: `apply.sh` + `verify.sh`, chạy thử trên VM thật; `local`: `verify.sh` + `solution/` hoặc `apply.sh`, chạy thử bằng `./labs/lab selftest <id>`), tăng số `practice-published:<id>` trong bảng kỳ vọng của `check-data.mjs` (sửa số **trước**), rồi chạy `check-data.mjs`.
+
+**Thêm một chương trình:** `program.js` khai `field` là id một lĩnh vực có trong `fields.js` (PR1) và `skillAreas: [{ id, label, prefix }]` (PR5; mỗi kỹ năng trong `skills.js` có `area` thuộc danh sách này và id bắt đầu bằng `prefix` của nó). `exam` là tuỳ chọn: chương trình theo chứng chỉ khai `exam.domains` (tỷ trọng cộng đúng 100), `passPct`, `durationMin`; chương trình theo chủ đề bỏ hẳn `exam`, khi đó trang không hiện độ phủ đề thi, số tuần còn lại, tag domain, ngưỡng đậu, và không có trang mock. Mỗi đề trong `mocks.js` cần `exam` và `labs/<id>/mocks/<đề>/{setup.sh,score.sh}` (PR10, PR11). Đăng ký trong `index.js`, khai số kỳ vọng (`practice-sessions:<id>`, `practice-published:<id>`) trong `check-data.mjs`.
+
+### Trường dữ liệu cho chương trình chạy cục bộ và theo sách
+
+Các trường dưới đây đều tuỳ chọn; chương trình không khai thì chạy như trước (CKA chỉ khai `env.tool: "multipass"`). Ví dụ đầy đủ: `js/data/practice/ssia/`.
+
+| Trường | Ở đâu | Ý nghĩa | Quy tắc |
+|---|---|---|---|
+| `env.tool` | `program.js` | Driver của bộ lab: `"multipass"` hoặc `"local"`, khớp `LAB_DRIVER` trong `labs/<id>/env.sh` | PR8: chỉ hai giá trị đó. PR11: `"local"` thì buổi đã phát hành cần `verify.sh` và `solution/` hoặc `apply.sh`; khác thì cần `apply.sh` + `verify.sh` |
+| `labels.workBlock` | `program.js` | Tiêu đề khối luyện tập của trang buổi khi chương trình không có đề thi (mặc định `🏋️ Luyện tập`; `ssia`: `🧩 Trong công việc`) | PR8: chuỗi không rỗng; `labels` chỉ nhận `workBlock`, `startStep` |
+| `labels.startStep` | `program.js` | Tiêu đề bước 1 trên trang chủ chương trình (mặc định `Khởi động lab`; `ssia`: `Chuẩn bị workspace`) | như trên |
+| `book` | `program.js` | `{ label, docPrefix }`: chương trình học theo một cuốn sách có trong Thư viện | PR8: cần cả hai; mỗi buổi đã phát hành có ít nhất một `refs` trỏ `#/docs/<docPrefix>…` |
+| `rules` | `program.js` | `{ diagram, dissect }` (true/false): bật quy tắc nội dung cho mọi buổi đã phát hành | PR8: `diagram` thì `mindset` có một khối ` ```mermaid `; `dissect` thì có ít nhất một nhiệm vụ `kind: "dissect"` |
+| `stages[].num` | `program.js` | Số hiển thị của chặng trên trang chủ (với `ssia`: số chương sách). Không khai thì dùng chỉ số của chặng, đếm từ 0 | — |
+| `session.work` | `stage-NN.js` | Khối luyện tập của chương trình **không có đề thi**: `patterns` (dạng tình huống thường gặp), `timeTargetMin`, `drills` (`{ text, timeLimitMin, solution }`) | PR8: buổi đã phát hành cần `work.patterns` (≥ 1) và `work.timeTargetMin` > 0 |
+| `session.bookDiff` | `stage-NN.js` | Bảng **📕 Khác với sách**: mảng `{ book, now, why }` — sách viết gì, phiên bản đang dùng làm gì (đã quan sát), vì sao | PR8: cả ba chuỗi không rỗng |
+| `tasks[].kind` | `stage-NN.js` | `"dissect"`: nhiệm vụ mổ xẻ (đọc log, chạy debugger, ghi kết quả vào tệp trả lời); trang buổi gắn nhãn "mổ xẻ" | PR8: chỉ nhận `"dissect"` |
+| kỹ năng `kind: "code"` | `skills.js` | Kỹ năng viết code: Java, annotation, SpEL (cấu hình `application.yml`/`.properties` vẫn là `yaml`). Bản đồ kỹ năng lọc theo nhóm "💻 Code" | PR5: `kind` thuộc `command`, `yaml`, `code`, `procedure`, `concept`, `docs`, `path` |
+
+**Chương trình không có `exam` phải dùng `session.work`.** Khối luyện tập đọc `session.exam ?? session.work`, nên một buổi cũ viết `exam: { patterns, timeTargetMin }` vẫn hiển thị, nhưng PR8 báo lỗi: với chương trình không có `exam`, buổi đã phát hành thiếu `work` bị báo `work.patterns cần ≥1` và `thiếu work.timeTargetMin` (đã thử bằng `sessionContentProblems` trong `practice-rules.mjs`).
+
+### Chương trình theo sách, chạy cục bộ
+
+Các bước cho một chương trình như `ssia` (học theo thứ tự chương một cuốn sách đã có bản dịch trong `sources/`, bộ lab driver `local`):
+
+1. **Phần chạy trên máy**: `labs/<id>/env.sh` với `LAB_DRIVER="local"`, bản gốc của ứng dụng ở `labs/<id>/app/`, `sessions/ORDER`, và mỗi buổi đã phát hành một thư mục theo [hợp đồng buổi của driver `local`](../labs/README.md#hợp-đồng-buổi-của-driver-local). Chạy `./labs/lab selftest <id>` cho tới khi xanh.
+2. **`program.js`**: `field` là lĩnh vực của cuốn sách; bỏ `exam`; `env: { tool: "local", commands: { up, down, status, begin, check, verify, restore, break, selftest, destroy } }` với mẫu `./labs/lab <lệnh> <id> <session>`; `labels` cho hai tiêu đề; `book: { label, docPrefix }` với `docPrefix` là tiền tố id tài liệu của sách trong `js/data/<lĩnh vực>/docs.js` (với `ssia`: `springsec-`); `rules` nếu muốn bắt buộc sơ đồ và nhiệm vụ mổ xẻ; mỗi chặng một chương, `num` là số chương.
+3. **Buổi** (`stage-NN.js`): `domain: null`, khối `work` thay cho `exam`, `refs` trỏ chương sách `#/docs/<docPrefix>NN`, `bookDiff` cho chỗ phiên bản đang dùng khác sách, nhiệm vụ mổ xẻ có `kind: "dissect"`. `mocks.js` xuất mảng rỗng.
+4. **Kỹ năng** (`skills.js`): `kind` theo bảng trên, để trống `ref` (chỉ lĩnh vực có module Thực hành nhanh mới có `ref`, PR5).
+5. Đăng ký trong `index.js`, khai số kỳ vọng, chạy `check-data.mjs` và `node --test "webapp/scripts/tests/*.test.mjs"`.

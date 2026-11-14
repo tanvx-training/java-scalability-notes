@@ -4,7 +4,7 @@ Ba service Spring Boot nhỏ (`gateway`, `catalog`, `order`) và module chung `c
 
 ## Chạy
 
-Cần JDK, Maven và git. JDK đã chạy được: 21 (Amazon Corretto 21.0.11) và 25 (Microsoft OpenJDK 25.0.4); chi tiết trong `VERSIONS.md`. Trên JDK 25, `mvn test` vẫn xanh nhưng in cảnh báo của Mockito/ByteBuddy (tự gắn agent động). Muốn sạch cảnh báo, chuyển sang JDK 21 trên macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`. Maven dùng `JAVA_HOME`, còn lệnh `java` lấy theo `PATH`; hai thứ có thể là hai JDK khác nhau, nên kiểm bằng `mvn -v` và `java -version`. Tạo workspace, rồi làm việc trong `labs/ssia/work/`:
+Cần JDK, Maven và git. JDK đã chạy được: 21 (Amazon Corretto 21.0.11) và 25 (Microsoft OpenJDK 25.0.4); chi tiết trong `VERSIONS.md`. Trên cả JDK 21 lẫn 25, `mvn -q test` xanh nhưng in cùng một bộ cảnh báo của Mockito/ByteBuddy (tự gắn agent động) và một dòng cảnh báo CDS, mỗi JVM test một lần; đổi JDK không làm sạch được. Thêm `-Dmaven.test.redirectTestOutputToFile=true -DargLine=-Xshare:off` (như `verify.sh`) thì màn hình sạch. Chuyển Maven sang JDK 21 trên macOS: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`. Maven dùng `JAVA_HOME`, còn lệnh `java` lấy theo `PATH`; hai thứ có thể là hai JDK khác nhau, nên kiểm bằng `mvn -v` và `java -version`. Tạo workspace, rồi làm việc trong `labs/ssia/work/`:
 
 ```
 ./labs/lab up ssia

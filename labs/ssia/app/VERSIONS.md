@@ -31,7 +31,7 @@ Mọi số dưới đây lấy từ `mvn dependency:tree`, từ `spring-boot-dep
 
 - JDK đã đo (workspace mới từ `./labs/lab up ssia`):
   - Corretto 21.0.11: `mvn -q clean test` xanh (13 test), `order` chạy, `/orders` trả 200 `[]`, `/actuator/health` UP.
-  - Microsoft OpenJDK 25.0.4 (mặc định của `JAVA_HOME` trên máy đo): `mvn -q test` xanh (13 test), `java -jar order/target/order.jar` chạy ("Using Java 25.0.4"), cùng kết quả curl. Khi test in cảnh báo (mỗi JVM test một lần, nguyên văn):
+  - Microsoft OpenJDK 25.0.4 (mặc định của `JAVA_HOME` trên máy đo): `mvn -q test` xanh (13 test), `java -jar order/target/order.jar` chạy ("Using Java 25.0.4"), cùng kết quả curl. Khi test in cảnh báo (mỗi JVM test một lần, nguyên văn). Corretto 21.0.11 in **đúng cùng bộ dòng này** (đo lại 2026-11-14 bằng `mvn -q test` trên workspace mới với `JAVA_HOME=$(/usr/libexec/java_home -v 21)`: hai bộ dòng cảnh báo giống hệt nhau); thêm `-Dmaven.test.redirectTestOutputToFile=true -DargLine=-Xshare:off` thì `mvn -q test` không in dòng nào trên JDK 21:
     - `Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: ...`
     - `WARNING: A Java agent has been loaded dynamically (.../byte-buddy-agent-1.18.15.jar)`, `WARNING: Dynamic loading of agents will be disallowed by default in a future release`
     - `OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended`
