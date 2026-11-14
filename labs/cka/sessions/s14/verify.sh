@@ -28,7 +28,7 @@ expect_eq "lịch sử: ≥ 3 revision, có revision image hỏng cũ hơn revis
     echo đạt"
 expect_eq "~/drills/s14/curl.log: ≥ 30 dòng, mọi dòng mã 200 (dạng '<mã HTTP> <mã thoát curl>', curl -m 5)" "đạt" \
   vm "$cp" "f=~/drills/s14/curl.log; [ -f \$f ] || { echo 'chưa có tệp'; exit 0; }
-    n=\$(grep -c . \$f); b=\$(grep -vc '^200 ' \$f)
+    n=\$(grep -c . \$f); b=\$(grep -vc '^200 0$' \$f)
     [ \"\$n\" -ge 30 ] && [ \"\$b\" = 0 ] && echo đạt || echo \"\$n dòng, \$b dòng khác 200\""
 expect_eq "~/shop/gateway.yaml (apply --dry-run=server): image 2.0, replicas 2, maxUnavailable 0, maxSurge 1" \
   "shop/gateway:2.0 2 0 1" \

@@ -39,7 +39,7 @@ measure() {
   kubectl -n shop rollout status deploy/gateway --timeout=300s >/dev/null
   sleep 15   # Pod cũ còn trong preStop + graceful shutdown: đo tới khi chúng dừng hẳn
   kill \$(cat /tmp/lab-s14-curl.pid); rm -f /tmp/lab-s14-curl.pid"
-  res="$(vm "$cp" "echo \"\$(grep -c . ~/drills/s14/curl.log) \$(grep -vc '^200 ' ~/drills/s14/curl.log)\"")"
+  res="$(vm "$cp" "echo \"\$(grep -c . ~/drills/s14/curl.log) \$(grep -vc '^200 0$' ~/drills/s14/curl.log)\"")"
   echo "s14: curl.log $res (số dòng, số dòng khác 200)"
 }
 echo "s14: rollout gateway 1.0 → 2.0 trong khi vòng curl chạy"
