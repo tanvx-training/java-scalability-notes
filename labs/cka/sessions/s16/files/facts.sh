@@ -38,7 +38,12 @@ def secret_refs(spec):
         if r: out.append(f"{e['name']}<-{r.get('name')}/{r.get('key')}")
     return " ".join(sorted(out))
 def sig(spec, replicas):
-    return f"image={c0(spec).get('image')} replicas={replicas} secret=[{secret_refs(spec)}] JAVA_OPTS={java_opts(spec)!r}"
+    c = c0(spec)
+    probes = [((c.get(k) or {}).get("httpGet") or {}).get("path") for k in ("startupProbe", "livenessProbe", "readinessProbe")]
+    env_from = sorted((x.get("configMapRef") or {}).get("name") or "" for x in c.get("envFrom") or [])
+    vols = sorted((v.get("configMap") or {}).get("name") or "" for v in spec.get("volumes") or [])
+    return (f"image={c.get('image')} replicas={replicas} secret=[{secret_refs(spec)}] JAVA_OPTS={java_opts(spec)!r} "
+            f"probe={probes} preStop={bool((c.get('lifecycle') or {}).get('preStop'))} envFrom={env_from} cm-volume={vols}")
 
 for name, (img, n) in want.items():
     try:
@@ -111,6 +116,9 @@ for p in pods:
     if n != "report-once" and not {o.get("kind") for o in owners} & {"ReplicaSet", "DaemonSet", "Job"}:
         bad.append(f"{n} (Pod lẻ)"); continue
     if ph in ("Failed", "Unknown"): bad.append(f"{n} {ph}"); continue
+    if ph == "Pending" and any(x.get("type") == "PodScheduled" and x.get("status") == "False"
+                               for x in p.get("status", {}).get("conditions") or []):
+        bad.append(f"{n} Pending (chưa xếp lịch được)"); continue
     for cs in (p.get("status", {}).get("initContainerStatuses") or []) + (p.get("status", {}).get("containerStatuses") or []):
         w = (cs.get("state") or {}).get("waiting")
         if w and w.get("reason") not in ("ContainerCreating", "PodInitializing"):

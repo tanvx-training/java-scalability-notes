@@ -6,7 +6,17 @@
 cp="$LAB_CP"
 echo "  (chờ apiserver và ba Deployment; lâu nhất vài phút nếu Pod đang khởi động)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
-  for d in gateway catalog order; do kubectl -n shop rollout status deploy/\$d --timeout=240s; done" >/dev/null 2>&1 || true
+  for d in gateway catalog order; do kubectl -n shop rollout status deploy/\$d --timeout=240s; done
+  # EndpointSlice controller cập nhật ready sau khi Deployment đã thấy Pod Available: chờ tối đa 30 giây tới khi số địa
+  # chỉ ready (không terminating) bằng số replica của từng Deployment.
+  for i in \$(seq 1 15); do ok=1
+    for d in gateway catalog order; do
+      n=\$(kubectl -n shop get deploy \$d -o jsonpath='{.spec.replicas}' 2>/dev/null)
+      r=\$(kubectl -n shop get endpointslices -l kubernetes.io/service-name=\$d -o jsonpath='{range .items[*].endpoints[*]}{.conditions.ready}/{.conditions.terminating}{\"\\n\"}{end}' 2>/dev/null | grep -cE '^true/(false)?$')
+      [ -n \"\$n\" ] && [ \"\$r\" != \"\$n\" ] && ok=0
+    done
+    [ \$ok = 1 ] && break; sleep 2
+  done" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }

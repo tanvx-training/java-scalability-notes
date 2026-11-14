@@ -10,7 +10,7 @@ echo "s16: đã gây sự cố, chờ các Pod hỏng hiện lý do rồi sửa"
 code="$(vm "$cp" "for i in \$(seq 1 60); do
     c=\$(kubectl -n shop get pod report-once -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' 2>/dev/null)
     [ -n \"\$c\" ] && break; sleep 2; done; echo \"\$c\"")"
-# CẦN ĐO: mã thoát của busybox wget khi gặp 404 (dự kiến 1); verify.sh so với cùng giá trị.
+# Đo trên lab: busybox wget gặp 404 thoát 1 (verify.sh so với cùng giá trị).
 [ -n "$code" ] && [ "$code" != 0 ] || { echo "s16: report-once không thoát với mã lỗi: '$code'" >&2; exit 1; }
 vm "$cp" "set -e
 python3 - <<'PY'

@@ -30,7 +30,8 @@ for name, fn in (('catalog', catalog), ('order', order), ('gateway', gateway)):
 for p, text in out.items():
     with open(p, 'w') as f: f.write(text.replace('@@NBSP@@', '\u00a0'))
 PY
-kubectl apply -f ~/shop/catalog.yaml -f ~/shop/order.yaml -f ~/shop/gateway.yaml 2>/dev/null
+kubectl apply -f ~/shop/catalog.yaml -f ~/shop/order.yaml -f ~/shop/gateway.yaml 2>/dev/null \\
+  || { echo 'lab: không apply được ~/shop/{catalog,order,gateway}.yaml (xem lại tệp của trạng thái cuối s15)' >&2; exit 1; }
 mkdir -p ~/drills/s16
 cat > ~/drills/s16/report-once.yaml <<'YAML'
 apiVersion: v1

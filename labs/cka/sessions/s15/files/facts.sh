@@ -93,6 +93,9 @@ else:
         bad.append("Job chưa Complete lúc lưu")
 print("MANUAL=" + ("; ".join(bad) or "đạt"))
 
+def seed_sig(j):
+    s = (j or {}).get("spec", {})
+    return f"completions={s.get('completions')} parallelism={s.get('parallelism')} backoffLimit={s.get('backoffLimit')}"
 # Tệp trong ~/shop/
 bad = []
 for f, kind in (("log-agent", "DaemonSet"), ("seed", "Job"), ("order-report", "CronJob")):
@@ -103,5 +106,6 @@ for f, kind in (("log-agent", "DaemonSet"), ("seed", "Job"), ("order-report", "C
     if d.get("kind") != kind: bad.append(f"{f}.yaml không phải đúng một {kind}"); continue
     if kind == "DaemonSet" and ds_sig(d) != ds_sig(ds): bad.append(f"log-agent.yaml khác DaemonSet: {ds_sig(d)}")
     if kind == "CronJob" and cron_sig(d) != cron_sig(cron): bad.append(f"order-report.yaml khác CronJob: {cron_sig(d)}")
+    if kind == "Job" and seed_sig(d) != seed_sig(seed): bad.append(f"seed.yaml khác Job seed: {seed_sig(d)}")
 print("FILES=" + ("; ".join(bad) or "đạt"))
 PY

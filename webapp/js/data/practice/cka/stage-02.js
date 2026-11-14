@@ -1376,7 +1376,7 @@ Verify đọc chiến lược, image và lịch sử ReplicaSet của gateway, g
     tasks: [
       { id: "t1", text: "DaemonSet không có lệnh `create`: sinh khung bằng `k -n shop create deploy log-agent --image=busybox:1.37 $do > ~/shop/log-agent.yaml`, đổi `kind: DaemonSet`, xoá `replicas`, `strategy`, `status`. Container `agent` chạy vòng `while true; do echo \"$(date -Iseconds) $NODE_NAME $(ls /var/log/pods | wc -l) thư mục log Pod\"; sleep 60; done`, `NODE_NAME` lấy từ `fieldRef: spec.nodeName`, mount `hostPath /var/log` vào `/var/log` với `readOnly: true`. Apply: `k -n shop get ds,pod -l app=log-agent -o wide` — bao nhiêu Pod, trên node nào?" },
       { id: "t2", text: "Thêm toleration cho taint `node-role.kubernetes.io/control-plane` (`k describe node cka-cp | grep Taints` để thấy nó) rồi apply lại; DESIRED/READY phải là 3. `k -n shop logs -l app=log-agent --prefix`." },
-      { id: "t3", text: "Job: `k -n shop create job seed --image=busybox:1.37 $do -- sh -c '…'` > `~/shop/seed.yaml` (lệnh: `wget -qO- --header 'Content-Type: application/json' --post-data '{\"productId\":1,\"qty\":2}' http://gateway:8080/api/orders`), thêm `completions: 3`, `backoffLimit: 2`, `restartPolicy: OnFailure`. Apply, `k -n shop get job seed -w`, `k -n shop logs job/seed`, rồi `k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/orders`." },
+      { id: "t3", text: "Job: sinh khung bằng `k -n shop create job seed --image=busybox:1.37 $do -- sh -c true > ~/shop/seed.yaml`, rồi trong vim đặt lệnh vào một khối `|` của YAML: `wget -qO- --header 'Content-Type: application/json' --post-data '{\"productId\":1,\"qty\":2}' http://gateway:8080/api/orders` (đừng gõ cả lệnh này trong `sh -c '…'` hay `\"…\"` trên dòng lệnh: nháy của JSON sẽ đụng nháy của shell, body mất dấu `\"`, không còn là JSON), thêm `completions: 3`, `backoffLimit: 2`, `restartPolicy: OnFailure`. Apply, `k -n shop get job seed -w`, `k -n shop logs job/seed`, rồi `k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/orders`." },
       { id: "t4", text: "CronJob: `k -n shop create cronjob order-report --image=busybox:1.37 --schedule='*/5 * * * *' $do -- sh -c '…'` > `~/shop/order-report.yaml` (lệnh gọi `GET /api/orders`, in kèm thời điểm, `set -e` để wget lỗi thì Job lỗi), thêm `concurrencyPolicy: Forbid`, `successfulJobsHistoryLimit: 2`, `failedJobsHistoryLimit: 1`, `restartPolicy: OnFailure`. Apply." },
       { id: "t5", text: "Không chờ lịch: `k -n shop create job order-report-manual --from=cronjob/order-report`, chờ Complete, đọc log. `k -n shop get job order-report-manual -o yaml | grep -A6 ownerReferences` — Job này thuộc về ai? `k -n shop get cronjob order-report` — LAST SCHEDULE và `.status.lastSuccessfulTime`. Lưu bằng chứng: `k -n shop get job order-report-manual -o yaml > ~/drills/s15/order-report-manual.yaml` (CronJob dọn Job này theo `successfulJobsHistoryLimit`: verify chấm tệp, không chấm Job còn sống)." },
       { id: "t6", text: "Tình huống hỏng: Job `seed-bad` gọi sai đường dẫn (`http://gateway:8080/api/order`), `backoffLimit: 1`, `restartPolicy: Never` (mặc định của `create job`). Theo dõi Pod và Job; `k -n shop describe job seed-bad` — condition và lý do? Ghi `BROKEN_JOB_REASON=<lý do>` vào `~/drills/s15/answers.env`, đọc log Pod lỗi, rồi xoá Job." },
@@ -1461,8 +1461,36 @@ Không có toleration thì DESIRED chỉ là 2: DaemonSet controller bỏ qua no
 **3. Job seed**
 
 \`\`\`bash
-k -n shop create job seed --image=busybox:1.37 $do -- sh -c "wget -qO- --header 'Content-Type: application/json' --post-data '{\"productId\":1,\"qty\":2}' http://gateway:8080/api/orders" > ~/shop/seed.yaml
-vim ~/shop/seed.yaml           # spec: completions: 3, parallelism: 1, backoffLimit: 2; template.spec.restartPolicy: OnFailure
+k -n shop create job seed --image=busybox:1.37 $do -- sh -c true > ~/shop/seed.yaml    # chỉ sinh khung
+vim ~/shop/seed.yaml
+\`\`\`
+
+\`\`\`yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed
+  namespace: shop
+spec:
+  completions: 3
+  parallelism: 1
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: seed
+        image: busybox:1.37
+        command:
+        - sh
+        - -c
+        - |
+          wget -qO- --header 'Content-Type: application/json' --post-data '{"productId":1,"qty":2}' http://gateway:8080/api/orders
+\`\`\`
+
+Viết lệnh thẳng trong khối \`|\` của YAML: không còn lớp nháy nào của shell bao quanh, JSON giữ nguyên dấu \`"\`. Gõ cả lệnh trên dòng \`k create job … -- sh -c "…"\` thì dấu \`"\` của JSON đóng chuỗi nháy kép của bash, body thành \`{productId:1,qty:2}\` (đã thử bằng bash), không còn là JSON, và Job không bao giờ đạt 3/3.
+
+\`\`\`bash
 k apply -f ~/shop/seed.yaml
 k -n shop get job seed
 # NAME   STATUS     COMPLETIONS   DURATION   AGE
@@ -1821,7 +1849,7 @@ Rồi \`./labs/lab verify cka s16\`. Lời giải tự động \`labs/cka/sessio
         {
           text: "Trong 2 phút: in 10 Event mới nhất loại Warning trong namespace `shop`.",
           timeLimitMin: 2,
-          solution: "```bash\nk -n shop get events --field-selector type=Warning --sort-by=.lastTimestamp | tail -10\n```",
+          solution: "```bash\nk -n shop get events --field-selector type=Warning --sort-by=.metadata.creationTimestamp | tail -10\n```",
         },
       ],
     },
@@ -1843,9 +1871,9 @@ Verify so ba Deployment với trạng thái cuối s15 (image, replica, cấu h�
       projectDelta: "shop đã qua sự cố đầu tiên ở tầng workload và có quy trình chẩn đoán Pod để dùng lại. Chặng 2 xong (mốc `st2-done`): chặng 3 bắt đầu đặt requests/limits và lập lịch.",
     },
     review: [
-      { q: "Bốn bước chẩn đoán một Pod không chạy là gì?", a: "`get pod` (STATUS, RESTARTS) → Events (`get events --sort-by=.lastTimestamp` hoặc `describe`) → `logs --previous` → `get … -o yaml` so với thứ bạn nghĩ đã apply." },
+      { q: "Bốn bước chẩn đoán một Pod không chạy là gì?", a: "`get pod` (STATUS, RESTARTS) → Events (`get events --sort-by=.metadata.creationTimestamp` hoặc `describe`) → `logs --previous` → `get … -o yaml` so với thứ bạn nghĩ đã apply." },
       { q: "`CreateContainerConfigError` và `CrashLoopBackOff` khác nhau ở đâu, đọc lý do ở đâu?", a: "ConfigError: kubelet không dựng được cấu hình (thiếu Secret/ConfigMap/khoá), tiến trình chưa chạy — đọc Events. CrashLoopBackOff: tiến trình chạy rồi thoát, kubelet lùi dần trước lần chạy sau — đọc `logs --previous` và exitCode." },
-      { q: "Rollout hỏng nhưng shop vẫn trả lời. Vì sao, và vì sao vẫn phải sửa ngay?", a: "Pod mới không Ready nên Pod cũ không bị xoá (maxUnavailable 0). Khi node khởi động lại hay Pod cũ bị thay, chỉ còn template hỏng: shop sập." },
+      { q: "Rollout hỏng nhưng shop vẫn trả lời. Vì sao, và vì sao vẫn phải sửa ngay?", a: "Pod mới không Ready nên Pod cũ không bị xoá (maxUnavailable 0). Khởi động lại node chỉ chạy lại cùng các Pod, Pod cũ bị xoá thì ReplicaSet cũ tạo lại bản lành; nguy hiểm nằm ở chỗ khác: Deployment không tự rollback (`ProgressDeadlineExceeded` chỉ là một condition), scale lên hay HPA chia replica mới cả vào ReplicaSet hỏng, rollout kế tiếp chồng lên template hỏng, và `k apply -f ~/shop/` đưa lỗi trở lại." },
       { q: "Vì sao không sửa lệnh của Pod `report-once` bằng `kubectl edit`?", a: "`command` là trường bất biến của Pod: API từ chối. Phải xoá và tạo lại, `replace --force -f` làm cả hai trong một lệnh từ tệp." },
       { q: "JVM báo một cờ lạ trông giống hai cờ đúng nối nhau. Kiểm thế nào?", a: "Có ký tự không phải dấu cách thật (thường NBSP U+00A0) giữa hai cờ. `cat -A`, vim `:set list listchars=nbsp:+`, hoặc `printenv … | od -An -tx1` trong container (thấy `c2 a0`)." },
     ],
