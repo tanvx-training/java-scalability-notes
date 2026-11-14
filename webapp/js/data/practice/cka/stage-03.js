@@ -779,7 +779,7 @@ Lời giải tự động: \`labs/cka/sessions/s19/apply.sh\` (manifest trong \`
       ],
     },
     tips: [
-      "Đọc FailedScheduling theo từng vế `N node(s) …`; tổng các vế bằng số node. Vế nào không tự giải thích được thì `describe node | grep -A3 Taints` và `get node --show-labels`.",
+      "Đọc FailedScheduling theo từng vế `N node(s) …`; mỗi node có mặt ít nhất ở một vế, và một node thiếu cả CPU lẫn memory được đếm ở cả hai vế, nên tổng các vế có thể lớn hơn số node. Vế nào không tự giải thích được thì `describe node | grep -A3 Taints` và `get node --show-labels`.",
       "`nodeName` bỏ qua scheduler: đừng dùng nó để \"sửa\" Pod Pending trong đề, trừ khi đề bảo vậy.",
       "Gỡ taint: cùng lệnh với dấu `-` ở cuối. Gỡ nhãn: `k label node <n> <key>-`.",
       "Không nhớ tên trường affinity: `k explain pod.spec.affinity --recursive | less`, hoặc chép khung từ kubernetes.io với `:set paste`.",
@@ -1109,7 +1109,7 @@ Verify kiểm metrics-server (phiên bản ghim, cờ cho kubelet của kubeadm,
 
 Rolling update che cả hai: Pod cũ vẫn chạy nên shop còn trả lời, \`READY 2/2\`. Cột UP-TO-DATE mới lộ ra.
 
-**Đọc "0/3 nodes are available" từng vế.** Mỗi node bị loại ở filter đầu tiên nó trượt; tổng các vế bằng số node. Đo trên lab trong buổi này:
+**Đọc "0/3 nodes are available" từng vế.** Mỗi node bị loại ở filter đầu tiên nó trượt, nên mỗi node có mặt ít nhất ở một vế; riêng filter tài nguyên kể mọi thứ node đó thiếu, nên một node thiếu cả CPU lẫn memory được đếm ở cả hai vế và tổng các vế có thể lớn hơn số node. Đo trên lab trong buổi này:
 
 - \`1 node(s) didn't match Pod's node affinity/selector, 1 node(s) had untolerated taint(s), 1 node(s) were unschedulable\` — cka-w2 không có nhãn mà Pod đòi, cka-cp có taint control plane, cka-w1 bị cordon. Ba vế, ba nguyên nhân, **không vế nào là thiếu tài nguyên**.
 - Sau khi uncordon: \`1 node(s) had untolerated taint(s), 2 node(s) didn't match Pod's node affinity/selector\`: còn lại một ràng buộc sai.
@@ -1141,8 +1141,8 @@ Rolling update che cả hai: Pod cũ vẫn chạy nên shop còn trả lời, \`
       { id: "t2", text: "Events toàn cụm: `k get events -A --sort-by=.metadata.creationTimestamp | tail -20`, rồi lọc `k get events -A --field-selector reason=FailedCreate` và `--field-selector reason=FailedScheduling`. Mỗi lỗi thuộc bề mặt nào trong bảng phần Tư duy? Đọc `k -n shop describe quota shop-quota`. Trả quota về giá trị cuối s18 **trong tệp** `~/shop/quota.yaml` rồi apply." },
       { id: "t3", text: "Sau khi quota đúng: Pod mới nào xuất hiện và Pending? `k -n shop describe pod <pod>`: đọc từng vế của `0/3 nodes are available: …` và chỉ ra node nào ứng với vế nào (`k get node --show-labels`, `k describe node | grep -E 'Taints|Unschedulable'`). Sửa từng nguyên nhân ở đúng chỗ (node hay tệp `~/shop/order.yaml`)." },
       { id: "t4", text: "gateway: vì sao ReplicaSet mới vẫn `FailedCreate` dù quota đã đúng? So `requested` trong thông báo với Allocatable của worker (`k describe node cka-w1 | grep -A6 Allocatable`) và với tài nguyên cuối s17 (`k -n shop get pod -l app=gateway -o custom-columns='NAME:.metadata.name,REQ_MEM:.spec.containers[0].resources.requests.memory,LIM_MEM:.spec.containers[0].resources.limits.memory'`). Sửa `~/shop/gateway.yaml`, apply, `rollout status`." },
-      { id: "t5", text: "Thử giả thuyết \"1900Mi không vừa node nào\" ở nơi không có quota: Pod `mem-probe` ở namespace `default` (busybox:1.37, `sleep 3600`, `requests.memory: 1900Mi`). Đọc FailedScheduling của nó; ghi `PROBE_REASON=<cụm từ chỉ lý do hai worker bị loại>` vào `~/drills/s21/answers.env`, rồi xoá mem-probe." },
-      { id: "t6", text: "Có gì làm cụm chậm không? `k top node`, `k top pod -A --sort-by=cpu | head`, `k top pod -A --containers --sort-by=cpu | head -5`. Ghi `HOG_NS=<namespace>` và `HOG_POD=<tên Pod>` của Pod ngốn CPU nhất, rồi xoá nó." },
+      { id: "t5", text: "Thử giả thuyết \"1900Mi không vừa node nào\" ở nơi không có quota: Pod `mem-probe` ở namespace `default` (busybox:1.37, `sleep 3600`, `requests.memory: 1900Mi`). Đọc FailedScheduling của nó; ghi `PROBE_REASON=<cụm từ chỉ lý do hai worker bị loại>` vào `~/drills/s21/answers.env` (chép nguyên cụm từ trong Event, không kèm số node), rồi xoá mem-probe." },
+      { id: "t6", text: "Có gì làm cụm chậm không? `k top node`, `k top pod -A --sort-by=cpu | head`, `k top pod -A --containers --sort-by=cpu | head -5`. Ghi `HOG_NS=<namespace>` và `HOG_POD=<tên Pod>` của Pod ngốn CPU nhất, rồi xoá nó. Cẩn thận: một JVM của shop vừa rollout (t4) cũng ngốn CPU trong khoảng một phút đầu. Pod cần tìm là Pod *ngoài* `shop` chạy nóng liên tục: xem `top` hai ba lần cách nhau 30 giây; đừng xoá Pod của shop." },
       { id: "t7", text: "Xác nhận: `k get pod -A | grep -v -E 'Running|Completed'` không còn gì của shop; `k -n shop get deploy` UP-TO-DATE đủ. Ghi thời gian đã dùng. Trên Mac: `./labs/lab verify cka s21` phải đạt 7/7 (chạy lại bao nhiêu lần cũng được)." },
     ],
     hints: [
@@ -1309,7 +1309,7 @@ Rồi \`./labs/lab verify cka s21\`. Lời giải tự động \`labs/cka/sessio
     },
     tips: [
       "Pod chưa chạy: trước hết hỏi \"Pod có tồn tại không?\". Không có → Event của ReplicaSet/Job; có và Pending → FailedScheduling của Pod.",
-      "Tổng các vế trong `0/N nodes are available` bằng N. Vế nào không tự giải thích được thì `describe node`.",
+      "Mỗi node trong `0/N nodes are available` có mặt ít nhất ở một vế; node thiếu cả CPU lẫn memory được đếm hai lần, nên tổng các vế có thể lớn hơn N. Vế nào không tự giải thích được thì `describe node`.",
       "`Insufficient memory` là so với *requests* đã đặt trên node và Allocatable, không phải `free -m`.",
       "Sửa ở nguồn: quota, nodeSelector, resources đều sửa trong `~/shop/*.yaml` rồi apply, để lần `k apply -f ~/shop/` sau không đưa lỗi trở lại.",
     ],

@@ -3,12 +3,14 @@
 # trong shop; hai worker schedulable, không taint thừa; Pod batch-7f và mem-probe ở default đã xoá; answers.env khớp.
 # Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 # Không chờ rollout đang kẹt (người học chạy verify nhiều lần giữa buổi sự cố): chỉ chờ khi không có gì đang hỏng mà
-# Deployment chưa đủ Available (như ngay sau khi VM khởi động lại), tối đa ~6 phút.
+# Deployment chưa đủ Available (như ngay sau khi VM khởi động lại), tối đa ~6 phút. PROBE_REASON không phân biệt hoa thường.
 cp="$LAB_CP"
 echo "  (chờ apiserver và ba Deployment, nếu đang khởi động: tối đa ~6 phút)"
-vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
+vm "$cp" "# Hạn theo đồng hồ (360 giây), không theo số vòng: mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
+  end=\$((\$(date +%s) + 360))
+  until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
   k='kubectl --request-timeout=10s'
-  for i in \$(seq 1 120); do
+  while [ \$(date +%s) -lt \$end ]; do
     # Đang có lỗi của buổi sự cố (Pod chưa xếp được, ReplicaSet FailedCreate, node cordon): đọc ngay, không chờ.
     o=\$(\$k -n shop get pod -o jsonpath='{range .items[*]}{.status.conditions[?(@.type==\"PodScheduled\")].status}{\"\\n\"}{end}' 2>/dev/null) \\
       && printf '%s\\n' \"\$o\" | grep -qx False && break
@@ -36,5 +38,5 @@ expect_eq "cka-w1, cka-w2: schedulable (không cordon), không taint thừa" "đ
 expect_eq "answers.env: HOG_NS=default, HOG_POD=batch-7f (Pod ngốn CPU nhất cụm); Pod batch-7f đã xoá" "default/batch-7f đã xoá" \
   echo "$(vm "$cp" "$(ans HOG_NS)")/$(vm "$cp" "$(ans HOG_POD)") $(fact BATCH)"
 expect_match "answers.env: PROBE_REASON có 'Insufficient memory' (FailedScheduling của Pod thử mem-probe); mem-probe đã xoá" \
-  "Insufficient memory.* đã xoá\$" echo "$(vm "$cp" "$(ans PROBE_REASON)") $(fact PROBE)"
+  "insufficient memory.* đã xoá\$" echo "$(vm "$cp" "$(ans PROBE_REASON)" | LC_ALL=C tr 'A-Z' 'a-z' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//') $(fact PROBE)"
 assert_summary

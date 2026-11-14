@@ -5,9 +5,11 @@
 # xoá; answers.env khớp. Chỉ đọc (--dry-run=server không tạo gì). Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
 echo "  (chờ apiserver và ba Deployment, nếu đang khởi động: tối đa ~6 phút)"
-vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
+vm "$cp" "# Hạn theo đồng hồ (360 giây), không theo số vòng: mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
+  end=\$((\$(date +%s) + 360))
+  until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
   # Chỉ thoát sớm khi đọc được cả ba Deployment và cả ba đủ Available: lệnh lỗi hay hết giờ là \"chưa sẵn sàng\".
-  for i in \$(seq 1 120); do
+  while [ \$(date +%s) -lt \$end ]; do
     o=\$(kubectl --request-timeout=10s -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null) \\
       && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 3 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
     sleep 3

@@ -6,21 +6,23 @@
 # Sau khi VM khởi động lại, metrics-server cần ~1 phút mới có số và HPA thêm một chu kỳ 15 giây: chờ có giới hạn.
 cp="$LAB_CP"
 echo "  (chờ apiserver, ba Deployment, kubectl top và số CPU của HPA, nếu đang khởi động: tối đa ~10 phút)"
-vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
+vm "$cp" "# Hạn theo đồng hồ (600 giây), không theo số vòng: mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
+  end=\$((\$(date +%s) + 600))
+  until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
   k='kubectl --request-timeout=10s'
   # Lệnh lỗi hay hết giờ là \"chưa sẵn sàng\": chỉ thoát sớm khi đọc được và đã đạt.
-  for i in \$(seq 1 120); do
+  while [ \$(date +%s) -lt \$end ]; do
     o=\$(\$k -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null) \\
       && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 3 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
     sleep 3
   done
   \$k -n kube-system get deploy metrics-server >/dev/null 2>&1 || exit 0
-  for i in \$(seq 1 40); do
-    o=\$(\$k top nodes --no-headers 2>/dev/null) && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 3 ] && break
+  while [ \$(date +%s) -lt \$end ]; do
+    o=\$(\$k top nodes --no-headers 2>/dev/null) && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$2 ~ /^[0-9]/' | grep -c .)\" = 3 ] && break
     sleep 3
   done
   \$k -n shop get hpa catalog >/dev/null 2>&1 || exit 0
-  for i in \$(seq 1 40); do
+  while [ \$(date +%s) -lt \$end ]; do
     o=\$(\$k -n shop get hpa catalog -o jsonpath='{.status.currentMetrics[0].resource.current.averageUtilization}' 2>/dev/null) \\
       && [ -n \"\$o\" ] && break
     sleep 3

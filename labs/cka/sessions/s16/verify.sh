@@ -6,9 +6,11 @@
 # Pod hỏng mà Deployment chưa đủ Available (như ngay sau khi VM khởi động lại) thì chờ có giới hạn (tối đa ~3 phút).
 cp="$LAB_CP"
 echo "  (chờ apiserver và các Pod đang khởi động, nếu có)"
-vm "$cp" "for i in \$(seq 1 30); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
+vm "$cp" "# Hạn theo đồng hồ (240 giây), không theo số vòng: mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
+  end=\$((\$(date +%s) + 240))
+  until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
   k='kubectl --request-timeout=10s -n shop'
-  for i in \$(seq 1 60); do
+  while [ \$(date +%s) -lt \$end ]; do
     # Pod của ba service đang hỏng (đúng lúc buổi sự cố): đọc ngay, không chờ. (Pod Job của CronJob chạy bù sau khi
     # VM khởi động lại có thể CrashLoopBackOff trong lúc gateway chưa lên: không tính.)
     \$k get pod -l 'app in (gateway,catalog,order)' -o jsonpath='{range .items[*].status.containerStatuses[*]}{.state.waiting.reason}{\"\\n\"}{end}' 2>/dev/null \\

@@ -55,7 +55,7 @@ elif cond(api, "Available") != ["True"]: bad.append("APIService v1beta1.metrics.
 print("MS=" + ("; ".join(bad) or "đạt"))
 
 top = open(f"{t}/top.txt").read()
-print("TOP_NODES=" + ("lỗi" if top.strip() == "ERR" else str(len([l for l in top.splitlines() if l.strip()]))))
+print("TOP_NODES=" + ("lỗi" if top.strip() == "ERR" else str(len([l for l in top.splitlines() if re.fullmatch(r"[0-9]+m?", (l.split() + ["", ""])[1])]))))
 
 # 2. HPA catalog: v2 trong tệp, đích Deployment catalog, min 2, max MAX, CPU 60%, behavior.scaleDown 60 giây.
 hpa, f, dep = load(f"{t}/hpa.json"), load(f"{t}/file-hpa.json"), load(f"{t}/catalog.json")

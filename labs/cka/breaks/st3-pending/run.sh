@@ -30,7 +30,10 @@ for p, text in out.items():
 PY
 kubectl apply -f ~/shop/quota.yaml -f ~/shop/order.yaml -f ~/shop/gateway.yaml >/dev/null 2>&1 \\
   || { echo 'lab: không apply được ~/shop/{quota,order,gateway}.yaml (xem lại tệp của trạng thái cuối s20)' >&2; exit 1; }
-# Pod nền ngốn CPU, giới hạn 500m để đứng đầu kubectl top mà không làm đói cả node.
+# Pod nền ngốn CPU, giới hạn 500m để đứng đầu kubectl top mà không làm đói cả node. Pod đang chạy (hay vừa tạo) thì giữ;
+# Pod đã dừng (restartPolicy Never: sau khi VM khởi động lại nó Failed/Unknown, không còn đốt CPU) thì tạo lại.
+ph=\$(kubectl -n default get pod batch-7f -o jsonpath='{.status.phase}' 2>/dev/null || true)
+case \"\$ph\" in Running|Pending) ;; *) kubectl -n default delete pod batch-7f --ignore-not-found --wait=true >/dev/null ;; esac
 kubectl -n default get pod batch-7f >/dev/null 2>&1 || kubectl apply -f - >/dev/null <<'YAML'
 apiVersion: v1
 kind: Pod

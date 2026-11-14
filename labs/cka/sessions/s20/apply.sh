@@ -17,8 +17,8 @@ vm "$cp" "set -e; mkdir -p ~/drills/s20 ~/shop
   grep -q -- '- --kubelet-insecure-tls' \$f
   kubectl apply -f \$f >/dev/null
   kubectl -n kube-system rollout status deploy/metrics-server --timeout=300s >/dev/null
-  for i in \$(seq 1 60); do [ \"\$(kubectl top nodes --no-headers 2>/dev/null | grep -c .)\" = 3 ] && break; sleep 3; done
-  [ \"\$(kubectl top nodes --no-headers 2>/dev/null | grep -c .)\" = 3 ] || { echo 'kubectl top nodes chưa có số cho 3 node' >&2; exit 1; }"
+  for i in \$(seq 1 60); do [ \"\$(kubectl top nodes --no-headers 2>/dev/null | awk '\$2 ~ /^[0-9]/' | grep -c .)\" = 3 ] && break; sleep 3; done
+  [ \"\$(kubectl top nodes --no-headers 2>/dev/null | awk '\$2 ~ /^[0-9]/' | grep -c .)\" = 3 ] || { echo 'kubectl top nodes chưa có số cho 3 node' >&2; exit 1; }"
 
 echo "s20: hpa-lab: HPA trên Deployment không khai requests.cpu → <unknown>, rồi thêm requests.cpu"
 reason="$(vm "$cp" "set -e
@@ -44,6 +44,7 @@ echo "s20: Event Warning của HPA nháp: '$reason'"
 
 echo "s20: HPA catalog (autoscaling/v2), chờ HPA có số CPU"
 vm "$cp" "set -e
+  kubectl -n shop delete pod load --ignore-not-found --wait=true >/dev/null
   install -m 644 /tmp/lab-s20-catalog-hpa.yaml ~/shop/catalog-hpa.yaml; rm -f /tmp/lab-s20-catalog-hpa.yaml
   kubectl apply -f ~/shop/catalog-hpa.yaml >/dev/null
   ok=''; for i in \$(seq 1 60); do
