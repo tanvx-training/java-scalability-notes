@@ -81,5 +81,8 @@ rr="${res%%|*}"; lr="$(printf '%s' "$res" | cut -d'|' -f4)"
 code="${res##*|}"
 [ "$code" = 143 ] || { echo "s13: container bị liveness giết thoát với mã '$code' (đo trên lab: 143)" >&2; exit 1; }
 # periodSeconds mặc định: đọc bằng k explain pod.spec.containers.livenessProbe.periodSeconds ("Default to 10 seconds").
-period="$(vm "$cp" "kubectl explain pod.spec.containers.livenessProbe.periodSeconds | grep -o 'Default to [0-9]*' | grep -o '[0-9]*'")"
+period="$(vm "$cp" "for i in 1 2 3; do
+    p=\$(kubectl explain pod.spec.containers.livenessProbe.periodSeconds 2>/dev/null | grep -o 'Default to [0-9]*' | grep -o '[0-9]*')
+    [ -n \"\$p\" ] && break; sleep 5; done; echo \"\$p\"")"
+[ -n "$period" ] || { echo "s13: không đọc được periodSeconds mặc định từ k explain" >&2; exit 1; }
 vm "$cp" "printf 'READINESS_RESTARTS=0\nLIVENESS_RESTARTS_GE1=yes\nLIVENESS_EXIT_CODE=%s\nPROBE_PERIOD_DEFAULT=%s\n' '$code' '$period' > ~/drills/s13/answers.env"
