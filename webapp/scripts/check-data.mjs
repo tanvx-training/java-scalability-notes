@@ -116,7 +116,7 @@ const EXPECTED = {
     "practice-sessions:cka": 53,
     "practice-published:cka": 9,
     // Chương trình ssia: 17 chặng (chương 2–18 của sách), 53 buổi. Số buổi đã phát hành TĂNG DẦN
-    // theo từng đợt nội dung (st02 = s01–s03); sửa ở đây TRƯỚC khi phát hành buổi.
+    // theo từng đợt nội dung (đợt 1 = st02–st04, s01–s08); sửa ở đây TRƯỚC khi phát hành buổi.
     "practice-sessions:ssia": 53,
     "practice-published:ssia": 8,
   },
