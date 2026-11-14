@@ -1,5 +1,5 @@
 // Chặng 3 — Scheduling và tài nguyên.
-// s17–s19 đã phát hành; s20–s21 là buổi khung (đủ trường cấu trúc, check-data PR7), nội dung đầy đủ ở task sau.
+// s17–s21 đã phát hành.
 
 export const sessions = [
   // ───────────────────────────── s17 ─────────────────────────────
@@ -804,6 +804,7 @@ Verify đọc nhãn và taint của hai worker, affinity và vị trí của hai
     ],
   },
 
+  // ───────────────────────────── s20 ─────────────────────────────
   {
     id: "s20",
     stage: "st3",
@@ -812,12 +813,12 @@ Verify đọc nhãn và taint của hai worker, affinity và vị trí của hai
     domain: "workloads",
     competencies: ["wl-autoscale"],
     requires: ["s19"],
-    status: "skeleton",
+    status: "published",
     pieces: ["hpa"],
     goals: [
-      "Cài metrics-server trên cluster kubeadm và thấy kubectl top trả số.",
-      "Tạo HPA cho catalog, bật endpoint ngốn CPU của shop và xem số replica tăng rồi giảm.",
-      "Đọc được vì sao HPA hiện TARGETS <unknown>.",
+      "Cài metrics-server từ manifest ghim phiên bản trên cluster kubeadm (thêm --kubelet-insecure-tls) và thấy kubectl top trả số.",
+      "Tạo HPA cho catalog bằng kubectl autoscale rồi viết lại bằng YAML autoscaling/v2 có behavior.scaleDown; sinh tải bằng /internal/burn, xem replica tăng rồi giảm.",
+      "Đọc được vì sao HPA hiện TARGETS <unknown> và tính được desiredReplicas từ số trên màn hình.",
     ],
     skills: [
       { skill: "k-metrics-server-install", level: "Làm được có tra" },
@@ -827,10 +828,251 @@ Verify đọc nhãn và taint của hai worker, affinity và vị trí của hai
       { skill: "k-hpa-v2-yaml", level: "Viết được có tra" },
       { skill: "k-hpa-targets", level: "Giải thích được" },
     ],
-    uses: ["k-set-resources", "k-cm-literal", "k-rollout-restart", "k-describe-quota"],
-    stateIn: "Đầu ra s19: shop có requests CPU.",
-    stateOut: "metrics-server chạy; HPA catalog (min 2, max 5, CPU 60%) đã co giãn thật dưới tải và về lại 2.",
+    uses: ["k-set-resources", "k-describe-quota", "k-events-sorted", "k-explain", "vim-paste-mode"],
+    foundation: null,
+    mindset: `**Ba vòng lặp nối nhau.** kubelet đo CPU/RAM của từng container → **metrics-server** hỏi mọi kubelet mỗi 15 giây (\`--metric-resolution=15s\`) và phục vụ con số mới nhất qua API \`metrics.k8s.io\` (một *APIService* gắn vào apiserver) → **HPA controller** trong kube-controller-manager, mỗi 15 giây, đọc API đó và chỉnh \`spec.replicas\` của Deployment. \`kubectl top\` chỉ là một client nữa của cùng API. Thiếu metrics-server thì \`k top\` báo \`error: Metrics API not available\` và HPA không có số; không có gì hỏng thêm.
+
+**Vì sao kubeadm cần \`--kubelet-insecure-tls\`.** metrics-server gọi \`https://<InternalIP>:10250\` của từng node. Chứng chỉ serving của kubelet do kubeadm sinh là tự ký và không có IP trong SAN, nên trên lab, manifest gốc cho log:
+
+\`"Failed to scrape node" err="Get \\"https://192.168.252.36:10250/metrics/resource\\": tls: failed to verify certificate: x509: cannot validate certificate for 192.168.252.36 because it doesn't contain any IP SANs"\`
+
+Pod \`0/1 Running\` (readiness 500), APIService \`False (MissingEndpoints)\`. Với lab, thêm \`--kubelet-insecure-tls\` (bỏ kiểm chứng chỉ của kubelet). Cluster thật thì bật \`serverTLSBootstrap\` cho kubelet và duyệt CSR, để kubelet có chứng chỉ ký bởi CA của cluster.
+
+**Công thức.** HPA tính:
+
+\`desiredReplicas = ceil(currentReplicas × currentUtilization / targetUtilization)\`
+
+và giữ trong \`[minReplicas, maxReplicas]\`. **Utilization là phần trăm của \`requests.cpu\`**, trung bình trên các Pod: catalog request 200m, target 60% nghĩa là 120m mỗi Pod. Trên lab, lúc tải: 2 replica, \`cpu: 81%/60%\` → ceil(2 × 81 / 60) = ceil(2,7) = 3. Lệch dưới 10% (tolerance mặc định) thì HPA không đổi gì. Vì công thức chia cho request, **container không khai \`requests.cpu\` thì HPA không tính được**: TARGETS \`<unknown>\`, Event \`FailedGetResourceMetric … missing request for cpu in container …\`. Trong namespace \`shop\` LimitRange \`shop-limits\` tự gán 50m, nên bài \`<unknown>\` làm ở namespace nháp không có LimitRange.
+
+**Tăng nhanh, giảm chậm.** Mặc định scale up không chờ, scale down lấy khuyến nghị **cao nhất** trong cửa sổ ổn định 300 giây, để tải dao động không làm Pod lên xuống liên tục (mỗi lần lên là một JVM khởi động 60–90 giây trên worker 2 vCPU). Buổi này đặt \`behavior.scaleDown.stabilizationWindowSeconds: 60\` để kịp thấy giảm: trên lab, ngừng tải lúc 3 replica, HPA về 2 sau khoảng 90 giây (60 giây cửa sổ + chu kỳ đo 15 giây của metrics-server + chu kỳ 15 giây của HPA). \`behavior\` chỉ có ở \`autoscaling/v2\`: đó là lý do viết lại HPA bằng YAML v2 thay vì để nguyên thứ \`kubectl autoscale\` tạo ra.
+
+**maxReplicas là con số về RAM, không về quota.** \`shop-quota\` còn chỗ cho 6–7 replica catalog, nhưng hai worker chỉ có 2 GB. Đo lúc catalog 3 replica dưới tải: \`free -m\` cka-w1 dùng 960 MB, còn 995 MB available; cka-w2 dùng 957 MB, còn 997 MB. Lab chọn \`maxReplicas: 3\`. Trên production cũng vậy: max của HPA phải nằm trong cả quota *và* sức chứa node (hay giới hạn của Cluster Autoscaler), nếu không replica dư sẽ Pending. Với JVM thêm một điều: CPU lúc khởi động cao (JIT, nạp class). Trên lab, ngay sau khi tạo HPA (JVM vừa khởi động lại sau khi VM bật), HPA lên 3 rồi về 2 sau 75 giây mà không có tải nào.`,
+    refs: [
+      { label: "Bài lộ trình CKA Study Guide: Scale thủ công và autoscaling", href: "#/roadmap/ckabook/cb-w3-4" },
+      { label: "Bài lộ trình CKA: kubectl get events, kubectl top (metrics-server)", href: "#/roadmap/cka/cka-w8-7" },
+      { label: "Bài lộ trình CKAD: Metrics — kubectl top pod/node", href: "#/roadmap/ckad/w5-6" },
+      { label: "CKA Study Guide, chương 12 — Scale workload", href: "#/docs/ckabook-12" },
+      { label: "Thực hành nhanh: kubectl top, kubectl autoscale", href: "#/commands" },
+      { label: "kubernetes.io: Horizontal Pod Autoscaling", href: "https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/" },
+      { label: "kubernetes.io: HorizontalPodAutoscaler Walkthrough", href: "https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/" },
+      { label: "kubernetes-sigs/metrics-server: README (yêu cầu, --kubelet-insecure-tls)", href: "https://github.com/kubernetes-sigs/metrics-server" },
+    ],
+    stateIn: "Đầu ra s19: shop có requests CPU (catalog 200m), quota shop-quota còn chỗ, LimitRange shop-limits gán 50m cho container không khai CPU; cka-w2 mang nhãn role=db, catalog trải hai node. Chưa có metrics-server: `kubectl top` báo Metrics API not available. `./labs/lab begin cka s20` kiểm đầu vào bằng verify của s19 và xoá ~/drills/s20/answers.env cũ.",
+    stateOut: "metrics-server v0.9.1 chạy trong kube-system (có --kubelet-insecure-tls), kubectl top có số; HPA catalog autoscaling/v2 (min 2, max 3, CPU 60%, scaleDown 60 giây) trong ~/shop/catalog-hpa.yaml, đã co giãn thật dưới tải và về lại 2; namespace hpa-lab và Pod tải đã xoá; ~/drills/s20/answers.env.",
+    tasks: [
+      { id: "t1", text: "Trên cka-cp: `k top node` (đọc lỗi). Tải manifest ghim phiên bản: `curl -L -o ~/drills/s20/metrics-server-v0.9.1.yaml https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.1/components.yaml`, apply nguyên như vậy. Sau một phút: `k -n kube-system get pod -l k8s-app=metrics-server`, `k get apiservice v1beta1.metrics.k8s.io`, `k -n kube-system logs deploy/metrics-server | head`. Vì sao không có số?" },
+      { id: "t2", text: "Sửa tệp manifest: thêm `- --kubelet-insecure-tls` vào `args` của container metrics-server (vim, `:set paste` nếu dán). Apply lại, `k -n kube-system rollout status deploy/metrics-server`. Rồi `k top node`, `k top pod -A --sort-by=cpu`, `k top pod -A --sort-by=memory | head`." },
+      { id: "t3", text: "Tình huống hỏng trên namespace nháp: `k create ns hpa-lab`, `k -n hpa-lab create deploy idle --image=busybox:1.37 -- sleep 3600`, `k -n hpa-lab autoscale deploy idle --min=1 --max=2 --cpu=50%`. Sau khoảng 30 giây: `k -n hpa-lab get hpa`, `k -n hpa-lab describe hpa idle`. Ghi `UNKNOWN_REASON=<reason của Event Warning có thông báo missing request for cpu>` vào `~/drills/s20/answers.env`. Sửa bằng `k -n hpa-lab set resources deploy idle --requests=cpu=10m`, chờ TARGETS có số, rồi xoá namespace hpa-lab. Vì sao không làm bài này trong shop?" },
+      { id: "t4", text: "Tính chỗ: `k -n shop describe quota shop-quota` và `k describe node cka-w1 cka-w2 | grep -A6 'Allocated resources'`, `free -m` trên hai worker. Thêm một replica catalog tốn bao nhiêu request trong quota? RAM thật bao nhiêu (`k top pod -l app=catalog`)? Buổi này dùng `maxReplicas: 3`." },
+      { id: "t5", text: "`k autoscale deploy catalog --min=2 --max=3 --cpu=60%`, `k get hpa catalog -o yaml`. Viết lại thành `~/shop/catalog-hpa.yaml` dạng `autoscaling/v2`: cùng min/max/target, thêm `behavior.scaleDown.stabilizationWindowSeconds: 60` (`k explain hpa.spec.behavior --api-version=autoscaling/v2`). `k apply -f ~/shop/catalog-hpa.yaml`; `k get hpa catalog` phải có số trong TARGETS." },
+      { id: "t6", text: "Mở cửa sổ thứ hai: `k get hpa catalog -w`. Ở cửa sổ đầu sinh tải nhỏ: `k run load --image=busybox:1.37 --restart=Never -- sh -c 'while true; do wget -q -O /dev/null \"http://catalog:8080/internal/burn?ms=100\"; sleep 0.2; done'`. Khi REPLICAS lên 3: `free -m` trên hai worker, `k top pod -l app=catalog`. Rồi xoá Pod load ngay (đừng để tải chạy lâu trên worker 2 GB) và xem bao lâu sau HPA về 2. Ghi `MAX_REPLICAS_SEEN=<số replica cao nhất bạn thấy>`. Trên Mac: `./labs/lab verify cka s20` phải đạt 7/7." },
+    ],
+    hints: [
+      "`error: Metrics API not available` sau khi đã apply metrics-server: xem APIService (`k get apiservice | grep metrics`) và log của Pod metrics-server trước. `MissingEndpoints` nghĩa là Pod chưa Ready.",
+      "Thêm cờ vào `args`, không phải `command`; đúng thụt lề của danh sách (`        - --kubelet-insecure-tls`). Sau khi sửa tệp phải `apply` lại tệp, sửa tệp thôi không đổi gì trong cluster.",
+      "kubectl 1.36: `--cpu-percent` của `kubectl autoscale` đã deprecated (thử trên lab: `Flag --cpu-percent has been deprecated, Use --cpu with percentage or resource quantity format`). Dùng `--cpu=60%`.",
+      "TARGETS `<unknown>` ngay sau khi tạo HPA là bình thường trong 15–30 giây đầu (`did not receive metrics for targeted pods`). Kéo dài hơn thì đọc Event: thiếu request là `missing request for cpu`.",
+      "`k get hpa -w` chỉ in khi có thay đổi. Muốn biết HPA đã quyết định gì và vì sao: `k describe hpa catalog`, phần Events `SuccessfulRescale … reason: …`.",
+      "Đang có HPA mà `k apply -f ~/shop/catalog.yaml` (có `replicas: 2`) thì Deployment về 2 trong chốc lát rồi HPA chỉnh lại. Không sao ở đây vì min là 2, nhưng đừng sửa số replica bằng tay khi HPA quản lý.",
+    ],
+    solution: `Output là của máy soạn bài; tên Pod, số đo và thời điểm sẽ khác. Context đã ở namespace shop (s18).
+
+**1–2. metrics-server**
+
+\`\`\`bash
+k top node
+# error: Metrics API not available
+mkdir -p ~/drills/s20
+curl -L -o ~/drills/s20/metrics-server-v0.9.1.yaml \\
+  https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.1/components.yaml
+k apply -f ~/drills/s20/metrics-server-v0.9.1.yaml
+k -n kube-system get pod -l k8s-app=metrics-server
+# metrics-server-64cf6c55d8-zkrfd   0/1     Running   0          2m29s
+k get apiservice v1beta1.metrics.k8s.io
+# v1beta1.metrics.k8s.io   kube-system/metrics-server   False (MissingEndpoints)   2m31s
+k -n kube-system logs deploy/metrics-server | grep -m1 x509
+# … "Failed to scrape node" err="Get \\"https://192.168.252.36:10250/metrics/resource\\": tls: failed to verify certificate: x509: cannot validate certificate for 192.168.252.36 because it doesn't contain any IP SANs" node="cka-w1"
+vim ~/drills/s20/metrics-server-v0.9.1.yaml
+\`\`\`
+
+\`\`\`yaml
+      containers:
+      - args:
+        - --cert-dir=/tmp
+        - --secure-port=10250
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        - --kubelet-use-node-status-port
+        - --metric-resolution=15s
+        - --kubelet-insecure-tls
+        image: registry.k8s.io/metrics-server/metrics-server:v0.9.1
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/drills/s20/metrics-server-v0.9.1.yaml
+k -n kube-system rollout status deploy/metrics-server
+k top node
+# NAME     CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)
+# cka-cp   1035m        51%      1683Mi          58%
+# cka-w1   954m         47%      935Mi           50%
+# cka-w2   1675m        83%      936Mi           50%
+k top pod --sort-by=cpu
+\`\`\`
+
+Phần trăm của \`k top node\` tính trên allocatable; của \`describe node\` (Allocated resources) là *requests*. Hai con số khác nhau là bình thường: một là dùng thật, một là đặt cọc.
+
+**3. HPA <unknown> trên Deployment nháp**
+
+\`\`\`bash
+k create ns hpa-lab
+k -n hpa-lab create deploy idle --image=busybox:1.37 -- sleep 3600
+k -n hpa-lab autoscale deploy idle --min=1 --max=2 --cpu=50%
+k -n hpa-lab get hpa
+# NAME   REFERENCE         TARGETS              MINPODS   MAXPODS   REPLICAS   AGE
+# idle   Deployment/idle   cpu: <unknown>/50%   1         2         1          41s
+k -n hpa-lab describe hpa idle | sed -n '/Conditions/,$p'
+#   ScalingActive  False   FailedGetResourceMetric  the HPA was unable to compute the replica count: failed to get cpu utilization: …
+#   Warning  FailedGetResourceMetric       …  failed to get cpu utilization: missing request for cpu in container busybox of Pod idle-545b5bb54d-jxx9f
+#   Warning  FailedComputeMetricsReplicas  …  invalid metrics (1 invalid out of 1), first error is: failed to get cpu resource metric value: …
+echo UNKNOWN_REASON=FailedGetResourceMetric >> ~/drills/s20/answers.env
+k -n hpa-lab set resources deploy idle --requests=cpu=10m
+k -n hpa-lab get hpa          # sau một hai chu kỳ: cpu: 0%/50%
+k delete ns hpa-lab
+\`\`\`
+
+Event đầu tiên (Pod mới) là \`did not receive metrics for targeted pods (pods might be unready)\`; khoảng 20 giây sau mới tới \`missing request for cpu\`. Trong \`shop\`, LimitRange \`shop-limits\` gán \`requests.cpu: 50m\` cho container không khai, nên ở đó không bao giờ thấy lỗi này.
+
+**4–5. Chỗ trong quota và HPA catalog**
+
+\`\`\`bash
+k describe quota shop-quota | tail -5
+# limits.memory    1920Mi  5Gi
+# pods             8       20
+# requests.cpu     700m    2
+# requests.memory  1280Mi  3Gi
+k autoscale deploy catalog --min=2 --max=3 --cpu=60%
+k get hpa catalog -o yaml > /tmp/hpa.yaml     # apiVersion: autoscaling/v2
+k delete hpa catalog
+vim ~/shop/catalog-hpa.yaml
+\`\`\`
+
+Một replica catalog thêm 200m CPU, 256Mi requests.memory, 384Mi limits.memory: quota còn dư nhiều hơn 3 replica. Giới hạn thật là RAM của worker.
+
+\`\`\`yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: catalog
+  namespace: shop
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: catalog
+  minReplicas: 2
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/catalog-hpa.yaml
+k get hpa catalog
+# catalog   Deployment/catalog   cpu: 7%/60%   2         3         2          …
+\`\`\`
+
+Không cần xoá HPA do \`autoscale\` tạo: cùng tên thì \`apply\` ghi đè. Xoá trước chỉ để chắc chắn tệp là nguồn duy nhất.
+
+**6. Tải thật** (cửa sổ hai: \`k get hpa catalog -w\`)
+
+\`\`\`bash
+k run load --image=busybox:1.37 --restart=Never -- sh -c 'while true; do wget -q -O /dev/null "http://catalog:8080/internal/burn?ms=100"; sleep 0.2; done'
+\`\`\`
+
+\`\`\`text
+NAME      REFERENCE            TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+catalog   Deployment/catalog   cpu: 7%/60%    2         3         2          4m46s
+catalog   Deployment/catalog   cpu: 81%/60%   2         3         2          6m23s
+catalog   Deployment/catalog   cpu: 78%/60%   2         3         3          7m47s
+catalog   Deployment/catalog   cpu: 57%/60%   2         3         3          8m9s
+catalog   Deployment/catalog   cpu: 26%/60%   2         3         3          8m17s
+catalog   Deployment/catalog   cpu: 26%/60%   2         3         3          8m32s
+catalog   Deployment/catalog   cpu: 5%/60%    2         3         3          8m47s
+catalog   Deployment/catalog   cpu: 1%/60%    2         3         3          9m2s
+catalog   Deployment/catalog   cpu: 2%/60%    2         3         3          9m17s
+\`\`\`
+
+Lúc \`81%\` với 2 replica: ceil(2 × 81 / 60) = 3. Pod thứ ba mất khoảng 70 giây mới Available (JVM khởi động). Khi đủ 3, cùng một lượng tải chia ba nên con số tụt (57%, 26%); các dòng 1–5% là sau khi xoá Pod load.
+
+\`\`\`bash
+free -m         # trên cka-w1, cka-w2 lúc 3 replica
+# cka-w1  Mem:  1955   960   50   2   1042   995
+# cka-w2  Mem:  1955   957   69   2   1012   997
+k delete pod load
+k describe hpa catalog | sed -n '/^Events/,$p'
+#   Normal  SuccessfulRescale  …  New size: 3; reason: cpu resource utilization (percentage of request) above target
+#   Normal  SuccessfulRescale  …  New size: 2; reason: All metrics below target
+echo MAX_REPLICAS_SEEN=3 >> ~/drills/s20/answers.env
+\`\`\`
+
+Hai sự kiện cách nhau gần ba phút; sau khi xoá Pod load, catalog về 2 sau khoảng 90 giây. Không có \`behavior\` thì phải chờ thêm năm phút (cửa sổ mặc định 300 giây).
+
+Lời giải tự động: \`labs/cka/sessions/s20/apply.sh\` (cài metrics-server, làm bài hpa-lab, apply HPA; không sinh tải để \`restore\` nhanh, \`MAX_REPLICAS_SEEN\` là số đã đo ở trên).`,
+    exam: {
+      patterns: [
+        "\"Tạo HPA cho Deployment X, min A, max B, CPU C%\" — `k autoscale deploy x --min=A --max=B --cpu=C%`.",
+        "\"HPA phải giảm chậm / chỉ giảm một Pod mỗi phút\" — YAML `autoscaling/v2`, `behavior.scaleDown` (`stabilizationWindowSeconds`, `policies`).",
+        "\"Tìm Pod dùng nhiều CPU nhất trong namespace Y, ghi tên vào tệp\" — `k top pod -n y --sort-by=cpu --no-headers | head -1 | awk '{print $1}' > …`.",
+        "\"HPA hiện <unknown>, sửa\" — kiểm metrics-server (`k top`), rồi `requests.cpu` của Deployment đích.",
+      ],
+      timeTargetMin: 6,
+      drills: [
+        {
+          text: "Trong 2 phút: ghi vào `/tmp/top-node.txt` tên node đang dùng nhiều memory nhất.",
+          timeLimitMin: 2,
+          solution: "```bash\nk top node --sort-by=memory --no-headers | head -1 | awk '{print $1}' > /tmp/top-node.txt\n```",
+        },
+        {
+          text: "Trong 4 phút: HPA `web` (autoscaling/v2) cho Deployment `web`, 1–4 replica, CPU 70%, scale down tối đa 1 Pod mỗi 60 giây.",
+          timeLimitMin: 4,
+          solution: "```yaml\napiVersion: autoscaling/v2\nkind: HorizontalPodAutoscaler\nmetadata:\n  name: web\nspec:\n  scaleTargetRef:\n    apiVersion: apps/v1\n    kind: Deployment\n    name: web\n  minReplicas: 1\n  maxReplicas: 4\n  metrics:\n  - type: Resource\n    resource:\n      name: cpu\n      target:\n        type: Utilization\n        averageUtilization: 70\n  behavior:\n    scaleDown:\n      policies:\n      - type: Pods\n        value: 1\n        periodSeconds: 60\n```\nNhanh nhất: `k autoscale deploy web --min=1 --max=4 --cpu=70% $do > hpa.yaml` rồi thêm khối `behavior`.",
+        },
+      ],
+    },
+    tips: [
+      "`k top` báo lỗi trong đề thi: metrics-server thường đã cài sẵn; chờ 30–60 giây sau khi Pod mới chạy trước khi kết luận.",
+      "`--sort-by=cpu` / `--sort-by=memory` của `k top` không cần jsonpath; `--containers` tách từng container.",
+      "Nhớ công thức bằng ví dụ: 2 Pod ở 90% với target 60% → ceil(2 × 1,5) = 3.",
+      "`k explain hpa.spec.behavior --api-version=autoscaling/v2 --recursive` khi quên tên trường.",
+    ],
+    outcome: {
+      md: `catalog tự co giãn theo CPU, trong giới hạn hai worker 2 GB chịu được. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s20
+\`\`\`
+
+Verify kiểm metrics-server (phiên bản ghim, cờ cho kubelet của kubeadm, APIService Available), \`kubectl top nodes\`, HPA so với tệp \`~/shop/catalog-hpa.yaml\` và đang có số CPU, chỗ trong quota cho \`maxReplicas\`, đáp án, và đã dọn Pod tải, namespace nháp. Sau khi VM khởi động lại, verify chờ metrics-server có số (khoảng một phút) trước khi kiểm.`,
+      verifyOutput: "lab: kiểm s20\n  (chờ apiserver, ba Deployment, kubectl top và số CPU của HPA, nếu đang khởi động: tối đa ~10 phút)\n  ✓ metrics-server (kube-system): image ghim phiên bản, có --kubelet-insecure-tls, Available; APIService v1beta1.metrics.k8s.io Available\n  ✓ kubectl top nodes: có số cho cả 3 node\n  ✓ HPA catalog: Deployment catalog, min 2, max 3, CPU Utilization 60%, behavior.scaleDown 60 giây; ~/shop/catalog-hpa.yaml (autoscaling/v2) khớp\n  ✓ HPA catalog đọc được CPU (status.currentMetrics có số, ScalingActive); catalog Available trong khoảng 2..3\n  ✓ shop-quota đủ chỗ cho catalog ở maxReplicas (pods, requests.cpu, requests.memory, limits.memory)\n  ✓ answers.env: MAX_REPLICAS_SEEN=3 (= maxReplicas); không còn Pod lẻ sinh tải trong shop\n  ✓ answers.env: UNKNOWN_REASON=FailedGetResourceMetric (Event của HPA nháp thiếu requests.cpu); namespace hpa-lab đã xoá\n  → 7/7 đạt",
+      projectDelta: "Mảnh `hpa` của shop xong: catalog có HPA autoscaling/v2 (2–3 replica, CPU 60%), cluster có metrics-server. Buổi sau là sự cố cuối chặng 3: Pod Pending vì nhiều nguyên nhân chồng nhau.",
+    },
+    review: [
+      { q: "HPA hiện `cpu: <unknown>/60%`. Hai nguyên nhân hay gặp và cách phân biệt?", a: "Không có metrics (metrics-server thiếu/chưa Ready: `k top pod` lỗi, APIService không Available) hoặc container không khai `requests.cpu` (Event `FailedGetResourceMetric … missing request for cpu`). `k top pod` có số mà HPA vẫn unknown thì là request." },
+      { q: "2 replica, mỗi Pod request 200m và đang dùng 300m, target 60%. HPA muốn bao nhiêu replica?", a: "Utilization = 300/200 = 150%. ceil(2 × 150 / 60) = ceil(5) = 5, rồi bị cắt về maxReplicas nếu max nhỏ hơn." },
+      { q: "Vì sao metrics-server trên cluster kubeadm cần `--kubelet-insecure-tls`, và cách sạch hơn là gì?", a: "Chứng chỉ serving của kubelet tự ký, không có IP trong SAN, metrics-server không kiểm được (`x509: … doesn't contain any IP SANs`). Cách sạch: `serverTLSBootstrap: true` trong cấu hình kubelet và duyệt CSR kubelet-serving để chứng chỉ do CA của cluster ký." },
+      { q: "Ngừng tải mà HPA không giảm ngay. Vì sao, và chỉnh ở đâu?", a: "Scale down lấy khuyến nghị cao nhất trong cửa sổ ổn định (mặc định 300 giây) để tránh dao động. Chỉnh `spec.behavior.scaleDown.stabilizationWindowSeconds` (và `policies`) trong `autoscaling/v2`." },
+      { q: "Quota còn chỗ cho 7 replica. Vì sao chọn maxReplicas 3?", a: "Quota chỉ đếm request; RAM thật của hai worker 2 GB mới là giới hạn (mỗi JVM catalog ~180–280 MiB, đo `free -m` lúc đỉnh còn ~1 GB mỗi worker trong khi máy chủ lab đã chật). Max phải vừa cả quota lẫn sức chứa node, nếu không replica dư Pending hoặc làm node thiếu RAM." },
+    ],
   },
+
+  // ───────────────────────────── s21 ─────────────────────────────
   {
     id: "s21",
     stage: "st3",
@@ -839,12 +1081,12 @@ Verify đọc nhãn và taint của hai worker, affinity và vị trí của hai
     domain: "troubleshooting",
     competencies: ["ts-monitor"],
     requires: ["s20"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Đưa các Pod Pending về Running trong 20 phút bằng cách đọc lý do FailedScheduling.",
-      "Tìm Pod và container đang ngốn tài nguyên nhất cụm bằng kubectl top và sắp xếp.",
-      "Phân biệt thiếu tài nguyên thật với ràng buộc scheduling sai.",
+      "Đưa shop về trạng thái cuối s20 trong 20 phút khi nhiều lỗi lập lịch và tài nguyên chồng lên nhau, không biết trước lỗi gì.",
+      "Phân biệt hai bề mặt của lỗi: FailedCreate trên ReplicaSet (quota chặn, chưa có Pod) và FailedScheduling trên Pod (scheduler không tìm được node), đọc từng vế của \"0/3 nodes are available\".",
+      "Phân biệt thiếu tài nguyên thật (Insufficient memory) với ràng buộc sai (nodeSelector, cordon), và tìm Pod ngốn CPU nhất cụm bằng kubectl top.",
     ],
     skills: [
       { skill: "k-pending-reasons", level: "Nhận ra trong 30 giây" },
@@ -853,8 +1095,241 @@ Verify đọc nhãn và taint của hai worker, affinity và vị trí của hai
       { skill: "k-events-all", level: "Gõ được không tra" },
       { skill: "k-custom-columns", level: "Gõ được có tra" },
     ],
-    uses: ["k-top-pod", "k-node-allocated", "k-taint-node", "k-node-affinity", "k-describe-quota"],
-    stateIn: "Đầu ra s20 cộng `./labs/lab break`: vài Pod Pending vì nhiều nguyên nhân chồng nhau.",
-    stateOut: "Mọi Pod của shop Running; ràng buộc scheduling và quota trở lại đúng như cuối s20.",
+    uses: ["k-top-pod", "k-node-allocated", "k-describe-quota", "k-events-sorted", "k-get-wide"],
+    foundation: null,
+    mindset: `**Một Pod chưa chạy có thể chưa tồn tại.** Với Deployment, chuỗi là: Deployment → ReplicaSet → *tạo* Pod (admission: LimitRange, ResourceQuota…) → scheduler *xếp* Pod lên node → kubelet chạy. Lỗi ở bước tạo và lỗi ở bước xếp để lại dấu ở hai chỗ khác nhau:
+
+| | Quota/admission chặn | Scheduler không xếp được |
+|---|---|---|
+| Có Pod không? | **Không**: \`get pod\` không thấy gì mới | Có, \`Pending\`, NODE \`<none>\` |
+| Event | \`FailedCreate\` trên **ReplicaSet** (hoặc Job) | \`FailedScheduling\` trên **Pod** |
+| Câu thông báo | \`exceeded quota: shop-quota, requested: …, used: …, limited: …\` | \`0/3 nodes are available: …\` |
+| Dấu khác | \`get deploy\`: UP-TO-DATE thiếu; RS \`DESIRED 1 CURRENT 0\`; condition \`ReplicaFailure\` | \`get pod -o wide\`: Pending, không node |
+| Đọc thêm | \`describe quota\` | \`describe node\` (Allocatable, Allocated resources, Taints, Unschedulable), \`get node --show-labels\` |
+
+Rolling update che cả hai: Pod cũ vẫn chạy nên shop còn trả lời, \`READY 2/2\`. Cột UP-TO-DATE mới lộ ra.
+
+**Đọc "0/3 nodes are available" từng vế.** Mỗi node bị loại ở filter đầu tiên nó trượt; tổng các vế bằng số node. Đo trên lab trong buổi này:
+
+- \`1 node(s) didn't match Pod's node affinity/selector, 1 node(s) had untolerated taint(s), 1 node(s) were unschedulable\` — cka-w2 không có nhãn mà Pod đòi, cka-cp có taint control plane, cka-w1 bị cordon. Ba vế, ba nguyên nhân, **không vế nào là thiếu tài nguyên**.
+- Sau khi uncordon: \`1 node(s) had untolerated taint(s), 2 node(s) didn't match Pod's node affinity/selector\`: còn lại một ràng buộc sai.
+- Pod thử 1900Mi: \`1 node(s) had untolerated taint(s), 2 Insufficient memory\` — đây mới là thiếu tài nguyên **thật**: tổng requests trên node cộng Pod mới vượt *Allocatable* (1899736Ki ≈ 1855Mi trên mỗi worker), dù \`free -m\` còn bao nhiêu cũng vậy, vì scheduler cộng *requests*, không nhìn mức dùng.
+
+Đuôi \`preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling\` nói đuổi Pod khác đi cũng không giúp: nhãn, taint, cordon không đổi khi có Pod bị xoá, và 1900Mi lớn hơn cả node trống.
+
+**Ràng buộc sai hay thiếu thật?** Ràng buộc sai (nodeSelector/affinity không khớp nhãn nào, taint không ai tolerate, cordon quên gỡ) sửa bằng cấu hình; thêm node không giúp. Thiếu thật (\`Insufficient cpu/memory\`, \`Too many pods\`) thì hoặc request quá tay, hoặc cần thêm chỗ (scale node, giảm replica, dọn Pod rác). Request lớn hơn Allocatable của **mọi** node là sai cấu hình đội lốt thiếu tài nguyên: không node nào chạy được Pod đó, kể cả node trống. PVC chưa bind là vế thứ năm (\`pod has unbound immediate PersistentVolumeClaims\`), gặp ở chặng 4.
+
+**Vì sao gateway hôm nay không bao giờ Pending.** "Đồng nghiệp" đặt cho gateway \`requests.memory: 1900Mi\`, lớn hơn mọi node. Nhưng quota tính trước scheduler: lúc nghỉ shop đã dùng 1280Mi \`requests.memory\` (2 gateway, 2 catalog, 1 order × 256Mi), cộng 1900Mi là 3180Mi, vượt \`3Gi\` (3072Mi) kể cả sau khi bạn trả quota về đúng giá trị. Nên Pod gateway mới không bao giờ được tạo: chỉ có \`FailedCreate … requested: requests.memory=1900Mi, used: requests.memory=1280Mi, limited: requests.memory=3Gi\`. Muốn tận mắt thấy scheduler nói gì về 1900Mi, buổi này cho bạn tạo một Pod thử ở namespace \`default\` (không có quota).
+
+**Pod ngốn CPU.** \`kubectl top pod -A --sort-by=cpu\` đọc mức dùng thật từ metrics-server (s20): Pod không có limit hay request vẫn hiện, và đó thường là thủ phạm làm Pod khác chậm. \`--containers\` tách theo container khi Pod có nhiều container.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Khi scheduler chết — Pod Pending; static pod vẫn chạy", href: "#/roadmap/cka/cka-w4-5" },
+      { label: "Bài lộ trình CKA: PriorityClass & ảnh hưởng của requests tới scheduling", href: "#/roadmap/cka/cka-w4-8" },
+      { label: "Bài lộ trình CKA: kubectl get events, kubectl top (metrics-server)", href: "#/roadmap/cka/cka-w8-7" },
+      { label: "Bài lộ trình CKAD: Lỗi phổ biến — ImagePullBackOff, CrashLoopBackOff, Pending, OOMKilled", href: "#/roadmap/ckad/w5-7" },
+      { label: "CKA Study Guide, chương 14 — Lập lịch Pod", href: "#/docs/ckabook-14" },
+      { label: "CKA Study Guide, chương 21 — Xử lý sự cố ứng dụng", href: "#/docs/ckabook-21" },
+      { label: "Thực hành nhanh: events -A, top --containers, custom-columns", href: "#/commands" },
+      { label: "kubernetes.io: Debug Pods (Pod Pending)", href: "https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/" },
+      { label: "kubernetes.io: Resource Management for Pods and Containers", href: "https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" },
+      { label: "kubernetes.io: Resource Quotas", href: "https://kubernetes.io/docs/concepts/policy/resource-quotas/" },
+    ],
+    stateIn: "Đầu ra s20 (metrics-server, HPA catalog 2–3, shop-quota như cuối s18). Trên Mac chạy `./labs/lab begin cka s21`: lệnh kiểm đầu vào rồi **gây sự cố**: \"một đồng nghiệp\" sửa vài tệp trong `~/shop/` rồi apply, động vào node, và chạy một việc nền ở namespace khác. Ba tệp trong `~/shop/` được ghi lại bằng một công cụ YAML: comment và cách viết danh sách có thể đổi. Không nói đã làm gì. Bấm giờ 20 phút. Đừng đọc `labs/cka/breaks/` trước khi làm xong.",
+    stateOut: "Ba Deployment Available đúng số replica (catalog trong khoảng của HPA), không Pod Pending, không ReplicaSet FailedCreate trong shop; order không nodeSelector; gateway có lại tài nguyên cuối s17; shop-quota như cuối s18; ~/shop/{order,gateway,quota}.yaml khớp cluster; hai worker schedulable; Pod batch-7f và mem-probe ở default đã xoá; ~/drills/s21/answers.env.",
+    tasks: [
+      { id: "t1", text: "Toàn cảnh, chưa sửa gì: `k get node`, `k get pod -A -o wide | grep -v Running`, `k -n shop get deploy,rs`. Shop còn trả lời không? Deployment nào có UP-TO-DATE thiếu, ReplicaSet nào `DESIRED 1 CURRENT 0`?" },
+      { id: "t2", text: "Events toàn cụm: `k get events -A --sort-by=.metadata.creationTimestamp | tail -20`, rồi lọc `k get events -A --field-selector reason=FailedCreate` và `--field-selector reason=FailedScheduling`. Mỗi lỗi thuộc bề mặt nào trong bảng phần Tư duy? Đọc `k -n shop describe quota shop-quota`. Trả quota về giá trị cuối s18 **trong tệp** `~/shop/quota.yaml` rồi apply." },
+      { id: "t3", text: "Sau khi quota đúng: Pod mới nào xuất hiện và Pending? `k -n shop describe pod <pod>`: đọc từng vế của `0/3 nodes are available: …` và chỉ ra node nào ứng với vế nào (`k get node --show-labels`, `k describe node | grep -E 'Taints|Unschedulable'`). Sửa từng nguyên nhân ở đúng chỗ (node hay tệp `~/shop/order.yaml`)." },
+      { id: "t4", text: "gateway: vì sao ReplicaSet mới vẫn `FailedCreate` dù quota đã đúng? So `requested` trong thông báo với Allocatable của worker (`k describe node cka-w1 | grep -A6 Allocatable`) và với tài nguyên cuối s17 (`k -n shop get pod -l app=gateway -o custom-columns='NAME:.metadata.name,REQ_MEM:.spec.containers[0].resources.requests.memory,LIM_MEM:.spec.containers[0].resources.limits.memory'`). Sửa `~/shop/gateway.yaml`, apply, `rollout status`." },
+      { id: "t5", text: "Thử giả thuyết \"1900Mi không vừa node nào\" ở nơi không có quota: Pod `mem-probe` ở namespace `default` (busybox:1.37, `sleep 3600`, `requests.memory: 1900Mi`). Đọc FailedScheduling của nó; ghi `PROBE_REASON=<cụm từ chỉ lý do hai worker bị loại>` vào `~/drills/s21/answers.env`, rồi xoá mem-probe." },
+      { id: "t6", text: "Có gì làm cụm chậm không? `k top node`, `k top pod -A --sort-by=cpu | head`, `k top pod -A --containers --sort-by=cpu | head -5`. Ghi `HOG_NS=<namespace>` và `HOG_POD=<tên Pod>` của Pod ngốn CPU nhất, rồi xoá nó." },
+      { id: "t7", text: "Xác nhận: `k get pod -A | grep -v -E 'Running|Completed'` không còn gì của shop; `k -n shop get deploy` UP-TO-DATE đủ. Ghi thời gian đã dùng. Trên Mac: `./labs/lab verify cka s21` phải đạt 7/7 (chạy lại bao nhiêu lần cũng được)." },
+    ],
+    hints: [
+      "Không thấy Pod mới nào dù Deployment đã đổi: lỗi ở bước tạo Pod, xem Event của ReplicaSet (`k -n shop describe rs <rs mới>`), không phải của Pod.",
+      "Thông báo quota đọc như phép cộng: `requested` + `used` > `limited`. Sửa quota xong mà vẫn vượt thì nhìn lại `requested`: một Pod có cần chừng ấy không?",
+      "ReplicaSet thử tạo lại Pod với thời gian chờ tăng dần: sửa quota xong có thể mất vài chục giây Pod mới xuất hiện.",
+      "`were unschedulable` là cordon (`SchedulingDisabled` trong `k get node`), không phải taint bạn tự đặt: gỡ bằng `k uncordon`.",
+      "Không nhớ cú pháp sắp xếp của top: `k top pod -h | grep sort`. Sắp theo cột của `get`: `--sort-by=.metadata.creationTimestamp`.",
+      "Gỡ cordon trước khi sửa Deployment: nếu không, mọi Pod mới dồn lên một worker 2 GB.",
+    ],
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài; tên Pod, số đo và thời điểm sẽ khác. (Lần đo này catalog đang 3 replica vì HPA vừa tăng lúc JVM khởi động, nên \`used\` là 1536Mi; lúc nghỉ là 1280Mi.)
+
+**Bước 1 — Toàn cảnh**
+
+\`\`\`bash
+k get node
+# cka-cp   Ready                      control-plane   24h   v1.36.6
+# cka-w1   Ready,SchedulingDisabled   <none>          24h   v1.36.6
+# cka-w2   Ready                      <none>          24h   v1.36.6
+k -n shop get deploy
+# catalog   3/3     3            3           72m
+# gateway   2/2     0            2           72m
+# order     1/1     0            1           72m
+k -n shop get rs | awk 'NR==1 || $2>0'
+# NAME                 DESIRED   CURRENT   READY   AGE
+# catalog-75c4d75888   3         3         3       47m
+# gateway-55f6b8dc58   2         2         2       46m
+# gateway-7f54fc7cb6   1         0         0       17s
+# order-64f7f7fd8b     1         0         0       17s
+# order-6c75b644fb     1         1         1       49m
+k get pod -A --field-selector=status.phase=Pending
+# No resources found
+\`\`\`
+
+cka-w1 bị cordon. gateway và order có ReplicaSet mới \`DESIRED 1 CURRENT 0\`: chưa có Pod nào để Pending. Shop vẫn chạy bằng Pod cũ.
+
+**Bước 2 — Events: bề mặt FailedCreate**
+
+\`\`\`bash
+k -n shop describe rs gateway-7f54fc7cb6 | tail -1
+#   Warning  FailedCreate  6s (x4 over 24s)  replicaset-controller  (combined from similar events): Error creating: pods "gateway-7f54fc7cb6-n2qnr" is forbidden: exceeded quota: shop-quota, requested: requests.memory=1900Mi, used: requests.memory=1536Mi, limited: requests.memory=1Gi
+k -n shop describe rs order-64f7f7fd8b | tail -1
+#   Warning  FailedCreate  6s (x4 over 24s)  replicaset-controller  (combined from similar events): Error creating: pods "order-64f7f7fd8b-n5zlw" is forbidden: exceeded quota: shop-quota, requested: requests.memory=256Mi, used: requests.memory=1536Mi, limited: requests.memory=1Gi
+k get events -A --field-selector reason=FailedCreate -o custom-columns='KIND:.involvedObject.kind,NAME:.involvedObject.name' | sort -u
+# … Job order-report-29911335 cũng bị chặn: requested: requests.memory=64Mi
+k -n shop describe quota shop-quota | tail -5
+# limits.memory    2304Mi  5Gi
+# pods             9       20
+# requests.cpu     900m    2
+# requests.memory  1536Mi  1Gi
+\`\`\`
+
+\`used\` (1536Mi) đã lớn hơn \`hard\` (1Gi): quota bị hạ dưới mức đang dùng. Pod đang chạy không bị đuổi, nhưng không Pod mới nào (kể cả Pod của CronJob) được tạo. Giá trị đúng là của s18:
+
+\`\`\`bash
+vim ~/shop/quota.yaml          # requests.memory: 3Gi
+k apply -f ~/shop/quota.yaml
+\`\`\`
+
+**Bước 3 — Bề mặt FailedScheduling: order**
+
+\`\`\`bash
+k -n shop get pod -l app=order -o wide
+# order-64f7f7fd8b-5hfb4   0/1     Pending   0              7s    <none>          <none>
+# order-6c75b644fb-vfhp4   1/1     Running   3 (6m9s ago)   51m   10.244.62.170   cka-w2
+k -n shop describe pod order-64f7f7fd8b-5hfb4 | grep FailedScheduling
+#   Warning  FailedScheduling  7s    default-scheduler  0/3 nodes are available: 1 node(s) didn't match Pod's node affinity/selector, 1 node(s) had untolerated taint(s), 1 node(s) were unschedulable. no new claims to deallocate, preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.
+k -n shop get deploy order -o jsonpath='{.spec.template.spec.nodeSelector}'; echo
+# {"disktype":"ssd"}
+k get node -L disktype           # không node nào có nhãn disktype
+\`\`\`
+
+Ba vế: cka-w2 không có nhãn \`disktype=ssd\`, cka-cp có taint control plane, cka-w1 cordon (bị loại trước khi xét nhãn). Hai nguyên nhân là của bạn: cordon và nodeSelector.
+
+\`\`\`bash
+k uncordon cka-w1
+k -n shop get events --field-selector reason=FailedScheduling --sort-by=.lastTimestamp | tail -1
+# … 0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 node(s) didn't match Pod's node affinity/selector. …
+vim ~/shop/order.yaml          # xoá khối nodeSelector
+k apply -f ~/shop/order.yaml && k -n shop rollout status deploy/order
+\`\`\`
+
+Đừng "sửa" bằng cách gắn nhãn \`disktype=ssd\` cho một worker: đó là chữa triệu chứng, order cuối s20 không có nodeSelector.
+
+**Bước 4 — gateway: request lớn hơn mọi node**
+
+\`\`\`bash
+k -n shop describe rs gateway-7f54fc7cb6 | tail -1
+# … exceeded quota: shop-quota, requested: requests.memory=1900Mi, used: requests.memory=1280Mi, limited: requests.memory=3Gi
+k describe node cka-w1 | grep -A6 Allocatable | grep memory
+#   memory:             1899736Ki
+k -n shop get deploy gateway -o custom-columns='REQ_MEM:.spec.template.spec.containers[0].resources.requests.memory,LIM_MEM:.spec.template.spec.containers[0].resources.limits.memory'
+# REQ_MEM   LIM_MEM
+# 1900Mi    1900Mi
+\`\`\`
+
+1280 + 1900 = 3180Mi > 3072Mi: quota đúng vẫn không đủ, và 1900Mi còn lớn hơn Allocatable của mỗi worker (1899736Ki ≈ 1855Mi). Một gateway không cần chừng ấy: tài nguyên cuối s17 là 100m / 256Mi / 384Mi.
+
+\`\`\`bash
+vim ~/shop/gateway.yaml        # requests.memory: 256Mi, limits.memory: 384Mi
+k apply -f ~/shop/gateway.yaml && k -n shop rollout status deploy/gateway
+\`\`\`
+
+**Bước 5 — Thử 1900Mi ở nơi không có quota**
+
+\`\`\`bash
+k -n default run mem-probe --image=busybox:1.37 --restart=Never $do -- sleep 3600 > /tmp/mem-probe.yaml
+vim /tmp/mem-probe.yaml        # containers[0].resources.requests.memory: 1900Mi
+k apply -f /tmp/mem-probe.yaml
+k -n default describe pod mem-probe | grep FailedScheduling
+#   Warning  FailedScheduling  …  default-scheduler  0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 Insufficient memory. no new claims to deallocate, preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.
+echo 'PROBE_REASON=Insufficient memory' >> ~/drills/s21/answers.env
+k -n default delete pod mem-probe
+\`\`\`
+
+Cùng một con số 1900Mi, hai bề mặt: trong \`shop\` quota từ chối tạo Pod (FailedCreate trên ReplicaSet); ở \`default\` Pod được tạo và scheduler báo \`Insufficient memory\` (FailedScheduling trên Pod). Preemption không giúp vì không node nào có 1900Mi kể cả khi trống.
+
+**Bước 6 — Pod ngốn CPU**
+
+\`\`\`bash
+k top pod -A --sort-by=cpu | head -3
+# NAMESPACE     NAME                    CPU(cores)   MEMORY(bytes)
+# default       batch-7f                488m         0Mi
+# kube-system   kube-apiserver-cka-cp   138m         298Mi
+k top pod -A --containers --sort-by=cpu | head -2
+# NAMESPACE   POD        NAME     CPU(cores)   MEMORY(bytes)
+# default     batch-7f   worker   488m         0Mi
+k -n default get pod batch-7f -o custom-columns='NAME:.metadata.name,LIM_CPU:.spec.containers[0].resources.limits.cpu,NODE:.spec.nodeName'
+printf 'HOG_NS=default\nHOG_POD=batch-7f\n' >> ~/drills/s21/answers.env
+k -n default delete pod batch-7f
+\`\`\`
+
+488m sát limit 500m của nó: một vòng lặp \`while :\` chiếm nửa core của worker. Pod mới có thể cần tới một phút mới có trong \`k top\` (metrics-server đo mỗi 15 giây).
+
+**Bước 7 — Xác nhận**
+
+\`\`\`bash
+k get node                     # không còn SchedulingDisabled
+k -n shop get deploy           # UP-TO-DATE đủ
+k get pod -A | grep -v -E 'Running|Completed'
+\`\`\`
+
+Rồi \`./labs/lab verify cka s21\`. Lời giải tự động \`labs/cka/sessions/s21/apply.sh\` chạy chính kịch bản gây lỗi rồi áp đúng các cách sửa này.`,
+    exam: {
+      patterns: [
+        "\"Pod X Pending, tìm nguyên nhân và sửa\" — `describe pod` → FailedScheduling, đọc từng vế; đối chiếu nhãn, taint, cordon, Allocatable.",
+        "\"Deployment không tạo đủ Pod\" — không thấy Pod thì xem Event của ReplicaSet (`FailedCreate`, quota/LimitRange).",
+        "\"Ghi tên Pod dùng nhiều CPU nhất trong cụm vào tệp\" — `k top pod -A --sort-by=cpu --no-headers | head -1`.",
+        "\"Liệt kê Pod với request CPU/memory của chúng\" — `-o custom-columns=…resources.requests…`.",
+      ],
+      timeTargetMin: 20,
+      drills: [
+        {
+          text: "Trong 2 phút: in mọi Event FailedScheduling của cả cụm, mới nhất cuối cùng.",
+          timeLimitMin: 2,
+          solution: "```bash\nk get events -A --field-selector reason=FailedScheduling --sort-by=.metadata.creationTimestamp\n```",
+        },
+        {
+          text: "Trong 3 phút: bảng mọi Pod của namespace `shop` với tên, node, request memory và limit memory của container đầu tiên.",
+          timeLimitMin: 3,
+          solution: "```bash\nk -n shop get pod -o custom-columns='NAME:.metadata.name,NODE:.spec.nodeName,REQ:.spec.containers[0].resources.requests.memory,LIM:.spec.containers[0].resources.limits.memory'\n```",
+        },
+      ],
+    },
+    tips: [
+      "Pod chưa chạy: trước hết hỏi \"Pod có tồn tại không?\". Không có → Event của ReplicaSet/Job; có và Pending → FailedScheduling của Pod.",
+      "Tổng các vế trong `0/N nodes are available` bằng N. Vế nào không tự giải thích được thì `describe node`.",
+      "`Insufficient memory` là so với *requests* đã đặt trên node và Allocatable, không phải `free -m`.",
+      "Sửa ở nguồn: quota, nodeSelector, resources đều sửa trong `~/shop/*.yaml` rồi apply, để lần `k apply -f ~/shop/` sau không đưa lỗi trở lại.",
+    ],
+    outcome: {
+      md: `Shop về đúng trạng thái cuối s20 sau sự cố lập lịch và tài nguyên. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s21
+\`\`\`
+
+Verify so order, gateway, shop-quota với cuối s20 (và với tệp trong \`~/shop/\`), quét Pod Pending và ReplicaSet FailedCreate trong \`shop\`, kiểm hai worker, kiểm Pod nền và Pod thử ở \`default\` đã xoá, và ba đáp án. Chặng 3 xong: mốc \`st3-done\`.`,
+      verifyOutput: "lab: kiểm s21\n  (chờ apiserver và ba Deployment, nếu đang khởi động: tối đa ~6 phút)\n  ✓ order: không nodeSelector/nodeAffinity, 1/1/1, rollout xong; ~/shop/order.yaml khớp\n  ✓ gateway: tài nguyên như cuối s17 (100m/256Mi/384Mi, init 10m/16Mi/32Mi), 2/2/2, rollout xong; ~/shop/gateway.yaml khớp\n  ✓ shop-quota: pods 20, requests.cpu 2, requests.memory 3Gi, limits.memory 5Gi (như cuối s18); ~/shop/quota.yaml khớp\n  ✓ shop: catalog Available trong khoảng của HPA; không Pod nào Pending, không ReplicaSet FailedCreate\n  ✓ cka-w1, cka-w2: schedulable (không cordon), không taint thừa\n  ✓ answers.env: HOG_NS=default, HOG_POD=batch-7f (Pod ngốn CPU nhất cụm); Pod batch-7f đã xoá\n  ✓ answers.env: PROBE_REASON có 'Insufficient memory' (FailedScheduling của Pod thử mem-probe); mem-probe đã xoá\n  → 7/7 đạt",
+      projectDelta: "shop qua sự cố thứ hai, lần này ở tầng lập lịch và tài nguyên; bạn có quy trình \"Pod có tồn tại không → FailedCreate hay FailedScheduling → từng vế\". Chặng 3 xong (mốc `st3-done`): chặng 4 đưa dữ liệu vào volume và PostgreSQL.",
+    },
+    review: [
+      { q: "Deployment đổi template mà không thấy Pod mới nào, Pending cũng không. Xem ở đâu?", a: "Event của ReplicaSet mới (`describe rs`): `FailedCreate`, thường là quota (`exceeded quota … requested/used/limited`) hoặc LimitRange/admission. Pod chưa tồn tại nên không có gì để scheduler xếp." },
+      { q: "`0/3 nodes are available: 1 node(s) didn't match Pod's node affinity/selector, 1 node(s) had untolerated taint(s), 1 node(s) were unschedulable` — sửa những gì?", a: "Mỗi vế một node: node không khớp nhãn (sửa nodeSelector/affinity hoặc nhãn nếu đúng là thiếu nhãn), node có taint (control plane, để nguyên hoặc thêm toleration nếu có chủ ý), node cordon (`k uncordon`). Không vế nào là thiếu tài nguyên." },
+      { q: "Vì sao gateway với requests.memory 1900Mi trong buổi này không bao giờ Pending?", a: "Quota kiểm lúc tạo Pod, trước scheduler: 1280Mi đang dùng + 1900Mi = 3180Mi > 3Gi, nên ReplicaSet không tạo được Pod (FailedCreate). Ở namespace không có quota thì cùng Pod đó Pending với `Insufficient memory`." },
+      { q: "`Insufficient memory` trong khi `free -m` trên node còn 1 GB. Mâu thuẫn không?", a: "Không. Scheduler cộng requests của các Pod trên node cộng request của Pod mới rồi so với Allocatable; mức dùng thật không vào phép tính. Request lớn hơn Allocatable thì không node nào nhận, kể cả node trống." },
+      { q: "Tìm container ngốn CPU nhất cụm bằng một lệnh?", a: "`k top pod -A --containers --sort-by=cpu | head` (cần metrics-server; Pod mới cần ~1 phút mới có số)." },
+    ],
   },
 ];
