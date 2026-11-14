@@ -57,23 +57,24 @@ rm -f "${TMPDIR:-/tmp}/lab-s13-probe-lab.yaml"
 res="$(vm "$cp" "set -e
   kubectl -n shop delete deploy,svc probe-lab --ignore-not-found --wait=true >/dev/null
   kubectl apply -f /tmp/lab-s13-probe-lab-1.yaml >/dev/null
-  pod() { kubectl -n shop get pod -l app=probe-lab -o jsonpath=\"\$1\" 2>/dev/null; }
+  # Đọc trạng thái không làm hỏng cả khối khi một lần gọi kubectl lỗi (cluster bận): giá trị rỗng, kiểm ở dưới.
+  pod() { kubectl -n shop get pod -l app=probe-lab -o jsonpath=\"\$1\" 2>/dev/null || true; }
   # Readiness sai: container chạy (Spring đã lên) nhưng không bao giờ Ready, EndpointSlice có địa chỉ ready=false.
   for i in \$(seq 1 60); do
     [ \"\$(pod '{.items[0].status.containerStatuses[0].started}')\" = true ] && break; sleep 2; done
   sleep 30
   rr=\$(pod '{.items[0].status.containerStatuses[0].restartCount}')
   ready=\$(pod '{.items[0].status.containerStatuses[0].ready}')
-  eps=\$(kubectl -n shop get endpointslices -l kubernetes.io/service-name=probe-lab -o jsonpath='{range .items[*].endpoints[*]}{.conditions.ready}{\" \"}{end}')
+  eps=\$(kubectl -n shop get endpointslices -l kubernetes.io/service-name=probe-lab -o jsonpath='{range .items[*].endpoints[*]}{.conditions.ready}{\" \"}{end}' || true)
   # Liveness sai: sau initialDelay 60 giây + 2 lần hỏng, kubelet giết container và tạo lại.
   kubectl apply -f /tmp/lab-s13-probe-lab-2.yaml >/dev/null
   kubectl -n shop rollout status deploy/probe-lab --timeout=180s >/dev/null 2>&1 || true
   lr=0; for i in \$(seq 1 120); do
     lr=\$(pod '{.items[0].status.containerStatuses[0].restartCount}'); [ \"\${lr:-0}\" -ge 1 ] && break; sleep 2; done
   code=\$(pod '{.items[0].status.containerStatuses[0].lastState.terminated.exitCode}')
-  kubectl -n shop delete deploy,svc probe-lab --ignore-not-found --wait=true >/dev/null
+  kubectl -n shop delete deploy,svc probe-lab --ignore-not-found --wait=true >/dev/null || true
   rm -f /tmp/lab-s13-probe-lab-1.yaml /tmp/lab-s13-probe-lab-2.yaml
-  echo \"\$rr|\$ready|\$eps|\$lr|\$code\"")"
+  echo \"\$rr|\$ready|\$eps|\$lr|\$code\"")" || { echo "s13: thí nghiệm probe-lab lỗi: $res" >&2; exit 1; }
 echo "s13: probe-lab readiness sai → restart|ready|EndpointSlice: ${res%|*|*}; liveness sai → restart|exitCode: ${res#*|*|*|}"
 rr="${res%%|*}"; lr="$(printf '%s' "$res" | cut -d'|' -f4)"
 [ "$rr" = 0 ] || { echo "s13: readiness sai mà container bị restart ($rr)" >&2; exit 1; }
