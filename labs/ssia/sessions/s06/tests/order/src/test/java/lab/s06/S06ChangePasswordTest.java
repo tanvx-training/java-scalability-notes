@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import shop.order.OrderApplication;
 
@@ -36,9 +37,13 @@ class S06ChangePasswordTest {
   void wrongOldPasswordChangesNothing() throws Exception {
     String name = DbUsers.randomName("w");
     DbUsers.insert(jdbc, name, "{noop}old-" + name, true, false, List.of("read"));
-    int s = Http.changePassword(mvc, name, "old-" + name, true, Http.passwordJson("doan-bua", "hacked-" + name));
-    assertThat(s).withFailMessage("PUT /users/me/password sai mật khẩu cũ: mong bị từ chối (4xx), nhận %s", s)
-        .isBetween(400, 499);
+    MockHttpServletResponse r = Http.changePasswordResponse(mvc, name, "old-" + name,
+        Http.passwordJson("doan-bua", "hacked-" + name));
+    String challenge = r.getHeader("WWW-Authenticate");
+    assertThat(challenge).withFailMessage("PUT sai mật khẩu cũ trả %s kèm WWW-Authenticate: %s (lỗi nghiệp vụ bị biến thành thách thức đăng nhập)",
+        r.getStatus(), challenge).isNull();
+    assertThat(r.getStatus()).withFailMessage("PUT /users/me/password sai mật khẩu cũ: mong 400, nhận %s", r.getStatus())
+        .isEqualTo(400);
     int hacked = Http.getOrders(mvc, name, "hacked-" + name);
     assertThat(hacked).withFailMessage("sai mật khẩu cũ mà mật khẩu vẫn bị đổi (mật khẩu mới nhận %s)", hacked).isEqualTo(401);
     int ok = Http.changePassword(mvc, name, "old-" + name, true, Http.passwordJson("old-" + name, "new-" + name));

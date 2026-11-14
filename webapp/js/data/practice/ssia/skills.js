@@ -38,7 +38,7 @@ export const skills = [
   // ── s06 UserDetailsManager: tạo user, đổi mật khẩu — và JdbcUserDetailsManager có sẵn ──
   { id: "cfg-userdetailsmanager", kind: "code", area: "config", label: "UserDetailsManager tự viết trên shop_users: createUser, changePassword lấy user từ SecurityContext và kiểm mật khẩu cũ" },
   { id: "cfg-user-builder", kind: "code", area: "config", label: "User.withUsername(...).password(encoder.encode(...)).authorities(...).build() để tạo UserDetails cho createUser" },
-  { id: "int-jdbcuserdetailsmanager-defaults", kind: "concept", area: "internals", label: "JdbcUserDetailsManager và users.ddl: không lưu khoá, user không authority là không tồn tại, changePassword chỉ kiểm mật khẩu cũ khi có AuthenticationManager" },
+  { id: "int-jdbcuserdetailsmanager-defaults", kind: "concept", area: "internals", label: "JdbcUserDetailsManager: lược đồ users.ddl, truy vấn tự viết cho bảng có sẵn (6 cột để đọc khoá), user không authority là không tồn tại, changePassword chỉ kiểm mật khẩu cũ khi có AuthenticationManager" },
 
   // ── s07 PasswordEncoder: contract, tự viết, và các bản có sẵn ──
   { id: "int-passwordencoder-contract", kind: "concept", area: "internals", label: "encode, matches, upgradeEncoding của PasswordEncoder" },

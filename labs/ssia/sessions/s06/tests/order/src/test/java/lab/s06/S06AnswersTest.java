@@ -80,19 +80,25 @@ class S06AnswersTest {
     Map<String, String> a = Support.answers("s06");
     String gotNoAuth = Support.answer(a, "NO_AUTHORITY_EXCEPTION", "s06");
     String gotLocked = Support.answer(a, "LOCKED_AFTER_RELOAD", "s06");
+    String gotMessage = Support.answer(a, "NO_AUTHORITY_MESSAGE", "s06");
     DataSource ds = defaultSchemaDb();
     JdbcUserDetailsManager m = new JdbcUserDetailsManager(ds);
     JdbcClient.create(ds).sql("INSERT INTO users (username, password, enabled) VALUES (?, ?, ?)")
         .params("noauth", "{noop}x", true).update();
     String noAuth;
+    String message;
     try {
       m.loadUserByUsername("noauth");
       noAuth = "null";
+      message = "null";
     } catch (Exception e) {
       noAuth = e.getClass().getSimpleName();
+      message = e.getMessage();
     }
     assertThat(gotNoAuth).withFailMessage("NO_AUTHORITY_EXCEPTION=%s chưa đúng điều xảy ra với user không có dòng nào trong authorities",
         gotNoAuth).isEqualTo(noAuth);
+    assertThat(gotMessage).withFailMessage("NO_AUTHORITY_MESSAGE=%s chưa đúng thông báo của ngoại lệ đó với user noauth", gotMessage)
+        .isEqualTo(message);
     m.createUser(User.withUsername("bill").password("{noop}12345").authorities("read").accountLocked(true).build());
     UserDetails bill = m.loadUserByUsername("bill");
     assertThat(gotLocked).withFailMessage("LOCKED_AFTER_RELOAD=%s chưa đúng isAccountNonLocked() của bill sau khi đọc lại", gotLocked)

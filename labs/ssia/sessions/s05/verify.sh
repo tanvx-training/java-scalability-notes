@@ -2,6 +2,7 @@
 # Một lần Maven cho test của buổi, rồi mỗi kiểm tra một dòng. Test ở order/src/test/java/lab/s05/.
 lab_mvn -q -pl order -am test -Dtest='lab.s05.**' -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.redirectTestOutputToFile=true -DargLine=-Xshare:off
 expect_test "user chèn vào shop_users đăng nhập được ngay, xoá đi thì 401" 'lab.s05.S05DbUsersTest#newDbUserLogsInDeletedUserCannot'
+expect_test "john, mary đến từ shop_users: đổi hoặc xoá trong DB có hiệu lực ngay" 'lab.s05.S05DbUsersTest#seededUsersComeFromDb'
 expect_test "dữ liệu mẫu: john, mary mở; bill bị khoá" 'lab.s05.S05DbUsersTest#seedDataInTable'
 expect_test "user bị khoá đúng mật khẩu → 401 (LockedException)" 'lab.s05.S05AccountStatusTest#lockedUserRejected'
 expect_test "user bị vô hiệu đúng mật khẩu → 401 (DisabledException)" 'lab.s05.S05AccountStatusTest#disabledUserRejected'

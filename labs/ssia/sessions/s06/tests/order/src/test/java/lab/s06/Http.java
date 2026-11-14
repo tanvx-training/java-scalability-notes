@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -37,6 +38,13 @@ final class Http {
 
   static int changePassword(MockMvc mvc, String user, String password, boolean withCsrf, String body) throws Exception {
     return status(mvc, put("/users/me/password"), user, password, withCsrf, body);
+  }
+
+  /** Như changePassword nhưng trả cả response để xem header. */
+  static MockHttpServletResponse changePasswordResponse(MockMvc mvc, String user, String password, String body)
+      throws Exception {
+    return mvc.perform(put("/users/me/password").contentType(MediaType.APPLICATION_JSON).content(body)
+        .with(httpBasic(user, password)).with(csrf())).andReturn().getResponse();
   }
 
   static int getOrders(MockMvc mvc, String user, String password) throws Exception {

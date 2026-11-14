@@ -78,10 +78,13 @@ class S04AnswersTest {
     Map<String, String> ans = Support.answers("s04");
     String gotClass = Support.answer(ans, "AUTH_CLASS", "s04");
     String gotCred = Support.answer(ans, "CREDENTIALS_AFTER_LOGIN", "s04");
+    String gotPw = Support.answer(ans, "PRINCIPAL_PASSWORD_AFTER_LOGIN", "s04");
     Authentication a = Support.login(ctx, "mary", "67890");
     assertThat(gotClass).withFailMessage("AUTH_CLASS=%s chưa đúng lớp của Authentication sau đăng nhập", gotClass)
         .isEqualTo(a.getClass().getSimpleName());
     assertThat(gotCred).withFailMessage("CREDENTIALS_AFTER_LOGIN=%s chưa đúng giá trị getCredentials() sau đăng nhập", gotCred)
         .isEqualTo(String.valueOf(a.getCredentials()));
+    assertThat(gotPw).withFailMessage("PRINCIPAL_PASSWORD_AFTER_LOGIN=%s chưa đúng getPassword() của principal sau đăng nhập", gotPw)
+        .isEqualTo(String.valueOf(((UserDetails) a.getPrincipal()).getPassword()));
   }
 }

@@ -8,5 +8,5 @@ expect_test "authority đúng như dữ liệu: john [read], mary [read, write]"
 expect_test "answers/s04.env: PRINCIPAL_CLASS" 'lab.s04.S04AnswersTest#principalClass'
 expect_test "answers/s04.env: EXTRA_AUTHORITY, EXTRA_AUTHORITY_CLASS" 'lab.s04.S04AnswersTest#extraAuthority'
 expect_test "answers/s04.env: DEFAULT_METHODS" 'lab.s04.S04AnswersTest#defaultMethods'
-expect_test "answers/s04.env: AUTH_CLASS, CREDENTIALS_AFTER_LOGIN" 'lab.s04.S04AnswersTest#authClassAndCredentials'
+expect_test "answers/s04.env: AUTH_CLASS, CREDENTIALS_AFTER_LOGIN, PRINCIPAL_PASSWORD_AFTER_LOGIN" 'lab.s04.S04AnswersTest#authClassAndCredentials'
 assert_summary

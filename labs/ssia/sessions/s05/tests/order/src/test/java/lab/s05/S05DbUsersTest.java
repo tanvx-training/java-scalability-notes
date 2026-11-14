@@ -47,6 +47,30 @@ class S05DbUsersTest {
         .isEqualTo(401);
   }
 
+  /** john và mary phải đến từ bảng: đổi mật khẩu của john và xoá mary trong DB có hiệu lực ngay. */
+  @Test
+  void seededUsersComeFromDb() throws Exception {
+    String temp = "tam-" + DbUsers.randomName("x");
+    jdbc.sql("UPDATE shop_users SET password = ? WHERE username = ?").params("{noop}" + temp, "john").update();
+    try {
+      int old = status("john", "12345");
+      assertThat(old).withFailMessage("đã đổi mật khẩu của john trong shop_users mà john:12345 vẫn nhận %s: còn bản john ngoài DB", old)
+          .isEqualTo(401);
+      int fresh = status("john", temp);
+      assertThat(fresh).withFailMessage("john với mật khẩu vừa ghi vào shop_users: mong 200, nhận %s", fresh).isEqualTo(200);
+    } finally {
+      jdbc.sql("UPDATE shop_users SET password = ? WHERE username = ?").params("{noop}12345", "john").update();
+    }
+    DbUsers.delete(jdbc, "mary");
+    try {
+      int gone = status("mary", "67890");
+      assertThat(gone).withFailMessage("đã xoá mary khỏi shop_users mà mary:67890 vẫn nhận %s: còn bản mary ngoài DB", gone)
+          .isEqualTo(401);
+    } finally {
+      DbUsers.insert(jdbc, "mary", "{noop}67890", true, false, List.of("read", "write"));
+    }
+  }
+
   @Test
   void seedDataInTable() {
     Map<String, String> rows = new java.util.TreeMap<>();
