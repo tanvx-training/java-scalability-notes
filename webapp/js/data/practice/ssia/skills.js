@@ -10,12 +10,13 @@ export const skills = [
   // ── s01 Thêm Spring Security vào order: mặc định sinh ra gì ──
   { id: "cfg-starter-security", kind: "procedure", area: "config", label: "Thêm spring-boot-starter-security vào pom của order và build lại" },
   { id: "dx-default-user-password", kind: "command", area: "diagnose", label: "Tìm mật khẩu sinh sẵn của user mặc định trong log khởi động; curl -u user:<mật khẩu> /orders" },
-  { id: "int-autoconfig-security", kind: "concept", area: "internals", label: "Auto-configuration bật những bean bảo mật nào khi có starter trên classpath" },
+  { id: "int-autoconfig-security", kind: "concept", area: "internals", label: "Starter bảo mật sinh ra gì: user trong bộ nhớ, chain managementSecurityFilterChain (có actuator) và vì sao /actuator/health vẫn mở" },
 
   // ── s02 Bức tranh class của Spring Security: lần theo một request ──
   { id: "int-auth-flow-diagram", kind: "concept", area: "internals", label: "Vẽ luồng authentication từ filter tới SecurityContext, gọi đúng tên contract" },
   { id: "dx-security-debug-log", kind: "command", area: "diagnose", label: "Bật logging.level.org.springframework.security=TRACE và đọc luồng request" },
   { id: "int-debug-breakpoint-filter", kind: "procedure", area: "internals", label: "Đặt breakpoint trong chuỗi filter để thấy request đi qua đâu" },
+  { id: "dx-401-error-dispatch", kind: "concept", area: "diagnose", label: "401 che lỗi khác (500, 403 CSRF): request lỗi sang /error rồi bị chain chặn lần hai với người dùng ẩn danh" },
 
   // ── s03 Ghi đè các cấu hình mặc định ──
   { id: "cfg-userdetailsservice-bean", kind: "code", area: "config", label: "Bean UserDetailsService và PasswordEncoder thay user mặc định" },

@@ -1,0 +1,2 @@
+# s02: order có UserDetailsService riêng (user john), user mặc định do Spring Boot sinh ra không còn.
+order/src/test/java/lab/s01/S01DefaultUserTest.java

@@ -1,0 +1,4 @@
+# s03: bạn thay chain mặc định và khai lại UserDetailsService/PasswordEncoder; đáp án của s01 và s02
+# mô tả trạng thái cũ nên không còn khớp. Tệp answers/s01.env vẫn ở lại (S03AnswersTest đọc FILTERS).
+order/src/test/java/lab/s01/S01AnswersTest.java
+order/src/test/java/lab/s02/S02AnswersTest.java
