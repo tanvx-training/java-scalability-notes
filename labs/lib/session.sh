@@ -91,13 +91,23 @@ cmd_verify() {
   return "$rc"
 }
 
-# check_input <id>: kiểm đầu vào của buổi (VM chạy, rồi check.sh hoặc verify.sh của buổi trước)
+# require_ready: môi trường của chương trình sẵn sàng — VM đang chạy, hoặc (driver local) workspace
+# tồn tại và đã chuyển vào đó (ws_enter trong local.sh)
+require_ready() {
+  case "${LAB_DRIVER:-multipass}" in
+    local) ws_enter ;;
+    *) require_running ;;
+  esac
+}
+
+# check_input <id>: kiểm đầu vào của buổi (môi trường sẵn sàng, rồi check.sh hoặc verify.sh của buổi trước)
 check_input() {
-  local id="$1" prev d rc=0
+  local id="$1" prev d rc=0 env="VM đang chạy"
   require_session "$id"
-  require_running
+  require_ready
+  [ "${LAB_DRIVER:-multipass}" = local ] && env="workspace đã có"
   prev="$(session_prev "$id")"
-  [ -n "$prev" ] || { info "buổi '$id' là buổi đầu, chỉ cần VM đang chạy"; return 0; }
+  [ -n "$prev" ] || { info "buổi '$id' là buổi đầu, chỉ cần $env"; return 0; }
   d="$(session_dir "$id")"
   if [ -f "$d/check.sh" ]; then
     info "kiểm đầu vào của '$id' (check.sh)"

@@ -1,0 +1,2 @@
+lab.a1.A1Test greets src/A.java hello
+lab.a1.A1Test$Nested deep src/A.java world

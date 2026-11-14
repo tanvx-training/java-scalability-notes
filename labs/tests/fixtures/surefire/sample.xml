@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="lab.s01.FilterChainTest" tests="7" errors="1" skipped="1" failures="1">
+  <properties>
+    <property name="java.version" value="21"/>
+  </properties>
+  <testcase name="passes" classname="lab.s01.FilterChainTest" time="0.1"/>
+  <testcase classname="lab.s01.FilterChainTest" name="fails" time="0.1">
+    <failure message="expected 401 but was 200" type="java.lang.AssertionError"><![CDATA[java.lang.AssertionError: expected 401
+	at lab.s01.FilterChainTest.fails(FilterChainTest.java:20)]]></failure>
+    <system-out><![CDATA[log line]]></system-out>
+  </testcase>
+  <testcase name="errors" classname="lab.s01.FilterChainTest" time="0.1">
+    <error message="boom" type="java.lang.IllegalStateException">java.lang.IllegalStateException: boom</error>
+  </testcase>
+  <testcase name="skips" classname="lab.s01.FilterChainTest" time="0">
+    <skipped message="tắt tạm"/>
+  </testcase>
+  <testcase name="noisy" classname="lab.s01.FilterChainTest" time="0.1">
+    <system-out><![CDATA[<failure message="chỉ là log"/> <error/> <skipped/>]]></system-out>
+  </testcase>
+  <testcase name="inner" classname="lab.s01.FilterChainTest$Inner$Deep" time="0.1"></testcase>
+  <testcase name="flaky" classname="lab.s01.FilterChainTest" time="0.1">
+    <flakyFailure message="lần đầu lỗi" type="java.lang.AssertionError">x</flakyFailure>
+  </testcase>
+</testsuite>

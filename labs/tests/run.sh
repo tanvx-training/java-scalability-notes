@@ -551,11 +551,13 @@ new_loc() { # new_loc: bản chép mới của fixture loc; không có multipass
   LOCN=$((LOCN+1)); LOCROOT="$WORK/loc.$LOCN"; mkdir -p "$LOCROOT"
   cp -R "$HERE/fixtures/loc" "$LOCROOT/loc"
   LOCW="$LOCROOT/loc/work"
+  export MVN_LOG="$WORK/mvn.log"; : > "$MVN_LOG"
+  unset MVN_REPORT MVN_COMPILE_FAIL LOCPATH
 }
 run_loc() { # run_loc <stdin> args…
   local input="$1"; shift
   RC=0
-  printf '%s' "$input" | env PATH="$LOCBIN:/usr/bin:/bin" LAB_ROOT="$LOCROOT" /bin/bash "$LAB" "$@" >"$OUT" 2>"$ERR" || RC=$?
+  printf '%s' "$input" | env PATH="${LOCPATH:-$LOCBIN:/usr/bin:/bin}" LAB_ROOT="$LOCROOT" /bin/bash "$LAB" "$@" >"$OUT" 2>"$ERR" || RC=$?
 }
 commits() { git -C "$LOCW" rev-list --count HEAD 2>/dev/null || echo 0; }
 
@@ -658,6 +660,255 @@ check "LAB_COMPOSE_FILE thiếu LAB_COMPOSE_PROJECT: từ chối" $((a+b))
 new_loc; run_loc "" down loc
 [ "$RC" -eq 0 ]; a=$?; [ ! -s "$DK_LOG" ]; b=$?
 check "down loc không compose: không làm gì, không gọi docker" $((a+b))
+
+
+# ---- Driver local: lệnh theo buổi (begin/verify/restore/break/selftest) và chấm bằng báo cáo surefire ----
+SF="$HERE/fixtures/surefire"
+FIXDATE="$WORK/fixdate"; mkdir -p "$FIXDATE"   # date cố định để hai lần chạy rơi vào cùng một giây
+cat > "$FIXDATE/date" <<'EOF'
+#!/bin/bash
+case "$*" in *%Y*) echo "20261114-101010"; exit 0 ;; esac
+exec /bin/date "$@"
+EOF
+GITFAIL="$WORK/gitfail"; mkdir -p "$GITFAIL"   # git mà mọi lệnh commit đều lỗi
+cat > "$GITFAIL/git" <<'EOF'
+#!/bin/bash
+for a in "$@"; do [ "$a" = commit ] && { echo "stub git: commit lỗi" >&2; exit 1; }; done
+exec /usr/bin/git "$@"
+EOF
+chmod +x "$FIXDATE/date" "$GITFAIL/git"
+gw() { git -C "$LOCW" -c commit.gpgsign=false "$@" 2>/dev/null; }
+head_subj() { gw log -1 --format=%s; }
+has_subj() { gw log --format=%s | grep -Fxq -- "$1"; }
+backups() { gw for-each-ref --format='%(refname:short)' 'refs/heads/backup/*'; }
+# same_tree <thư mục kỳ vọng>: workspace (bỏ .git, target) có đúng danh sách tệp và nội dung như kỳ vọng
+same_tree() {
+  local f
+  [ "$(cd "$1" && find . -type f | sort)" = \
+    "$(cd "$LOCW" && find . -path ./.git -prune -o -path ./target -prune -o -type f -print | sort)" ] || return 1
+  for f in $(cd "$1" && find . -type f); do cmp -s "$1/$f" "$LOCW/$f" || return 1; done
+}
+LS="$HERE/fixtures/loc/sessions"
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1
+[ "$RC" -eq 0 ]; a=$?
+[ -f "$LOCW/src/test/a1/A1.case" ]; b=$?
+[ "$(head_subj)" = "lab: đầu buổi a1" ]; c=$?
+has_subj "lab: trước buổi a1"; d=$?
+gw ls-files --error-unmatch src/test/a1/A1.case >/dev/null 2>&1; e=$?
+log_empty; f=$?
+check "begin loc a1: test của a1 vào workspace, commit 'trước buổi a1' rồi 'đầu buổi a1', không gọi multipass" $((a+b+c+d+e+f))
+
+new_loc; run_loc "" begin loc a1
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" './labs/lab up loc'; b=$?; [ ! -e "$LOCW" ]; c=$?
+check "begin loc khi chưa có workspace: từ chối, gợi ý up, không tạo gì" $((a+b+c))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1
+MVN_REPORT="$SF/a1-fail.xml"; export MVN_REPORT; run_loc "" verify loc a1
+[ "$RC" -ne 0 ]; a=$?; has "$OUT" '✓ A có hello'; b=$?; has "$OUT" '✗ A có world'; c=$?
+has "$OUT" '1/2 đạt'; d=$?; has_subj "lab: xong buổi a1"; [ $? -ne 0 ]; e=$?
+has "$MVN_LOG" "^$LOCW -q test"; f=$?
+check "verify loc a1 có một testcase lỗi: dòng đó ✗, 1/2, mã khác 0, không commit 'xong buổi', mvn chạy trong workspace" $((a+b+c+d+e+f))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1
+MVN_REPORT="$SF/a1-pass.xml"; export MVN_REPORT; run_loc "" verify loc a1
+[ "$RC" -eq 0 ]; a=$?; has "$OUT" '2/2 đạt'; b=$?; [ "$(head_subj)" = "lab: xong buổi a1" ]; c=$?
+[ -z "$(gw status --porcelain)" ]; d=$?
+check "verify loc a1 đạt hết: commit 'lab: xong buổi a1', cây sạch (target/ không vào kho)" $((a+b+c+d))
+unset MVN_REPORT; MVN_COMPILE_FAIL=1; export MVN_COMPILE_FAIL; run_loc "" verify loc a1
+[ "$RC" -ne 0 ]; a=$?; has "$OUT" '✓'; [ $? -ne 0 ]; b=$?; [ "$(count "$OUT" '✗')" = 2 ]; c=$?
+has "$OUT" '0/2 đạt'; d=$?; has "$OUT" 'không chạy'; e=$?
+[ -e "$LOCW/target/surefire-reports/TEST-a1-pass.xml" ]; [ $? -ne 0 ]; f=$?
+check "verify khi Maven lỗi biên dịch và còn báo cáo cũ toàn đạt: mọi dòng ✗ 'không chạy', báo cáo cũ đã xoá" $((a+b+c+d+e+f))
+
+new_loc; run_loc "" up loc; run_loc "" verify loc a1
+[ "$RC" -ne 0 ]; a=$?; has "$OUT" '0/2 đạt'; b=$?; has "$OUT" '✓'; [ $? -ne 0 ]; c=$?
+check "verify khi Maven đạt nhưng không test nào chạy: mọi dòng ✗" $((a+b+c))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1; run_loc "" begin loc a2
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" './labs/lab restore loc a1'; b=$?
+has_subj "lab: trước buổi a2"; [ $? -ne 0 ]; c=$?; [ ! -e "$LOCW/src/test/a2" ]; d=$?
+check "begin loc a2 khi a1 chưa đạt: từ chối, gợi ý './labs/lab restore loc a1', không commit" $((a+b+c+d))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1
+printf 'class A { String hello = "world"; }\n' > "$LOCW/src/A.java"
+n0="$(commits)"; run_loc "" check loc a2
+[ "$RC" -eq 0 ]; a=$?; [ "$(commits)" = "$n0" ]; b=$?
+run_loc "" begin loc a2
+[ "$RC" -eq 0 ]; c=$?
+[ ! -e "$LOCW/src/test/a1/A1.case" ] && [ -f "$LOCW/src/test/a2/A2.case" ]; d=$?
+[ "$(cat "$LOCW/setup-a2.txt" 2>/dev/null)" = "$LOCW" ]; e=$?
+[ "$(head_subj)" = "lab: đầu buổi a2" ] && gw ls-files --error-unmatch setup-a2.txt >/dev/null 2>&1; f=$?
+[ "$(gw log -1 --format=%s HEAD~1)" = "lab: trước buổi a2" ] && gw cat-file -e HEAD~1:src/test/a1/A1.case \
+  && [ "$(gw show HEAD~1:src/A.java)" = 'class A { String hello = "world"; }' ]; g=$?
+check "check rồi begin loc a2: check không ghi; begin chạy setup.sh trong workspace, gỡ test retire, code người học nằm trong 'trước buổi a2'" $((a+b+c+d+e+f+g))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1
+echo "của tôi" > "$LOCW/src/A.java"; echo "mới" > "$LOCW/notes.txt"
+run_loc "" restore loc a2 --yes
+[ "$RC" -eq 0 ]; a=$?
+br="$(backups)"; [ -n "$br" ] && [ "$(printf '%s\n' "$br" | wc -l | tr -d ' ')" = 1 ]; b=$?
+has "$OUT" "$br"; c=$?
+[ "$(gw show "$br:src/A.java")" = "của tôi" ] && [ "$(gw show "$br:notes.txt")" = "mới" ]; d=$?
+exp="$LOCROOT/exp"; cp -R "$LOCROOT/loc/app" "$exp"
+cp -R "$LS/a1/tests/." "$LS/a1/solution/." "$LS/a2/tests/." "$exp/"; rm "$exp/src/test/a1/A1.case"
+cp -R "$LS/a2/solution/." "$exp/"; rm "$exp/src/Old.java"
+same_tree "$exp"; e=$?
+[ "$(head_subj)" = "lab: khôi phục về cuối buổi a2" ] && [ -z "$(gw status --porcelain)" ]; f=$?
+has "$OUT" '1/1 đạt'; g=$?
+check "restore loc a2 --yes: tệp sửa và tệp mới còn trong nhánh backup/* đã in; cây = bản gốc + a1 + a2, retire đã gỡ; verify a2 chạy" $((a+b+c+d+e+f+g))
+
+new_loc; run_loc "" up loc; mkdir -p "$LOCW/target" "$LOCW/src/target"
+echo cũ > "$LOCW/target/stale.txt"; echo "class X {}" > "$LOCW/src/target/X.java"
+run_loc "" restore loc a1 --yes
+[ "$RC" -eq 0 ]; a=$?; [ ! -e "$LOCW/target/stale.txt" ] && [ ! -e "$LOCW/src/target" ]; b=$?
+[ "$(gw show "$(backups):src/target/X.java")" = "class X {}" ]; c=$?
+check "restore: xoá target/ cũ cạnh pom.xml; package tên 'target' trong src/ vẫn được sao lưu" $((a+b+c))
+
+new_loc; run_loc "" up loc; run_loc "" begin loc a1; echo x > "$LOCW/src/A.java"; n0="$(commits)"
+run_loc "n
+" restore loc a2
+[ "$RC" -ne 0 ]; a=$?; [ "$(commits)" = "$n0" ]; b=$?; [ -z "$(backups)" ]; c=$?; [ "$(cat "$LOCW/src/A.java")" = x ]; d=$?
+has "$OUT" 'a1 a2'; e=$?
+check "restore loc a2 trả lời n: đã liệt kê việc sẽ làm, không commit, không nhánh mới, không đổi tệp" $((a+b+c+d+e))
+
+new_loc; LOCPATH="$FIXDATE:$LOCBIN:/usr/bin:/bin"; run_loc "" up loc
+run_loc "" restore loc a1 --yes; a=$RC; run_loc "" restore loc a1 --yes; b=$RC
+[ "$(backups | wc -l | tr -d ' ')" = 2 ]; c=$?
+backups | grep -Fxq backup/20261114-101010; d=$?; backups | grep -Fxq backup/20261114-101010-2; e=$?
+check "hai lần restore trong cùng một giây: hai nhánh sao lưu khác tên" $((a+b+c+d+e))
+
+merge_conflict() { # workspace đang ở giữa một merge có xung đột ở src/A.java, thêm một tệp chưa theo dõi
+  gw checkout -q -b side; echo side > "$LOCW/src/A.java"; gw commit -qam side
+  gw checkout -q -; echo main > "$LOCW/src/A.java"; gw commit -qam main
+  gw merge -q side >/dev/null 2>&1
+  echo "mới" > "$LOCW/untracked.txt"
+}
+new_loc; run_loc "" up loc; merge_conflict
+[ -f "$LOCW/.git/MERGE_HEAD" ]; a=$?
+run_loc "" restore loc a1 --yes
+[ "$RC" -eq 0 ]; b=$?; br="$(backups)"
+gw show "$br:src/A.java" | grep -q '^<<<<<<<'; c=$?
+[ "$(gw show "$br:untracked.txt")" = "mới" ]; d=$?
+[ ! -f "$LOCW/.git/MERGE_HEAD" ] && [ "$(head_subj)" = "lab: khôi phục về cuối buổi a1" ]; e=$?
+check "restore khi đang giữa merge: nội dung xung đột và tệp mới còn trong nhánh sao lưu" $((a+b+c+d+e))
+new_loc; run_loc "" up loc; merge_conflict; run_loc "" begin loc a1
+[ "$RC" -eq 0 ]; a=$?
+[ "$(gw log -1 --format=%s HEAD~1)" = "lab: trước buổi a1" ] && gw show HEAD~1:src/A.java | grep -q '^<<<<<<<' \
+  && [ "$(gw show HEAD~1:untracked.txt)" = "mới" ]; b=$?
+check "begin khi đang giữa merge: nội dung xung đột và tệp mới nằm trong commit 'trước buổi a1'" $((a+b))
+
+new_loc; run_loc "" up loc; h0="$(gw rev-parse HEAD)"; echo keep > "$LOCROOT/loc/x"
+printf '../x\n' >> "$LOCROOT/loc/sessions/a2/solution.delete"
+run_loc "" restore loc a2 --yes
+[ "$RC" -ne 0 ]; a=$?; [ "$(cat "$LOCROOT/loc/x")" = keep ]; b=$?
+[ "$(gw rev-parse HEAD)" = "$h0" ] && [ -z "$(backups)" ]; c=$?
+printf '.git\n' > "$LOCROOT/loc/sessions/a2/solution.delete"; run_loc "" restore loc a2 --yes
+[ "$RC" -ne 0 ] && [ -d "$LOCW/.git" ] && [ "$(gw rev-parse HEAD)" = "$h0" ]; d=$?
+printf '/etc/x\n' > "$LOCROOT/loc/sessions/a2/solution.delete"; run_loc "" restore loc a2 --yes
+[ "$RC" -ne 0 ] && [ "$(gw rev-parse HEAD)" = "$h0" ]; e=$?
+printf 'src/../../x\n' > "$LOCROOT/loc/sessions/a2/solution.delete"; run_loc "" restore loc a2 --yes
+[ "$RC" -ne 0 ] && [ "$(cat "$LOCROOT/loc/x")" = keep ] && [ "$(gw rev-parse HEAD)" = "$h0" ]; f=$?
+: > "$LOCROOT/loc/sessions/a2/solution.delete"; mkdir -p "$LOCROOT/loc/sessions/a1/solution/.GIT"
+echo x > "$LOCROOT/loc/sessions/a1/solution/.GIT/config"; run_loc "" restore loc a2 --yes
+[ "$RC" -ne 0 ] && [ "$(gw rev-parse HEAD)" = "$h0" ]; g=$?
+check "solution.delete có '../x', 'src/../../x', '.git' hoặc đường dẫn tuyệt đối, solution/ có '.GIT/': từ chối trước khi ghi, không sao lưu, không commit" $((a+b+c+d+e+f+g))
+
+new_loc; run_loc "" up loc; h0="$(gw rev-parse HEAD)"; mkdir "$LOCROOT/outside"
+ln -s "$LOCROOT/outside" "$LOCROOT/loc/sessions/a1/solution/evil"
+run_loc "" restore loc a1 --yes
+[ "$RC" -ne 0 ]; a=$?; [ -z "$(ls -A "$LOCROOT/outside")" ]; b=$?; [ "$(gw rev-parse HEAD)" = "$h0" ]; c=$?
+rm "$LOCROOT/loc/sessions/a1/solution/evil"; printf '../../x\n' > "$LOCROOT/loc/sessions/a2/retire"
+run_loc "" restore loc a2 --yes
+[ "$RC" -ne 0 ] && [ "$(gw rev-parse HEAD)" = "$h0" ]; d=$?
+check "solution/ có symlink trỏ ra ngoài, retire có '..': từ chối, không ghi gì" $((a+b+c+d))
+
+new_loc; run_loc "" up loc; mkdir "$LOCROOT/outside"; mkdir -p "$LOCW/src"; ln -s "$LOCROOT/outside" "$LOCW/src/test"
+run_loc "" begin loc a1
+[ "$RC" -ne 0 ]; a=$?; [ -z "$(ls -A "$LOCROOT/outside")" ]; b=$?
+run_loc "" begin loc ../a1
+[ "$RC" -ne 0 ]; c=$?
+rm "$LOCW/src/test"; mkdir -p "$LOCROOT/loc/backups"; ln -s ../../backups "$LOCW/src/test"
+run_loc "" begin loc a1
+[ "$RC" -ne 0 ] && [ -z "$(ls -A "$LOCROOT/loc/backups")" ]; d=$?
+check "begin: đích trong workspace là symlink ra ngoài (kể cả sang backups/), hoặc id buổi có '..': từ chối, đích không bị đụng" $((a+b+c+d))
+
+new_loc; run_loc "" up loc; echo mine > "$LOCW/src/A.java"; run_loc "" break loc b1
+[ "$RC" -eq 0 ]; a=$?; [ "$(head_subj)" = "lab: trước sự cố b1" ]; b=$?
+[ "$(gw show HEAD:src/A.java)" = mine ] && [ "$(cat "$LOCW/src/A.java")" = broken ]; c=$?
+run_loc "" break loc ../b1; [ "$RC" -ne 0 ]; d=$?
+run_loc "" break loc khong-co; [ "$RC" -ne 0 ] && [ "$(head_subj)" = "lab: trước sự cố b1" ]; e=$?
+check "break loc b1: commit 'trước sự cố b1' giữ code người học trước khi run.sh sửa; mã lạ bị từ chối" $((a+b+c+d+e))
+
+new_loc; run_loc "" up loc; echo dirty > "$LOCW/src/A.java"; echo u > "$LOCW/u.txt"
+h0="$(gw rev-parse HEAD)"; s0="$(gw status --porcelain)"
+export ST_TRACE="$WORK/st.trace"; : > "$ST_TRACE"
+printf 'echo "$PWD" >> "$ST_TRACE"\n' > "$LOCROOT/loc/selftest.sh"
+run_loc "" selftest loc
+[ "$RC" -eq 0 ]; a=$?
+[ "$(gw rev-parse HEAD)" = "$h0" ] && [ "$(gw status --porcelain)" = "$s0" ] && [ "$(cat "$LOCW/src/A.java")" = dirty ]; b=$?
+[ -z "$(backups)" ]; c=$?
+has "$MVN_LOG" "^$LOCW "; [ $? -ne 0 ]; d=$?
+tmpw="$(head -n 1 "$MVN_LOG" | cut -d' ' -f1)"; [ -n "$tmpw" ] && [ ! -e "$tmpw" ]; e=$?
+[ "$(count "$ST_TRACE" .)" = 3 ] && [ "$(sort -u "$ST_TRACE")" = "$tmpw" ]; f=$?
+has "$OUT" "bỏ qua 'a4'"; g=$?; has "$OUT" 'giây'; h=$?
+check "selftest loc: đi a1..a3 trên workspace tạm (đã dọn), selftest.sh chạy sau mỗi buổi, work/ không đổi, in thời gian" $((a+b+c+d+e+f+g+h))
+printf 'exit 1\n' > "$LOCROOT/loc/selftest.sh"; run_loc "" selftest loc
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" 'selftest.sh'; b=$?
+check "selftest loc: selftest.sh của chương trình lỗi thì selftest lỗi" $((a+b))
+
+new_loc; printf 'class A { String hello = "world"; }\n' > "$LOCROOT/loc/app/src/A.java"; run_loc "" selftest loc
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" "'a1'"; b=$?; has "$ERR" 'xanh ngay sau begin'; c=$?; [ ! -e "$LOCW" ]; d=$?
+check "selftest loc: buổi xanh ngay sau begin thì báo lỗi" $((a+b+c+d))
+
+new_loc; printf 'class A {}\n' > "$LOCROOT/loc/sessions/a1/solution/src/A.java"; run_loc "" selftest loc
+[ "$RC" -ne 0 ]; a=$?; has "$ERR" "'a1'"; b=$?; has "$ERR" 'lời giải'; c=$?
+check "selftest loc: lời giải không làm verify xanh thì báo lỗi" $((a+b+c))
+
+new_loc; run_loc "" up loc; run_loc "" restore loc a2 --yes; run_loc "" begin loc a3
+[ "$RC" -eq 0 ]; a=$?; [ ! -e "$LOCW/src/test/a3" ]; b=$?
+printf 'class C { String cee; }\n' > "$LOCW/src/C.java"; run_loc "" verify loc a3
+[ "$RC" -eq 0 ]; c=$?; [ -f "$LOCW/src/test/a3/A3.case" ]; d=$?
+[ "$(head_subj)" = "lab: xong buổi a3" ] && gw ls-files --error-unmatch src/test/a3/A3.case >/dev/null 2>&1; e=$?
+check "a3 có tests.hidden: sau begin chưa có test, sau verify có và đã commit" $((a+b+c+d+e))
+
+et() { # et <Lớp#phương_thức> [thư mục báo cáo]: một dòng expect_test
+  env PATH="/usr/bin:/bin" /bin/bash -c '. "$1/lib/assert.sh"; [ -n "$3" ] && lab_tests "$3"; expect_test "t" "$2"' \
+    _ "$LABS" "$1" "${2-$SF}" 2>&1
+}
+P=lab.s01.FilterChainTest
+et "$P#passes" | grep -q '^  ✓ t$'; a=$?
+et "$P#fails" | grep -q '^  ✗ t (thực tế: .*failure.*expected 401 but was 200'; b=$?
+et "$P#errors" | grep -q '^  ✗ t (thực tế: .*error.*boom'; c=$?
+et "$P#skips" | grep -q '^  ✗ t (thực tế: .*skipped'; d=$?
+et "$P#missing" | grep -q '^  ✗ t (thực tế: không chạy'; e=$?
+et "$P#noisy" | grep -q '^  ✓ t$'; f=$?
+et "$P\$Inner\$Deep#inner" | grep -q '^  ✓ t$'; g=$?
+et "$P\$Inner#inner" | grep -q 'không chạy'; h=$?
+et "lab.s01XFilterChainTest#passes" | grep -q 'không chạy'; i=$?
+et "$P#pass" | grep -q 'không chạy'; j=$?
+et "$P#flaky" | grep -q '^  ✓ t$'; k=$?
+et "$P#passes" "" | grep -q 'không chạy'; l=$?
+et "$P" | grep -q '^  ✗'; m=$?
+check "expect_test: đạt, failure, error, skipped, không tồn tại, log giả, lớp có '.' và '\$', chưa chạy Maven" $((a+b+c+d+e+f+g+h+i+j+k+l+m))
+
+new_loc; LOCPATH="$GITFAIL:$LOCBIN:/usr/bin:/bin"; run_loc "" up loc
+[ "$RC" -ne 0 ]; a=$?; [ ! -e "$LOCW" ]; b=$?
+unset LOCPATH; run_loc "" up loc
+[ "$RC" -eq 0 ] && [ "$(commits)" = 1 ]; c=$?
+check "up loc lỗi giữa chừng (commit đầu lỗi): không để lại work/ dở, lần up sau chạy được" $((a+b+c))
+
+new_loc; mkdir -p "$LOCW"; echo keep > "$LOCW/f"; run_loc "" destroy loc --yes
+[ "$RC" -ne 0 ]; a=$?; [ "$(cat "$LOCW/f")" = keep ]; b=$?; [ ! -e "$LOCROOT/loc/backups" ]; c=$?
+check "destroy loc trên thư mục không phải workspace (thiếu .git): từ chối, không đụng" $((a+b+c))
+
+new_loc; run_loc "" up loc; mkdir -p "$LOCROOT/loc/backups" "$LOCROOT/nowhere"
+ln -s "$LOCROOT/nowhere/x.tar.gz" "$LOCROOT/loc/backups/loc-20261114-101010.tar.gz"
+LOCPATH="$FIXDATE:$LOCBIN:/usr/bin:/bin"; run_loc "" destroy loc --yes
+[ "$RC" -eq 0 ]; a=$?; [ ! -e "$LOCROOT/nowhere/x.tar.gz" ]; b=$?
+[ -L "$LOCROOT/loc/backups/loc-20261114-101010.tar.gz" ]; c=$?
+[ "$(find "$LOCROOT/loc/backups" -type f -name '*.tar.gz' | wc -l | tr -d ' ')" = 1 ]; d=$?
+check "destroy loc khi đường dẫn gói trùng một symlink treo: không ghi theo symlink, gói sang tên khác" $((a+b+c+d))
 
 echo "---"
 echo "$((CASES-FAILS))/$CASES ca đạt"

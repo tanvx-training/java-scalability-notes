@@ -1,2 +1,37 @@
 #!/bin/bash
-echo "stub mvn"
+# Stub mvn: ghi "<thư mục> <đối số>" vào $MVN_LOG.
+#   MVN_COMPILE_FAIL=1  in lỗi biên dịch, trả 1, không sinh báo cáo
+#   MVN_REPORT=<tệp>    chép tệp XML đó vào target/surefire-reports/TEST-<tên>
+#   (mặc định)          chạy các tệp src/test/**/*.case: mỗi dòng "<lớp> <phương thức> <tệp> <chuỗi>",
+#                       testcase đạt khi <tệp> chứa <chuỗi>; ghi target/surefire-reports/TEST-lab.xml
+[ -n "${MVN_LOG:-}" ] && echo "$PWD $*" >> "$MVN_LOG"
+if [ -n "${MVN_COMPILE_FAIL:-}" ]; then
+  echo "[ERROR] COMPILATION ERROR : stub"
+  exit 1
+fi
+if [ -n "${MVN_REPORT:-}" ]; then
+  mkdir -p target/surefire-reports
+  cp "$MVN_REPORT" "target/surefire-reports/TEST-$(basename "$MVN_REPORT")"
+  grep -q '<failure\|<error' "$MVN_REPORT" && exit 1
+  exit 0
+fi
+cases="$(find src/test -name '*.case' 2>/dev/null | sort)"
+[ -n "$cases" ] || { echo "stub mvn: không có test"; exit 0; }
+mkdir -p target/surefire-reports
+fail=0
+{
+  echo '<testsuite name="lab">'
+  for f in $cases; do
+    while read -r cls m file needle; do
+      [ -n "$cls" ] || continue
+      if grep -qF -- "$needle" "$file" 2>/dev/null; then
+        echo "  <testcase name=\"$m\" classname=\"$cls\"/>"
+      else
+        echo "  <testcase name=\"$m\" classname=\"$cls\"><failure message=\"thiếu $needle trong $file\"/></testcase>"
+        fail=1
+      fi
+    done < "$f"
+  done
+  echo '</testsuite>'
+} > target/surefire-reports/TEST-lab.xml
+exit "$fail"

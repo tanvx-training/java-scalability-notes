@@ -52,3 +52,95 @@ assert_summary() {
   echo "  → $ASSERT_OK/$ASSERT_N đạt"
   [ "$ASSERT_OK" -eq "$ASSERT_N" ]
 }
+
+# ---- Chấm bằng báo cáo JUnit của Maven Surefire (driver local) ----
+#   lab_tests <thư mục>                 đọc báo cáo (*.xml) trong thư mục đó thay cho mặc định
+#   expect_test "<nhãn>" "<lớp>#<pt>"  đạt khi testcase đó có trong báo cáo, không failure/error/skipped
+# Mặc định đọc mọi target/surefire-reports/*.xml trong workspace, nhưng chỉ sau khi lab_mvn chạy trong
+# cùng script (lab_mvn xoá báo cáo cũ trước): chưa chạy Maven thì mọi dòng là ✗ "không chạy".
+LAB_TEST_REPORTS=""
+
+lab_tests() { LAB_TEST_REPORTS="$1"; }
+
+# _lab_report_files: danh sách tệp báo cáo, mỗi dòng một tệp
+_lab_report_files() {
+  if [ -n "$LAB_TEST_REPORTS" ]; then
+    [ -d "$LAB_TEST_REPORTS" ] && find "$LAB_TEST_REPORTS" -type f -name '*.xml' -print
+  elif [ "${LAB_MVN_RAN:-0}" = 1 ]; then
+    find "${WS:-.}" -name .git -prune -o -type f -path '*/target/surefire-reports/*.xml' -print
+  fi
+  return 0
+}
+
+# _lab_test_result <lớp> <phương thức>: in "ok", lý do không đạt, hoặc rỗng khi không thấy testcase.
+# Khớp đúng classname; name bằng phương thức (hoặc "phương_thức(…" / "phương_thức[…" của test tham số hoá,
+# khi đó mọi lần chạy đều phải đạt). Bỏ CDATA và chú thích trước khi tìm failure/error/skipped.
+_lab_test_result() {
+  _lab_report_files | awk -v cls="$1" -v m="$2" '
+    function attr(t, a,   r) {
+      if (!match(t, "[ \t\r\n]" a "=\"[^\"]*\"")) return ""
+      r = substr(t, RSTART + 1, RLENGTH - 1); sub(/^[^=]*="/, "", r); sub(/"$/, "", r)
+      gsub(/&lt;/, "<", r); gsub(/&gt;/, ">", r); gsub(/&quot;/, "\"", r); gsub(/&amp;/, "\\&", r)
+      return r
+    }
+    function cut(s, op, cl,   i, j, out) {
+      out = ""
+      while ((i = index(s, op)) > 0) {
+        out = out substr(s, 1, i - 1)
+        s = substr(s, i + length(op))
+        j = index(s, cl)
+        if (j == 0) { s = ""; break }
+        s = substr(s, j + length(cl))
+      }
+      return out s
+    }
+    function scan(s,   i, e, c, tag, body, nm, why, t) {
+      s = cut(s, "<![CDATA[", "]]>"); s = cut(s, "<!--", "-->")
+      while ((i = index(s, "<testcase")) > 0) {
+        s = substr(s, i + 9)
+        c = substr(s, 1, 1)
+        if (c != " " && c != "\t" && c != "\n" && c != "\r" && c != "/" && c != ">") continue
+        e = index(s, ">"); if (e == 0) break
+        tag = substr(s, 1, e - 1); s = substr(s, e + 1)
+        body = ""
+        if (substr(tag, length(tag)) != "/") {
+          e = index(s, "</testcase>")
+          if (e == 0) { body = s; s = "" } else { body = substr(s, 1, e - 1); s = substr(s, e + 11) }
+        }
+        if (attr(tag, "classname") != cls) continue
+        nm = attr(tag, "name")
+        if (nm != m && index(nm, m "(") != 1 && index(nm, m "[") != 1) continue
+        found = 1
+        why = ""
+        if (match(body, /<failure[ \t\r\n\/>]/)) why = "thất bại (failure)"
+        else if (match(body, /<error[ \t\r\n\/>]/)) why = "lỗi (error)"
+        else if (match(body, /<skipped[ \t\r\n\/>]/)) why = "bị bỏ qua (skipped)"
+        if (why != "") {
+          t = substr(body, RSTART); e = index(t, ">"); if (e > 0) t = substr(t, 1, e)
+          t = attr(t, "message")
+          if (t != "") why = why ": " t
+          if (bad == "") bad = why
+        }
+      }
+    }
+    { f = $0; s = ""; while ((getline line < f) > 0) s = s line "\n"; close(f); scan(s) }
+    END { if (bad != "") print bad; else if (found) print "ok" }'
+}
+
+expect_test() {
+  local label="$1" id="$2" ok=0 res
+  case "$id" in
+    *'#'*'#'*) ;;
+    ?*'#'?*) ok=1 ;;
+  esac
+  if [ "$ok" -ne 1 ]; then
+    _assert_fail "$label" "định danh test '$id' sai dạng (cần <lớp>#<phương thức>)"
+    return 0
+  fi
+  res="$(_lab_test_result "${id%#*}" "${id#*#}")"
+  case "$res" in
+    ok) _assert_pass "$label" ;;
+    '') _assert_fail "$label" "không chạy (không thấy testcase $2 trong báo cáo)" ;;
+    *) _assert_fail "$label" "$res" ;;
+  esac
+}

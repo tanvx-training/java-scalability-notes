@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="lab.a1.A1Test" tests="2" failures="0" errors="0" skipped="0">
+  <testcase name="greets" classname="lab.a1.A1Test" time="0.01"/>
+  <testcase name="deep" classname="lab.a1.A1Test$Nested" time="0.01"/>
+</testsuite>
