@@ -4,8 +4,9 @@
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
 k get node -o json > "$tmp/nodes.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/nodes.json"
-k -n shop get deploy -o json > "$tmp/deploy.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/deploy.json"
-k -n shop get pod -o json > "$tmp/pods.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/pods.json"
+# Lệnh lỗi → tệp ghi ERR (load() trả None): dòng "đã xoá" không được xanh khi không đọc được cluster.
+k -n shop get deploy -o json > "$tmp/deploy.json" 2>/dev/null || echo ERR > "$tmp/deploy.json"
+k -n shop get pod -o json > "$tmp/pods.json" 2>/dev/null || echo ERR > "$tmp/pods.json"
 k get priorityclass shop-critical -o json > "$tmp/pc.json" 2>/dev/null || echo '{}' > "$tmp/pc.json"
 for d in gateway catalog; do
   k apply --dry-run=server -f "$HOME/shop/$d.yaml" -o json > "$tmp/file-$d.json" 2>"$tmp/file-$d.err" || : > "$tmp/file-$d.json"
@@ -51,7 +52,9 @@ if others: bad.append(f"nhãn role=db cả trên {', '.join(others)}")
 for n in ("cka-w1", "cka-w2"):
     o = nodes.get(n)
     if not o: continue
-    ts = [f"{x.get('key')}={x.get('value', '')}:{x.get('effect')}" for x in (o.get("spec") or {}).get("taints") or []]
+    # Taint tạm do node lifecycle controller/kubelet tự đặt (not-ready, unreachable, memory-pressure…) không tính.
+    ts = [f"{x.get('key')}={x.get('value', '')}:{x.get('effect')}" for x in (o.get("spec") or {}).get("taints") or []
+          if not str(x.get("key", "")).startswith("node.kubernetes.io/")]
     if ts: bad.append(f"{n} còn taint {', '.join(ts)}")
     if (o.get("spec") or {}).get("unschedulable"): bad.append(f"{n} đang cordon")
 print("NODES=" + ("; ".join(bad) or "đạt"))
@@ -107,9 +110,10 @@ print("PRIORITY=" + ("; ".join(bad) or "đạt"))
 print(f"PC_VALUE={val}")
 
 names = {x["metadata"]["name"] for x in pods}
-print("DB_PROBE=" + ("còn" if "db-probe" in names else "đã xoá"))
+unread = load(f"{t}/deploy.json") is None or load(f"{t}/pods.json") is None
+print("DB_PROBE=" + ("không đọc được Pod" if unread else ("còn" if "db-probe" in names else "đã xoá")))
 left = [n for n in ("pinned",) if n in names] + (["deploy/spread-lab"] if "spread-lab" in deps else [])
 left += [x["metadata"]["name"] for x in pods if x["metadata"].get("labels", {}).get("app") == "spread-lab"
          and "spread-lab" not in deps]
-print("DRAFTS=" + (" ".join(left) if left else "đã xoá"))
+print("DRAFTS=" + ("không đọc được Pod/Deployment" if unread else (" ".join(left) if left else "đã xoá")))
 PY

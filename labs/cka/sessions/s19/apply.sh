@@ -69,4 +69,6 @@ vm "$cp" "set -e
     kubectl -n shop delete \$(kubectl -n shop get pod -l app=catalog -o name | head -n1) --wait=true >/dev/null
     kubectl -n shop rollout status deploy/catalog --timeout=420s >/dev/null
   done
+  n=\$(kubectl -n shop get pod -l app=catalog -o jsonpath='{range .items[*]}{.spec.nodeName}{\"\\n\"}{end}' | sort -u | grep -c .)
+  [ \"\$n\" -ge 2 ] || { echo 'catalog: hai Pod vẫn chung một node sau 3 lần xoá' >&2; exit 1; }
   printf 'PENDING_REASON=%s\nNODENAME_SKIPS_SCHEDULER=yes\n' '$reason' > ~/drills/s19/answers.env"

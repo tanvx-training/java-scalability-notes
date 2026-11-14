@@ -8,7 +8,7 @@ k -n shop get limitrange shop-limits -o json > "$tmp/lr.json" 2>/dev/null || ech
 k -n shop get deploy -o json > "$tmp/deploy.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/deploy.json"
 k -n shop run lr-probe --image=busybox:1.37 --restart=Never --dry-run=server -o json -- true > "$tmp/probe.json" 2>"$tmp/probe.err" \
   || : > "$tmp/probe.json"
-k get ns quota-lab -o name > "$tmp/ns.txt" 2>/dev/null || :
+k get ns quota-lab --ignore-not-found -o name > "$tmp/ns.txt" 2>/dev/null || echo ERR > "$tmp/ns.txt"
 for f in quota limits; do
   k apply --dry-run=server -f "$HOME/shop/$f.yaml" -o json > "$tmp/file-$f.json" 2>"$tmp/file-$f.err" || : > "$tmp/file-$f.json"
 done
@@ -98,5 +98,6 @@ for name, n in {"gateway": 2, "catalog": 2, "order": 1}.items():
     r = f"{d['spec'].get('replicas')}/{st.get('updatedReplicas', 0)}/{st.get('availableReplicas', 0)}"
     if r != f"{n}/{n}/{n}": bad.append(f"{name}: replica/cập nhật/Available {r}")
 print("USED=" + ("; ".join(bad) or ("đạt" if hard else "không có quota")))
-print("QUOTA_LAB=" + ("còn" if open(f"{t}/ns.txt").read().strip() else "đã xoá"))
+ns = open(f"{t}/ns.txt").read().strip()
+print("QUOTA_LAB=" + ("không đọc được namespace" if ns == "ERR" else ("còn" if ns else "đã xoá")))
 PY

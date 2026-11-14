@@ -3,7 +3,8 @@
 # Available, Deployment nháp oom-lab. Chạy trên control plane bằng user ubuntu (kubectl + python3). Chỉ đọc.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
-k -n shop get deploy -o json > "$tmp/deploy.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/deploy.json"
+# Lệnh lỗi → tệp ghi ERR (load() trả None): dòng "đã xoá" không được xanh khi không đọc được cluster.
+k -n shop get deploy -o json > "$tmp/deploy.json" 2>/dev/null || echo ERR > "$tmp/deploy.json"
 k -n shop get pod -l 'app in (gateway,catalog,order)' -o json > "$tmp/pods.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/pods.json"
 for d in gateway catalog order; do
   k apply --dry-run=server -f "$HOME/shop/$d.yaml" -o json > "$tmp/file-$d.json" 2>"$tmp/file-$d.err" || : > "$tmp/file-$d.json"
@@ -96,5 +97,5 @@ for name, n in want.items():
     if sig(fspec, f["spec"].get("replicas")) != sig(d["spec"]["template"]["spec"], d["spec"].get("replicas")):
         bad.append(f"~/shop/{name}.yaml khác Deployment (resources/JAVA_OPTS/replicas): chưa apply từ tệp?")
 print("FILES=" + ("; ".join(bad) or "đạt"))
-print("OOMLAB=" + ("còn" if "oom-lab" in deps else "đã xoá"))
+print("OOMLAB=" + ("không đọc được Deployment" if load(f"{t}/deploy.json") is None else ("còn" if "oom-lab" in deps else "đã xoá")))
 PY

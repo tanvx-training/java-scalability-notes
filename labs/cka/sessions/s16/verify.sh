@@ -14,8 +14,10 @@ vm "$cp" "for i in \$(seq 1 30); do kubectl get --raw /readyz >/dev/null 2>&1 &&
     \$k get pod -l 'app in (gateway,catalog,order)' -o jsonpath='{range .items[*].status.containerStatuses[*]}{.state.waiting.reason}{\"\\n\"}{end}' 2>/dev/null \\
       | grep -qE 'CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName' && break
     # Không Pod nào hỏng: chờ tới khi mọi Deployment đủ Available (vd. ngay sau khi VM khởi động lại).
-    u=\$(\$k get deploy -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null | awk '\$1!=\$2' | grep -c .)
-    [ \"\$u\" = 0 ] && break; sleep 3
+    # Lệnh lỗi hay hết giờ là \"chưa sẵn sàng\": chỉ thoát khi đọc được cả ba Deployment và cả ba đủ Available.
+    o=\$(\$k get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null) \\
+      && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 3 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
+    sleep 3
   done" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"

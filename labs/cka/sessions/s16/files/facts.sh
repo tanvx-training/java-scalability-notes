@@ -7,7 +7,8 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
 k -n shop get deploy -o json > "$tmp/deploy.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/deploy.json"
 k -n shop get endpointslices -o json > "$tmp/eps.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/eps.json"
-k -n shop get pod -o json > "$tmp/pods.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/pods.json"
+# Lệnh lỗi → ERR (load() trả None): dòng "namespace sạch" không được xanh khi không đọc được Pod.
+k -n shop get pod -o json > "$tmp/pods.json" 2>/dev/null || echo ERR > "$tmp/pods.json"
 k -n shop get job -o json > "$tmp/jobs.json" 2>/dev/null || echo '{"items":[]}' > "$tmp/jobs.json"
 k -n shop get cronjob order-report -o json > "$tmp/cron.json" 2>/dev/null || echo '{}' > "$tmp/cron.json"
 for d in gateway catalog order; do
@@ -123,5 +124,5 @@ for p in pods:
         w = (cs.get("state") or {}).get("waiting")
         if w and w.get("reason") not in ("ContainerCreating", "PodInitializing"):
             bad.append(f"{n} {w.get('reason')}"); break
-print("PODS=" + (", ".join(bad) if bad else "sạch"))
+print("PODS=" + ("không đọc được Pod" if load(f"{t}/pods.json") is None else (", ".join(bad) if bad else "sạch")))
 PY
