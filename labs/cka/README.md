@@ -18,7 +18,7 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 
 ## Mốc snapshot
 
-`milestones`: `s05 st0-done`, `s09 st1-done`, `s16 st2-done`. Snapshot được chụp lúc VM đã dừng, nên khi khôi phục:
+`milestones`: `s05 st0-done`, `s09 st1-done`, `s16 st2-done`, `s21 st3-done`. Snapshot được chụp lúc VM đã dừng, nên khi khôi phục:
 
 - `restore` áp lại `apply.sh` của chính buổi mốc (container `catalog` chạy bằng `ctr` của s05 không bền qua lần tắt VM; khôi phục `st1-done` thì s09 gây lỗi rồi sửa lại).
 - Cluster kubeadm tự lên lại sau khi khởi động: kubelet `enabled`, control plane là static pod. `verify` của s07–s09 chờ có giới hạn (apiserver `/readyz` tối đa 120 giây, node Ready tối đa 180 giây) trước khi kiểm.
@@ -34,6 +34,8 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 | s09 | `setup.sh` | `lab_break st1-node-notready` (không in ra đã làm gì) |
 | s11 | `check.sh` | như `verify.sh` của s10 nhưng chỉ đòi `POD_IP` trong `answers.env` là một IPv4: Pod lẻ `catalog` được dựng lại sandbox sau khi VM khởi động lại nên IP có thể đổi |
 | s16 | `setup.sh` | xoá `~/drills/s16/answers.env` cũ, rồi `lab_break st2-pods-broken` (không in ra đã làm gì) |
+| s17, s18, s19, s20 | `setup.sh` | xoá `~/drills/<buổi>/answers.env` cũ: làm lại buổi thì đáp án phải đo lại |
+| s21 | `setup.sh` | xoá `~/drills/s21/answers.env` cũ, rồi `lab_break st3-pending` (không in ra đã làm gì) |
 
 Lỗi có chủ ý: `breaks/st1-node-notready/run.sh` — `cka-w1`: `/etc/default/kubelet` ghi đè `--config` bằng đường dẫn không tồn tại; `cka-w2`: kubelet `stop` + `disable`. Hai worker `NotReady` sau khoảng một phút.
 
