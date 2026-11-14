@@ -24,20 +24,33 @@ vm "$cp" "set -e; $fns
   fi
   [ -n \"\$(g '{.metadata.annotations.kubernetes\\.io/change-cause}')\" ] || cause 'probe + graceful shutdown (s13)'"
 
-# 2. Vòng curl tới ClusterIP của gateway, 5 lần mỗi giây, trong lúc set image lên 2.0.
-echo "s14: rollout gateway 1.0 → 2.0 trong khi vòng curl chạy"
-vm "$cp" "set -e; $fns
+# 2. Vòng curl tới ClusterIP của gateway, 5 lần mỗi giây, trong lúc set image lên 2.0. Mỗi dòng: mã HTTP và mã thoát của
+# curl (000 28 = hết 5 giây không có phản hồi: máy nghẽn; 000 7 = bị từ chối kết nối: Pod rời EndpointSlice chậm).
+# Lần đo đầu có dòng lỗi thì về 1.0 và đo lại một lần (một giây nghẽn của máy Mac không làm hỏng cả restore/selftest);
+# lần thứ hai vẫn lỗi thì dừng.
+measure() {
+  vm "$cp" "set -e; $fns
   ip=\$(kubectl -n shop get svc gateway -o jsonpath='{.spec.clusterIP}')
   : > ~/drills/s14/curl.log
-  nohup bash -c \"while :; do curl -s -o /dev/null -m 2 -w '%{http_code}\\n' http://\$ip:8080/api/info >> \$HOME/drills/s14/curl.log; sleep 0.2; done\" >/dev/null 2>&1 &
+  nohup bash -c \"while :; do curl -s -o /dev/null -m 5 -w '%{http_code} %{exitcode}\\n' http://\$ip:8080/api/info >> \$HOME/drills/s14/curl.log; sleep 0.2; done\" >/dev/null 2>&1 &
   echo \$! > /tmp/lab-s14-curl.pid
   sleep 3
   kubectl -n shop set image deploy/gateway gateway=shop/gateway:2.0 >/dev/null; cause 'lên 2.0'
   kubectl -n shop rollout status deploy/gateway --timeout=300s >/dev/null
   sleep 15   # Pod cũ còn trong preStop + graceful shutdown: đo tới khi chúng dừng hẳn
   kill \$(cat /tmp/lab-s14-curl.pid); rm -f /tmp/lab-s14-curl.pid"
-res="$(vm "$cp" "echo \"\$(grep -c . ~/drills/s14/curl.log) \$(grep -vc '^200\$' ~/drills/s14/curl.log)\"")"
-echo "s14: curl.log $res (số dòng, số dòng khác 200)"
+  res="$(vm "$cp" "echo \"\$(grep -c . ~/drills/s14/curl.log) \$(grep -vc '^200 ' ~/drills/s14/curl.log)\"")"
+  echo "s14: curl.log $res (số dòng, số dòng khác 200)"
+}
+echo "s14: rollout gateway 1.0 → 2.0 trong khi vòng curl chạy"
+measure
+if [ "${res##* }" != 0 ]; then
+  echo "s14: lần đo đầu có request lỗi: $(vm "$cp" "sort ~/drills/s14/curl.log | uniq -c" | tr '\n' ';'); về 1.0 và đo lại một lần"
+  vm "$cp" "set -e; $fns
+    kubectl -n shop set image deploy/gateway gateway=shop/gateway:1.0 >/dev/null; cause 'về 1.0 (đo lại vòng curl)'
+    kubectl -n shop rollout status deploy/gateway --timeout=300s >/dev/null"
+  measure
+fi
 [ "${res##* }" = 0 ] || { echo "s14: vòng curl có request lỗi: $(vm "$cp" "sort ~/drills/s14/curl.log | uniq -c")" >&2; exit 1; }
 
 # 3. Image hỏng: Pod mới ImagePullBackOff, maxUnavailable 0 giữ hai Pod 2.0 phục vụ; quay về revision 1.0 rồi lên lại 2.0.

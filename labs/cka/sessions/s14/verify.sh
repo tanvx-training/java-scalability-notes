@@ -1,9 +1,9 @@
 # s14 — kiểm: gateway image shop/gateway:2.0, 2 replica Available, RollingUpdate maxUnavailable 0 / maxSurge 1;
 # /api/info trả version 2.0; lịch sử ≥ 3 revision, có revision image hỏng cũ hơn revision hiện hành, revision hiện hành
-# có change-cause; ~/drills/s14/curl.log ≥ 30 dòng, dòng nào cũng 200; ~/shop/gateway.yaml khớp; answers.env khớp.
+# có change-cause; ~/drills/s14/curl.log ≥ 30 dòng, dòng nào cũng bắt đầu bằng 200 (`-w '%{http_code} %{exitcode}'`); ~/shop/gateway.yaml khớp; answers.env khớp.
 # Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
-echo "  (chờ apiserver và Deployment gateway; lâu nhất vài phút nếu Pod đang khởi động)"
+echo "  (chờ apiserver và Deployment gateway nếu Pod đang khởi động: tối đa ~6 phút, lâu hơn nếu apiserver nhận kết nối mà không trả lời)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
   kubectl -n shop rollout status deploy/gateway --timeout=240s" >/dev/null 2>&1 || true
 
@@ -26,9 +26,9 @@ expect_eq "lịch sử: ≥ 3 revision, có revision image hỏng cũ hơn revis
     [ -n \"\$bad\" ] && [ \"\$bad\" -lt \"\$cur\" ] || { echo \"không có revision image hỏng cũ hơn revision \$cur: \$(echo \$l)\"; exit 0; }
     [ -n \"\$cause\" ] || { echo \"revision \$cur chưa có change-cause\"; exit 0; }
     echo đạt"
-expect_eq "~/drills/s14/curl.log: ≥ 30 dòng, mọi dòng 200" "đạt" \
+expect_eq "~/drills/s14/curl.log: ≥ 30 dòng, mọi dòng mã 200 (dạng '<mã HTTP> <mã thoát curl>', curl -m 5)" "đạt" \
   vm "$cp" "f=~/drills/s14/curl.log; [ -f \$f ] || { echo 'chưa có tệp'; exit 0; }
-    n=\$(grep -c . \$f); b=\$(grep -vc '^200\$' \$f)
+    n=\$(grep -c . \$f); b=\$(grep -vc '^200 ' \$f)
     [ \"\$n\" -ge 30 ] && [ \"\$b\" = 0 ] && echo đạt || echo \"\$n dòng, \$b dòng khác 200\""
 expect_eq "~/shop/gateway.yaml (apply --dry-run=server): image 2.0, replicas 2, maxUnavailable 0, maxSurge 1" \
   "shop/gateway:2.0 2 0 1" \

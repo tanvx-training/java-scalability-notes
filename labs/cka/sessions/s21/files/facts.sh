@@ -123,7 +123,10 @@ else:
     if hpa: lo, hi = hpa["spec"].get("minReplicas") or 1, hpa["spec"].get("maxReplicas") or 1
     p = avail("catalog", lo, hi)
     if p: bad.append(p)
+    # Chỉ Pod của ba service: Pod Job của CronJob order-report chạy bù ngay sau khi VM khởi động lại có thể thoáng
+    # Pending (node còn taint not-ready), không phải lỗi của buổi (như s16).
     pend = [x["metadata"]["name"] for x in pods_j.get("items", []) if x.get("status", {}).get("phase") == "Pending"
+            and (x["metadata"].get("labels") or {}).get("app") in ("gateway", "catalog", "order")
             and any(c.get("type") == "PodScheduled" and c.get("status") == "False" for c in x.get("status", {}).get("conditions") or [])]
     if pend: bad.append(f"Pod Pending: {' '.join(sorted(pend))}")
     fail = [r["metadata"]["name"] for r in rs_j.get("items", []) if (r["spec"].get("replicas") or 0) > 0

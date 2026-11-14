@@ -5,7 +5,7 @@
 # chấm qua tệp vì CronJob có thể dọn Job đó theo successfulJobsHistoryLimit; ~/shop/{log-agent,seed,order-report}.yaml
 # khớp cluster; Job seed-bad đã xoá và answers.env khớp. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
-echo "  (chờ apiserver và DaemonSet log-agent; lâu nhất vài phút nếu Pod đang khởi động)"
+echo "  (chờ apiserver và DaemonSet log-agent nếu Pod đang khởi động: tối đa ~6 phút, lâu hơn nếu apiserver nhận kết nối mà không trả lời)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
   kubectl -n shop get ds log-agent >/dev/null 2>&1 && kubectl -n shop rollout status ds/log-agent --timeout=240s" >/dev/null 2>&1 || true
 

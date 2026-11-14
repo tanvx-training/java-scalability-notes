@@ -3,7 +3,7 @@
 # ConfigMap; gateway mount gateway-files ở /config, tệp trong Pod bằng nội dung khoá và Spring đã đọc nó (/actuator/info);
 # catalog, order lấy DB_USER, DB_PASSWORD từ secretKeyRef; answers.env khớp. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
-echo "  (chờ apiserver, ba Deployment và app trả lời; lâu nhất vài phút nếu Pod đang khởi động)"
+echo "  (chờ apiserver, ba Deployment và app trả lời nếu Pod đang khởi động: thường vài phút, tối đa ~19 phút, lâu hơn nếu apiserver nhận kết nối mà không trả lời)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
   for d in gateway catalog order; do kubectl -n shop rollout status deploy/\$d --timeout=150s; done
   # Chưa có readinessProbe (s13): Pod Ready trước khi Spring Boot mở cổng, nên chờ app trả lời (tối đa 180 giây mỗi service).

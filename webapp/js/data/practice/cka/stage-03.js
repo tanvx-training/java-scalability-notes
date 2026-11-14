@@ -1134,7 +1134,7 @@ Rolling update che cả hai: Pod cũ vẫn chạy nên shop còn trả lời, \`
       { label: "kubernetes.io: Resource Management for Pods and Containers", href: "https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/" },
       { label: "kubernetes.io: Resource Quotas", href: "https://kubernetes.io/docs/concepts/policy/resource-quotas/" },
     ],
-    stateIn: "Đầu ra s20 (metrics-server, HPA catalog 2–3, shop-quota như cuối s18). Trên Mac chạy `./labs/lab begin cka s21`: lệnh kiểm đầu vào rồi **gây sự cố**: \"một đồng nghiệp\" sửa vài tệp trong `~/shop/` rồi apply, động vào node, và chạy một việc nền ở namespace khác. Ba tệp trong `~/shop/` được ghi lại bằng một công cụ YAML: comment và cách viết danh sách có thể đổi. Không nói đã làm gì. Bấm giờ 20 phút. Đừng đọc `labs/cka/breaks/` trước khi làm xong.",
+    stateIn: "Đầu ra s20 (metrics-server, HPA catalog 2–3, shop-quota như cuối s18). Trên Mac chạy `./labs/lab begin cka s21`: lệnh kiểm đầu vào rồi **gây sự cố**: \"một đồng nghiệp\" sửa vài tệp trong `~/shop/` rồi apply, động vào node, và chạy một việc nền ở namespace khác. Ba tệp trong `~/shop/` được ghi lại bằng một công cụ YAML: comment và cách viết danh sách có thể đổi. Không nói đã làm gì. Bấm giờ 20 phút. Muốn làm lại từ đầu giữa chừng: chạy lại `./labs/lab begin cka s21` (đặt lại sự cố, xoá đáp án cũ). Đừng đọc `labs/cka/breaks/` trước khi làm xong.",
     stateOut: "Ba Deployment Available đúng số replica (catalog trong khoảng của HPA), không Pod Pending, không ReplicaSet FailedCreate trong shop; order không nodeSelector; gateway có lại tài nguyên cuối s17; shop-quota như cuối s18; ~/shop/{order,gateway,quota}.yaml khớp cluster; hai worker schedulable; Pod batch-7f và mem-probe ở default đã xoá; ~/drills/s21/answers.env.",
     tasks: [
       { id: "t1", text: "Toàn cảnh, chưa sửa gì: `k get node`, `k get pod -A -o wide | grep -v Running`, `k -n shop get deploy,rs`. Shop còn trả lời không? Deployment nào có UP-TO-DATE thiếu, ReplicaSet nào `DESIRED 1 CURRENT 0`?" },
@@ -1219,7 +1219,7 @@ Ba vế: cka-w2 không có nhãn \`disktype=ssd\`, cka-cp có taint control plan
 
 \`\`\`bash
 k uncordon cka-w1
-k -n shop get events --field-selector reason=FailedScheduling --sort-by=.lastTimestamp | tail -1
+k -n shop get events --field-selector reason=FailedScheduling --sort-by=.metadata.creationTimestamp | tail -1
 # … 0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 node(s) didn't match Pod's node affinity/selector. …
 vim ~/shop/order.yaml          # xoá khối nodeSelector
 k apply -f ~/shop/order.yaml && k -n shop rollout status deploy/order

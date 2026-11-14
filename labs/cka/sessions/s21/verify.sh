@@ -12,7 +12,8 @@ vm "$cp" "# Hạn theo đồng hồ (360 giây), không theo số vòng: mỗi l
   k='kubectl --request-timeout=10s'
   while [ \$(date +%s) -lt \$end ]; do
     # Đang có lỗi của buổi sự cố (Pod chưa xếp được, ReplicaSet FailedCreate, node cordon): đọc ngay, không chờ.
-    o=\$(\$k -n shop get pod -o jsonpath='{range .items[*]}{.status.conditions[?(@.type==\"PodScheduled\")].status}{\"\\n\"}{end}' 2>/dev/null) \\
+    # Chỉ xét Pod của ba service: Pod Job của CronJob chạy bù ngay sau khi VM khởi động lại có thể thoáng Pending.
+    o=\$(\$k -n shop get pod -l 'app in (gateway,catalog,order)' -o jsonpath='{range .items[*]}{.status.conditions[?(@.type==\"PodScheduled\")].status}{\"\\n\"}{end}' 2>/dev/null) \\
       && printf '%s\\n' \"\$o\" | grep -qx False && break
     o=\$(\$k -n shop get rs -o jsonpath='{range .items[*]}{.status.conditions[?(@.type==\"ReplicaFailure\")].status}{\"\\n\"}{end}' 2>/dev/null) \\
       && printf '%s\\n' \"\$o\" | grep -qx True && break

@@ -4,7 +4,7 @@
 # wait-catalog; ~/shop/*.yaml khớp Deployment đang chạy; Deployment nháp probe-lab đã xoá; answers.env khớp.
 # Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
-echo "  (chờ apiserver và ba Deployment; lâu nhất vài phút nếu Pod đang khởi động)"
+echo "  (chờ apiserver và ba Deployment nếu Pod đang khởi động: thường vài phút, tối đa ~15 phút, lâu hơn nếu apiserver nhận kết nối mà không trả lời)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
   for d in gateway catalog order; do kubectl -n shop rollout status deploy/\$d --timeout=240s; done
   # EndpointSlice controller cập nhật ready sau khi Deployment đã thấy Pod Available: chờ tối đa 30 giây tới khi số địa
