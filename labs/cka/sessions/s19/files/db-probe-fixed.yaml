@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-probe
+  namespace: shop
+  labels:
+    app: db-probe
+spec:
+  tolerations:
+  - key: dedicated
+    operator: Equal
+    value: db
+    effect: NoSchedule
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: role
+            operator: In
+            values: ["db"]
+  terminationGracePeriodSeconds: 0
+  containers:
+  - name: probe
+    image: busybox:1.37
+    command: ["sleep", "3600"]

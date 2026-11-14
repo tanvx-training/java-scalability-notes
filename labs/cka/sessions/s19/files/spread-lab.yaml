@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spread-lab
+  namespace: shop
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: spread-lab
+  template:
+    metadata:
+      labels:
+        app: spread-lab
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app: spread-lab
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: sleep
+        image: busybox:1.37
+        command: ["sleep", "3600"]

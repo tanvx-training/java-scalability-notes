@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-probe
+  namespace: shop
+  labels:
+    app: db-probe
+spec:
+  nodeSelector:
+    role: db
+  terminationGracePeriodSeconds: 0
+  containers:
+  - name: probe
+    image: busybox:1.37
+    command: ["sleep", "3600"]
