@@ -72,7 +72,7 @@ export const sessions = [
       { skill: "dx-self-debug-method-security", level: "Làm được có tra" },
     ],
     uses: ["cfg-postauthorize","cfg-postfilter","cfg-permission-evaluator","cfg-data-security-spel"],
-    refs: [{ label: "Sách, chương 12", href: "#/docs/springsec-12" }],
+    refs: [{ label: "Sách, mục 11.2–11.3", href: "#/docs/springsec-11" }, { label: "Sách, mục 12.1–12.3", href: "#/docs/springsec-12" }],
     stateIn: "Đầu ra s30 (chương 7–12 đã làm xong).",
     stateOut: "order chỉ cho chủ đơn xem đơn, qua bộ test chấm.",
   },

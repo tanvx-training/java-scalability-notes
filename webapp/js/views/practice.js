@@ -275,7 +275,7 @@ function mockBlock(program, rec) {
 // ---------- Trang một buổi ----------
 
 const SKILL_GROUPS = [
-  ["command", "⌨️ Lệnh"], ["yaml", "📄 YAML"], ["procedure", "🧭 Quy trình"],
+  ["command", "⌨️ Lệnh"], ["yaml", "📄 YAML"], ["code", "💻 Code"], ["procedure", "🧭 Quy trình"],
   ["concept", "💡 Khái niệm"], ["docs", "🔖 Trang docs"], ["path", "📁 File và đường dẫn"],
 ];
 // Cùng đích với lib/search.js: loại ref → trang Thực hành nhanh.

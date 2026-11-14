@@ -15,7 +15,7 @@ export const sessions = [
     goals: [
       "Dùng @WithMockUser và user() của MockMvc để test endpoint cần đăng nhập.",
       "Dùng @WithUserDetails với UserDetailsService thật.",
-      "Tạo annotation riêng với SecurityContextFactory để dựng Authentication tùy chỉnh.",
+      "Tạo annotation riêng với WithSecurityContextFactory để dựng Authentication tùy chỉnh.",
     ],
     skills: [
       { skill: "tst-with-mock-user", level: "Viết được không tra" },

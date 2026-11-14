@@ -39,7 +39,7 @@ export const sessions = [
     pieces: [],
     goals: [
       "Đăng ký client dùng authorization code và PKCE và đi hết luồng bằng trình duyệt và curl.",
-      "Lần theo các endpoint /authorize và /token của server.",
+      "Lần theo các endpoint authorize và token của server (đường dẫn mặc định tra ở tài liệu tham chiếu đúng phiên bản, không viết theo trí nhớ).",
       "Chẩn đoán lỗi redirect_uri và invalid_grant.",
     ],
     skills: [

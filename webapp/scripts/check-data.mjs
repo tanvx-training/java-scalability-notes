@@ -1300,7 +1300,7 @@ const PRACTICE_REF_IDS = {
   playbook: new Set(kubePlaybooks.map((p) => p.id)),
 };
 const LABS = join(WEBAPP, "..", "labs");
-const SKILL_KINDS = ["command", "yaml", "procedure", "concept", "docs", "path"];
+const SKILL_KINDS = ["command", "yaml", "code", "procedure", "concept", "docs", "path"];
 // Mảng kỹ năng (id, label, tiền tố id) do từng chương trình khai ở program.skillAreas — PR5.
 const SESSION_KINDS = ["lesson", "mock"];
 const sessionKind = (s) => s.kind ?? "lesson";

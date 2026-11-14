@@ -122,7 +122,7 @@ export const sessions = [
       { skill: "dx-self-debug-auth", level: "Làm được có tra" },
     ],
     uses: ["cfg-userdetailsservice-db","cfg-delegating-encoder","cfg-form-login","cfg-authenticationprovider"],
-    refs: [{ label: "Sách, chương 6", href: "#/docs/springsec-06" }],
+    refs: [{ label: "Sách, mục 3.3 và 4.1", href: "#/docs/springsec-03" }, { label: "Sách, mục 4.1.4", href: "#/docs/springsec-04" }, { label: "Sách, mục 6.1", href: "#/docs/springsec-06" }, { label: "Sách, mục 6.3.2", href: "#/docs/springsec-06" }],
     stateIn: "Đầu ra s15 (chương 3–6 đã làm xong).",
     stateOut: "order có đăng nhập tự dựng, qua bộ test chấm.",
   },
