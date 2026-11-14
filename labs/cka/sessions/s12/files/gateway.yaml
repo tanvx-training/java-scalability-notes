@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: gateway
+  name: gateway
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+      - image: shop/gateway:1.0
+        name: gateway
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: shop-config
+        volumeMounts:
+        - name: app-config
+          mountPath: /config
+          readOnly: true
+        resources: {}
+      volumes:
+      - name: app-config
+        configMap:
+          name: gateway-files
+status: {}

@@ -107,9 +107,9 @@ export const skills = [
   { id: "k-delete-now", kind: "command", area: "kubernetes", label: "k delete pod <pod> $now", ref: cmd("c020") },
 
   // ── s11 Deployment, ReplicaSet, Service tối thiểu ──
-  { id: "k-create-deploy", kind: "command", area: "kubernetes", label: "k create deploy catalog --image=shop/catalog:1.0 --replicas=2 $do > catalog.yaml", ref: cmd("c022") },
+  { id: "k-create-deploy", kind: "command", area: "kubernetes", label: "k create deploy catalog --image=shop/catalog:1.0 --replicas=2 --port=8080 $do > ~/shop/catalog.yaml", ref: cmd("c022") },
   { id: "k-scale", kind: "command", area: "kubernetes", label: "k scale deploy catalog --replicas=3", ref: cmd("c023") },
-  { id: "k-expose", kind: "command", area: "kubernetes", label: "k expose deploy catalog --port=80 --target-port=8080", ref: cmd("c054") },
+  { id: "k-expose", kind: "command", area: "kubernetes", label: "k -n shop expose deploy catalog --port=8080 — Service cùng tên, selector lấy từ Deployment", ref: cmd("c054") },
   { id: "k-deploy-rs-pod", kind: "concept", area: "kubernetes", label: "Deployment → ReplicaSet → Pod: ownerReferences và pod-template-hash" },
   { id: "k-labels-selectors", kind: "command", area: "kubernetes", label: "k get pods -l app=catalog --show-labels", ref: cmd("c090") },
   { id: "vim-paste-mode", kind: "command", area: "vim", label: ":set paste trước khi dán YAML từ kubernetes.io, :set nopaste sau đó" },
@@ -117,14 +117,14 @@ export const skills = [
   { id: "k-docs-kubectl-ref", kind: "docs", area: "kubernetes", label: "kubernetes.io: kubectl Quick Reference" },
 
   // ── s12 ConfigMap và Secret ──
-  { id: "k-cm-literal", kind: "command", area: "kubernetes", label: "k create cm catalog-config --from-literal=KEY=val", ref: cmd("c036") },
-  { id: "k-cm-file", kind: "command", area: "kubernetes", label: "k create cm catalog-config --from-file=application.yaml", ref: cmd("c037") },
-  { id: "k-secret-generic", kind: "command", area: "kubernetes", label: "k create secret generic db-cred --from-literal=password=…", ref: cmd("c039") },
+  { id: "k-cm-literal", kind: "command", area: "kubernetes", label: "k create cm shop-config --from-literal=APP_GREETING=… --from-literal=CATALOG_URL=…", ref: cmd("c036") },
+  { id: "k-cm-file", kind: "command", area: "kubernetes", label: "k create cm gateway-files --from-file=application.yaml", ref: cmd("c037") },
+  { id: "k-secret-generic", kind: "command", area: "kubernetes", label: "k create secret generic db-cred --from-literal=DB_USER=… --from-literal=DB_PASSWORD=…", ref: cmd("c039") },
   { id: "k-cm-envfrom-volume", kind: "yaml", area: "kubernetes", label: "Pod dùng ConfigMap qua envFrom và volume", ref: yaml("sn-pod-use-configmap") },
-  { id: "k-secret-env-volume", kind: "yaml", area: "kubernetes", label: "Pod dùng Secret qua env và volume", ref: yaml("sn-secret-pod") },
+  { id: "k-secret-env-volume", kind: "yaml", area: "kubernetes", label: "Pod dùng Secret qua env (valueFrom.secretKeyRef) và qua volume", ref: yaml("sn-secret-pod") },
   { id: "lx-base64", kind: "command", area: "linux", label: "echo -n 's3cret' | base64; echo 'czNjcmV0' | base64 -d", ref: cmd("c043") },
-  { id: "k-secret-jsonpath", kind: "command", area: "kubernetes", label: "k get secret db-cred -o jsonpath='{.data.password}' | base64 -d", ref: cmd("c044") },
-  { id: "vim-visual-block", kind: "command", area: "vim", label: "Ctrl-v chọn cột rồi I# Esc — comment nhiều dòng một lúc" },
+  { id: "k-secret-jsonpath", kind: "command", area: "kubernetes", label: "k get secret db-cred -o jsonpath='{.data.DB_PASSWORD}' | base64 -d", ref: cmd("c044") },
+  { id: "vim-visual-block", kind: "command", area: "vim", label: "Ctrl-v chọn cột rồi I (dấu cách hoặc #) Esc — thụt lề hay comment nhiều dòng một lúc" },
 
   // ── s13 Probe, vòng đời Pod, graceful shutdown ──
   { id: "k-probes-yaml", kind: "yaml", area: "kubernetes", label: "livenessProbe, readinessProbe, startupProbe", ref: yaml("sn-pod-probes") },

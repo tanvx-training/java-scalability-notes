@@ -32,6 +32,7 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 | s06 | `setup.sh` | thêm swapfile `/swap.img` 512 MiB và dòng fstab (dùng TAB như bộ cài Ubuntu), vì VM Multipass mặc định không có swap |
 | s06 | `check.sh` | chỉ kiểm phần bền của chặng 0 (không đòi container `catalog`) |
 | s09 | `setup.sh` | `lab_break st1-node-notready` (không in ra đã làm gì) |
+| s11 | `check.sh` | như `verify.sh` của s10 nhưng chỉ đòi `POD_IP` trong `answers.env` là một IPv4: Pod lẻ `catalog` được dựng lại sandbox sau khi VM khởi động lại nên IP có thể đổi |
 
 Lỗi có chủ ý: `breaks/st1-node-notready/run.sh` — `cka-w1`: `/etc/default/kubelet` ghi đè `--config` bằng đường dẫn không tồn tại; `cka-w2`: kubelet `stop` + `disable`. Hai worker `NotReady` sau khoảng một phút.
 
