@@ -234,7 +234,7 @@ function stagesBlock(program, state, next) {
     }));
     const det = h("details", { class: "pr-stage" },
       h("summary", {},
-        h("span", { class: `pr-num${complete ? " ok" : stage.id === curStage ? " now" : ""}` }, complete ? "✓" : String(i)),
+        h("span", { class: `pr-num${complete ? " ok" : stage.id === curStage ? " now" : ""}` }, complete ? "✓" : String(Number.isFinite(stage.num) ? stage.num : i)),
         h("span", { class: "grow" }, h("strong", {}, stage.title)),
         h("span", { class: "faint" }, `${done}/${total}`)),
       stage.goal ? h("p", { class: "muted small" }, stage.goal) : null,
@@ -670,7 +670,7 @@ function renderMockIndex(root, program) {
   const mocks = program.mocks || [];
   const page = h("div", { class: "page pr-page" },
     crumbs(program, "Đề mock"),
-    pageHead("⏱️ Đề mock", examLine(program), `${program.label} · Mock`));
+    pageHead("⏱️ Đề mock", hasExam(program) ? examLine(program) : "", `${program.label} · Mock`));
   const add = (...n) => page.append(...n.filter(Boolean));
   if (!mocks.length) {
     add(hasExam(program)

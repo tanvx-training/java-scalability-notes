@@ -115,6 +115,9 @@ const EXPECTED = {
     // hành TĂNG DẦN theo từng đợt nội dung; sửa ở đây TRƯỚC khi phát hành buổi.
     "practice-sessions:cka": 53,
     "practice-published:cka": 9,
+    // Chương trình ssia: 17 chặng (chương 2–18 của sách), 53 buổi, chưa phát hành buổi nào (chỉ có khung).
+    "practice-sessions:ssia": 53,
+    "practice-published:ssia": 0,
   },
 };
 
