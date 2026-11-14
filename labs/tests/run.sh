@@ -904,6 +904,15 @@ et "$P#passes" "" | grep -q 'không chạy'; l=$?
 et "$P" | grep -q '^  ✗'; m=$?
 check "expect_test: đạt, failure, error, skipped, không tồn tại, log giả, lớp có '.' và '\$', chưa chạy Maven" $((a+b+c+d+e+f+g+h+i+j+k+l+m))
 
+# Thông báo lỗi trong báo cáo surefire là thuộc tính XML: thực thể được giải mã khi in, xuống dòng thành
+# một dấu cách (mỗi kiểm tra vẫn một dòng); giải mã một lượt, như &amp; sau cùng: "&amp;lt;" in ra "&lt;", "&#38;lt;" cũng vậy.
+E=lab.s01.EntityTest
+want="  ✗ t (thực tế: thất bại (failure): Status expected:<401> but was:<200> Expected: 'Basic' and \"realm\" at x &lt;y&gt; &amp; AA )"
+[ "$(et "$E#multiline")" = "$want" ]; a=$?
+[ "$(et "$E#multiline" | wc -l | tr -d ' ')" = 1 ]; b=$?
+[ "$(et "$E#literal")" = "  ✗ t (thực tế: lỗi (error): tệp &#10;.env thiếu &lt;, ký tự &#233; giữ nguyên)" ]; c=$?
+check "expect_test: thông báo lỗi giải mã thực thể XML (&#10; &apos; &quot; &lt; &gt; &amp;), một dòng" $((a+b+c))
+
 # Báo cáo lớn (log DEBUG trong system-out): 30 testcase × 1000 dòng log (~3 MB), testcase cuối lỗi.
 BIG="$WORK/big"; mkdir -p "$BIG"
 awk 'BEGIN {

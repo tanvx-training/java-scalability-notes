@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="lab.s01.EntityTest" tests="2" failures="1" errors="1" skipped="0">
+  <testcase name="multiline" classname="lab.s01.EntityTest" time="0.1">
+    <failure message="Status expected:&lt;401&gt; but was:&lt;200&gt;&#10;Expected: &apos;Basic&apos; and &quot;realm&quot;&#13;&#10;&#9;at x &amp;lt;y&amp;gt; &amp;amp; &#x41;&#65;&#10;" type="java.lang.AssertionError">stack</failure>
+  </testcase>
+  <testcase name="literal" classname="lab.s01.EntityTest" time="0.1">
+    <error message="tệp &amp;#10;.env thiếu &#38;lt;, ký tự &#233; giữ nguyên" type="java.lang.IllegalStateException">x</error>
+  </testcase>
+</testsuite>

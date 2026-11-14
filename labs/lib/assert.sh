@@ -94,8 +94,35 @@ EOF
     function attr(t, a,   r) {
       if (!match(t, "[ \t\r\n]" a "=\"[^\"]*\"")) return ""
       r = substr(t, RSTART + 1, RLENGTH - 1); sub(/^[^=]*="/, "", r); sub(/"$/, "", r)
-      gsub(/&lt;/, "<", r); gsub(/&gt;/, ">", r); gsub(/&quot;/, "\"", r); gsub(/&amp;/, "\\&", r)
-      return r
+      return unxml(r)
+    }
+    # unxml: giải mã thực thể XML của một giá trị thuộc tính trong một lượt quét (kết quả giải mã không bị
+    # quét lại, nên "&amp;lt;" ra "&lt;" như khi giải mã &amp; sau cùng). Tham chiếu số chỉ giải mã khi là
+    # ký tự ASCII (tab, xuống dòng, in được); ngoài ra giữ nguyên.
+    function unxml(r,   out, ent, n, c) {
+      out = ""
+      while (match(r, /&(#x[0-9A-Fa-f]+|#[0-9]+|lt|gt|quot|apos|amp);/)) {
+        ent = substr(r, RSTART + 1, RLENGTH - 2)
+        out = out substr(r, 1, RSTART - 1)
+        c = substr(r, RSTART, RLENGTH)
+        if (ent == "lt") c = "<"
+        else if (ent == "gt") c = ">"
+        else if (ent == "quot") c = "\""
+        else if (ent == "apos") c = "'\''"
+        else if (ent == "amp") c = "&"
+        else {
+          n = (substr(ent, 2, 1) == "x") ? hex(substr(ent, 3)) : substr(ent, 2) + 0
+          if (n == 9 || n == 10 || n == 13 || (n >= 32 && n < 127)) c = sprintf("%c", n)
+        }
+        out = out c
+        r = substr(r, RSTART + RLENGTH)
+      }
+      return out r
+    }
+    function hex(h,   v, i) {
+      v = 0; h = tolower(h)
+      for (i = 1; i <= length(h); i++) v = v * 16 + index("0123456789abcdef", substr(h, i, 1)) - 1
+      return v
     }
     function clean(v) { gsub(/[\t\r\n]+/, " ", v); return v }
     function emit(r) {
