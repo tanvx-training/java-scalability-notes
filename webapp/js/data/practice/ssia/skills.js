@@ -14,14 +14,14 @@ export const skills = [
 
   // ── s02 Bức tranh class của Spring Security: lần theo một request ──
   { id: "int-auth-flow-diagram", kind: "concept", area: "internals", label: "Vẽ luồng authentication từ filter tới SecurityContext, gọi đúng tên contract" },
-  { id: "dx-security-debug-log", kind: "command", area: "diagnose", label: "Bật logging.level.org.springframework.security=TRACE và đọc luồng request" },
+  { id: "dx-security-debug-log", kind: "yaml", area: "diagnose", label: "Bật logging.level.org.springframework.security=TRACE và đọc luồng request" },
   { id: "int-debug-breakpoint-filter", kind: "procedure", area: "internals", label: "Đặt breakpoint trong chuỗi filter để thấy request đi qua đâu" },
   { id: "dx-401-error-dispatch", kind: "concept", area: "diagnose", label: "401 che lỗi khác (500, 403 CSRF): request lỗi sang /error rồi bị chain chặn lần hai với người dùng ẩn danh" },
 
   // ── s03 Ghi đè các cấu hình mặc định ──
   { id: "cfg-userdetailsservice-bean", kind: "code", area: "config", label: "Bean UserDetailsService và PasswordEncoder thay user mặc định" },
   { id: "cfg-securityfilterchain-bean", kind: "code", area: "config", label: "Bean SecurityFilterChain với authorizeHttpRequests và httpBasic" },
-  { id: "cfg-multiple-config-classes", kind: "procedure", area: "config", label: "Tách cấu hình bảo mật ra nhiều lớp @Configuration" },
+  { id: "cfg-multiple-config-classes", kind: "code", area: "config", label: "Tách cấu hình bảo mật ra nhiều lớp @Configuration" },
   { id: "int-custom-provider-sketch", kind: "concept", area: "internals", label: "AuthenticationProvider tùy chỉnh thay UserDetailsService và PasswordEncoder" },
 
   // ── s04 UserDetails và GrantedAuthority ──
@@ -30,13 +30,13 @@ export const skills = [
   { id: "dx-account-status-errors", kind: "command", area: "diagnose", label: "Gọi /orders với user bị disabled/locked và đọc phản hồi cùng log" },
 
   // ── s05 Hiện thực UserDetails: tối giản, builder, và gói entity ──
-  { id: "cfg-userdetails-impl", kind: "procedure", area: "config", label: "Hiện thực UserDetails tối giản cho user của order" },
+  { id: "cfg-userdetails-impl", kind: "code", area: "config", label: "Hiện thực UserDetails tối giản cho user của order" },
   { id: "cfg-user-builder", kind: "code", area: "config", label: "User.withUsername(...).password(...).authorities(...).build()" },
   { id: "int-userdetails-wrapper", kind: "concept", area: "internals", label: "Bọc entity bằng UserDetails thay vì để một lớp có hai trách nhiệm" },
 
   // ── s06 UserDetailsService và UserDetailsManager: user lưu trong DB ──
-  { id: "cfg-userdetailsservice-db", kind: "procedure", area: "config", label: "UserDetailsService đọc user từ bảng users của order" },
-  { id: "cfg-userdetailsmanager", kind: "procedure", area: "config", label: "UserDetailsManager tạo, đổi, xoá user (JdbcUserDetailsManager)" },
+  { id: "cfg-userdetailsservice-db", kind: "code", area: "config", label: "UserDetailsService đọc user từ bảng users của order" },
+  { id: "cfg-userdetailsmanager", kind: "code", area: "config", label: "UserDetailsManager tạo, đổi, xoá user (JdbcUserDetailsManager)" },
   { id: "dx-username-not-found", kind: "command", area: "diagnose", label: "Đăng nhập với username không có và đọc UsernameNotFoundException / phản hồi" },
 
   // ── s07 PasswordEncoder: contract, tự viết, và các bản có sẵn ──
@@ -47,25 +47,25 @@ export const skills = [
   // ── s08 DelegatingPasswordEncoder và crypto module ──
   { id: "cfg-delegating-encoder", kind: "code", area: "config", label: "PasswordEncoderFactories.createDelegatingPasswordEncoder và tiền tố {id}" },
   { id: "pro-hash-vs-encrypt", kind: "concept", area: "protocol", label: "Băm một chiều (mật khẩu) khác mã hóa hai chiều (secret) thế nào" },
-  { id: "cfg-crypto-encryptors", kind: "procedure", area: "config", label: "KeyGenerators và Encryptors của spring-security-crypto" },
+  { id: "cfg-crypto-encryptors", kind: "code", area: "config", label: "KeyGenerators và Encryptors của spring-security-crypto" },
 
   // ── s09 Filter trong kiến trúc Spring Security; thêm filter trước một filter có sẵn ──
   { id: "int-filterchain-proxy", kind: "concept", area: "internals", label: "DelegatingFilterProxy, FilterChainProxy và SecurityFilterChain nối với nhau thế nào" },
-  { id: "dx-list-filters", kind: "command", area: "diagnose", label: "In danh sách filter của chuỗi (log TRACE hoặc debug FilterChainProxy)" },
-  { id: "cfg-add-filter-before", kind: "procedure", area: "config", label: "http.addFilterBefore(filter, tênFilter.class)" },
+  { id: "dx-list-filters", kind: "procedure", area: "diagnose", label: "In danh sách filter của chuỗi (log TRACE hoặc debug FilterChainProxy)" },
+  { id: "cfg-add-filter-before", kind: "code", area: "config", label: "http.addFilterBefore(filter, tênFilter.class)" },
 
   // ── s10 Thêm filter sau và tại vị trí của một filter khác ──
-  { id: "cfg-add-filter-after", kind: "procedure", area: "config", label: "http.addFilterAfter(filter, tênFilter.class)" },
-  { id: "cfg-add-filter-at", kind: "procedure", area: "config", label: "http.addFilterAt(filter, tênFilter.class) và hệ quả khi trùng vị trí" },
+  { id: "cfg-add-filter-after", kind: "code", area: "config", label: "http.addFilterAfter(filter, tênFilter.class)" },
+  { id: "cfg-add-filter-at", kind: "code", area: "config", label: "http.addFilterAt(filter, tênFilter.class) và hệ quả khi trùng vị trí" },
   { id: "dx-filter-order-bug", kind: "procedure", area: "diagnose", label: "Chẩn đoán filter chạy sai thứ tự: log TRACE rồi đối chiếu danh sách filter" },
 
   // ── s11 Các filter có sẵn: GenericFilterBean, OncePerRequestFilter và bạn bè ──
   { id: "int-once-per-request-filter", kind: "concept", area: "internals", label: "OncePerRequestFilter, GenericFilterBean và khi nào chọn cái nào" },
-  { id: "cfg-should-not-filter", kind: "procedure", area: "config", label: "Bỏ qua filter cho một số request bằng shouldNotFilter" },
+  { id: "cfg-should-not-filter", kind: "code", area: "config", label: "Bỏ qua filter cho một số request bằng shouldNotFilter" },
 
   // ── s12 AuthenticationProvider: Authentication, logic tùy chỉnh ──
   { id: "int-authentication-contract", kind: "concept", area: "internals", label: "Authentication: principal, credentials, authorities, cờ authenticated" },
-  { id: "cfg-authenticationprovider", kind: "procedure", area: "config", label: "Viết và đăng ký AuthenticationProvider tùy chỉnh" },
+  { id: "cfg-authenticationprovider", kind: "code", area: "config", label: "Viết và đăng ký AuthenticationProvider tùy chỉnh" },
   { id: "int-providermanager", kind: "concept", area: "internals", label: "ProviderManager hỏi từng AuthenticationProvider qua supports() và authenticate()" },
 
   // ── s13 SecurityContext và các chiến lược lưu giữ ──
@@ -74,8 +74,8 @@ export const skills = [
   { id: "dx-context-lost-async", kind: "procedure", area: "diagnose", label: "Chẩn đoán Authentication null trong thread @Async" },
 
   // ── s14 Chuyển tiếp SecurityContext sang thread khác ──
-  { id: "cfg-delegating-runnable", kind: "procedure", area: "config", label: "DelegatingSecurityContextRunnable và Callable" },
-  { id: "cfg-delegating-executor", kind: "procedure", area: "config", label: "DelegatingSecurityContextExecutorService bọc executor" },
+  { id: "cfg-delegating-runnable", kind: "code", area: "config", label: "DelegatingSecurityContextRunnable và Callable" },
+  { id: "cfg-delegating-executor", kind: "code", area: "config", label: "DelegatingSecurityContextExecutorService bọc executor" },
   { id: "dx-verify-context-thread", kind: "procedure", area: "diagnose", label: "Kiểm Authentication trong thread con bằng log và test" },
 
   // ── s15 HTTP Basic và form login ──
@@ -104,7 +104,7 @@ export const skills = [
 
   // ── s20 Chọn request áp luật và matcher dùng biểu thức chính quy ──
   { id: "cfg-regex-matchers", kind: "code", area: "config", label: "Matcher biểu thức chính quy cho request" },
-  { id: "cfg-multiple-filterchains", kind: "procedure", area: "config", label: "Nhiều SecurityFilterChain với @Order và securityMatcher" },
+  { id: "cfg-multiple-filterchains", kind: "code", area: "config", label: "Nhiều SecurityFilterChain với @Order và securityMatcher" },
   { id: "int-chain-selection", kind: "concept", area: "internals", label: "FilterChainProxy chọn chain đầu tiên khớp request" },
 
   // ── s21 CSRF hoạt động thế nào trong Spring Security ──
@@ -113,18 +113,18 @@ export const skills = [
   { id: "dx-csrf-403", kind: "procedure", area: "diagnose", label: "Chẩn đoán 403 do thiếu hoặc sai CSRF token" },
 
   // ── s22 Dùng CSRF trong các tình huống thực tế ──
-  { id: "cfg-csrf-in-forms", kind: "procedure", area: "config", label: "Gửi CSRF token trong form và trong header X-CSRF-TOKEN" },
+  { id: "cfg-csrf-in-forms", kind: "code", area: "config", label: "Gửi CSRF token trong form và trong header X-CSRF-TOKEN" },
   { id: "pro-csrf-when-disable", kind: "concept", area: "protocol", label: "Khi nào tắt CSRF an toàn (API không dựa cookie phiên) và khi nào không" },
   { id: "dx-csrf-spa", kind: "procedure", area: "diagnose", label: "Chẩn đoán CSRF với client JavaScript (cookie, header, phiên)" },
 
   // ── s23 Tùy chỉnh bảo vệ CSRF ──
-  { id: "cfg-csrf-token-repository", kind: "procedure", area: "config", label: "CsrfTokenRepository (cookie, phiên, tự viết)" },
+  { id: "cfg-csrf-token-repository", kind: "code", area: "config", label: "CsrfTokenRepository (cookie, phiên, tự viết)" },
   { id: "cfg-csrf-ignoring", kind: "code", area: "config", label: "csrf.ignoringRequestMatchers và csrfTokenRequestHandler" },
-  { id: "tst-csrf-manual", kind: "procedure", area: "testing", label: "Kiểm CSRF bằng curl: lấy token, gửi lại cùng cookie" },
+  { id: "tst-csrf-manual", kind: "command", area: "testing", label: "Kiểm CSRF bằng curl: lấy token, gửi lại cùng cookie" },
 
   // ── s24 CORS hoạt động thế nào; @CrossOrigin ──
   { id: "pro-cors-preflight", kind: "concept", area: "protocol", label: "Same-origin, preflight OPTIONS và các header Access-Control-*" },
-  { id: "cfg-cross-origin-annotation", kind: "procedure", area: "config", label: "@CrossOrigin(origins, methods, allowedHeaders)" },
+  { id: "cfg-cross-origin-annotation", kind: "code", area: "config", label: "@CrossOrigin(origins, methods, allowedHeaders)" },
   { id: "dx-cors-devtools", kind: "procedure", area: "diagnose", label: "Đọc lỗi CORS ở DevTools và so với header thật bằng curl -i" },
 
   // ── s25 CORS bằng CorsConfigurer và vị trí của nó trong chuỗi filter ──
@@ -143,9 +143,9 @@ export const skills = [
   { id: "dx-postauthorize-sideeffect", kind: "concept", area: "diagnose", label: "@PostAuthorize chỉ chặn sau khi method đã chạy: hệ quả với side effect" },
 
   // ── s28 Hiện thực permission cho method ──
-  { id: "cfg-permission-evaluator", kind: "procedure", area: "config", label: "PermissionEvaluator và MethodSecurityExpressionHandler" },
+  { id: "cfg-permission-evaluator", kind: "code", area: "config", label: "PermissionEvaluator và MethodSecurityExpressionHandler" },
   { id: "cfg-spel-bean-call", kind: "code", area: "config", label: "@PreAuthorize(\"@bean.kiemTra(#id)\") gọi bean tự viết" },
-  { id: "tst-method-permission", kind: "procedure", area: "testing", label: "Kiểm permission với nhiều user trong test" },
+  { id: "tst-method-permission", kind: "code", area: "testing", label: "Kiểm permission với nhiều user trong test" },
 
   // ── s29 Prefiltering: @PreFilter ──
   { id: "cfg-prefilter", kind: "code", area: "config", label: "@PreFilter với filterObject" },
@@ -187,7 +187,7 @@ export const skills = [
 
   // ── s37 Chạy client credentials grant type ──
   { id: "cfg-client-credentials", kind: "code", area: "config", label: "Client dùng client_credentials và scope riêng" },
-  { id: "cfg-token-customizer", kind: "procedure", area: "config", label: "OAuth2TokenCustomizer thêm claim vào JWT" },
+  { id: "cfg-token-customizer", kind: "code", area: "config", label: "OAuth2TokenCustomizer thêm claim vào JWT" },
 
   // ── s38 Opaque token, introspection và thu hồi token ──
   { id: "cfg-opaque-token", kind: "code", area: "config", label: "Client dùng opaque (reference) token" },
@@ -195,17 +195,17 @@ export const skills = [
   { id: "pro-token-revocation", kind: "command", area: "protocol", label: "POST tới revocation endpoint rồi introspect lại" },
 
   // ── s39 Cấu hình kiểm chứng JWT ──
-  { id: "cfg-resource-server-jwt", kind: "code", area: "config", label: "oauth2ResourceServer(jwt) với issuer-uri hoặc jwk-set-uri" },
+  { id: "cfg-resource-server-jwt", kind: "yaml", area: "config", label: "issuer-uri hoặc jwk-set-uri (application.yml) và oauth2ResourceServer(jwt)" },
   { id: "int-bearer-token-filter", kind: "concept", area: "internals", label: "BearerTokenAuthenticationFilter và JwtAuthenticationProvider" },
   { id: "dx-bearer-401", kind: "procedure", area: "diagnose", label: "Đọc header WWW-Authenticate khi token sai hoặc hết hạn" },
 
   // ── s40 Dùng JWT tùy chỉnh: claim và authority ──
-  { id: "cfg-jwt-authorities-converter", kind: "procedure", area: "config", label: "JwtAuthenticationConverter và JwtGrantedAuthoritiesConverter" },
+  { id: "cfg-jwt-authorities-converter", kind: "code", area: "config", label: "JwtAuthenticationConverter và JwtGrantedAuthoritiesConverter" },
   { id: "cfg-scope-rules", kind: "code", area: "config", label: "hasAuthority(\"SCOPE_x\") hoặc @PreAuthorize theo scope" },
   { id: "dx-scope-vs-role", kind: "procedure", area: "diagnose", label: "Chẩn đoán 403 do prefix SCOPE_ và claim không khớp" },
 
   // ── s41 Kiểm chứng token bằng introspection ──
-  { id: "cfg-resource-server-opaque", kind: "code", area: "config", label: "oauth2ResourceServer(opaqueToken) với introspection-uri" },
+  { id: "cfg-resource-server-opaque", kind: "yaml", area: "config", label: "introspection-uri và thông tin client (application.yml) và oauth2ResourceServer(opaqueToken)" },
   { id: "dx-introspection-failure", kind: "procedure", area: "diagnose", label: "Chẩn đoán introspection lỗi: client, URL, token không active" },
 
   // ── s42 Hệ thống multitenant ──
@@ -213,18 +213,18 @@ export const skills = [
   { id: "pro-multitenancy-models", kind: "concept", area: "protocol", label: "Các mô hình multitenant: một issuer nhiều tenant hay mỗi tenant một issuer" },
 
   // ── s43 OAuth 2 login với một nhà cung cấp phổ biến ──
-  { id: "cfg-oauth2-login", kind: "code", area: "config", label: "http.oauth2Login và spring.security.oauth2.client.registration" },
+  { id: "cfg-oauth2-login", kind: "yaml", area: "config", label: "spring.security.oauth2.client.registration (application.yml) và http.oauth2Login" },
   { id: "int-clientregistration", kind: "concept", area: "internals", label: "ClientRegistration và ClientRegistrationRepository" },
   { id: "dx-oauth2-login-redirect", kind: "procedure", area: "diagnose", label: "Chẩn đoán redirect-uri không khớp khi oauth2Login" },
 
   // ── s44 OAuth 2 login với auth server của shop ──
   { id: "cfg-custom-provider-registration", kind: "yaml", area: "config", label: "Đăng ký provider tùy chỉnh bằng issuer-uri" },
-  { id: "cfg-clientregistrationrepository", kind: "procedure", area: "config", label: "ClientRegistrationRepository tự viết" },
-  { id: "cfg-oauth2-user-authorities", kind: "procedure", area: "config", label: "Ánh xạ authority của user từ OAuth 2 login" },
+  { id: "cfg-clientregistrationrepository", kind: "code", area: "config", label: "ClientRegistrationRepository tự viết" },
+  { id: "cfg-oauth2-user-authorities", kind: "code", area: "config", label: "Ánh xạ authority của user từ OAuth 2 login" },
 
   // ── s45 Hiện thực OAuth 2 client: gateway gọi service ──
-  { id: "cfg-authorized-client-manager", kind: "procedure", area: "config", label: "OAuth2AuthorizedClientManager và OAuth2AuthorizedClientService" },
-  { id: "cfg-token-relay", kind: "procedure", area: "config", label: "Gắn Authorization: Bearer vào cuộc gọi từ gateway sang order" },
+  { id: "cfg-authorized-client-manager", kind: "code", area: "config", label: "OAuth2AuthorizedClientManager và OAuth2AuthorizedClientService" },
+  { id: "cfg-token-relay", kind: "code", area: "config", label: "Gắn Authorization: Bearer vào cuộc gọi từ gateway sang order" },
   { id: "dx-token-expired-client", kind: "procedure", area: "diagnose", label: "Chẩn đoán access token hết hạn và refresh trong client" },
 
   // ── s46 Tự làm: chuyển tiếp token qua gateway ──
@@ -250,18 +250,18 @@ export const skills = [
   { id: "dx-reactive-401", kind: "procedure", area: "diagnose", label: "Chẩn đoán 401 trong WebFlux: log và header" },
 
   // ── s51 Mock user, user từ UserDetailsService và Authentication tùy chỉnh ──
-  { id: "tst-with-mock-user", kind: "procedure", area: "testing", label: "@WithMockUser và SecurityMockMvcRequestPostProcessors.user" },
-  { id: "tst-with-user-details", kind: "procedure", area: "testing", label: "@WithUserDetails nạp user từ UserDetailsService" },
-  { id: "tst-custom-security-context", kind: "procedure", area: "testing", label: "Annotation + WithSecurityContextFactory cho Authentication tùy chỉnh" },
+  { id: "tst-with-mock-user", kind: "code", area: "testing", label: "@WithMockUser và SecurityMockMvcRequestPostProcessors.user" },
+  { id: "tst-with-user-details", kind: "code", area: "testing", label: "@WithUserDetails nạp user từ UserDetailsService" },
+  { id: "tst-custom-security-context", kind: "code", area: "testing", label: "Annotation + WithSecurityContextFactory cho Authentication tùy chỉnh" },
 
   // ── s52 Test method security và test authentication ──
-  { id: "tst-method-security", kind: "procedure", area: "testing", label: "Test method security với @WithMockUser trên bean" },
-  { id: "tst-authentication", kind: "procedure", area: "testing", label: "Test httpBasic và formLogin bằng MockMvc" },
+  { id: "tst-method-security", kind: "code", area: "testing", label: "Test method security với @WithMockUser trên bean" },
+  { id: "tst-authentication", kind: "code", area: "testing", label: "Test httpBasic và formLogin bằng MockMvc" },
   { id: "dx-test-catches-misconfig", kind: "procedure", area: "diagnose", label: "Dùng test đỏ để định vị cấu hình bảo mật sai" },
 
   // ── s53 Test CSRF, CORS và ứng dụng reactive ──
-  { id: "tst-csrf", kind: "procedure", area: "testing", label: "with(csrf()) trong MockMvc và kiểm phản hồi 403" },
-  { id: "tst-cors", kind: "procedure", area: "testing", label: "Kiểm header Access-Control-* và preflight trong MockMvc" },
-  { id: "tst-reactive", kind: "procedure", area: "testing", label: "WebTestClient với mutateWith và SecurityMockServerConfigurers" },
+  { id: "tst-csrf", kind: "code", area: "testing", label: "with(csrf()) trong MockMvc và kiểm phản hồi 403" },
+  { id: "tst-cors", kind: "code", area: "testing", label: "Kiểm header Access-Control-* và preflight trong MockMvc" },
+  { id: "tst-reactive", kind: "code", area: "testing", label: "WebTestClient với mutateWith và SecurityMockServerConfigurers" },
 
 ];
