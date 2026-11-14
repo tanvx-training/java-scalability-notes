@@ -845,7 +845,7 @@ Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp 
       { skill: "k-explain", level: "Thành phản xạ" },
       { skill: "k-init-container", level: "Viết được có tra" },
     ],
-    uses: ["k-describe-pod", "k-labels-selectors", "k-port-forward", "vim-paste-mode", "lx-ps-proc"],
+    uses: ["k-describe-pod", "k-labels-selectors", "vim-paste-mode", "lx-ps-proc"],
     foundation: null,
     mindset: `**Ba probe, ba câu hỏi khác nhau.** kubelet hỏi container ba câu, mỗi câu một hậu quả:
 
@@ -862,7 +862,7 @@ Spring Boot đã chia sẵn đúng hai nhóm đó. Image shop bật \`management
 **Dừng tử tế: ba đồng hồ phải khớp nhau.** Khi Pod bị xoá (rollout, scale xuống, drain node), hai việc xảy ra **song song**: kubelet bắt đầu dừng container, còn EndpointSlice controller rút địa chỉ Pod khỏi Service và kube-proxy trên từng node cập nhật iptables. Việc thứ hai mất một lúc; nếu JVM đóng cổng ngay, những request đến trong khoảng đó gặp \`connection refused\`.
 
 \`\`\`text
-t=0      Pod bị xoá ─┬─ EndpointSlice bỏ địa chỉ → kube-proxy cập nhật iptables trên mọi node (vài giây)
+t=0      Pod bị xoá ─┬─ địa chỉ trong EndpointSlice thành ready: false, terminating: true → kube-proxy bỏ nó khỏi đích của Service trên mọi node (vài giây)
                      └─ kubelet chạy preStop: sleep 10
 t=10s    preStop xong → SIGTERM tới PID 1 (java) → Spring: "Commencing graceful shutdown", chờ request đang chạy
 t≤30s    spring.lifecycle.timeout-per-shutdown-phase: 20s hết → Spring đóng hẳn
@@ -1021,7 +1021,7 @@ date +%T; k -n shop delete pod catalog-544847b966-p6788; date +%T   # cửa sổ
 # 19:49:35.953 … HikariPool-1 - Shutdown initiated...
 \`\`\`
 
-Mười giây giữa \`delete\` và \`Commencing graceful shutdown\` là preStop: trong lúc đó Pod đã \`Terminating\`, đã rời EndpointSlice, nhưng JVM vẫn nhận kết nối. SIGTERM tới PID 1 của container, chính là \`java\` (ENTRYPOINT của image là \`sh -c "exec java …"\`: \`exec\` thay shell bằng JVM, nên tín hiệu không bị shell nuốt): \`k -n shop exec deploy/catalog -- cat /proc/1/cmdline | tr '\\\\0' ' '\` cho thấy PID 1 là \`java\`, không phải \`sh\`.
+Mười giây giữa \`delete\` và \`Commencing graceful shutdown\` là preStop: trong lúc đó Pod đã \`Terminating\`, địa chỉ của nó trong EndpointSlice đã thành \`ready: false\`, \`terminating: true\` (kube-proxy không gửi request mới tới nữa), nhưng JVM vẫn nhận kết nối. SIGTERM tới PID 1 của container, chính là \`java\` (ENTRYPOINT của image là \`sh -c "exec java …"\`: \`exec\` thay shell bằng JVM, nên tín hiệu không bị shell nuốt): \`k -n shop exec deploy/catalog -- cat /proc/1/cmdline | tr '\\0' ' '\` cho thấy PID 1 là \`java\`, không phải \`sh\`.
 
 **6. Init container cho gateway**
 
@@ -1161,7 +1161,7 @@ Mặc định là \`25%\` / \`25%\` (làm tròn: surge lên, unavailable xuống
     stateOut: "gateway 2 replica chạy shop/gateway:2.0, RollingUpdate maxUnavailable 0 / maxSurge 1; lịch sử revision có change-cause, có revision image hỏng đã rollback; ~/drills/s14/curl.log toàn 200; ~/shop/gateway.yaml khớp.",
     tasks: [
       { id: "t1", text: "Trong `~/shop/gateway.yaml`: `replicas: 2` và `strategy` RollingUpdate với `maxUnavailable: 0`, `maxSurge: 1` (vẫn image 1.0). Apply, `k -n shop rollout status deploy/gateway`. Ghi change-cause cho revision hiện tại: `k -n shop annotate deploy/gateway kubernetes.io/change-cause=\"2 replica, maxUnavailable 0\"`." },
-      { id: "t2", text: "Vòng curl: ở một cửa sổ tmux trên cka-cp, lấy ClusterIP của Service gateway rồi chạy một vòng `curl -s -o /dev/null -m 2 -w '%{http_code}\\n' http://<ClusterIP>:8080/api/info >> ~/drills/s14/curl.log; sleep 0.2` không dừng. Để nó chạy suốt bước 3." },
+      { id: "t2", text: "Vòng curl: ở một cửa sổ tmux trên cka-cp, lấy ClusterIP của Service gateway, `mkdir -p ~/drills/s14 && : > ~/drills/s14/curl.log` (tệp chỉ ghi nối: lần thử trước còn dòng `000` thì xoá đi), rồi chạy một vòng `curl -s -o /dev/null -m 2 -w '%{http_code}\\n' http://<ClusterIP>:8080/api/info >> ~/drills/s14/curl.log; sleep 0.2` không dừng. Để nó chạy suốt bước 3." },
       { id: "t3", text: "Cửa sổ kia: `k -n shop set image deploy/gateway gateway=shop/gateway:2.0`, ngay sau đó annotate change-cause `lên 2.0`, rồi `k -n shop rollout status deploy/gateway` và `k -n shop get rs -l app=gateway -w` để thấy hai ReplicaSet đổi số. Chờ thêm 15 giây sau khi rollout xong rồi mới dừng vòng curl (Ctrl-c). `sort ~/drills/s14/curl.log | uniq -c`: phải chỉ có `200`, ít nhất 30 dòng." },
       { id: "t4", text: "Bản hỏng: `set image` lên `shop/gateway:2.1` (tag không có), annotate `thử 2.1`. `rollout status --timeout=30s` báo gì? `k -n shop get pod -l app=gateway`: Pod cũ có bị xoá không, vì sao? `k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/info` vẫn trả version nào?" },
       { id: "t5", text: "`k -n shop rollout history deploy/gateway`, rồi `… --revision=<n>` để xem template của từng revision. Ghi `BROKEN_REVISION=<revision của image 2.1>` vào `~/drills/s14/answers.env`. Rollback về **revision của 1.0 mới nhất** bằng `rollout undo --to-revision=<n>`, annotate change-cause; xem lại history: số revision đó đi đâu?" },
@@ -1172,7 +1172,7 @@ Mặc định là \`25%\` / \`25%\` (làm tròn: surge lên, unavailable xuống
       "`set image deploy/gateway gateway=…`: phần trước `=` là **tên container** (xem `k -n shop get deploy gateway -o jsonpath='{.spec.template.spec.containers[*].name}'`), không phải tên Deployment.",
       "`rollout status` của bản hỏng không bao giờ tự xong: Deployment chỉ đặt condition `Progressing=False` (`ProgressDeadlineExceeded`) sau `progressDeadlineSeconds` (mặc định 600 giây). Dùng `--timeout` và đọc `k get pod`.",
       "Vòng curl có dòng `000`: curl không nhận được phản hồi trong 2 giây. Kiểm Pod mới đã có readinessProbe chưa, Pod cũ có preStop chưa (`k -n shop get deploy gateway -o yaml | grep -A4 preStop`).",
-      "Annotate change-cause **sau** `set image`: annotation của Deployment được chép sang ReplicaSet hiện hành. Annotate trước thì nó dính vào revision cũ.",
+      "Annotate change-cause **sau** `set image`: annotation của Deployment được chép sang ReplicaSet hiện hành. Annotate trước thì câu đó bị ghi lên cả revision đang chạy (cũ), rồi chép tiếp sang revision mới.",
       "`rollout undo` cảnh báo `Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation`: nhớ sửa tệp và `apply`, nếu không lần `apply -f ~/shop/` sau sẽ kéo Deployment về thứ trong tệp.",
       "`rollout history --revision=N` in template Pod của revision N: nhanh hơn đoán xem revision nào là 1.0.",
     ],
@@ -1199,7 +1199,7 @@ k -n shop annotate deploy/gateway kubernetes.io/change-cause="2 replica, maxUnav
 **2 và 3. Vòng curl trong lúc lên 2.0**
 
 \`\`\`bash
-mkdir -p ~/drills/s14
+mkdir -p ~/drills/s14 && : > ~/drills/s14/curl.log
 IP=$(k -n shop get svc gateway -o jsonpath='{.spec.clusterIP}')
 while :; do curl -s -o /dev/null -m 2 -w '%{http_code}\\n' http://$IP:8080/api/info >> ~/drills/s14/curl.log; sleep 0.2; done   # cửa sổ 1
 \`\`\`

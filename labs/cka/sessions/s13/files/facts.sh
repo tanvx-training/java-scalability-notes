@@ -54,8 +54,9 @@ for name in ("gateway", "catalog", "order"):
         continue
     spec = d["spec"]["template"]["spec"]; st = d.get("status", {})
     print(f"PROBES_{name}={probes(spec)}")
+    # Pod đang dừng vẫn nằm trong EndpointSlice (terminating: true, ready: false) tới khi object Pod bị xoá: không đếm.
     addrs = [e for s in eps if s.get("metadata", {}).get("labels", {}).get("kubernetes.io/service-name") == name
-             for e in (s.get("endpoints") or [])]
+             for e in (s.get("endpoints") or []) if not (e.get("conditions") or {}).get("terminating")]
     ready = sum(1 for e in addrs if (e.get("conditions") or {}).get("ready"))
     print(f"AVAIL_{name}={d['spec'].get('replicas')}/{st.get('updatedReplicas', 0)}/{st.get('availableReplicas', 0)} "
           f"eps={ready}/{len(addrs)}")
@@ -66,7 +67,9 @@ for name in ("gateway", "catalog", "order"):
     else: stop = "đạt"
     print(f"STOP_{name}={stop} (preStop={s}, grace={g})")
     f = load(f"{t}/file-{name}.json")
-    if not f:
+    if f and f.get("kind") != "Deployment":
+        print(f"FILE_{name}=lỗi: tệp phải là đúng một Deployment (dry-run trả {f.get('kind')})")
+    elif not f:
         err = open(f"{t}/file-{name}.err").read().strip().splitlines()
         print(f"FILE_{name}=lỗi: {err[-1] if err else 'rỗng'}")
     else:

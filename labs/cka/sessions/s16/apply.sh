@@ -1,6 +1,6 @@
 # s16 — lời giải chuẩn: gây đúng sự cố của buổi rồi sửa theo cách chẩn đoán ra (để selftest chứng minh cách sửa khớp lỗi):
 # catalog: tag image không có → về shop/catalog:1.0; order: secretKeyRef trỏ khoá DB_PASS không có trong db-cred → về
-# DB_PASSWORD; gateway: JAVA_OPTS nối hai cờ bằng NBSP (U+00A0) nên JVM thấy một cờ lạ → thay bằng dấu cách; sửa trong
+# DB_PASSWORD; gateway: JAVA_OPTS nối hai cờ bằng NBSP (U+00A0) nên JVM thấy một cờ lạ → bỏ JAVA_OPTS (cuối s15 không có); sửa trong
 # ~/shop/*.yaml rồi apply. Pod report-once gọi sai đường dẫn (/api/oders) nên Failed; command là trường bất biến của Pod
 # (k edit bị từ chối) → sửa trong ~/drills/s16/report-once.yaml rồi replace --force.
 # Ghi ~/drills/s16/answers.env. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
@@ -18,7 +18,7 @@ import os, yaml
 home = os.path.expanduser('~')
 def edit(name, fn):
     p = f'{home}/shop/{name}.yaml'
-    with open(p) as f: doc = yaml.safe_load(f)
+    with open(p) as f: doc = [d for d in yaml.safe_load_all(f) if d and d.get('kind') == 'Deployment'][0]
     fn(doc['spec']['template']['spec']['containers'][0])
     with open(p, 'w') as f: f.write(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=1000))
 def catalog(c): c['image'] = 'shop/catalog:1.0'
@@ -27,8 +27,9 @@ def order(c):
         ref = (e.get('valueFrom') or {}).get('secretKeyRef')
         if ref and ref.get('key') == 'DB_PASS': ref['key'] = 'DB_PASSWORD'
 def gateway(c):
-    for e in c.get('env') or []:
-        if e.get('name') == 'JAVA_OPTS': e['value'] = e['value'].replace(' ', ' ')
+    # Về cấu hình cuối s15: không có JAVA_OPTS (cờ "đồng nghiệp" thêm vào không thuộc trạng thái chuẩn).
+    c['env'] = [e for e in (c.get('env') or []) if e.get('name') != 'JAVA_OPTS']
+    if not c['env']: del c['env']
 edit('catalog', catalog); edit('order', order); edit('gateway', gateway)
 PY
 kubectl apply -f ~/shop/catalog.yaml -f ~/shop/order.yaml -f ~/shop/gateway.yaml >/dev/null
