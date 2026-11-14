@@ -58,9 +58,13 @@ assert_summary() {
 #   expect_test "<nhãn>" "<lớp>#<pt>"  đạt khi testcase đó có trong báo cáo, không failure/error/skipped
 # Mặc định đọc mọi target/surefire-reports/*.xml trong workspace, nhưng chỉ sau khi lab_mvn chạy trong
 # cùng script (lab_mvn xoá báo cáo cũ trước): chưa chạy Maven thì mọi dòng là ✗ "không chạy".
+# Báo cáo được đọc một lần thành bảng chỉ mục (lớp, phương thức, kết quả) ở expect_test đầu tiên;
+# lab_tests và lab_mvn xoá bảng để lần sau đọc lại.
 LAB_TEST_REPORTS=""
+_LAB_TEST_INDEX=""
+_LAB_TEST_INDEX_OK=0
 
-lab_tests() { LAB_TEST_REPORTS="$1"; }
+lab_tests() { LAB_TEST_REPORTS="$1"; _LAB_TEST_INDEX_OK=0; }
 
 # _lab_report_files: danh sách tệp báo cáo, mỗi dòng một tệp
 _lab_report_files() {
@@ -72,58 +76,72 @@ _lab_report_files() {
   return 0
 }
 
-# _lab_test_result <lớp> <phương thức>: in "ok", lý do không đạt, hoặc rỗng khi không thấy testcase.
-# Khớp đúng classname; name bằng phương thức (hoặc "phương_thức(…" / "phương_thức[…" của test tham số hoá,
-# khi đó mọi lần chạy đều phải đạt). Bỏ CDATA và chú thích trước khi tìm failure/error/skipped.
-_lab_test_result() {
-  _lab_report_files | awk -v cls="$1" -v m="$2" '
+# _lab_test_index: đọc mọi báo cáo một lượt, in mỗi testcase một dòng "<lớp>\t<tên>\t<ok|lý do>".
+# Đọc theo từng thẻ (RS='>'), bỏ qua nội dung CDATA và chú thích (log trong system-out có thể rất lớn)
+# nên thời gian tuyến tính theo kích thước báo cáo.
+_lab_test_index() {
+  local f
+  set --
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case "$f" in /*) ;; *) f="./$f" ;; esac   # awk không hiểu nhầm "a=b/…" là gán biến
+    set -- "$@" "$f"
+  done <<EOF
+$(_lab_report_files)
+EOF
+  [ $# -gt 0 ] || return 0
+  awk '
     function attr(t, a,   r) {
       if (!match(t, "[ \t\r\n]" a "=\"[^\"]*\"")) return ""
       r = substr(t, RSTART + 1, RLENGTH - 1); sub(/^[^=]*="/, "", r); sub(/"$/, "", r)
       gsub(/&lt;/, "<", r); gsub(/&gt;/, ">", r); gsub(/&quot;/, "\"", r); gsub(/&amp;/, "\\&", r)
       return r
     }
-    function cut(s, op, cl,   i, j, out) {
-      out = ""
-      while ((i = index(s, op)) > 0) {
-        out = out substr(s, 1, i - 1)
-        s = substr(s, i + length(op))
-        j = index(s, cl)
-        if (j == 0) { s = ""; break }
-        s = substr(s, j + length(cl))
-      }
-      return out s
+    function clean(v) { gsub(/[\t\r\n]+/, " ", v); return v }
+    function emit(r) {
+      if (r == "") r = "ok"
+      print clean(cls) "\t" clean(nm) "\t" clean(r)
+      inc = 0
     }
-    function scan(s,   i, e, c, tag, body, nm, why, t) {
-      s = cut(s, "<![CDATA[", "]]>"); s = cut(s, "<!--", "-->")
-      while ((i = index(s, "<testcase")) > 0) {
-        s = substr(s, i + 9)
-        c = substr(s, 1, 1)
-        if (c != " " && c != "\t" && c != "\n" && c != "\r" && c != "/" && c != ">") continue
-        e = index(s, ">"); if (e == 0) break
-        tag = substr(s, 1, e - 1); s = substr(s, e + 1)
-        body = ""
-        if (substr(tag, length(tag)) != "/") {
-          e = index(s, "</testcase>")
-          if (e == 0) { body = s; s = "" } else { body = substr(s, 1, e - 1); s = substr(s, e + 11) }
-        }
-        if (attr(tag, "classname") != cls) continue
-        nm = attr(tag, "name")
-        if (nm != m && index(nm, m "(") != 1 && index(nm, m "[") != 1) continue
-        found = 1
-        why = ""
-        if (match(body, /<failure[ \t\r\n\/>]/)) why = "thất bại (failure)"
-        else if (match(body, /<error[ \t\r\n\/>]/)) why = "lỗi (error)"
-        else if (match(body, /<skipped[ \t\r\n\/>]/)) why = "bị bỏ qua (skipped)"
-        if (why != "") {
-          t = substr(body, RSTART); e = index(t, ">"); if (e > 0) t = substr(t, 1, e)
-          t = attr(t, "message")
-          if (t != "") why = why ": " t
-          if (bad == "") bad = why
-        }
+    BEGIN { RS = ">" }
+    FNR == 1 { if (inc) emit(why != "" ? why : "báo cáo không trọn vẹn"); st = 0 }
+    {
+      r = $0
+      if (st == 1) { if (r ~ /\]\]$/) st = 0; next }
+      if (st == 2) { if (r ~ /--$/) st = 0; next }
+      i = index(r, "<"); if (i == 0) next
+      t = substr(r, i + 1)
+      if (substr(t, 1, 8) == "![CDATA[") { if (!(t ~ /\]\]$/)) st = 1; next }
+      if (substr(t, 1, 3) == "!--") { if (!(length(t) >= 5 && t ~ /--$/)) st = 2; next }
+      if (t ~ /^\/testcase[ \t\r\n]*$/) { if (inc) emit(why); next }
+      tag = t; sub(/[ \t\r\n\/].*$/, "", tag)
+      if (tag == "testcase") {
+        if (inc) emit(why != "" ? why : "báo cáo không trọn vẹn")
+        inc = 1; why = ""; cls = attr(t, "classname"); nm = attr(t, "name")
+        if (t ~ /\/[ \t\r\n]*$/) emit("")
+        next
+      }
+      if (inc && why == "") {
+        if (tag == "failure") why = "thất bại (failure)"
+        else if (tag == "error") why = "lỗi (error)"
+        else if (tag == "skipped") why = "bị bỏ qua (skipped)"
+        else next
+        msg = attr(t, "message")
+        if (msg != "") why = why ": " msg
       }
     }
-    { f = $0; s = ""; while ((getline line < f) > 0) s = s line "\n"; close(f); scan(s) }
+    END { if (inc) emit(why != "" ? why : "báo cáo không trọn vẹn") }' "$@"
+}
+
+# _lab_test_result <lớp> <phương thức>: in "ok", lý do không đạt, hoặc rỗng khi không thấy testcase.
+# Khớp đúng classname; name bằng phương thức (hoặc "phương_thức(…" / "phương_thức[…" của test tham số hoá,
+# khi đó mọi lần chạy đều phải đạt).
+_lab_test_result() {
+  [ -n "$_LAB_TEST_INDEX" ] || return 0
+  printf '%s\n' "$_LAB_TEST_INDEX" | awk -F '\t' -v cls="$1" -v m="$2" '
+    $1 == cls && ($2 == m || index($2, m "(") == 1 || index($2, m "[") == 1) {
+      found = 1; if ($3 != "ok" && bad == "") bad = $3
+    }
     END { if (bad != "") print bad; else if (found) print "ok" }'
 }
 
@@ -136,6 +154,10 @@ expect_test() {
   if [ "$ok" -ne 1 ]; then
     _assert_fail "$label" "định danh test '$id' sai dạng (cần <lớp>#<phương thức>)"
     return 0
+  fi
+  if [ "$_LAB_TEST_INDEX_OK" -ne 1 ]; then
+    _LAB_TEST_INDEX="$(_lab_test_index)"
+    _LAB_TEST_INDEX_OK=1
   fi
   res="$(_lab_test_result "${id%#*}" "${id#*#}")"
   case "$res" in

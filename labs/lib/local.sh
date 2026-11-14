@@ -296,6 +296,7 @@ EOF
 # Gọi trực tiếp trong verify.sh (không trong $(…)) để expect_test biết Maven vừa chạy.
 lab_mvn() {
   local w list d rc=0
+  _LAB_TEST_INDEX_OK=0   # bảng chỉ mục của expect_test phải đọc lại báo cáo mới
   w="${WS:-$(ws_dir)}"
   list="$(find "$w" -name .git -prune -o -type d -path '*/target/surefire-reports' -print)"
   while IFS= read -r d; do

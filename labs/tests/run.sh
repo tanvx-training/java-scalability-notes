@@ -892,6 +892,36 @@ et "$P#passes" "" | grep -q 'không chạy'; l=$?
 et "$P" | grep -q '^  ✗'; m=$?
 check "expect_test: đạt, failure, error, skipped, không tồn tại, log giả, lớp có '.' và '\$', chưa chạy Maven" $((a+b+c+d+e+f+g+h+i+j+k+l+m))
 
+# Báo cáo lớn (log DEBUG trong system-out): 30 testcase × 1000 dòng log (~3 MB), testcase cuối lỗi.
+BIG="$WORK/big"; mkdir -p "$BIG"
+awk 'BEGIN {
+  print "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"; print "<testsuite name=\"lab.big.BigTest\">"
+  for (t = 1; t <= 30; t++) {
+    printf "  <testcase name=\"t%d\" classname=\"lab.big.BigTest\" time=\"0.1\">\n", t
+    if (t == 30) print "    <failure message=\"hỏng ở cuối\" type=\"java.lang.AssertionError\">x</failure>"
+    printf "    <system-out><![CDATA["
+    for (l = 1; l <= 1000; l++) printf "2026-11-14 DEBUG o.s.s.w.FilterChainProxy > Securing GET /x <failure/> line %d of test %d -->\n", l, t
+    print "]]></system-out>"; print "  </testcase>"
+  }
+  print "</testsuite>" }' > "$BIG/TEST-big.xml"
+t0="$(date +%s)"
+out="$(env PATH="/usr/bin:/bin" /bin/bash -c '. "$1/lib/assert.sh"; lab_tests "$2"
+  for i in 1 2 3 4 5 6 7 8 9; do expect_test "t$i" "lab.big.BigTest#t$i"; done
+  expect_test "t30" "lab.big.BigTest#t30"' _ "$LABS" "$BIG" 2>&1)"
+t1="$(date +%s)"
+[ $((t1 - t0)) -le 5 ]; a=$?
+[ "$(printf '%s\n' "$out" | grep -c '✓')" = 9 ]; b=$?
+printf '%s\n' "$out" | grep -q '^  ✗ t30 (thực tế: thất bại (failure): hỏng ở cuối)$'; c=$?
+check "expect_test trên báo cáo ~3 MB log: 10 dòng xong trong ≤ 5 giây, kết quả đúng" $((a+b+c))
+
+out="$(env PATH="/usr/bin:/bin" /bin/bash -c '. "$1/lib/assert.sh"
+  lab_tests "$2"; expect_test "a" "lab.big.BigTest#t1"; lab_tests "$3"; expect_test "b" "lab.big.BigTest#t1"
+  expect_test "c" "lab.s01.FilterChainTest#passes"' _ "$LABS" "$BIG" "$SF" 2>&1)"
+printf '%s\n' "$out" | grep -q '^  ✓ a$'; a=$?
+printf '%s\n' "$out" | grep -q '^  ✗ b (thực tế: không chạy'; b=$?
+printf '%s\n' "$out" | grep -q '^  ✓ c$'; c=$?
+check "expect_test: đổi lab_tests thì đọc lại báo cáo (không dùng bảng cũ)" $((a+b+c))
+
 new_loc; LOCPATH="$GITFAIL:$LOCBIN:/usr/bin:/bin"; run_loc "" up loc
 [ "$RC" -ne 0 ]; a=$?; [ ! -e "$LOCW" ]; b=$?
 unset LOCPATH; run_loc "" up loc
