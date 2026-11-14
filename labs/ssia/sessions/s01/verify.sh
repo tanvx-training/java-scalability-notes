@@ -12,4 +12,6 @@ expect_test "test gốc: tạo và liệt kê đơn (POST có CSRF)" 'shop.order
 expect_test "test gốc: sản phẩm không có → 422" 'shop.order.OrderTest#unknownProductIs422'
 expect_test "test gốc: readiness UP" 'shop.order.OrderTest#readinessIsUp'
 expect_test "test gốc: catalog sập → 503" 'shop.order.OrderCatalogDownTest#unreachableCatalogIs503'
+expect_test "MockMvc của OrderTest vẫn chặn GET /orders ẩn danh" 'lab.s01.S01TestsKeepSecurityTest#orderTestKeepsSecurity'
+expect_test "MockMvc của OrderCatalogDownTest vẫn chặn GET /orders ẩn danh" 'lab.s01.S01TestsKeepSecurityTest#catalogDownTestKeepsSecurity'
 assert_summary

@@ -80,8 +80,8 @@ Mọi phản hồi, kể cả 200, có thêm \`X-Content-Type-Options: nosniff\`
       { id: "t2", text: "Trong log khởi động, tìm dòng `Using generated security password: …` và dòng `Global AuthenticationManager configured with UserDetailsService bean with name …` ngay sau nó. Ghi lại logger của từng dòng và tên bean." },
       { id: "t3", text: "Gọi bằng `curl -i` và giải thích từng kết quả theo sơ đồ ở Tư duy: `/orders` không credential; `-u user:<mật khẩu>`; mật khẩu sai; `-H 'Accept: text/html'`; `/actuator/health`; `/khong-co` (có và không credential). Rồi tự dựng header: `H=$(printf 'user:%s' <mật khẩu> | base64)` và `curl -H \"Authorization: Basic $H\" localhost:8082/orders`." },
       { id: "t4", kind: "dissect", text: "Dừng app, chạy lại với `--logging.level.org.springframework.security=TRACE` và gọi `/orders` một lần. Từ dòng DEBUG `Will secure any request with filters: …` và dòng TRACE `Trying to match request against DefaultSecurityFilterChain defined as '…'`, viết `labs/ssia/work/answers/s01.env` (mỗi dòng `KHOÁ=giá trị`) với năm khoá: `CHAIN_BEAN` (tên bean của chain), `FILTERS` (simple name của mọi filter, cách nhau dấu phẩy, đúng thứ tự), `FILTER_COUNT`, `BEFORE_BASIC` (filter đứng ngay trước `BasicAuthenticationFilter`), `AFTER_CSRF` (filter đứng ngay sau `CsrfFilter`). Verify đo lại từ `FilterChainProxy` của context lúc chấm." },
-      { id: "t5", text: "Chạy `./labs/lab verify ssia s01`: ba dòng \"test gốc\" đỏ với `expected: 201 but was: 401`. Sửa `OrderTest` và `OrderCatalogDownTest` mà không tắt bảo mật: thêm `spring-boot-starter-security-test` (scope `test`), chuyển sang `@AutoConfigureMockMvc` + `MockMvc`, gắn `@WithMockUser` lên lớp, thêm `.with(csrf())` cho mỗi POST. Giữ nguyên tên lớp và tên phương thức (verify chấm theo tên)." },
-      { id: "t6", text: "`./labs/lab verify ssia s01` phải đạt 11/11." },
+      { id: "t5", text: "Chạy `./labs/lab verify ssia s01`: ba dòng \"test gốc\" đỏ với `expected: 201 but was: 401`. Sửa `OrderTest` và `OrderCatalogDownTest` mà không tắt bảo mật: thêm `spring-boot-starter-security-test` (scope `test`), chuyển sang `@AutoConfigureMockMvc` + `MockMvc`, gắn `@WithMockUser` lên lớp, thêm `.with(csrf())` cho mỗi POST. Giữ nguyên tên lớp và tên phương thức (verify chấm theo tên). Đừng \"xanh hoá\" bằng `@AutoConfigureMockMvc(addFilters = false)` hay loại auto-configuration bảo mật: verify dựng lại đúng context của hai lớp test đó, gửi một `GET /orders` ẩn danh qua MockMvc của chúng và đòi 401." },
+      { id: "t6", text: "`./labs/lab verify ssia s01` phải đạt 13/13." },
     ],
     hints: [
       "Starter vào `<dependencies>` của `order/pom.xml`, không phải pom cha: chặng này chỉ bảo vệ `order`. Sau khi sửa pom phải `package` lại, nếu không `java -jar` vẫn chạy jar cũ không có bảo mật.",
@@ -160,7 +160,11 @@ EOF
 
 \`CorsFilter\` là của \`org.springframework.web.filter\` (chain actuator gọi \`http.cors(withDefaults())\`). Ba filter \`Default…\` vẽ trang login/logout và tài nguyên của chúng — có mặt vì chain bật \`formLogin\`.
 
-**4. Test gốc qua MockMvc**
+**4. Test gốc đỏ — chẩn đoán rồi sửa**
+
+*Triệu chứng.* Verify sau khi thêm starter: \`test gốc: catalog sập → 503 (thực tế: thất bại (failure): … expected: 503 … but was: 401)\`, tương tự 201 và 422; riêng \`readinessIsUp\` xanh.
+*Bằng chứng.* Test gốc gửi request thật bằng \`HttpClient\` không có \`Authorization\` — đúng như \`curl -i localhost:8082/orders\` ở bước 2: chain trả 401 trước khi tới controller. Health mở nên readiness xanh.
+*Nguyên nhân.* Không phải bug nghiệp vụ: test chưa có danh tính. *Sửa:* cho test một user giả mà vẫn đi qua chuỗi filter.
 
 Thêm vào \`order/pom.xml\`:
 
@@ -190,7 +194,7 @@ class OrderTest {
 }
 \`\`\`
 
-MockMvc vẫn đi qua \`FilterChainProxy\` (Boot tự gắn khi có \`spring-boot-starter-security-test\`), nên test vẫn kiểm cả luật bảo mật. Bản đầy đủ: \`labs/ssia/sessions/s01/solution/order/src/test/java/shop/order/\`.`,
+\`@AutoConfigureMockMvc\` gắn các filter của context (gồm \`springSecurityFilterChain\`) vào MockMvc, nên test vẫn đi qua chain. Phần \`spring-boot-starter-security-test\` thêm là \`SecurityMockMvcAutoConfiguration\`, nối SecurityContext của test vào request để \`@WithMockUser\` có tác dụng. Đo trên order: thay starter bằng riêng \`org.springframework.security:spring-security-test\` thì vẫn biên dịch, chain vẫn chạy, nhưng ba test đỏ lại với \`Status expected:<201> but was:<401>\` — user giả không tới được request. Bản đầy đủ: \`labs/ssia/sessions/s01/solution/order/src/test/java/shop/order/\`.`,
     work: {
       patterns: [
         "Thêm Spring Security vào một service đang chạy: thứ hỏng đầu tiên là bộ test hiện có (401 khắp nơi), và POST vẫn hỏng dù đã đăng nhập vì CSRF.",
@@ -205,9 +209,9 @@ MockMvc vẫn đi qua \`FilterChainProxy\` (Boot tự gắn khi có \`spring-boo
           solution: "```bash\ncurl -s -o /dev/null -w '%{http_code}\\n' localhost:8082/khong-co                     # 401\ncurl -s -o /dev/null -w '%{http_code}\\n' -u user:<mật khẩu> localhost:8082/khong-co   # 404\n```\nKhông đăng nhập: 401 cho một đường dẫn không tồn tại — chưa ai hỏi DispatcherServlet. Đăng nhập rồi mới tới MVC và nhận 404.",
         },
         {
-          text: "Trong 3 phút: chạy order với user cố định `dev` / `dev-pass` mà không viết Java, và chứng minh không còn mật khẩu sinh ra.",
-          timeLimitMin: 3,
-          solution: "```bash\njava -jar order/target/order.jar --spring.security.user.name=dev --spring.security.user.password=dev-pass\ncurl -s -o /dev/null -w '%{http_code}\\n' -u dev:dev-pass localhost:8082/orders   # 200\n```\nLog không còn dòng `Using generated security password`: Boot chỉ in khi mật khẩu do nó sinh ra (`spring.security.user.password` chưa đặt). Cũng đặt được trong `application.yml` — tiện cho dev, không dùng cho môi trường thật.",
+          text: "Sự cố: bạn đã chuyển `OrderTest` sang MockMvc + `@WithMockUser`, test GET xanh, nhưng `createsOrderAndListsIt` và `unknownProductIs422` đỏ với `Status expected:<201> but was:<403>` (và `<422> but was:<403>`). Trong 6 phút, tìm bằng chứng trong log xem ai trả 403 và sửa — không tắt bảo mật.",
+          timeLimitMin: 6,
+          solution: "**Triệu chứng.** 403 chỉ ở POST; GET cùng lớp xanh, nên user giả đã tới request (không phải 401).\n\n**Bằng chứng.** Chạy lại riêng lớp đó với log DEBUG của security truyền cho JVM test, rồi đọc tệp output:\n```bash\ncd labs/ssia/work\nmvn -q -pl order -am test -Dtest='shop.order.OrderTest' -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.redirectTestOutputToFile=true \"-DargLine=-Xshare:off -Dlogging.level.org.springframework.security=DEBUG\"\ngrep -E 'Securing POST|CsrfFilter|AccessDeniedHandlerImpl' order/target/surefire-reports/shop.order.OrderTest-output.txt\n```\n```text\nDEBUG o.s.security.web.FilterChainProxy      : Securing POST /orders\nDEBUG o.s.security.web.csrf.CsrfFilter       : Invalid CSRF token found for http://localhost/orders\nDEBUG o.s.s.w.access.AccessDeniedHandlerImpl : Responding with 403 status code\n```\n**Nguyên nhân.** `CsrfFilter` chặn mọi POST không mang token CSRF, kể cả khi đã đăng nhập. MockMvc không có lượt `/error` nên bạn thấy đúng 403 (curl qua cổng thật thì thấy 401 — s02 giải thích).\n\n**Sửa.** Thêm `.with(csrf())` (`SecurityMockMvcRequestPostProcessors.csrf`) cho mỗi POST: MockMvc gửi kèm một token hợp lệ. Tắt CSRF cho API là quyết định của chương 9, không phải cách làm test xanh.",
         },
       ],
     },
@@ -215,6 +219,7 @@ MockMvc vẫn đi qua \`FilterChainProxy\` (Boot tự gắn khi có \`spring-boo
       "`curl -i` trước khi nghĩ: mã trạng thái, `WWW-Authenticate`, `Set-Cookie`, `Location` đã kể gần hết câu chuyện.",
       "Thấy `Using generated security password` trong log của một môi trường thật nghĩa là cấu hình bảo mật thật chưa được nạp — coi là lỗi, không phải cảnh báo vô hại.",
       "401 cho một đường dẫn không tồn tại là bình thường: chain chạy trước DispatcherServlet.",
+      "Tự chạy `mvn -q test` trong workspace bạn sẽ thấy dòng `OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended` (đo được trên cả JDK 21 và 25): JVM chạy test tắt chia sẻ class (CDS) cho phần còn lại vì Mockito tự gắn agent. Vô hại; verify thêm `-DargLine=-Xshare:off` để không in dòng này.",
       "Verify ghi log của test vào `order/target/surefire-reports/<lớp>-output.txt` thay vì in ra màn hình: muốn xem Spring Boot đã khởi động thế nào trong test, mở tệp đó.",
     ],
     outcome: {
@@ -225,7 +230,7 @@ MockMvc vẫn đi qua \`FilterChainProxy\` (Boot tự gắn khi có \`spring-boo
 \`\`\`
 
 Verify chạy Maven một lần (test của buổi ở \`order/src/test/java/lab/s01/\` và bốn test gốc của order), đo chain từ \`FilterChainProxy\` của context test để so với \`answers/s01.env\`. Output của test nằm trong \`order/target/surefire-reports/\`.`,
-      verifyOutput: "lab: kiểm s01\n  ✓ GET /orders không credential → 401\n  ✓ 401 kèm WWW-Authenticate: Basic\n  ✓ user mặc định + mật khẩu sinh ra → 200\n  ✓ mật khẩu sai → 401\n  ✓ answers/s01.env: CHAIN_BEAN khớp bean đang chạy\n  ✓ answers/s01.env: FILTERS đúng thứ tự thật\n  ✓ answers/s01.env: FILTER_COUNT, BEFORE_BASIC, AFTER_CSRF\n  ✓ test gốc: tạo và liệt kê đơn (POST có CSRF)\n  ✓ test gốc: sản phẩm không có → 422\n  ✓ test gốc: readiness UP\n  ✓ test gốc: catalog sập → 503\n  → 11/11 đạt",
+      verifyOutput: "lab: kiểm s01\n  ✓ GET /orders không credential → 401\n  ✓ 401 kèm WWW-Authenticate: Basic\n  ✓ user mặc định + mật khẩu sinh ra → 200\n  ✓ mật khẩu sai → 401\n  ✓ answers/s01.env: CHAIN_BEAN khớp bean đang chạy\n  ✓ answers/s01.env: FILTERS đúng thứ tự thật\n  ✓ answers/s01.env: FILTER_COUNT, BEFORE_BASIC, AFTER_CSRF\n  ✓ test gốc: tạo và liệt kê đơn (POST có CSRF)\n  ✓ test gốc: sản phẩm không có → 422\n  ✓ test gốc: readiness UP\n  ✓ test gốc: catalog sập → 503\n  ✓ MockMvc của OrderTest vẫn chặn GET /orders ẩn danh\n  ✓ MockMvc của OrderCatalogDownTest vẫn chặn GET /orders ẩn danh\n  → 13/13 đạt",
       projectDelta: "order là service đầu tiên của shop có bảo mật: endpoint nghiệp vụ đòi HTTP Basic, health vẫn mở cho probe, bộ test gốc đi qua chuỗi filter bảo mật bằng MockMvc.",
     },
     review: [
@@ -326,7 +331,7 @@ flowchart TD
       { id: "t2", kind: "dissect", text: "Chạy `OrderApplication` từ IDE ở chế độ Debug, đặt breakpoint trong `BasicAuthenticationFilter.doFilterInternal` (ở lời gọi `authenticate`), gọi `curl -u user:<mật khẩu> localhost:8082/orders`, rồi Step Into cho tới `PasswordEncoder.matches`. Viết `answers/s02.env` (simple name của lớp): `MANAGER_WRAPPER` (lớp của đối tượng mà filter gọi `authenticate()`), `LOCAL_PROVIDERS` (provider của ProviderManager đầu tiên, cách nhau dấu phẩy), `PROVIDER` (provider thực sự xác thực username/password), `PROVIDER_IN` (`local` nếu provider đó thuộc ProviderManager đầu tiên, `parent` nếu thuộc ProviderManager cha), `USER_DETAILS_SERVICE` và `PASSWORD_ENCODER` (lớp mà provider đó giữ — không phải lớp bên trong encoder gọi tới)." },
       { id: "t3", text: "Vẫn tại breakpoint: xem `SecurityContextHolder.getContextHolderStrategy()` và trường `securityContextRepository` của filter. SecurityContext nằm ở đâu, có vào session không? Đối chiếu với `curl -i`: response 200 có `Set-Cookie` không?" },
       { id: "t4", text: "Gây sự cố: `./labs/lab break ssia st02-no-prefix` (lab commit code của bạn trước). Một đồng nghiệp vừa thêm user `john` / `12345` cho order. Build, chạy, `curl -i -u john:12345 localhost:8082/orders`. Chẩn đoán theo trình tự (triệu chứng → log → stack trace → nguyên nhân) rồi sửa sao cho john đăng nhập được bằng đúng `12345`, không đổi username/mật khẩu, không tắt bảo mật. Đừng đọc `labs/ssia/breaks/` trước khi làm xong." },
-      { id: "t5", text: "Sau khi sửa, kiểm lại `answers/s02.env`: verify đo trên app lúc chấm, nên nếu cách sửa của bạn đổi lớp mà provider giữ thì đáp án cũng đổi. `./labs/lab verify ssia s02` phải đạt 8/8." },
+      { id: "t5", text: "Sau khi sửa, kiểm lại `answers/s02.env`: verify đo trên app lúc chấm, nên nếu cách sửa của bạn đổi lớp mà provider giữ thì đáp án cũng đổi. `./labs/lab verify ssia s02` phải đạt 7/7." },
     ],
     hints: [
       "Ba đoạn TRACE giống nhau tới `Invoking BasicAuthenticationFilter (12/17)`. Dòng ngay sau tách chúng: `Found username 'user' in Basic Authorization header` hoặc `Did not process authentication request since failed to find username and password in Basic Authorization header`. Với mật khẩu sai, tiếp theo là `Failed to authenticate since password does not match stored value`.",
@@ -455,7 +460,7 @@ UserDetails john = User.withUsername("john")
 \`\`\`
 
 Verify đăng nhập bằng HTTP vào một context test chạy trên cổng ngẫu nhiên, rồi đi theo các đối tượng mà \`BasicAuthenticationFilter\` đang giữ (lớp bọc, các ProviderManager, provider, UserDetailsService, encoder) để so với \`answers/s02.env\`.`,
-      verifyOutput: "lab: kiểm s02\n  ✓ john:12345 → 200\n  ✓ john + mật khẩu sai → 401\n  ✓ user mặc định của Spring Boot không còn\n  ✓ answers/s02.env: MANAGER_WRAPPER\n  ✓ answers/s02.env: LOCAL_PROVIDERS\n  ✓ answers/s02.env: PROVIDER, PROVIDER_IN\n  ✓ answers/s02.env: USER_DETAILS_SERVICE\n  ✓ answers/s02.env: PASSWORD_ENCODER\n  → 8/8 đạt",
+      verifyOutput: "lab: kiểm s02\n  ✓ john:12345 → 200, john + mật khẩu sai → 401\n  ✓ user mặc định của Spring Boot không còn\n  ✓ answers/s02.env: MANAGER_WRAPPER\n  ✓ answers/s02.env: LOCAL_PROVIDERS\n  ✓ answers/s02.env: PROVIDER, PROVIDER_IN\n  ✓ answers/s02.env: USER_DETAILS_SERVICE\n  ✓ answers/s02.env: PASSWORD_ENCODER\n  → 7/7 đạt",
       projectDelta: "order có user nội bộ `john` khai bằng bean `UserDetailsService` (mật khẩu `{noop}12345`, sẽ chuyển sang băm ở chương 4); user mặc định của Boot không còn.",
     },
     review: [
@@ -523,7 +528,6 @@ Cách thứ hai là lý do sách khuyên "chọn một kiểu và bám theo": nh
     bookDiff: [
       { book: "`SecurityFilterChain configure(HttpSecurity http) throws Exception`.", now: "Trong 7.1.2, `HttpSecurity.build()`, `httpBasic(...)`, `authorizeHttpRequests(...)` không khai checked exception; lời giải viết không có `throws Exception` và biên dịch được.", why: "API cấu hình của Spring Security 7 bỏ `throws Exception` khỏi chữ ký." },
       { book: "Listing 2.9/2.10: đăng ký user bằng `http.userDetailsService(...)` + bean `NoOpPasswordEncoder`, \"lựa chọn thứ hai cũng tốt không kém\".", now: "Trên Boot 4.1.2, không có bean UserDetailsService nên Boot vẫn tạo user `user` với mật khẩu sinh ra trong AuthenticationManager cha; với bean NoOp, `curl -u user:<mật khẩu sinh ra> /orders` trả 200.", why: "Sách viết như thể chỉ có một AuthenticationManager; auto-configuration chỉ lùi khi thấy bean, không nhìn vào `HttpSecurity`." },
-      { book: "Bean `NoOpPasswordEncoder.getInstance()`.", now: "Lời giải dùng bean `PasswordEncoderFactories.createDelegatingPasswordEncoder()` và giữ mật khẩu `{noop}12345`; `NoOpPasswordEncoder` mang `@Deprecated`.", why: "Delegating chọn encoder theo tiền tố, nên chương 4 đổi sang băm mà không phải đổi bean." },
       { book: "Chain tự viết: `anyRequest().authenticated()` hoặc `permitAll()` cho mọi request.", now: "Phải tự mở health: `requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()` (Boot 4: `org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest`, `org.springframework.boot.health.actuate.endpoint.HealthEndpoint`).", why: "Khi có bean SecurityFilterChain, `ManagementWebSecurityAutoConfiguration` lùi lại hoàn toàn; app của sách không có actuator nên không gặp." },
     ],
     refs: [
@@ -540,7 +544,7 @@ Cách thứ hai là lý do sách khuyên "chọn một kiểu và bám theo": nh
       { id: "t2", text: "Viết lớp cấu hình luật web (tên tuỳ bạn, ví dụ `WebAuthorizationConfig` trong `shop.order.config`) với một bean `SecurityFilterChain`: `httpBasic`; `/actuator/health` cùng các đường dẫn con của nó (`liveness`, `readiness`) mở cho người chưa đăng nhập; mọi request khác `authenticated()`. Không mở `/actuator` hay `/actuator/**`." },
       { id: "t3", text: "Viết lớp cấu hình quản lý user (ví dụ `UserManagementConfig`) với bean `UserDetailsService` giữ user `john` / `12345` và bean `PasswordEncoder`. Xoá `ProjectConfig`. Verify kiểm: đúng một bean mỗi loại, provider xác thực Basic dùng đúng instance đó, và bean chain không nằm cùng lớp với hai bean kia." },
       { id: "t4", kind: "dissect", text: "Chạy lại với `--logging.level.org.springframework.security=DEBUG`, đọc dòng `Will secure any request with filters:` mới và viết `answers/s03.env`: `FILTER_COUNT` (số filter của chain của bạn), `REMOVED_FILTERS` (các filter có trong `FILTERS` của `answers/s01.env` mà nay không còn, cách nhau dấu phẩy, thứ tự tuỳ ý), `LOGIN_PAGE_STATUS` (mã trạng thái của `curl -i localhost:8082/login` khi không đăng nhập). Với mỗi filter đã mất, viết một câu: lời gọi nào của chain actuator đã thêm nó." },
-      { id: "t5", text: "Thử cách của listing 2.10 rồi bỏ đi: bỏ bean UserDetailsService, đăng ký john bằng `http.userDetailsService(new InMemoryUserDetailsManager(...))` trong chain, bean PasswordEncoder là `NoOpPasswordEncoder` (mật khẩu `12345` trần). Khởi động: log còn `Using generated security password` không? Gọi `/orders` bằng `user` và mật khẩu đó. Giải thích kết quả bằng hai ProviderManager của s02. Commit t3 vào git của workspace trước khi thử, thử xong thì `git checkout -- .` trong `labs/ssia/work` để trả về." },
+      { id: "t5", text: "Thử cách của listing 2.10 rồi bỏ đi: bỏ bean UserDetailsService, đăng ký john bằng `http.userDetailsService(new InMemoryUserDetailsManager(...))` trong chain, bean PasswordEncoder là `NoOpPasswordEncoder` (mật khẩu `12345` trần). Khởi động: log còn `Using generated security password` không? Gọi `/orders` bằng `user` và mật khẩu đó. Giải thích kết quả bằng hai ProviderManager của s02. Trước khi thử, commit t3 vào git của workspace (`git add -A && git commit -m t3` trong `labs/ssia/work`); thử xong chạy `git stash -u` — cả tệp đã sửa lẫn tệp mới tạo vào stash, cây làm việc về đúng t3 (`git stash drop` nếu không cần giữ)." },
       { id: "t6", text: "`./labs/lab verify ssia s03` đạt 11/11. Chạy thêm cả bộ test: `cd labs/ssia/work && mvn -q test` — test còn hiệu lực của s01, s02 và test gốc vẫn xanh." },
     ],
     hints: [
@@ -668,6 +672,7 @@ Một \`@Component\` hiện thực \`AuthenticationProvider\` (listing 2.13) là
     },
     tips: [
       "Thấy `Using generated security password` sau khi đã viết cấu hình nghĩa là vẫn còn một user mặc định ở AuthenticationManager cha: tìm xem bean UserDetailsService nào còn thiếu.",
+      "Bean encoder của lời giải là `PasswordEncoderFactories.createDelegatingPasswordEncoder()` chứ không phải `NoOpPasswordEncoder` như sách: Delegating chọn encoder theo tiền tố `{noop}`, nên chương 4 đổi sang băm mà không phải đổi bean.",
       "Một app, một kiểu cấu hình: bean `UserDetailsService` + bean `PasswordEncoder` là kiểu khớp với Spring Boot, vì Boot lùi lại khi thấy bean.",
       "Buổi này `begin` gỡ `S01AnswersTest` và `S02AnswersTest` (`labs/ssia/sessions/s03/retire`): đáp án của chúng mô tả chain và provider trước khi ghi đè. `S01ProtectedTest`, `S02LoginTest` vẫn đúng và vẫn chạy trong `mvn test`; nếu chạy lại `./labs/lab verify ssia s01`, các dòng của test đã gỡ sẽ báo `không chạy`.",
       "Không có `formLogin` thì không có `/login`: trình duyệt gọi `/orders` sẽ thấy hộp thoại Basic thay vì trang form.",

@@ -209,7 +209,7 @@ export const skills = [
   { id: "dx-introspection-failure", kind: "procedure", area: "diagnose", label: "Chẩn đoán introspection lỗi: client, URL, token không active" },
 
   // ── s42 Hệ thống multitenant ──
-  { id: "cfg-multitenant-resolver", kind: "procedure", area: "config", label: "AuthenticationManagerResolver chọn issuer theo request" },
+  { id: "cfg-multitenant-resolver", kind: "code", area: "config", label: "AuthenticationManagerResolver chọn issuer theo request" },
   { id: "pro-multitenancy-models", kind: "concept", area: "protocol", label: "Các mô hình multitenant: một issuer nhiều tenant hay mỗi tenant một issuer" },
 
   // ── s43 OAuth 2 login với một nhà cung cấp phổ biến ──

@@ -22,18 +22,14 @@ class S02LoginTest {
   @Autowired SecurityProperties security;
 
   @Test
-  void johnGets200() throws Exception {
-    HttpResponse<String> r = Support.get(port, "/orders", "john", "12345");
-    assertThat(r.statusCode())
-        .withFailMessage("GET /orders với john:12345: mong 200, nhận %s", r.statusCode())
+  void johnRightAndWrongPassword() throws Exception {
+    HttpResponse<String> ok = Support.get(port, "/orders", "john", "12345");
+    assertThat(ok.statusCode())
+        .withFailMessage("GET /orders với john:12345: mong 200, nhận %s", ok.statusCode())
         .isEqualTo(200);
-  }
-
-  @Test
-  void johnWrongPasswordIs401() throws Exception {
-    HttpResponse<String> r = Support.get(port, "/orders", "john", "54321");
-    assertThat(r.statusCode())
-        .withFailMessage("GET /orders với john:54321: mong 401, nhận %s", r.statusCode())
+    HttpResponse<String> bad = Support.get(port, "/orders", "john", "54321");
+    assertThat(bad.statusCode())
+        .withFailMessage("GET /orders với john:54321: mong 401, nhận %s", bad.statusCode())
         .isEqualTo(401);
   }
 
