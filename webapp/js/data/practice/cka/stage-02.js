@@ -62,11 +62,11 @@ export const sessions = [
     stateOut: "Pod catalog (nhãn app=catalog, containerPort 8080) Running trong namespace default, trả UP ở /actuator/health; ~/drills/s10/pod.yaml và ~/drills/s10/answers.env.",
     tasks: [
       { id: "t1", text: "Trên cka-cp: `sudo crictl images | grep shop` (image đã có sẵn trên node, không cần registry). Chạy `k run catalog --image=shop/catalog:1.0`, rồi `k get pod -o wide` — Pod nằm ở node nào, IP gì?" },
-      { id: "t2", text: "`k logs catalog` — tìm dòng `Tomcat started on port` và `Started CatalogApplication`. `k exec catalog -- id -u` và `k exec -it catalog -- bash`: image không có `curl`, hãy gọi `/actuator/health` từ trong Pod bằng `/dev/tcp` của bash." },
-      { id: "t3", text: "`k port-forward pod/catalog 8080:8080` ở một cửa sổ tmux, cửa sổ kia `curl -s localhost:8080/actuator/health` và `curl -s localhost:8080/products`. Dừng port-forward bằng Ctrl-c." },
-      { id: "t4", text: "Sinh YAML: `k run catalog --image=shop/catalog:1.0 $do > ~/drills/s10/pod.yaml`. Sửa trong vim: nhãn `app: catalog` (thay `run: catalog`) và `ports: - containerPort: 8080`. `k apply -f` lên Pod đang chạy — đọc lỗi, rồi xoá Pod (`k delete pod catalog $now`) và tạo lại từ tệp." },
-      { id: "t5", text: "Tình huống hỏng: `k run catalog-bad --image=shop/catalog:9.9`. Sau 30 giây `k get pod catalog-bad`, `k describe pod catalog-bad` — đọc Events từ trên xuống: node nào nhận Pod, kubelet thử kéo image từ đâu, vì sao thất bại? Ghi lý do chờ (cột STATUS) rồi xoá Pod." },
-      { id: "t6", text: "Ghi `~/drills/s10/answers.env`: `NODE=` (node chạy Pod catalog), `POD_IP=`, `RUN_UID=` (kết quả `id -u` trong Pod), `BAD_REASON=` (lý do chờ của catalog-bad: `ErrImagePull` hoặc `ImagePullBackOff`). Trên Mac: `./labs/lab verify cka s10` phải đạt 10/10." },
+      { id: "t2", text: "`k logs catalog` — tìm dòng `Tomcat started on port` và `Started CatalogApplication`. `k exec catalog -- id -u` và `k exec -it catalog -- bash`: image không có `curl`, hãy gọi `/actuator/health` từ trong Pod bằng `/dev/tcp` của bash. Ghi vào `~/drills/s10/answers.env` dòng `LOG_DB_USER=<giá trị>` với giá trị `user=` trong dòng `HikariPool-1 - Added connection` của log." },
+      { id: "t3", text: "`k port-forward pod/catalog 8080:8080` ở một cửa sổ tmux, cửa sổ kia `curl -s localhost:8080/actuator/health` và `curl -s localhost:8080/products`. Ghi `PRODUCTS=<số sản phẩm /products trả về>` vào `answers.env`. Dừng port-forward bằng Ctrl-c." },
+      { id: "t4", text: "Sinh YAML: `k run catalog --image=shop/catalog:1.0 $do > ~/drills/s10/pod.yaml`. Sửa trong vim: nhãn `app: catalog` (thay `run: catalog`) và `ports: - containerPort: 8080`. `k apply -f` lên Pod đang chạy — đọc lỗi, rồi thay Pod bằng tệp: `k replace --force -f ~/drills/s10/pod.yaml`." },
+      { id: "t5", text: "Tình huống hỏng: `k run catalog-bad --image=shop/catalog:9.9`. Sau 30 giây `k get pod catalog-bad`, `k describe pod catalog-bad` — đọc Events từ trên xuống: node nào nhận Pod, kubelet thử kéo image từ đâu, vì sao thất bại? Ghi giá trị cột STATUS lúc bạn xem vào `answers.env` dạng `BAD_REASON=<STATUS>`, rồi xoá Pod." },
+      { id: "t6", text: "Ghi `~/drills/s10/answers.env`: `NODE=` (node chạy Pod catalog), `POD_IP=`, `RUN_UID=` (kết quả `id -u` trong Pod), cùng `LOG_DB_USER`, `PRODUCTS`, `BAD_REASON` từ các bước trước. Trên Mac: `./labs/lab verify cka s10` phải đạt 12/12." },
     ],
     hints: [
       "Pod `Running` mà `curl` qua port-forward báo `connection refused`? Spring Boot cần vài giây sau khi container chạy; chờ tới khi `k logs catalog` có `Started CatalogApplication`.",
@@ -150,7 +150,7 @@ k apply -f ~/drills/s10/pod.yaml
 # The Pod "catalog" is invalid: spec: Forbidden: pod updates may not change fields other than \`spec.containers[*].image\`, …
 #  -   "Ports": null,
 #  +   "Ports": [ { … "ContainerPort": 8080 … } ],
-k delete pod catalog $now && k apply -f ~/drills/s10/pod.yaml     # hoặc: k replace --force -f ~/drills/s10/pod.yaml
+k replace --force -f ~/drills/s10/pod.yaml     # xoá Pod cũ (chờ nó dừng) rồi tạo lại từ tệp
 k get pod catalog --show-labels -o wide
 \`\`\`
 
@@ -179,6 +179,8 @@ cat > ~/drills/s10/answers.env <<EOF
 NODE=$(k get pod catalog -o jsonpath='{.spec.nodeName}')
 POD_IP=$(k get pod catalog -o jsonpath='{.status.podIP}')
 RUN_UID=$(k exec catalog -- id -u)
+LOG_DB_USER=SA
+PRODUCTS=3
 BAD_REASON=ImagePullBackOff
 EOF
 cat ~/drills/s10/answers.env
@@ -210,7 +212,7 @@ Lời giải tự động: \`labs/cka/sessions/s10/apply.sh\` (tạo cả Pod ta
       "`$do` trước, tạo sau: Pod gần như không sửa được tại chỗ, sửa YAML rồi mới `apply` đỡ một vòng xoá/tạo.",
       "`k get pod -o wide` một lần cho cả node, IP, số lần restart: thói quen đầu tiên khi nhìn một Pod.",
       "Events cũ hơn khoảng một giờ bị xoá: chẩn đoán xong thì ghi lại, đừng trông vào chúng ở lần sau.",
-      "`k delete pod x $now` (`--force --grace-period=0`) chỉ dùng cho Pod bạn đang thử nghiệm; với Pod thật, để nó dừng tử tế.",
+      "`k delete pod x $now` (`--force --grace-period=0`) chỉ dùng cho Pod bạn đang thử nghiệm (như `catalog-bad`); với Pod thật, `k replace --force -f` hay `k delete` thường để nó dừng tử tế.",
     ],
     outcome: {
       md: `Pod \`catalog\` đầu tiên của shop chạy trong namespace \`default\`, đúng nhãn và cổng, trả \`UP\` ở Actuator. Trên Mac:
@@ -220,7 +222,7 @@ Lời giải tự động: \`labs/cka/sessions/s10/apply.sh\` (tạo cả Pod ta
 \`\`\`
 
 Verify gọi \`/actuator/health\` qua proxy của apiserver (\`/api/v1/namespaces/default/pods/catalog:8080/proxy/…\`), tự đọc node, IP và \`id -u\` của Pod để so với tệp của bạn.`,
-      verifyOutput: "lab: kiểm s10\n  ✓ Pod catalog (default) Running và Ready\n  ✓ Pod catalog chạy image shop/catalog:1.0\n  ✓ Pod catalog có nhãn app=catalog\n  ✓ Pod catalog khai containerPort 8080\n  ✓ ~/drills/s10/pod.yaml qua apply --dry-run=server, mô tả Pod/catalog/default\n  ✓ /actuator/health của Pod catalog trả UP (qua apiserver proxy)\n  ✓ answers.env: NODE=cka-w2\n  ✓ answers.env: POD_IP=10.244.62.132\n  ✓ answers.env: RUN_UID=10001 (kubectl exec … id -u)\n  ✓ answers.env: BAD_REASON là lý do chờ của Pod tag sai (ErrImagePull hoặc ImagePullBackOff)\n  → 10/10 đạt",
+      verifyOutput: "lab: kiểm s10\n  (chờ apiserver và Pod catalog trả lời, tối đa khoảng 8 phút nếu Pod đang khởi động)\n  ✓ Pod catalog (default) Running và Ready\n  ✓ Pod catalog chạy image shop/catalog:1.0\n  ✓ Pod catalog có nhãn app=catalog\n  ✓ Pod catalog khai containerPort 8080\n  ✓ ~/drills/s10/pod.yaml qua apply --dry-run=server, mô tả Pod/catalog/default\n  ✓ /actuator/health của Pod catalog trả UP (qua apiserver proxy)\n  ✓ answers.env: NODE=cka-w2\n  ✓ answers.env: POD_IP=10.244.62.131\n  ✓ answers.env: RUN_UID=10001 (kubectl exec … id -u)\n  ✓ answers.env: LOG_DB_USER=SA (user trong dòng 'Added connection' của k logs)\n  ✓ answers.env: PRODUCTS=3 (số sản phẩm của /products, gọi qua port-forward)\n  ✓ answers.env: BAD_REASON là lý do chờ của Pod tag sai (ErrImagePull hoặc ImagePullBackOff)\n  → 12/12 đạt",
       projectDelta: "catalog chạy được trên cluster dưới dạng một Pod: bạn đã thấy log, tiến trình, cổng và các Event của nó. Buổi sau thay Pod lẻ bằng Deployment cho cả ba service và nối chúng bằng Service.",
     },
     review: [
@@ -302,10 +304,10 @@ Mẹo để macro chạy đúng trên tệp khác: bắt đầu bằng một bư
     tasks: [
       { id: "t1", text: "Xoá Pod lẻ: `k delete pod catalog` (để nó dừng tử tế; Deployment thay nó từ đây). Tạo namespace `shop`." },
       { id: "t2", text: "Sinh ba tệp **không** kèm `-n`: `k create deploy gateway --image=shop/gateway:1.0 --port=8080 $do > ~/shop/gateway.yaml`, tương tự `catalog`, `order`. Mở cả ba `vim ~/shop/*.yaml`, ghi một macro thêm dòng `  namespace: shop` ngay dưới `  name:` của `metadata`, lưu, phát lại trên hai tệp còn lại. `k apply -f ~/shop/`." },
-      { id: "t3", text: "Trong 30 giây, tìm trong *kubectl Quick Reference* (kubernetes.io) mục *Scaling resources* rồi scale `catalog` lên 2 replica. `k -n shop get deploy,rs,pod -o wide --show-labels`: đọc `pod-template-hash`." },
+      { id: "t3", text: "Trong 30 giây, tìm trong *kubectl Quick Reference* (kubernetes.io) mục *Scaling resources* rồi scale `catalog` lên 2 replica; sửa luôn `replicas: 2` trong `~/shop/catalog.yaml` và `k apply -f` lại (verify chấm cả tệp: buổi sau bạn sẽ apply lại chính tệp này). `k -n shop get deploy,rs,pod -o wide --show-labels`: đọc `pod-template-hash`." },
       { id: "t4", text: "Xoá một Pod catalog. Lần ngược: `ownerReferences` của Pod mới trỏ tới đâu, của ReplicaSet đó trỏ tới đâu? Ghi `CATALOG_RS=<tên ReplicaSet hiện hành>` vào `~/drills/s11/answers.env`." },
       { id: "t5", text: "`k -n shop expose deploy <tên> --port=8080` cho cả ba. `k -n shop get svc,endpointslices`. Gọi gateway qua proxy của apiserver: `k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/products` phải ra 3 sản phẩm; `/api/orders` ra `[]`." },
-      { id: "t6", text: "Tình huống hỏng: mở trang *Service* trên kubernetes.io, chép ví dụ đầu tiên (mục *Defining a Service*), trong vim `:set paste` rồi dán vào `~/drills/s11/catalog-api.yaml`, `:set nopaste`. Sửa thành Service `catalog-api`, namespace `shop`, cổng 8080, selector `app: catalog-api` (cố ý sai). Apply, gọi thử, tìm vì sao không có đích. Ghi `EMPTY_SELECTOR=<selector của nó, dạng khoá=giá-trị>` vào `answers.env`, rồi xoá Service đó." },
+      { id: "t6", text: "Tình huống hỏng: mở trang *Service* trên kubernetes.io, chép ví dụ đầu tiên (mục *Defining a Service*), trong vim `:set paste` rồi dán vào `~/drills/s11/catalog-api.yaml`, `:set nopaste`. Chỉ sửa tên thành `catalog-api`, thêm `namespace: shop`, cổng và targetPort 8080; **giữ nguyên selector của ví dụ**. Apply, gọi thử qua `k get --raw …/services/catalog-api:8080/proxy/products`, tìm vì sao không có đích. Ghi `EMPTY_SELECTOR=<selector của nó, dạng khoá=giá-trị>` vào `answers.env`, rồi xoá Service đó." },
       { id: "t7", text: "Trên Mac: `./labs/lab verify cka s11` phải đạt 13/13." },
     ],
     hints: [
@@ -381,10 +383,11 @@ k apply -f ~/shop/
 
 **3. Scale và đọc pod-template-hash**
 
-*kubectl Quick Reference* → *Scaling resources*: \`kubectl scale --replicas=3 rs/foo\`. Áp vào bài (sửa luôn \`replicas: 2\` trong \`~/shop/catalog.yaml\` để tệp và cluster không lệch nhau):
+*kubectl Quick Reference* → *Scaling resources*: \`kubectl scale --replicas=3 rs/foo\`. Áp vào bài, rồi sửa tệp cho khớp: s12 sẽ sửa và \`apply\` lại chính \`~/shop/catalog.yaml\`; tệp còn \`replicas: 1\` thì lần apply đó kéo catalog về 1 replica.
 
 \`\`\`bash
 k -n shop scale deploy catalog --replicas=2
+sed -i 's/^  replicas: 1$/  replicas: 2/' ~/shop/catalog.yaml && k apply -f ~/shop/catalog.yaml
 k -n shop get deploy,rs -o wide
 # deployment.apps/catalog   2/2   2   2   …   shop/catalog:1.0   app=catalog
 # replicaset.apps/catalog-cd5c8d544   2   2   2   …   app=catalog,pod-template-hash=cd5c8d544
@@ -440,7 +443,7 @@ metadata:
   namespace: shop
 spec:
   selector:
-    app: catalog-api
+    app.kubernetes.io/name: MyApp      # giữ nguyên từ ví dụ trên kubernetes.io
   ports:
     - protocol: TCP
       port: 8080
@@ -451,16 +454,19 @@ spec:
 k apply -f ~/drills/s11/catalog-api.yaml
 k -n shop get endpointslices -l kubernetes.io/service-name=catalog-api
 # NAME                ADDRESSTYPE   PORTS     ENDPOINTS   AGE
-# catalog-api-64vqj   IPv4          <unset>   <unset>     0s
+# catalog-api-rqs2s   IPv4          <unset>   <unset>     0s
+k get --raw /api/v1/namespaces/shop/services/catalog-api:8080/proxy/products
+# Error from server (ServiceUnavailable): no endpoints available for service "catalog-api"
 k -n shop describe svc catalog-api | grep -E 'Selector|Endpoints'
-# Selector:                 app=catalog-api
+# Selector:                 app.kubernetes.io/name=MyApp
 # Endpoints:
-k -n shop get pod -l app=catalog-api        # No resources found
-echo "EMPTY_SELECTOR=app=catalog-api" >> ~/drills/s11/answers.env
+k -n shop get pod -l app.kubernetes.io/name=MyApp     # No resources found
+k -n shop get pod --show-labels                       # Pod mang app=catalog, app=gateway, app=order
+echo "EMPTY_SELECTOR=app.kubernetes.io/name=MyApp" >> ~/drills/s11/answers.env
 k -n shop delete svc catalog-api
 \`\`\`
 
-\`kubectl create service clusterip catalog-api --tcp=8080:8080\` rơi vào đúng bẫy này: nó lấy selector \`app=<tên service>\`. \`kubectl expose deploy\` thì không, vì nó chép selector của Deployment.
+\`kubectl create service clusterip catalog-api --tcp=8080:8080\` rơi vào cùng bẫy: nó lấy selector \`app=<tên service>\` (lời giải tự động dùng cách này, nên đáp án của nó là \`EMPTY_SELECTOR=app=catalog-api\`; verify nhận mọi selector khoá=giá-trị không khớp Pod nào trong \`shop\`). \`kubectl expose deploy\` thì không, vì nó chép selector của Deployment.
 
 Lời giải tự động: \`labs/cka/sessions/s11/apply.sh\` (sinh tệp bằng \`-n shop\`, cùng nội dung với cách dùng macro).`,
     exam: {
@@ -498,7 +504,7 @@ Lời giải tự động: \`labs/cka/sessions/s11/apply.sh\` (sinh tệp bằng
 \`\`\`
 
 Verify đếm địa chỉ sẵn sàng trong EndpointSlice của từng Service, gọi \`/api/products\` của gateway qua proxy của apiserver, và chạy \`apply --dry-run=server\` trên ba tệp trong \`~/shop/\`.`,
-      verifyOutput: "lab: kiểm s11\n  ✓ Pod lẻ catalog ở namespace default đã xoá\n  ✓ Deployment gateway: image shop/gateway:1.0, selector app=gateway, 1/1 Available\n  ✓ Deployment catalog: image shop/catalog:1.0, selector app=catalog, 2/2 Available\n  ✓ Deployment order: image shop/order:1.0, selector app=order, 1/1 Available\n  ✓ Service gateway: ClusterIP cổng 8080, 1 địa chỉ sẵn sàng trong EndpointSlice\n  ✓ Service catalog: ClusterIP cổng 8080, 2 địa chỉ sẵn sàng trong EndpointSlice\n  ✓ Service order: ClusterIP cổng 8080, 1 địa chỉ sẵn sàng trong EndpointSlice\n  ✓ gateway /api/products trả 3 sản phẩm (gateway → Service catalog)\n  ✓ answers.env: CATALOG_RS=catalog-cd5c8d544 (ReplicaSet hiện hành của catalog)\n  ✓ answers.env: EMPTY_SELECTOR=app=catalog-api (selector của Service không có endpoint)\n  ✓ ~/shop/gateway.yaml qua apply --dry-run=server, khai namespace shop (Deployment/gateway/shop)\n  ✓ ~/shop/catalog.yaml qua apply --dry-run=server, khai namespace shop (Deployment/catalog/shop)\n  ✓ ~/shop/order.yaml qua apply --dry-run=server, khai namespace shop (Deployment/order/shop)\n  → 13/13 đạt",
+      verifyOutput: "lab: kiểm s11\n  (chờ apiserver, ba Deployment và app trả lời; lâu nhất vài phút nếu Pod đang khởi động)\n  ✓ Pod lẻ catalog ở namespace default đã xoá\n  ✓ Deployment gateway: image shop/gateway:1.0, selector app=gateway, 1/1 Available\n  ✓ Deployment catalog: image shop/catalog:1.0, selector app=catalog, 2/2 Available\n  ✓ Deployment order: image shop/order:1.0, selector app=order, 1/1 Available\n  ✓ Service gateway: ClusterIP cổng 8080, 1 địa chỉ sẵn sàng trong EndpointSlice\n  ✓ Service catalog: ClusterIP cổng 8080, 2 địa chỉ sẵn sàng trong EndpointSlice\n  ✓ Service order: ClusterIP cổng 8080, 1 địa chỉ sẵn sàng trong EndpointSlice\n  ✓ gateway /api/products trả 3 sản phẩm (gateway → Service catalog)\n  ✓ answers.env: CATALOG_RS=catalog-cd5c8d544 (ReplicaSet hiện hành của catalog)\n  ✓ answers.env: EMPTY_SELECTOR là selector khoá=giá-trị không khớp Pod nào trong shop\n  ✓ ~/shop/gateway.yaml qua apply --dry-run=server, khai namespace shop, replicas 1 (Deployment/gateway/shop 1)\n  ✓ ~/shop/catalog.yaml qua apply --dry-run=server, khai namespace shop, replicas 2 (Deployment/catalog/shop 2)\n  ✓ ~/shop/order.yaml qua apply --dry-run=server, khai namespace shop, replicas 1 (Deployment/order/shop 1)\n  → 13/13 đạt",
       projectDelta: "Mảnh project **deployments** hoàn thành: gateway, catalog (2 replica), order chạy bằng Deployment, gọi nhau qua Service ClusterIP; manifest nằm ở `~/shop/` để các buổi sau sửa tiếp.",
     },
     review: [
@@ -552,7 +558,7 @@ Biến môi trường thắng tệp: đo trên lab, một Pod gateway có \`APP_
 
 **Secret không phải mã hoá.** \`data\` của Secret là base64 — mã hoá *ký tự*, không phải *bảo mật*: \`U2hvcC1QYXNzLTIwMjY=\` giải ra \`Shop-Pass-2026\` bằng một lệnh. Thứ bảo vệ Secret là RBAC (ai được \`get secrets\`), mã hoá etcd lúc nghỉ (không bật trên lab) và việc Secret chỉ tới node có Pod dùng nó. Đừng chép giá trị Secret vào ConfigMap, log hay \`-o yaml\` dán lên chat.
 
-**Tham chiếu sai làm Pod không khởi động được, không phải chạy với giá trị rỗng.** \`secretKeyRef\` trỏ tới khoá không tồn tại: kubelet không dựng được môi trường, container không được tạo, Pod đứng ở \`CreateContainerConfigError\` với Event \`Error: couldn't find key DB_PASS in Secret shop/db-cred\`. Đó là điều tốt: lỗi cấu hình lộ ra lúc deploy chứ không phải lúc app kết nối database. (Muốn tuỳ chọn thì có \`optional: true\`.)`,
+**Tham chiếu sai làm Pod không khởi động được, không phải chạy với giá trị rỗng.** \`secretKeyRef\` trỏ tới khoá không tồn tại: kubelet không dựng được môi trường, container không được tạo, Pod đứng ở một trạng thái chờ riêng (bạn sẽ đọc nó ở t7) với một Event nói đúng khoá nào thiếu trong Secret nào. Đó là điều tốt: lỗi cấu hình lộ ra lúc deploy chứ không phải lúc app kết nối database. (Muốn tuỳ chọn thì có \`optional: true\`.)`,
     refs: [
       { label: "Bài lộ trình CKA Study Guide: ConfigMap và Secret — các cách đưa cấu hình vào container", href: "#/roadmap/ckabook/cb-w3-2" },
       { label: "Bài lộ trình CKAD: ConfigMaps — literal/file/env-file; env, envFrom, volume", href: "#/roadmap/ckad/w4-1" },
@@ -570,19 +576,19 @@ Biến môi trường thắng tệp: đo trên lab, một Pod gateway có \`APP_
     stateOut: "gateway đọc shop-config qua envFrom và application.yaml từ ConfigMap gateway-files mount ở /config; catalog, order lấy DB_USER/DB_PASSWORD từ Secret db-cred qua secretKeyRef; ~/drills/s12/answers.env.",
     tasks: [
       { id: "t1", text: "ConfigMap từ literal: `shop-config` trong `shop` với `APP_GREETING` (một lời chào **khác** `Xin chào từ shop`, vd. `Xin chào từ ConfigMap`), `CATALOG_URL=http://catalog:8080`, `ORDER_URL=http://order:8080`." },
-      { id: "t2", text: "ConfigMap từ tệp: viết `~/shop/application.yaml` mở thêm endpoint `info` của Actuator (`management.endpoints.web.exposure.include: health,info`, `management.info.env.enabled: true`) và một khối `info.shop` (vd. `team: platform`), rồi `k -n shop create cm gateway-files --from-file=application.yaml=$HOME/shop/application.yaml`." },
+      { id: "t2", text: "ConfigMap từ tệp: viết `~/shop/config/application.yaml` (thư mục con: `~/shop/` chỉ chứa manifest, để `k apply -f ~/shop/` vẫn chạy) mở thêm endpoint `info` của Actuator (`management.endpoints.web.exposure.include: health,info`, `management.info.env.enabled: true`) và một khối `info.shop` (vd. `team: platform`), rồi `k -n shop create cm gateway-files --from-file=application.yaml=$HOME/shop/config/application.yaml`." },
       { id: "t3", text: "Sửa `~/shop/gateway.yaml`: `envFrom` từ `shop-config`; volume từ ConfigMap `gateway-files` mount ở `/config` (Spring tìm `./config/application.yaml`; đo thư mục làm việc bằng `k exec … -- ls -l /proc/1/cwd`). Apply. Kiểm `/api/info` (lời chào mới) và `/actuator/info` (khối `shop`) qua proxy của apiserver; `k exec deploy/gateway -- ls -la /config`." },
       { id: "t4", text: "Secret: `db-cred` với `DB_USER=shop`, `DB_PASSWORD` tuỳ bạn. Thêm vào `~/shop/catalog.yaml` và `~/shop/order.yaml` hai biến `DB_USER`, `DB_PASSWORD` bằng `valueFrom.secretKeyRef` (dán khối `env:` rồi chỉnh thụt lề cả khối bằng Ctrl-v + `I`). Apply; `k -n shop logs deploy/catalog | grep 'Added connection'` phải thấy `user=SHOP`." },
-      { id: "t5", text: "Đọc ngược Secret: `k -n shop get secret db-cred -o jsonpath='{.data.DB_PASSWORD}' | base64 -d`. Ghi `DB_PASSWORD_DECODED=<giá trị>` vào `~/drills/s12/answers.env`. Thử chiều ngược lại: `echo -n '<giá trị>' | base64` có bằng chuỗi trong Secret không, và vì sao phải `-n`?" },
-      { id: "t6", text: "Env và volume: đổi `APP_GREETING` trong `shop-config` và `team` trong `gateway-files`. Mỗi 10 giây xem `k exec deploy/gateway -- cat /config/application.yaml`, `printenv APP_GREETING`, `/api/info`, `/actuator/info`: cái nào đổi, sau bao lâu? Rồi `k -n shop rollout restart deploy/gateway` và xem lại." },
-      { id: "t7", text: "Tình huống hỏng: tạo một Pod thử `cfg-bad` (image `shop/catalog:1.0`) có `DB_PASSWORD` từ `secretKeyRef` khoá `DB_PASS` (không có trong `db-cred`). Đọc STATUS và Events; ghi `CONFIG_ERROR_REASON=<STATUS>` vào `answers.env`; xoá Pod. Trên Mac: `./labs/lab verify cka s12` phải đạt 12/12." },
+      { id: "t5", text: "Đọc ngược Secret: `k -n shop get secret db-cred -o jsonpath='{.data.DB_PASSWORD}' | base64 -d`. Ghi `DB_PASSWORD_DECODED=<giá trị>` vào `~/drills/s12/answers.env`. Thử chiều ngược lại: `echo -n '<giá trị>' | base64` có bằng chuỗi trong Secret không, và vì sao phải `-n`? Rồi mount `db-cred` thành volume ở `/etc/db` trong một Pod thử `secret-vol` (image `shop/catalog:1.0`, lệnh `sleep 3600`), ghi `SECRET_FILE_DB_USER=<nội dung /etc/db/DB_USER>`, xoá Pod." },
+      { id: "t6", text: "Env và volume: đổi `APP_GREETING` trong `shop-config` và `team` trong `gateway-files`. Mỗi 10 giây xem `k exec deploy/gateway -- cat /config/application.yaml`, `printenv APP_GREETING`, `/api/info`, `/actuator/info`: cái nào đổi, sau bao lâu? Ghi `VOLUME_UPDATED_BEFORE_RESTART=` và `ENV_UPDATED_BEFORE_RESTART=` (`yes`/`no`: trước khi restart, tệp volume / biến môi trường đã đổi chưa). Rồi `k -n shop rollout restart deploy/gateway` và xem lại." },
+      { id: "t7", text: "Tình huống hỏng: tạo một Pod thử `cfg-bad` (image `shop/catalog:1.0`) có `DB_PASSWORD` từ `secretKeyRef` khoá `DB_PASS` (không có trong `db-cred`). Đọc STATUS và Events; ghi `CONFIG_ERROR_REASON=<STATUS>` vào `answers.env`; xoá Pod. Trên Mac: `./labs/lab verify cka s12` phải đạt 14/14." },
     ],
     hints: [
       "`--from-file=application.yaml=<đường dẫn>`: phần trước dấu `=` là tên khoá, cũng là tên tệp trong volume. Không có phần đó thì khoá là tên tệp gốc.",
       "Volume ConfigMap mount đè cả thư mục đích: mount ở `/config` (thư mục chưa có trong image) chứ đừng mount vào `/` hay `/app`.",
       "`/actuator/info` trả 404: Spring chưa đọc tệp. Kiểm `k exec deploy/gateway -- cat /config/application.yaml`, rồi nhớ Spring chỉ đọc lúc khởi động: tệp vào sau khi Pod đã chạy thì cần restart.",
       "`echo 'x' | base64` mã hoá cả ký tự xuống dòng: dùng `echo -n` hoặc `printf %s`. `kubectl create secret --from-literal` tự mã hoá, đừng mã hoá hai lần.",
-      "Pod `CreateContainerConfigError`: Event cuối của `k describe pod` nói đúng khoá nào thiếu ở Secret/ConfigMap nào. So với `k get secret db-cred -o jsonpath='{.data}'`.",
+      "Pod không lên mà `k logs` trống: Event cuối của `k describe pod` nói đúng khoá nào thiếu ở Secret/ConfigMap nào. So với `k get secret db-cred -o jsonpath='{.data}'`.",
       "Sau `rollout restart`, gọi `/api/info` vài lần cho tới khi `hostname` là Pod mới (Pod cũ dừng trong vòng vài giây).",
     ],
     solution: `Output là của máy soạn bài.
@@ -598,7 +604,7 @@ k -n shop get cm shop-config -o yaml | sed -n '/^data:/,/^kind:/p'
 **2. ConfigMap từ tệp**
 
 \`\`\`yaml
-# ~/shop/application.yaml
+# ~/shop/config/application.yaml
 management:
   endpoints:
     web:
@@ -614,8 +620,11 @@ info:
 \`\`\`
 
 \`\`\`bash
-k -n shop create cm gateway-files --from-file=application.yaml=$HOME/shop/application.yaml
+mkdir -p ~/shop/config && vim ~/shop/config/application.yaml
+k -n shop create cm gateway-files --from-file=application.yaml=$HOME/shop/config/application.yaml
 \`\`\`
+
+Tệp nằm trong thư mục con vì \`kubectl apply -f ~/shop/\` không đệ quy: nó chỉ đọc \`gateway.yaml\`, \`catalog.yaml\`, \`order.yaml\`. Đặt \`application.yaml\` ngay trong \`~/shop/\` thì lệnh đó báo \`error validating "…/application.yaml": error validating data: [apiVersion not set, kind not set]\` (đo trên lab).
 
 \`include: health,info\` giữ \`health\` (s13 cần) và mở thêm \`info\`; \`management.info.env.enabled\` cho phép \`/actuator/info\` in các khoá \`info.*\`. Đây là một khoá **chỉ có trong tệp**: không biến môi trường nào đè nó, nên \`/actuator/info\` chứng minh Spring đã đọc \`/config/application.yaml\`.
 
@@ -702,11 +711,25 @@ mkdir -p ~/drills/s12
 echo "DB_PASSWORD_DECODED=$(k -n shop get secret db-cred -o jsonpath='{.data.DB_PASSWORD}' | base64 -d)" > ~/drills/s12/answers.env
 \`\`\`
 
+Secret dạng volume: mỗi khoá thành một tệp, nội dung đã giải base64.
+
+\`\`\`bash
+k -n shop run secret-vol --image=shop/catalog:1.0 $do --command -- sleep 3600 > ~/drills/s12/secret-vol.yaml
+vim ~/drills/s12/secret-vol.yaml
+#   spec.volumes:                 - name: db
+#                                   secret: {secretName: db-cred}
+#   containers[0].volumeMounts:   - {name: db, mountPath: /etc/db, readOnly: true}
+k apply -f ~/drills/s12/secret-vol.yaml && k -n shop wait --for=condition=Ready pod/secret-vol
+k -n shop exec secret-vol -- ls /etc/db                    # DB_PASSWORD  DB_USER
+echo "SECRET_FILE_DB_USER=$(k -n shop exec secret-vol -- cat /etc/db/DB_USER)" >> ~/drills/s12/answers.env
+k -n shop delete pod secret-vol
+\`\`\`
+
 **6. Env và volume khi ConfigMap đổi**
 
 \`\`\`bash
 k -n shop patch cm shop-config --type merge -p '{"data":{"APP_GREETING":"Chào lần hai"}}'
-sed 's/team: platform/team: checkout/' ~/shop/application.yaml > /tmp/app.yaml
+sed 's/team: platform/team: checkout/' ~/shop/config/application.yaml > /tmp/app.yaml
 k -n shop create cm gateway-files --from-file=application.yaml=/tmp/app.yaml $do | k apply -f -
 \`\`\`
 
@@ -721,6 +744,11 @@ k -n shop create cm gateway-files --from-file=application.yaml=/tmp/app.yaml $do
 k -n shop rollout restart deploy/gateway && k -n shop rollout status deploy/gateway
 k get --raw $P/api/info       # … "greeting":"Chào lần hai"
 k get --raw $P/actuator/info  # {"shop":{"team":"checkout",…}}
+\`\`\`
+
+\`\`\`bash
+echo VOLUME_UPDATED_BEFORE_RESTART=yes >> ~/drills/s12/answers.env
+echo ENV_UPDATED_BEFORE_RESTART=no >> ~/drills/s12/answers.env
 \`\`\`
 
 Verify so lời chào của gateway với ConfigMap **hiện tại**, nên đổi ConfigMap mà quên restart là đỏ. Sửa \`kubectl create … $do | kubectl apply -f -\` là cách "cập nhật bằng lệnh tạo" hay dùng trong phòng thi.
@@ -754,9 +782,9 @@ Lời giải tự động: \`labs/cka/sessions/s12/apply.sh\` (manifest đầy �
       timeTargetMin: 6,
       drills: [
         {
-          text: "Trong 4 phút: Pod `secret-vol` (namespace `shop`, image `busybox:1.37`, lệnh `sleep 3600`) mount Secret `db-cred` ở `/etc/db` chỉ đọc; chứng minh `cat /etc/db/DB_USER` in `shop`. Xoá Pod khi xong.",
+          text: "Trong 4 phút: Pod `pw-only` (namespace `shop`, image `busybox:1.37`, lệnh `sleep 3600`) chỉ mount **một** khoá `DB_PASSWORD` của `db-cred`, thành tệp `/etc/db/password`; chứng minh `ls /etc/db` chỉ có `password`. Xoá Pod khi xong.",
           timeLimitMin: 4,
-          solution: "```bash\nk -n shop run secret-vol --image=busybox:1.37 $do --command -- sleep 3600 > sv.yaml\n# thêm vào spec:\n#   volumes: [{name: db, secret: {secretName: db-cred}}]\n# và vào container:\n#   volumeMounts: [{name: db, mountPath: /etc/db, readOnly: true}]\nk apply -f sv.yaml\nk -n shop exec secret-vol -- cat /etc/db/DB_USER     # shop\nk -n shop delete pod secret-vol $now\n```\nMỗi khoá của Secret thành một tệp, nội dung đã giải base64.",
+          solution: "```bash\nk -n shop run pw-only --image=busybox:1.37 $do --command -- sleep 3600 > pw.yaml\n# thêm vào spec:\n#   volumes:\n#   - name: db\n#     secret:\n#       secretName: db-cred\n#       items: [{key: DB_PASSWORD, path: password}]\n# và vào container:\n#   volumeMounts: [{name: db, mountPath: /etc/db, readOnly: true}]\nk apply -f pw.yaml\nk -n shop exec pw-only -- ls /etc/db          # password\nk -n shop delete pod pw-only $now\n```\n`items` chọn khoá nào thành tệp và đặt tên tệp; khoá không liệt kê thì không có mặt.",
         },
         {
           text: "Trong 1 phút: in mật khẩu trong Secret `db-cred` (khoá `DB_PASSWORD`, namespace `shop`) ra tệp `/tmp/pw.txt`, không xuống dòng thừa.",
@@ -780,7 +808,7 @@ Lời giải tự động: \`labs/cka/sessions/s12/apply.sh\` (manifest đầy �
 \`\`\`
 
 Verify so lời chào gateway trả về với ConfigMap hiện tại, so tệp trong Pod với khoá của ConfigMap (chờ tới khoảng 90 giây nếu bạn vừa sửa ConfigMap), và giải mã Secret để so với đáp án của bạn.`,
-      verifyOutput: "lab: kiểm s12\n  ✓ ConfigMap shop-config: khoá APP_GREETING CATALOG_URL ORDER_URL, URL trỏ tới Service, lời chào khác mặc định\n  ✓ ConfigMap gateway-files: khoá application.yaml\n  ✓ Secret db-cred: Opaque, khoá DB_PASSWORD DB_USER\n  ✓ gateway: envFrom configMapRef shop-config, 1/1 cập nhật và Available\n  ✓ gateway /api/info: greeting = APP_GREETING của shop-config (Xin chào từ ConfigMap)\n  ✓ gateway: volume từ ConfigMap gateway-files mount ở /config\n  ✓ Pod gateway: /config/application.yaml bằng nội dung khoá application.yaml\n  ✓ gateway /actuator/info có khối shop (Spring đã nạp /config/application.yaml)\n  ✓ catalog: DB_USER, DB_PASSWORD từ secretKeyRef db-cred, 2/2/2 cập nhật và Available\n  ✓ order: DB_USER, DB_PASSWORD từ secretKeyRef db-cred, 1/1/1 cập nhật và Available\n  ✓ answers.env: DB_PASSWORD_DECODED khớp Secret db-cred\n  ✓ answers.env: CONFIG_ERROR_REASON=CreateContainerConfigError (tham chiếu khoá không có)\n  → 12/12 đạt",
+      verifyOutput: "lab: kiểm s12\n  (chờ apiserver, ba Deployment và app trả lời; lâu nhất vài phút nếu Pod đang khởi động)\n  ✓ ConfigMap shop-config: khoá APP_GREETING CATALOG_URL ORDER_URL, URL trỏ tới Service, lời chào khác mặc định\n  ✓ ConfigMap gateway-files: khoá application.yaml\n  ✓ Secret db-cred: Opaque, khoá DB_PASSWORD DB_USER\n  ✓ gateway: envFrom configMapRef shop-config, 1/1 cập nhật và Available\n  ✓ gateway /api/info: greeting = APP_GREETING của shop-config (Xin chào từ ConfigMap)\n  ✓ gateway: volume từ ConfigMap gateway-files mount ở /config\n  ✓ Pod gateway: /config/application.yaml bằng nội dung khoá application.yaml\n  ✓ gateway /actuator/info có khối shop (Spring đã nạp /config/application.yaml)\n  ✓ catalog: DB_USER, DB_PASSWORD từ secretKeyRef db-cred, 2/2/2 cập nhật và Available\n  ✓ order: DB_USER, DB_PASSWORD từ secretKeyRef db-cred, 1/1/1 cập nhật và Available\n  ✓ answers.env: DB_PASSWORD_DECODED khớp Secret db-cred\n  ✓ answers.env: SECRET_FILE_DB_USER=shop (tệp DB_USER khi mount db-cred thành volume)\n  ✓ answers.env: trước rollout restart volume đã đổi, env chưa (VOLUME_/ENV_UPDATED_BEFORE_RESTART)\n  ✓ answers.env: CONFIG_ERROR_REASON=CreateContainerConfigError (tham chiếu khoá không có)\n  → 14/14 đạt",
       projectDelta: "Mảnh project **config** hoàn thành: shop có ConfigMap `shop-config`, `gateway-files` và Secret `db-cred`; ba manifest trong `~/shop/` đọc cấu hình từ đó. Buổi sau gắn probe vào Actuator và cho Pod dừng tử tế.",
     },
     review: [

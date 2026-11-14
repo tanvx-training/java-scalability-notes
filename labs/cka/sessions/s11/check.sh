@@ -5,6 +5,7 @@
 # proxy; ~/drills/s10/answers.env khớp giá trị script tự đọc. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 cp="$LAB_CP"
 # Sau khi bật VM, apiserver và Pod cần một lúc: chờ có giới hạn (không sửa gì).
+echo "  (chờ apiserver và Pod catalog trả lời, tối đa khoảng 8 phút nếu Pod đang khởi động)"
 vm "$cp" "for i in \$(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
   kubectl -n default wait --for=condition=Ready pod/catalog --timeout=150s
   # Pod chưa có readinessProbe: Ready trước khi Spring Boot mở cổng, nên chờ thêm tới khi app trả lời (tối đa 180 giây).
@@ -30,6 +31,11 @@ expect_eq "answers.env: NODE=${node:-?}" "${node:-?}" vm "$cp" "$(ans NODE)"
 expect_match "answers.env: POD_IP là một IPv4" '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' vm "$cp" "$(ans POD_IP)"
 uid="$(vm "$cp" "kubectl -n default exec catalog -- id -u" 2>/dev/null)"
 expect_eq "answers.env: RUN_UID=${uid:-?} (kubectl exec … id -u)" "${uid:-?}" vm "$cp" "$(ans RUN_UID)"
+dbu="$(vm "$cp" "kubectl -n default logs catalog 2>/dev/null | sed -n 's/.*HikariPool-1 - Added connection.* user=\\([^ ]*\\).*/\\1/p' | tail -n1" 2>/dev/null)"
+expect_eq "answers.env: LOG_DB_USER=${dbu:-?} (user trong dòng 'Added connection' của k logs)" "${dbu:-?}" vm "$cp" "$(ans LOG_DB_USER)"
+np="$(vm "$cp" "kubectl get --raw /api/v1/namespaces/default/pods/catalog:8080/proxy/products 2>/dev/null | grep -o '\"id\":' | wc -l" 2>/dev/null)"
+[ "$np" = 0 ] && np=""   # Pod không trả lời: không có giá trị đúng nào để so
+expect_eq "answers.env: PRODUCTS=${np:-?} (số sản phẩm của /products, gọi qua port-forward)" "${np:-?}" vm "$cp" "$(ans PRODUCTS)"
 expect_match "answers.env: BAD_REASON là lý do chờ của Pod tag sai (ErrImagePull hoặc ImagePullBackOff)" \
   '^(ErrImagePull|ImagePullBackOff)$' vm "$cp" "$(ans BAD_REASON)"
 assert_summary
