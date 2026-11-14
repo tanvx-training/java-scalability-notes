@@ -17,7 +17,7 @@ cp "$HOME/drills/s20/answers.env" "$tmp/answers.env" 2>/dev/null || : > "$tmp/an
 python3 - "$tmp" <<'PY'
 import json, re, sys
 t = sys.argv[1]
-MAX = 4  # maxReplicas của HPA catalog (chọn theo free -m đo lúc đỉnh, xem labs/cka/README.md)
+MAX = 3  # maxReplicas của HPA catalog (chọn theo free -m đo lúc đỉnh, xem labs/cka/README.md)
 def load(p):
     try:
         with open(p) as f: return json.load(f)
@@ -127,7 +127,7 @@ print("QUOTA_ROOM=" + ("; ".join(bad) or "đạt"))
 # 5. Đáp án: MAX_REPLICAS_SEEN trong khoảng 3..MAX; không còn Pod lẻ (Pod sinh tải) trong shop.
 bad = []
 seen = ans.get("MAX_REPLICAS_SEEN", "")
-if not seen.isdigit() or not 3 <= int(seen) <= MAX: bad.append(f"MAX_REPLICAS_SEEN={seen or '(rỗng)'} (cần 3..{MAX})")
+if not seen.isdigit() or not 3 <= int(seen) <= MAX: bad.append(f"MAX_REPLICAS_SEEN={seen or '(rỗng)'} (cần {MAX} = maxReplicas, số replica cao nhất bạn thấy)")
 if pods is None: bad.append("không đọc được Pod")
 else:
     stray = [p["metadata"]["name"] for p in pods.get("items", []) if not p["metadata"].get("ownerReferences")

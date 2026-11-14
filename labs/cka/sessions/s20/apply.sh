@@ -28,7 +28,7 @@ reason="$(vm "$cp" "set -e
   kubectl -n hpa-lab rollout status deploy/idle --timeout=180s >/dev/null
   kubectl -n hpa-lab autoscale deploy idle --min=1 --max=2 --cpu=50% >/dev/null
   r=''; for i in \$(seq 1 60); do
-    r=\$(kubectl -n hpa-lab get events --field-selector involvedObject.kind=HorizontalPodAutoscaler,type=Warning -o jsonpath='{.items[0].reason}' 2>/dev/null)
+    r=\$(kubectl -n hpa-lab get events --field-selector involvedObject.kind=HorizontalPodAutoscaler,type=Warning -o jsonpath='{range .items[*]}{.reason}{\"\\n\"}{end}' 2>/dev/null | grep -x -m1 FailedGetResourceMetric || true)
     [ -n \"\$r\" ] && break; sleep 3
   done
   kubectl -n hpa-lab set resources deploy idle --requests=cpu=10m >/dev/null
@@ -51,4 +51,4 @@ vm "$cp" "set -e
   done
   [ -n \"\$ok\" ] || { echo 'HPA catalog chưa có số CPU sau 180 giây' >&2; exit 1; }
   # Số đo khi chạy tải thật một lần trên lab (xem nội dung buổi): HPA đưa catalog lên đúng maxReplicas.
-  printf 'MAX_REPLICAS_SEEN=4\nUNKNOWN_REASON=%s\n' '$reason' > ~/drills/s20/answers.env"
+  printf 'MAX_REPLICAS_SEEN=3\nUNKNOWN_REASON=%s\n' '$reason' > ~/drills/s20/answers.env"

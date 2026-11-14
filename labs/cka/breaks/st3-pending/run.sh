@@ -30,7 +30,24 @@ for p, text in out.items():
 PY
 kubectl apply -f ~/shop/quota.yaml -f ~/shop/order.yaml -f ~/shop/gateway.yaml >/dev/null 2>&1 \\
   || { echo 'lab: không apply được ~/shop/{quota,order,gateway}.yaml (xem lại tệp của trạng thái cuối s20)' >&2; exit 1; }
-kubectl -n default get pod batch-7f >/dev/null 2>&1 \\
-  || kubectl -n default run batch-7f --image=busybox:1.37 --restart=Never --labels=app=batch -- sh -c 'while :; do :; done' >/dev/null
+# Pod nền ngốn CPU, giới hạn 500m để đứng đầu kubectl top mà không làm đói cả node.
+kubectl -n default get pod batch-7f >/dev/null 2>&1 || kubectl apply -f - >/dev/null <<'YAML'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: batch-7f
+  namespace: default
+  labels:
+    app: batch
+spec:
+  restartPolicy: Never
+  containers:
+  - name: worker
+    image: busybox:1.37
+    command: [\"sh\", \"-c\", \"while :; do :; done\"]
+    resources:
+      limits:
+        cpu: 500m
+YAML
 kubectl cordon cka-w1 >/dev/null
 " >/dev/null

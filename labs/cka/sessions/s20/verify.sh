@@ -32,12 +32,12 @@ fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }
 expect_eq "metrics-server (kube-system): image ghim phiên bản, có --kubelet-insecure-tls, Available; APIService v1beta1.metrics.k8s.io Available" \
   "đạt" echo "$(fact MS)"
 expect_eq "kubectl top nodes: có số cho cả 3 node" "3" echo "$(fact TOP_NODES)"
-expect_eq "HPA catalog: Deployment catalog, min 2, max 4, CPU Utilization 60%, behavior.scaleDown 60 giây; ~/shop/catalog-hpa.yaml (autoscaling/v2) khớp" \
+expect_eq "HPA catalog: Deployment catalog, min 2, max 3, CPU Utilization 60%, behavior.scaleDown 60 giây; ~/shop/catalog-hpa.yaml (autoscaling/v2) khớp" \
   "đạt" echo "$(fact HPA)"
-expect_eq "HPA catalog đọc được CPU (status.currentMetrics có số, ScalingActive); catalog Available trong khoảng 2..4" \
+expect_eq "HPA catalog đọc được CPU (status.currentMetrics có số, ScalingActive); catalog Available trong khoảng 2..3" \
   "đạt" echo "$(fact CURRENT)"
 expect_eq "shop-quota đủ chỗ cho catalog ở maxReplicas (pods, requests.cpu, requests.memory, limits.memory)" "đạt" echo "$(fact QUOTA_ROOM)"
-expect_eq "answers.env: MAX_REPLICAS_SEEN trong khoảng 3..4; không còn Pod lẻ sinh tải trong shop" "đạt" echo "$(fact SEEN)"
+expect_eq "answers.env: MAX_REPLICAS_SEEN=3 (= maxReplicas); không còn Pod lẻ sinh tải trong shop" "đạt" echo "$(fact SEEN)"
 expect_eq "answers.env: UNKNOWN_REASON=FailedGetResourceMetric (Event của HPA nháp thiếu requests.cpu); namespace hpa-lab đã xoá" \
   "FailedGetResourceMetric đã xoá" echo "$(fact UNKNOWN_REASON) $(fact HPA_LAB)"
 assert_summary

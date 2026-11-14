@@ -190,7 +190,7 @@ export const skills = [
   { id: "k-metrics-server-install", kind: "procedure", area: "kubernetes", label: "Cài metrics-server (components.yaml) và thêm --kubelet-insecure-tls cho lab" },
   { id: "k-top-node", kind: "command", area: "kubernetes", label: "k top node", ref: cmd("c081") },
   { id: "k-top-pod", kind: "command", area: "kubernetes", label: "k top pod --sort-by=memory", ref: cmd("c080") },
-  { id: "k-autoscale", kind: "command", area: "kubernetes", label: "k autoscale deploy catalog --min=2 --max=5 --cpu-percent=60", ref: cmd("c024") },
+  { id: "k-autoscale", kind: "command", area: "kubernetes", label: "k autoscale deploy catalog --min=2 --max=3 --cpu=60%", ref: cmd("c024") },
   { id: "k-hpa-v2-yaml", kind: "yaml", area: "kubernetes", label: "HPA autoscaling/v2: metrics cpu averageUtilization, behavior.scaleDown" },
   { id: "k-hpa-targets", kind: "concept", area: "kubernetes", label: "TARGETS <unknown>/60%: thiếu requests hoặc thiếu metrics-server" },
 
