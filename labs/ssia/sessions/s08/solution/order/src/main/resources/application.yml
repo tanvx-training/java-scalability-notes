@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: order
+  jackson:
+    default-property-inclusion: non_null
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:shop;DB_CLOSE_DELAY=-1}
+    username: ${DB_USER:sa}
+    password: ${DB_PASSWORD:}
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+server:
+  port: ${SERVER_PORT:8082}
+  shutdown: graceful
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+app:
+  version: ${APP_VERSION:1.0}
+  catalog-url: ${CATALOG_URL:http://localhost:8081}
+  # s08: khoá AES 256 bit (64 ký tự hex) mã hoá địa chỉ giao hàng. Không có giá trị mặc định: thiếu
+  # ORDER_DATA_KEY thì order không khởi động. Test lấy khoá riêng ở src/test/resources/application.properties.
+  data-key: ${ORDER_DATA_KEY}

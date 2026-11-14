@@ -40,15 +40,18 @@ export const skills = [
   { id: "cfg-user-builder", kind: "code", area: "config", label: "User.withUsername(...).password(encoder.encode(...)).authorities(...).build() để tạo UserDetails cho createUser" },
   { id: "int-jdbcuserdetailsmanager-defaults", kind: "concept", area: "internals", label: "JdbcUserDetailsManager: lược đồ users.ddl, truy vấn tự viết cho bảng có sẵn (6 cột để đọc khoá), user không authority là không tồn tại, changePassword chỉ kiểm mật khẩu cũ khi có AuthenticationManager" },
 
-  // ── s07 PasswordEncoder: contract, tự viết, và các bản có sẵn ──
-  { id: "int-passwordencoder-contract", kind: "concept", area: "internals", label: "encode, matches, upgradeEncoding của PasswordEncoder" },
-  { id: "cfg-passwordencoder-bean", kind: "code", area: "config", label: "Khai PasswordEncoder (BCrypt) làm bean" },
-  { id: "dx-encoder-benchmark", kind: "procedure", area: "diagnose", label: "Đo thời gian băm các encoder với cùng một mật khẩu" },
+  // ── s07 PasswordEncoder và DelegatingPasswordEncoder: băm lại mật khẩu kiểu cũ khi user đăng nhập ──
+  { id: "int-passwordencoder-contract", kind: "concept", area: "internals", label: "PasswordEncoder 7.1.2: encode, matches, upgradeEncoding; AbstractValidatingPasswordEncoder trả false cho mật khẩu rỗng; salt nằm trong chuỗi băm nên hai lần encode khác nhau" },
+  { id: "cfg-passwordencoder-bean", kind: "code", area: "config", label: "Bean DelegatingPasswordEncoder từ PasswordEncoderFactories, setDefaultPasswordEncoderForMatches cho băm cũ không tiền tố" },
+  { id: "dx-encoder-benchmark", kind: "procedure", area: "diagnose", label: "Đo thời gian encode/matches của BCrypt (strength 10/12), PBKDF2, SCrypt, Argon2 với tham số _v5_8; SCrypt và Argon2 cần BouncyCastle" },
+  { id: "cfg-delegating-encoder", kind: "code", area: "config", label: "Tiền tố {id} của DelegatingPasswordEncoder: map id → encoder của createDelegatingPasswordEncoder, id nào deprecated, giá trị không tiền tố đi đâu" },
+  { id: "int-password-upgrade", kind: "concept", area: "internals", label: "Băm lại khi đăng nhập: DaoAuthenticationProvider hỏi upgradeEncoding rồi gọi UserDetailsPasswordService.updatePassword; configurer chỉ nối khi có đúng một bean" },
 
-  // ── s08 DelegatingPasswordEncoder và crypto module ──
-  { id: "cfg-delegating-encoder", kind: "code", area: "config", label: "PasswordEncoderFactories.createDelegatingPasswordEncoder và tiền tố {id}" },
-  { id: "pro-hash-vs-encrypt", kind: "concept", area: "protocol", label: "Băm một chiều (mật khẩu) khác mã hóa hai chiều (secret) thế nào" },
-  { id: "cfg-crypto-encryptors", kind: "code", area: "config", label: "KeyGenerators và Encryptors của spring-security-crypto" },
+  // ── s08 Crypto module: khoá, IV, và mã hoá địa chỉ giao hàng của đơn khi lưu ──
+  { id: "pro-hash-vs-encrypt", kind: "concept", area: "protocol", label: "Băm một chiều (mật khẩu) khác mã hoá hai chiều (dữ liệu phải đọc lại); salt, IV, khoá mỗi thứ để làm gì; GCM phát hiện bản mã bị sửa, CBC thì không" },
+  { id: "cfg-crypto-encryptors", kind: "code", area: "config", label: "AesGcmBytesEncryptor.withSecretKey / withPassword và KeyGenerators của spring-security-crypto 7.1.2 (Encryptors.* đã deprecated)" },
+  { id: "cfg-data-key-config", kind: "yaml", area: "config", label: "Khoá mã hoá từ biến môi trường (app.data-key: ${ORDER_DATA_KEY}) không có mặc định, kiểm độ dài lúc khởi động" },
+  { id: "dx-decrypt-tag-mismatch", kind: "procedure", area: "diagnose", label: "500 với IllegalStateException bad padding và cause AEADBadTagException khi đọc dữ liệu mã hoá: khoá lúc đọc khác khoá lúc ghi" },
 
   // ── s09 Filter trong kiến trúc Spring Security; thêm filter trước một filter có sẵn ──
   { id: "int-filterchain-proxy", kind: "concept", area: "internals", label: "DelegatingFilterProxy, FilterChainProxy và SecurityFilterChain nối với nhau thế nào" },

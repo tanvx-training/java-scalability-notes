@@ -1,0 +1,3 @@
+# s07: đăng nhập đúng giờ băm lại mật khẩu {noop} thành {bcrypt}. Đáp án PRINCIPAL_PASSWORD_AFTER_LOGIN
+# của s04 ({noop}67890) mô tả trạng thái trước chương 4 và không còn đúng sau lần đăng nhập đầu của mary.
+order/src/test/java/lab/s04/S04AnswersTest.java
