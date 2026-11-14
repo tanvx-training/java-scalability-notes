@@ -17,7 +17,7 @@ import { PROGRAMS, getProgram } from "../data/practice/index.js";
 import {
   RESERVED_SEGMENTS, findSession, findMock, orderedSessions, isPublished, isDone, doneCount, nextSession, hasExam, skillAreaLabel,
   stageProgress, domainCoverage, projectPieces, reviewFor, weeksLeft, practiceState, sessionKey, taskKey,
-  neighbors, missingRequires, setDone, setTask, setNote, skillIndex, parseMockResult, addMockResult,
+  neighbors, missingRequires, practiceData, workBlockTitle, startStepTitle, hasPracticeBlock, bookDiffRows, isDissect, setDone, setTask, setNote, skillIndex, parseMockResult, addMockResult,
 } from "../lib/practice.js";
 
 // Hàm dọn của trang đang mở (timer…), đăng ký qua onCleanup().
@@ -185,7 +185,7 @@ function todayBlock(program, state, next) {
   const step3 = h("a", { class: "btn btn-primary", href: `#/practice/${program.id}/${next.id}` }, `Bắt đầu buổi ${idx} →`);
 
   box.append(h("div", { class: "stepper" },
-    step("1", "Khởi động lab", step1, note),
+    step("1", startStepTitle(program), step1, note),
     step("2", "Ôn nhanh buổi trước (5 phút)", step2),
     step("3", "Vào buổi", [step3])));
   return box;
@@ -374,6 +374,7 @@ function renderSession(root, program, session) {
     page.append(block(`🧱 Nền tảng cần cho buổi này${session.foundation.area ? ` · ${skillAreaLabel(program, session.foundation.area)}` : ""}`, md(session.foundation.md)));
   }
   page.append(block("🧠 Tư duy", md(session.mindset)));
+  add(bookDiffBlock(session));
   if ((session.refs || []).length) {
     page.append(block("📖 Tham chiếu", h("ul", { class: "pr-list" }, session.refs.map((r) => {
       const ext = !String(r.href).startsWith("#/");
@@ -410,7 +411,7 @@ function tasksBlock(program, session, state) {
     const box = h("input", { type: "checkbox", id: `pr-${session.id}-${t.id}` });
     box.checked = !!state.tasks[taskKey(program.id, session.id, t.id)];
     box.addEventListener("change", () => { setTask(program.id, session.id, t.id, box.checked); refresh(); });
-    return h("label", { class: "pr-task", for: box.id }, box, h("span", { html: inlineMd(t.text) }));
+    return h("label", { class: "pr-task", for: box.id }, box, ...(isDissect(t) ? [h("span", { class: "badge" }, "mổ xẻ"), " "] : []), h("span", { html: inlineMd(t.text) }));
   }));
   refresh();
   return h("div", { class: "card mb-4" }, h("div", { class: "card-head" }, h("strong", {}, "📋 Nhiệm vụ"), count), list);
@@ -423,13 +424,23 @@ function hintsBlock(session) {
     session.solution ? reveal("🔓 Cách xử lý", md(session.solution)) : null);
 }
 
+function bookDiffBlock(session) {
+  const rows = bookDiffRows(session);
+  if (!rows.length) return null;
+  const table = h("table", { class: "table" },
+    h("thead", {}, h("tr", {}, h("th", {}, "Sách"), h("th", {}, "Bản đang chạy"), h("th", {}, "Vì sao"))),
+    h("tbody", {}, rows.map((r) => h("tr", {},
+      h("td", { html: inlineMd(r.book) }), h("td", { html: inlineMd(r.now) }), h("td", { class: "muted", html: inlineMd(r.why) })))));
+  return block("📕 Khác với sách", h("div", { class: "table-wrap" }, table));
+}
+
 function examBlock(program, session) {
   const domain = domainOf(program, session);
-  const ex = session.exam || {};
+  const ex = practiceData(session);
   const exam = hasExam(program);
   // Chương trình không có đề thi: chỉ hiện khối khi buổi có câu luyện hay dạng câu để làm.
-  if (!exam && !(ex.patterns || []).length && !(ex.drills || []).length && !ex.timeTargetMin) return null;
-  const box = block(exam ? `🎓 Trong đề thi${domain ? ` · ${domain.label} ${domain.weight}%` : ""}` : "🏋️ Luyện tập");
+  if (!hasPracticeBlock(program, session)) return null;
+  const box = block(exam ? `🎓 Trong đề thi${domain ? ` · ${domain.label} ${domain.weight}%` : ""}` : workBlockTitle(program));
   if ((ex.patterns || []).length) {
     box.append(h("p", { class: "muted small mt0" }, "Dạng câu thường gặp:"),
       h("ul", { class: "pr-list" }, ex.patterns.map((t) => h("li", { html: inlineMd(t) }))));

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as P from "../../js/lib/practice.js";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { makeProgram, makeTopicProgram } from "./fixtures/program.mjs";
+import { makeProgram, makeTopicProgram, makeBookProgram } from "./fixtures/program.mjs";
 
 const p = makeProgram();
 const ids = (a) => a.map((s) => s.id);
@@ -249,4 +249,85 @@ test("lab mock score output round-trips through parseMockResult", () => {
   assert.equal(r.ok, true);
   assert.deepEqual(r.record.byDomain, { a: { got: 3, max: 6 }, b: { got: 2, max: 4 } });
   assert.equal(r.record.total, 50);
+});
+
+// ---- Chương trình theo sách, chạy cục bộ ----
+import { programShapeProblems, sessionContentProblems, sessionLabProblems } from "../practice-rules.mjs";
+
+test("practiceData reads exam first, then work, else empty", () => {
+  const b = makeBookProgram();
+  assert.deepEqual(P.practiceData(b.sessions[0]), b.sessions[0].work);
+  assert.deepEqual(P.practiceData(p.sessions[0]), {});
+  assert.deepEqual(P.practiceData({ exam: { patterns: ["a"] }, work: { patterns: ["b"] } }), { patterns: ["a"] });
+  assert.deepEqual(P.practiceData(null), {});
+});
+
+test("labels fall back to the existing wording; programme labels win", () => {
+  const b = makeBookProgram();
+  assert.equal(P.workBlockTitle(b), "🧩 Trong công việc");
+  assert.equal(P.startStepTitle(b), "Chuẩn bị workspace");
+  assert.equal(P.workBlockTitle(makeTopicProgram()), "🏋️ Luyện tập");
+  assert.equal(P.startStepTitle(p), "Khởi động lab");
+  assert.equal(P.startStepTitle({ labels: { startStep: "  " } }), "Khởi động lab");
+});
+
+test("bookDiffRows and isDissect: only well-formed data, old programmes get nothing", () => {
+  const b = makeBookProgram();
+  assert.deepEqual(P.bookDiffRows(b.sessions[0]), b.sessions[0].bookDiff);
+  assert.deepEqual(P.bookDiffRows(p.sessions[0]), []);
+  assert.deepEqual(P.bookDiffRows({ bookDiff: "x" }), []);
+  assert.equal(P.isDissect(b.sessions[0].tasks[1]), true);
+  assert.equal(P.isDissect(b.sessions[0].tasks[0]), false);
+  assert.equal(P.isDissect(null), false);
+});
+
+test("practice block applies to a book programme through work and not to an empty one", () => {
+  const b = makeBookProgram();
+  assert.equal(P.hasPracticeBlock(b, b.sessions[0]), true);
+  assert.equal(P.hasPracticeBlock(b, b.sessions[1]), false);
+  assert.equal(P.hasPracticeBlock(p, p.sessions[0]), true); // chương trình có đề thi luôn hiện khối
+});
+
+test("rules: the book programme fixture is valid; each rule has a negative case", () => {
+  const b = makeBookProgram();
+  const s = b.sessions[0];
+  assert.deepEqual(programShapeProblems(b), []);
+  assert.deepEqual(sessionContentProblems(b, s), []);
+  assert.deepEqual(sessionContentProblems(b, b.sessions[1]), []); // buổi khung không bị đòi nội dung
+  const bad = (mut) => sessionContentProblems(b, { ...s, ...mut });
+  assert.match(bad({ work: undefined }).join(), /work\.patterns/);
+  assert.match(bad({ work: { patterns: ["x"] } }).join(), /work\.timeTargetMin/);
+  assert.match(bad({ refs: [{ label: "a", href: "#/docs/other-01" }] }).join(), /bookx-/);
+  assert.match(bad({ mindset: "không có sơ đồ" }).join(), /mermaid/);
+  assert.match(bad({ tasks: s.tasks.map((t) => ({ ...t, kind: undefined })) }).join(), /dissect/);
+  assert.match(bad({ tasks: [{ id: "t", text: "x", kind: "lạ" }] }).join(), /kind "lạ"/);
+  assert.match(bad({ bookDiff: [{ book: "a", now: "b" }] }).join(), /bookDiff/);
+  // Không bật rules thì không đòi sơ đồ/dissect/link sách.
+  const plain = { ...b, rules: undefined, book: undefined };
+  assert.deepEqual(sessionContentProblems(plain, { ...s, mindset: "x", refs: [], tasks: [] }), []);
+  assert.match(programShapeProblems({ ...b, env: { tool: "vagrant" } }).join(), /env\.tool/);
+  assert.match(programShapeProblems({ ...b, book: { label: "x" } }).join(), /book/);
+  assert.match(programShapeProblems({ ...b, rules: { diagram: "yes" } }).join(), /rules\.diagram/);
+  assert.match(programShapeProblems({ ...b, labels: { startStep: "" } }).join(), /labels\.startStep/);
+});
+
+test("rules: programmes with an exam keep the old requirements", () => {
+  const s = { ...p.sessions[1], status: "published", mindset: "m", refs: [{ label: "a", href: "#/x" }] };
+  assert.match(sessionContentProblems(p, s).join(), /exam\.patterns/);
+  assert.match(sessionContentProblems(p, { ...s, exam: { patterns: ["a"] } }).join(), /exam\.timeTargetMin/);
+  assert.deepEqual(sessionContentProblems(p, { ...s, exam: { patterns: ["a"], timeTargetMin: 5 } }), []);
+});
+
+test("lab directory rules by driver", () => {
+  const b = makeBookProgram();
+  const files = (...f) => (rel) => f.includes(rel);
+  const base = "labs/bk/sessions/w1/";
+  assert.deepEqual(sessionLabProblems(b, "w1", files(base + "verify.sh", base + "solution")), []);
+  assert.deepEqual(sessionLabProblems(b, "w1", files(base + "verify.sh", base + "apply.sh")), []);
+  assert.equal(sessionLabProblems(b, "w1", files(base + "verify.sh")).length, 1);
+  assert.equal(sessionLabProblems(b, "w1", files(base + "solution")).length, 1);
+  // multipass (mặc định): cả verify.sh lẫn apply.sh.
+  const t = { id: "bk", env: { tool: "multipass" } };
+  assert.equal(sessionLabProblems(t, "w1", files("labs/bk/sessions/w1/verify.sh", "labs/bk/sessions/w1/solution")).length, 1);
+  assert.equal(sessionLabProblems({ id: "bk" }, "w1", () => false).length, 2);
 });

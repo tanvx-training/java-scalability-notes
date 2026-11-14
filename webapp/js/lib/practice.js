@@ -39,6 +39,30 @@ export function skillAreaLabel(program, areaId) {
   return a && a.label ? a.label : areaId;
 }
 
+// Khối luyện tập của buổi: chương trình có đề khai session.exam, chương trình không đề khai session.work.
+export const practiceData = (session) => (session && (session.exam ?? session.work)) || {};
+
+const textOr = (v, fallback) => (typeof v === "string" && v.trim() ? v : fallback);
+// Tiêu đề khối luyện tập khi chương trình không có đề thi; mặc định là chữ cũ.
+export const workBlockTitle = (program) => textOr(program && program.labels && program.labels.workBlock, "🏋️ Luyện tập");
+// Tiêu đề bước 1 trên trang chủ chương trình.
+export const startStepTitle = (program) => textOr(program && program.labels && program.labels.startStep, "Khởi động lab");
+
+// Chương trình có đề luôn hiện khối; chương trình không đề chỉ hiện khi buổi có dạng câu, câu luyện hay mốc thời gian.
+export function hasPracticeBlock(program, session) {
+  if (hasExam(program)) return true;
+  const d = practiceData(session);
+  return !!((d.patterns || []).length || (d.drills || []).length || d.timeTargetMin);
+}
+
+// Các dòng "Khác với sách" hợp lệ của buổi (rỗng nếu buổi không khai).
+export const bookDiffRows = (session) =>
+  Array.isArray(session && session.bookDiff)
+    ? session.bookDiff.filter((d) => d && typeof d.book === "string" && typeof d.now === "string" && typeof d.why === "string")
+    : [];
+
+export const isDissect = (task) => !!task && task.kind === "dissect";
+
 export function isDone(program, sessionId, done) {
   const s = findSession(program, sessionId);
   return !!s && isPublished(s) && !!(done || {})[sessionKey(program.id, sessionId)];

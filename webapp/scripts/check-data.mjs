@@ -10,6 +10,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { programShapeProblems, sessionContentProblems, sessionLabProblems } from "./practice-rules.mjs";
 
 // scripts/ nằm trong webapp/ — mọi đường dẫn tính từ gốc webapp.
 const WEBAPP = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -1513,8 +1514,10 @@ await check("PR8 — buổi đã phát hành có đủ nội dung; link #/docs, 
   const docIds = new Set(docs.map((d) => d.id));
   const itemsOf = new Map(tracks.map((t) => [t.id, new Set(t.weeks.flatMap((w) => w.items.map((i) => i.id)))]));
   for (const p of PROGRAMS) {
+    bad.push(...programShapeProblems(p));
     for (const s of p.sessions ?? []) {
       const at = `${p.id}/${s.id}`;
+      bad.push(...sessionContentProblems(p, s));
       // Link nội bộ: quét toàn bộ buổi (refs, markdown, lời giải…), buổi khung cũng vậy.
       const text = JSON.stringify(s);
       for (const m of text.matchAll(/#\/docs\/([A-Za-z0-9_-]+)/g)) {
@@ -1536,8 +1539,6 @@ await check("PR8 — buổi đã phát hành có đủ nội dung; link #/docs, 
       if (dupTask.length) bad.push(`${at}: id nhiệm vụ trùng: ${dupTask.join(", ")}`);
       if (!strList(s.hints, 2)) bad.push(`${at}: hints cần ≥2`);
       if (!nonEmptyStr(s.solution)) bad.push(`${at}: thiếu solution`);
-      if (s.domain && !strList(s.exam?.patterns, 1)) bad.push(`${at}: exam.patterns cần ≥1`);
-      if (hasExam(p) && !(Number.isFinite(s.exam?.timeTargetMin) && s.exam.timeTargetMin > 0)) bad.push(`${at}: thiếu exam.timeTargetMin`);
       if (!strList(s.tips, 2)) bad.push(`${at}: tips cần ≥2`);
       const outcomeKeys = (p.project?.pieces?.length ? ["md", "verifyOutput", "projectDelta"] : ["md", "verifyOutput"]);
       for (const k of outcomeKeys) {
@@ -1608,9 +1609,7 @@ await check("PR11 — thư mục lab khớp dữ liệu (ORDER, script buổi đ
     }
     const published = new Set((p.sessions ?? []).filter(isPublished).map((s) => s.id));
     for (const id of published) {
-      for (const f of ["verify.sh", "apply.sh"]) {
-        if (!existsSync(join(dir, "sessions", id, f))) bad.push(`thiếu labs/${p.id}/sessions/${id}/${f}`);
-      }
+      bad.push(...sessionLabProblems(p, id, (rel) => existsSync(join(LABS, "..", rel))));
     }
     const sdir = join(dir, "sessions");
     if (existsSync(sdir)) {
@@ -1676,7 +1675,7 @@ await check("PR12 — lib/practice.js và views/practice.js không nhắc tên c
     const full = join(WEBAPP, rel);
     if (!existsSync(full)) continue;
     const text = readFileSync(full, "utf8");
-    for (const word of ["cka", "kubernetes"]) {
+    for (const word of ["cka", "kubernetes", "ssia", "spring"]) {
       if (new RegExp(word, "i").test(text)) bad.push(`${rel} chứa "${word}"`);
     }
   }
