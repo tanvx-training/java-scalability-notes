@@ -40,6 +40,7 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 | s20 | `setup.sh` | tạo `~/drills/s20` (t1 tải manifest vào đó), xoá `~/drills/s20/answers.env` cũ |
 | s21 | `check.sh` | như `verify.sh` của s20 nhưng bỏ dòng "shop-quota đủ chỗ cho catalog ở maxReplicas": sự cố st3-pending hạ quota nên dòng đó đỏ suốt buổi; nhờ vậy `begin cka s21` chạy lại được giữa buổi (gây lại sự cố, xoá đáp án cũ) mà không phải restore. Quota do verify của s21 chấm |
 | s21 | `setup.sh` | tạo `~/drills/s21`, xoá `~/drills/s21/answers.env` cũ, rồi `lab_break st3-pending` (không in ra đã làm gì) |
+| s22, s23 | `setup.sh` | tạo `~/drills/<buổi>`, xoá `answers.env` cũ |
 
 Lỗi có chủ ý: `breaks/st1-node-notready/run.sh` — `cka-w1`: `/etc/default/kubelet` ghi đè `--config` bằng đường dẫn không tồn tại; `cka-w2`: kubelet `stop` + `disable`. Hai worker `NotReady` sau khoảng một phút.
 
@@ -89,4 +90,12 @@ Sau khi VM khởi động lại (`down` + `up`), năm JVM cùng khởi động t
 metrics-server **v0.9.1** (`components.yaml` của release, image `registry.k8s.io/metrics-server/metrics-server:v0.9.1`), thêm `--kubelet-insecure-tls`: kubelet của kubeadm dùng chứng chỉ serving tự ký không có IP SAN (log: `x509: cannot validate certificate for 192.168.252.36 because it doesn't contain any IP SANs`). Sau khi VM khởi động lại, `kubectl top nodes` có số sau khoảng một phút; `verify` của s20 chờ chung tối đa ~10 phút (Deployment, rồi `top` có số cho cả ba node, rồi số CPU của HPA). Node chưa có metrics hiện `<unknown>` trong `kubectl top nodes`, nên chỉ đếm dòng có số.
 
 HPA catalog: min 2, **max 3**, CPU 60%, `behavior.scaleDown.stabilizationWindowSeconds: 60`. Đo ngày 2026-11-15 với một vòng `wget …/internal/burn?ms=100; sleep 0.2`: `cpu: 81%/60%` ở 2 replica → 3 replica sau 100 giây, Pod thứ ba Available sau 68 giây nữa; `free -m` lúc 3 replica: `cka-w1` dùng 960 MB, còn 995 MB available; `cka-w2` dùng 957 MB, còn 997 MB. Ngừng tải → về 2 sau 93 giây. Chọn 3 chứ không 4 vì máy Mac lúc đo đã dùng 6,9 GB swap và apiserver khởi động lại một lần trong lúc chạy tải. JVM khởi động (sau khi VM bật) cũng đủ đưa HPA lên 3 trong 75 giây mà không có tải.
+
+## Storage (s22–s23)
+
+s22: PV `shop-data` tạo tay (hostPath `/mnt/shop-data`, `type: DirectoryOrCreate`, 1Gi, RWO, `storageClassName: manual`, `Retain`, `nodeAffinity` ghim `cka-w2`) + PVC `shop/shop-data`, cả hai trong `~/shop/shop-data.yaml`. Không có đối tượng StorageClass `manual`: PVC sai (RWX, 2Gi) đứng Pending với Event `ProvisioningFailed … storageclass.storage.k8s.io "manual" not found` (đo 2026-11-15), cả khi chưa có PV lẫn khi PV đã `Available`. Sửa PVC Pending bằng `apply` bị từ chối (`spec is immutable after creation except resources.requests and volumeAttributesClassName for bound claims`): phải xoá rồi tạo lại. `verify` đọc `probe.txt` thẳng trên đĩa của cka-w2 theo đường dẫn trong PV.
+
+s23: local-path-provisioner **v0.0.37** (bản phát hành không phải RC mới nhất, 2026-08-05, theo GitHub releases API; manifest `deploy/local-path-storage.yaml` của tag; image `docker.io/rancher/local-path-provisioner:v0.0.37` có arm64 theo Docker Hub). Manifest gốc không có nodeSelector/toleration và helper Pod dùng `docker.io/library/busybox` không tag: lab thêm `nodeSelector: node-role.kubernetes.io/control-plane: ""` + toleration control plane (Pod chạy trên cka-cp) và ghim helper `busybox:1.37` (image đã có trên các node). StorageClass `local-path` (`WaitForFirstConsumer`, `Delete`) đặt mặc định bằng annotation. PV động: hostPath `/opt/local-path-provisioner/pvc-<uid>_<ns>_<pvc>` trên node mà scheduler chọn cho Pod (annotation `volume.kubernetes.io/selected-node`), nodeAffinity ghim node đó; helper Pod chạy trên node chứa volume. `Delete` xoá cả thư mục; PV đổi sang `Retain` thì `Released` và thư mục còn, `apply.sh` xoá PV và thư mục.
+
+RAM khi cài provisioner (đo 2026-11-15, cuối s22 → sau s23, `free -m` trên cka-cp): trước dùng 991 MB, còn 1964 MB available; sau dùng 1014 MB, còn 1942 MB. `kubectl top`: Pod provisioner 15m CPU, 9Mi. Manifest không khai requests nên Allocated resources của cka-cp không đổi (cpu 1100m, memory 240Mi requests). Worker không thêm gì thường trực.
 
