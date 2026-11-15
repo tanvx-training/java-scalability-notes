@@ -175,7 +175,7 @@ export const program = {
       id: "st4",
       title: "Storage",
       goal: "Cấp lưu trữ bền cho PostgreSQL bằng PV/PVC, StorageClass động và StatefulSet; hiểu access mode và reclaim policy.",
-      projectMilestone: "PostgreSQL giữ dữ liệu qua restart và dời node",
+      projectMilestone: "PostgreSQL giữ dữ liệu qua restart; hiểu vì sao lưu trữ cục bộ ghim Pod vào node",
       sessions: ["s22", "s23", "s24", "s25"],
     },
     {

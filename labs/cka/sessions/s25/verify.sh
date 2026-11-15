@@ -2,8 +2,9 @@
 # cka-w2 với PVC data-postgres-0 bind vào PV cũ của s24; dữ liệu bằng hoặc hơn cuối s24 (psql); catalog, order DB_URL đúng
 # và Available, ~/shop/order.yaml khớp; PVC reports Bound với lớp có thật, Deployment reports Available, ~/shop/reports.yaml
 # khớp; answers.env PROTECTION_FINALIZER. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
-# Không chờ khi sự cố còn (PVC Pending, PV Released, chưa có StatefulSet): người học chạy verify nhiều lần giữa buổi. Chỉ chờ
-# khi mọi thứ đã có mà chưa sẵn sàng (như ngay sau khi VM khởi động lại), tối đa ~7 phút.
+# Không chờ khi sự cố còn (PVC Pending, PV Released, chưa có StatefulSet postgres hay Deployment reports, DB_URL của order
+# sai): người học chạy verify nhiều lần giữa buổi. Chỉ chờ khi mọi thứ đã có mà chưa sẵn sàng (như ngay sau khi VM khởi
+# động lại), tối đa ~7 phút.
 cp="$LAB_CP"
 echo "  (chờ apiserver, postgres-0 và các Deployment, nếu đang khởi động: tối đa ~7 phút)"
 vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
@@ -14,7 +15,7 @@ vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-time
     # Sự cố còn đó: đọc ngay, không chờ.
     o=\$(\$k -n shop get pvc -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Pending && break
     o=\$(\$k get pv -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Released && break
-    e=\$(\$k -n shop get sts postgres -o name 2>&1) || { case \"\$e\" in *NotFound*) break ;; esac; sleep 3; continue; }
+    e=\$(\$k -n shop get sts postgres deploy/reports -o name 2>&1) || { case \"\$e\" in *NotFound*) break ;; esac; sleep 3; continue; }
     o=\$(\$k -n shop get deploy order -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name==\"DB_URL\")].value}' 2>/dev/null) \\
       && case \"\$o\" in *:5432/shop) ;; *) break ;; esac
     # Lệnh lỗi hay hết giờ là \"chưa sẵn sàng\": chỉ thoát khi postgres-0 Ready và mọi Deployment đủ Available.

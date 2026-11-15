@@ -1,8 +1,9 @@
 # s25 — lời giải chuẩn: gây đúng sự cố st4-storage rồi sửa theo quy trình chẩn đoán lưu trữ (để selftest chứng minh cách sửa
 # khớp lỗi): PV Retain Released của data-postgres-0 → gỡ uid/resourceVersion khỏi claimRef (PV giữ chỗ cho đúng tên PVC đó,
 # không PVC nào khác lấy được), apply lại ~/shop/postgres.yaml để StatefulSet tạo PVC cùng tên và bind vào PV cũ; PVC reports
-# xin lớp fast-ssd không có → sửa storageClassName trong ~/shop/reports.yaml thành local-path, xoá Deployment rồi PVC (PVC Pending
-# không sửa được lớp), apply lại; order DB_URL cổng 5433 → 5432 trong ~/shop/order.yaml, apply. Ghi ~/drills/s25/answers.env.
+# xin lớp fast-ssd không có → sửa storageClassName trong ~/shop/reports.yaml thành local-path, xoá PVC (không sửa được lớp; Pod
+# Pending chưa được xếp lên node nên không giữ PVC lại) rồi apply, Pod reports tự được xếp; order DB_URL cổng 5433 → 5432 trong
+# ~/shop/order.yaml, apply. Finalizer đọc trên PVC data-postgres-0 đang được postgres-0 dùng. Ghi ~/drills/s25/answers.env.
 # Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
 lab_break st4-storage
@@ -25,7 +26,7 @@ vm "$cp" "set -e
   [ \"\$(kubectl -n shop get pvc data-postgres-0 -o jsonpath='{.spec.volumeName}')\" = $pv ]
   kubectl -n shop exec postgres-0 -c postgres -- psql -U shop -d shop -tAc 'select count(*) from orders'"
 
-echo "s25: PVC reports sang local-path (xoá Deployment trước: finalizer pvc-protection), order DB_URL về cổng 5432"
+echo "s25: PVC reports sang local-path (xoá PVC, apply lại), order DB_URL về cổng 5432"
 fin="$(vm "$cp" "set -e
 python3 - <<'PY'
 import os, yaml
@@ -42,13 +43,12 @@ for e in c['env']:
     if e['name'] == 'DB_URL': e['value'] = e['value'].replace(':5433/', ':5432/')
 with open(p, 'w') as f: f.write(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=1000))
 PY
-  f=\$(kubectl -n shop get pvc reports -o jsonpath='{.metadata.finalizers[0]}')
-  kubectl -n shop delete deploy reports --wait=true >/dev/null
+  f=\$(kubectl -n shop get pvc data-postgres-0 -o jsonpath='{.metadata.finalizers[0]}')
   kubectl -n shop delete pvc reports --wait=true --timeout=120s >/dev/null
   kubectl apply -f ~/shop/reports.yaml -f ~/shop/order.yaml >/dev/null
   for d in reports order catalog; do kubectl -n shop rollout status deploy/\$d --timeout=420s >/dev/null; done
   printf '%s' \"\$f\"")"
-echo "s25: finalizer của PVC: '$fin'"
+echo "s25: finalizer của PVC data-postgres-0: '$fin'"
 [ "$fin" = "kubernetes.io/pvc-protection" ] || { echo "s25: PVC không có finalizer kubernetes.io/pvc-protection" >&2; exit 1; }
 vm "$cp" "set -e; mkdir -p ~/drills/s25; printf 'PROTECTION_FINALIZER=%s\n' '$fin' > ~/drills/s25/answers.env
   kubectl -n shop get pvc"
