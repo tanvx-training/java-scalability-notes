@@ -2,20 +2,23 @@
 # toleration control plane; image helper Pod ghim busybox:1.37), StorageClass local-path làm mặc định (annotation);
 # PVC nháp wffc-lab Pending với Event WaitForFirstConsumer cho tới khi có Pod wffc-pod; xoá Pod + PVC → PV động bị xoá
 # theo (Delete); làm lại, đổi PV sang Retain trước khi xoá → PV Released; dọn PV Released và thư mục của nó trên node.
-# Ghi ~/drills/s23/answers.env. Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
+# StorageClass nháp slow (Retain, không mặc định) tạo rồi xoá. Ghi ~/drills/s23/answers.env (WFFC_REASON, DELETED_PV,
+# RETAINED_PV, RETAINED_PHASE). Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
 LPP_VERSION="v0.0.37"
 vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
   echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
-for f in wffc-lab wffc-pod; do vm_put "$SESSION_DIR/files/$f.yaml" "$cp" "/tmp/lab-s23-$f.yaml"; done
+for f in wffc-lab wffc-pod slow-sc; do vm_put "$SESSION_DIR/files/$f.yaml" "$cp" "/tmp/lab-s23-$f.yaml"; done
 
 echo "s23: local-path-provisioner $LPP_VERSION trên cka-cp, StorageClass local-path mặc định"
 vm "$cp" "set -e; mkdir -p ~/drills/s23
   install -m 644 /tmp/lab-s23-wffc-lab.yaml ~/drills/s23/wffc-lab.yaml
   install -m 644 /tmp/lab-s23-wffc-pod.yaml ~/drills/s23/wffc-pod.yaml
+  install -m 644 /tmp/lab-s23-slow-sc.yaml ~/drills/s23/slow-sc.yaml
   rm -f /tmp/lab-s23-*.yaml
   f=~/drills/s23/local-path-storage-$LPP_VERSION.yaml
-  [ -s \$f ] || curl -fsSL --retry 3 -o \$f https://raw.githubusercontent.com/rancher/local-path-provisioner/$LPP_VERSION/deploy/local-path-storage.yaml
+  # Tải và sửa qua tệp tạm rồi mv: lần chạy bị ngắt giữa chừng không để lại tệp hỏng cho lần sau.
+  [ -s \$f ] || { curl -fsSL --retry 3 -o \$f.tmp https://raw.githubusercontent.com/rancher/local-path-provisioner/$LPP_VERSION/deploy/local-path-storage.yaml && mv \$f.tmp \$f; }
 python3 - \$f <<'PY'
 import sys, yaml
 p = sys.argv[1]
@@ -31,12 +34,17 @@ for d in docs:
 def block(dumper, s):
     return dumper.represent_scalar('tag:yaml.org,2002:str', s, style='|' if '\n' in s else None)
 yaml.SafeDumper.add_representer(str, block)
-with open(p, 'w') as fh: yaml.safe_dump_all(docs, fh, sort_keys=False, allow_unicode=True, width=1000)
+with open(p + '.tmp', 'w') as fh: yaml.safe_dump_all(docs, fh, sort_keys=False, allow_unicode=True, width=1000)
+import os; os.replace(p + '.tmp', p)
 PY
   grep -q 'image: docker.io/library/busybox:1.37' \$f
   kubectl apply -f \$f >/dev/null
   kubectl -n local-path-storage rollout status deploy/local-path-provisioner --timeout=300s >/dev/null
-  kubectl patch storageclass local-path -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}' >/dev/null"
+  kubectl patch storageclass local-path -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}' >/dev/null
+  # StorageClass tự viết (không mặc định): tạo, thấy trong k get sc, rồi xoá để chỉ còn một lớp.
+  kubectl apply -f ~/drills/s23/slow-sc.yaml >/dev/null
+  [ \"\$(kubectl get sc slow -o jsonpath='{.volumeBindingMode} {.reclaimPolicy}')\" = 'WaitForFirstConsumer Retain' ]
+  kubectl delete -f ~/drills/s23/slow-sc.yaml --wait=true >/dev/null"
 
 echo "s23: dọn PVC/PV nháp của lần chạy trước (nếu có)"
 vm "$cp" "set -e
@@ -82,6 +90,7 @@ echo "s23: lần 1 (reclaimPolicy Delete): xoá PVC → PV bị xoá theo"
 set -- $(round delete)
 echo "s23: PV $1 sau khi xoá PVC: $2"
 [ "$2" = gone ] || { echo "s23: PV $1 không bị xoá theo PVC" >&2; exit 1; }
+deleted_pv="$1"
 echo "s23: lần 2 (đổi PV sang Retain trước khi xoá PVC): PV Released"
 set -- $(round retain)
 echo "s23: PV $1 sau khi xoá PVC: $2 (dữ liệu ở $3:$4)"
@@ -92,4 +101,5 @@ case "$3:$4" in
   cka-w1:/opt/local-path-provisioner/pvc-*|cka-w2:/opt/local-path-provisioner/pvc-*) vm "$3" "sudo rm -rf -- '$4'" ;;
   *) echo "s23: không rõ thư mục dữ liệu của PV $1 ($3:$4), không xoá" >&2; exit 1 ;;
 esac
-vm "$cp" "set -e; mkdir -p ~/drills/s23; printf 'WFFC_REASON=%s\n' '$reason' > ~/drills/s23/answers.env"
+vm "$cp" "set -e; mkdir -p ~/drills/s23
+  printf 'WFFC_REASON=%s\nDELETED_PV=%s\nRETAINED_PV=%s\nRETAINED_PHASE=%s\n' '$reason' '$deleted_pv' '$1' '$2' > ~/drills/s23/answers.env"

@@ -1,5 +1,5 @@
 # s23 — đọc local-path-provisioner (Deployment, Pod, ConfigMap local-path-config), mọi StorageClass, mọi PV và PVC,
-# ~/drills/s23/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane bằng user ubuntu (kubectl + python3).
+# ~/drills/s23/answers.env (WFFC_REASON, DELETED_PV, RETAINED_PV, RETAINED_PHASE). In dạng KHOÁ=giá-trị. Chạy trên control plane bằng user ubuntu (kubectl + python3).
 # Chỉ đọc. Lệnh lỗi hay hết giờ → tệp ghi ERR: dòng tương ứng in "không đọc được", không xanh.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
@@ -87,4 +87,12 @@ else:
             bad.append(f"PV shop-data: {sd.get('status', {}).get('phase')}, claimRef {ref.get('namespace')}/{ref.get('name')}")
 print("CLEAN=" + ("; ".join(bad) or "đạt"))
 print("WFFC_REASON=" + ans.get("WFFC_REASON", ""))
+
+# 4. Hai vòng Delete/Retain: PV động mà người học ghi lại; verify.sh so với journal kubelet (PV đã được Pod mount).
+names = set(p["metadata"]["name"] for p in (pv or {}).get("items", []))
+for key in ("DELETED_PV", "RETAINED_PV"):
+    v = ans.get(key, "")
+    print(f"{key}={v}")
+    print(f"{key}_EXISTS=" + ("không đọc được" if pv is None else ("còn" if v and v in names else "không")))
+print("RETAINED_PHASE=" + ans.get("RETAINED_PHASE", ""))
 PY

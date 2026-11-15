@@ -42,7 +42,7 @@ export const sessions = [
 
 \`storageClassName: manual\` ở đây chỉ là một cái nhãn để ghép tay: không có đối tượng StorageClass nào tên \`manual\`, và cũng không cần. Ghép tay như vậy là *static provisioning*; s23 thay bằng provisioner tạo PV theo yêu cầu.
 
-**Access mode là lời hứa về node, không về Pod.** \`ReadWriteOnce\` (RWO): mount đọc ghi trên **một node** (nhiều Pod cùng node vẫn dùng chung được); \`ReadOnlyMany\` (ROX): nhiều node chỉ đọc; \`ReadWriteMany\` (RWX): nhiều node đọc ghi, cần storage mạng (NFS, CephFS…); \`ReadWriteOncePod\` (RWOP): đúng một Pod trong cả cluster. hostPath và local chỉ làm được RWO. PVC xin RWX mà PV chỉ có RWO thì không bao giờ bind. Access mode của PV là *khả năng* được dùng để ghép; Kubernetes không tự chặn hai Pod trên hai node ghi vào một hostPath — đó là lý do PV hostPath phải có \`nodeAffinity\`.
+**Access mode là lời hứa về node, không về Pod.** \`ReadWriteOnce\` (RWO): mount đọc ghi trên **một node** (nhiều Pod cùng node vẫn dùng chung được); \`ReadOnlyMany\` (ROX): nhiều node chỉ đọc; \`ReadWriteMany\` (RWX): nhiều node đọc ghi, cần storage mạng (NFS, CephFS…); \`ReadWriteOncePod\` (RWOP): đúng một Pod trong cả cluster. hostPath và local chỉ *đúng nghĩa* RWO: khai RWX vẫn bind, nhưng không node nào khác thấy dữ liệu. PVC xin RWX mà PV chỉ có RWO thì không bao giờ bind. Access mode của PV là *khả năng* được dùng để ghép; Kubernetes không tự chặn hai Pod trên hai node ghi vào một hostPath — đó là lý do PV hostPath phải có \`nodeAffinity\`.
 
 **hostPath "trên cka-w2" nghĩa là gì.** PV hostPath chỉ là một đường dẫn; tự nó không biết thuộc node nào. Không có \`nodeAffinity\`, Pod dùng PVC được xếp lên cka-w1 sẽ mount \`/mnt/shop-data\` *của cka-w1*: một thư mục rỗng khác, dữ liệu "mất" mà không lỗi nào. \`nodeAffinity\` của PV (\`kubernetes.io/hostname In [cka-w2]\`) làm scheduler chỉ xếp Pod dùng PV này lên cka-w2. \`type: DirectoryOrCreate\` để kubelet tự tạo thư mục nếu chưa có.
 
@@ -62,20 +62,20 @@ export const sessions = [
     stateIn: "Đầu ra s21 (mốc `st3-done`): shop chạy đủ trong shop-quota (pods 20, requests.memory 3Gi) và LimitRange shop-limits (gán 50m/64Mi cho container không khai); cka-w2 mang nhãn role=db, không taint; metrics-server và HPA catalog (2–3). Chưa có PV, PVC hay StorageClass nào. `./labs/lab begin cka s22` kiểm đầu vào bằng verify của s21, tạo ~/drills/s22 và xoá answers.env cũ.",
     stateOut: "PV shop-data (hostPath /mnt/shop-data trên cka-w2, 1Gi, RWO, manual, Retain, nodeAffinity cka-w2) Bound với PVC shop/shop-data, cả hai trong ~/shop/shop-data.yaml; /mnt/shop-data/probe.txt trên cka-w2 có chuỗi bạn ghi; Pod scratch và pvc-probe đã xoá; ~/drills/s22/answers.env.",
     tasks: [
-      { id: "t1", text: "`./labs/lab begin cka s22` trên Mac (tạo ~/drills/s22). Trên cka-cp: `~/drills/s22/scratch.yaml`: Pod `scratch` (namespace shop) hai container busybox:1.37 dùng chung một `emptyDir` (`sizeLimit: 16Mi`) mount ở `/cache`: `writer` ghi `date >> /cache/log.txt` mỗi 5 giây, `reader` mount `readOnly: true` và `tail -f` tệp đó. Apply, `k logs scratch -c reader`. Rồi `k exec scratch -c writer -- ls /cache` và `k exec scratch -c reader -- touch /cache/x`: vì sao lệnh sau lỗi?" },
+      { id: "t1", text: "`./labs/lab begin cka s22` trên Mac (tạo ~/drills/s22). Trên cka-cp: `~/drills/s22/scratch.yaml`: Pod `scratch` (namespace shop) hai container busybox:1.37 dùng chung một `emptyDir` (`sizeLimit: 16Mi`) mount ở `/cache`: `writer` ghi `date >> /cache/log.txt` mỗi 5 giây, `reader` mount `readOnly: true` và `tail -f` tệp đó. Apply, `k logs scratch -c reader`. Rồi `k exec scratch -c writer -- ls /cache` và `k exec scratch -c reader -- touch /cache/x`: vì sao lệnh sau lỗi? Ghi `SCRATCH_RO_ERROR=<thông báo lỗi>` (phần đứng sau `/cache/x:` trong lỗi của touch) vào `~/drills/s22/answers.env`." },
       { id: "t2", text: "Thư mục emptyDir nằm đâu? `k get pod scratch -o jsonpath='{.metadata.uid} {.spec.nodeName}'`, rồi trên node đó `ssh <node> sudo ls -l /var/lib/kubelet/pods/<uid>/volumes/kubernetes.io~empty-dir/cache`. Rồi `k delete pod scratch --now`: thư mục trên node còn không? (Container restart thì thư mục còn; xoá Pod thì mất.)" },
       { id: "t3", text: "Tình huống hỏng: `~/shop/shop-data.yaml` chỉ có PVC `shop-data` (shop, `storageClassName: manual`, `ReadWriteMany`, 2Gi). Apply. `k get pvc`, `k describe pvc shop-data`: STATUS, Events nói gì? Chưa có PV nào, nên chưa ai trả lời được." },
       { id: "t4", text: "Thêm PV `shop-data` vào đầu cùng tệp (khung `sn-pv-pvc`): hostPath `/mnt/shop-data` (`type: DirectoryOrCreate`), 1Gi, `ReadWriteOnce`, `persistentVolumeReclaimPolicy: Retain`, `storageClassName: manual`, `nodeAffinity` required `kubernetes.io/hostname In [cka-w2]`. Apply. PVC có Bound không? `k get pv shop-data` STATUS là gì, `k describe pvc shop-data` báo gì? Sửa PVC về `ReadWriteOnce`, 1Gi: thử `k apply` trước (đọc lỗi), rồi xoá PVC và apply lại. `k get pv,pvc` phải hai dòng Bound trỏ vào nhau." },
-      { id: "t5", text: "`~/drills/s22/pvc-probe.yaml`: Pod `pvc-probe` (busybox:1.37, `sleep 3600`, `nodeName: cka-w2`) mount PVC `shop-data` ở `/data`. Ghi: `k exec pvc-probe -- sh -c 'echo <chuỗi của bạn, không dấu cách> > /data/probe.txt'`. `k delete pod pvc-probe --now`, apply lại, `k exec pvc-probe -- cat /data/probe.txt`. Ghi `PVC_REUSE_CONTENT=<chuỗi đọc được>` vào `~/drills/s22/answers.env`. Trên cka-w2: `sudo cat /mnt/shop-data/probe.txt`." },
-      { id: "t6", text: "Dọn: xoá `pvc-probe` (và `scratch` nếu còn). `k get pv,pvc` vẫn Bound. Trên Mac: `./labs/lab verify cka s22` phải đạt 4/4." },
+      { id: "t5", text: "`~/drills/s22/pvc-probe.yaml`: Pod `pvc-probe` (busybox:1.37, `sleep 3600`, `nodeName: cka-w2`) mount PVC `shop-data` ở `/data`. Ghi UID của chính Pod này vào volume: `uid=$(k get pod pvc-probe -o jsonpath='{.metadata.uid}')`, `k exec pvc-probe -- sh -c \"echo $uid > /data/probe.txt\"`. `k delete pod pvc-probe --now`, apply lại (Pod mới có UID khác: `k get pod pvc-probe -o jsonpath='{.metadata.uid}'`), `k exec pvc-probe -- cat /data/probe.txt`. Ghi `PVC_REUSE_CONTENT=<UID đọc được>` vào `~/drills/s22/answers.env`. Trên cka-w2: `sudo cat /mnt/shop-data/probe.txt`." },
+      { id: "t6", text: "Dọn: xoá `pvc-probe` (và `scratch` nếu còn). `k get pv,pvc` vẫn Bound. Trên Mac: `./labs/lab verify cka s22` phải đạt 4/4. Verify đọc journal của kubelet trên hai worker để biết Pod scratch và hai Pod pvc-probe đã thật sự chạy và mount volume, nên các Pod đã xoá vẫn được tính." },
     ],
     hints: [
       "PVC Pending: so ba thứ với `k get pv` — STORAGECLASS trùng từng chữ, ACCESS MODES của PVC nằm trong của PV, CAPACITY ≥ yêu cầu. Thiếu một là không bind, và PV vẫn `Available`.",
       "Event `ProvisioningFailed … storageclass.storage.k8s.io \"manual\" not found` không bảo bạn tạo StorageClass `manual`: nó nói không PV nào khớp nên controller thử cấp động và không tìm được lớp. Sửa chỗ lệch giữa PV và PVC.",
       "PVC đã tạo gần như không sửa được: `spec` chỉ cho tăng `resources.requests` khi đã Bound. PVC sai đang Pending thì `k delete pvc shop-data` rồi apply lại.",
       "Thụt lề của `nodeAffinity` trong PV: `spec.nodeAffinity.required.nodeSelectorTerms[].matchExpressions[]` (giống `requiredDuringSchedulingIgnoredDuringExecution` của Pod nhưng tên ngắn hơn). Quên thì `k explain pv.spec.nodeAffinity --recursive`.",
-      "`k exec … -- sh -c 'echo … > /data/probe.txt'`: phải có `sh -c` và nháy đơn, nếu không dấu `>` được shell của cka-cp hiểu và tệp nằm trên cka-cp.",
-      "Pod với `nodeName` bỏ qua scheduler (s19): sai tên node thì Pod đứng `Pending` mãi không có Event FailedScheduling nào. Gõ đúng `cka-w2`: đó là node có dữ liệu.",
+      "`k exec pvc-probe -- sh -c \"echo $uid > /data/probe.txt\"`: phải có `sh -c` và cả lệnh trong nháy, nếu không dấu `>` được shell của cka-cp hiểu và tệp nằm trên cka-cp. Nháy kép để `$uid` được shell của cka-cp thay trước khi gửi vào Pod.",
+      "Pod với `nodeName` bỏ qua scheduler (s19): không có Event FailedScheduling nào; tên node không tồn tại thì PodGC xoá Pod sau ít chục giây. Gõ đúng `cka-w2`: đó là node có dữ liệu.",
       "Pod busybox chạy `sleep` không bắt SIGTERM: `k delete pod` thường chờ đủ 30 giây grace. Với Pod nháp dùng `--now`.",
     ],
     solution: `Output là của máy soạn bài; tên Pod, UID, node và thời điểm sẽ khác. Context đã ở namespace shop (s18).
@@ -120,6 +120,7 @@ k exec scratch -c writer -- ls -l /cache
 k exec scratch -c reader -- touch /cache/x
 # touch: /cache/x: Read-only file system
 # command terminated with exit code 1
+echo 'SCRATCH_RO_ERROR=Read-only file system' >> ~/drills/s22/answers.env
 k get pod scratch -o jsonpath='{.metadata.uid} {.spec.nodeName}'; echo
 # 6c2980c8-f874-4b78-b362-288c5b8ddf76 cka-w1
 ssh cka-w1 sudo ls -l /var/lib/kubelet/pods/6c2980c8-f874-4b78-b362-288c5b8ddf76/volumes/kubernetes.io~empty-dir/cache
@@ -232,15 +233,28 @@ spec:
 
 \`\`\`bash
 k apply -f ~/drills/s22/pvc-probe.yaml
-k exec pvc-probe -- sh -c 'echo shop-data-ok > /data/probe.txt'
+uid=$(k get pod pvc-probe -o jsonpath='{.metadata.uid}'); echo $uid
+# 94ce822d-1f60-4781-8e3b-621203bc8903
+k exec pvc-probe -- sh -c "echo $uid > /data/probe.txt"
 k delete pod pvc-probe --now
 k apply -f ~/drills/s22/pvc-probe.yaml
+k get pod pvc-probe -o jsonpath='{.metadata.uid}'; echo
+# f9b5c4c3-c986-4166-817c-7f34308bf467
 k exec pvc-probe -- cat /data/probe.txt
-# shop-data-ok
-echo PVC_REUSE_CONTENT=shop-data-ok >> ~/drills/s22/answers.env
+# 94ce822d-1f60-4781-8e3b-621203bc8903
+echo PVC_REUSE_CONTENT=94ce822d-1f60-4781-8e3b-621203bc8903 >> ~/drills/s22/answers.env
 ssh cka-w2 'ls -ld /mnt/shop-data; sudo cat /mnt/shop-data/probe.txt'
 # drwxr-xr-x 2 root root 4096 Nov 15 23:25 /mnt/shop-data
-# shop-data-ok
+# 94ce822d-1f60-4781-8e3b-621203bc8903
+\`\`\`
+
+Pod mới (UID khác) đọc được thứ Pod cũ đã ghi: dữ liệu nằm ở PV, không ở Pod. Pod đã xoá vẫn để lại dấu trong journal của kubelet trên cka-w2, và verify dựa vào đó để biết hai Pod đã thật sự mount \`shop-data\`:
+
+\`\`\`bash
+ssh cka-w2 "sudo journalctl -u kubelet -o cat | grep 'pod=\\"shop/pvc-probe\\"' | grep -o 'VerifyControllerAttachedVolume started for volume [^(]*' | sort | uniq -c"
+#       1 VerifyControllerAttachedVolume started for volume \\"kube-api-access-clcx8\\"
+#       1 VerifyControllerAttachedVolume started for volume \\"kube-api-access-crmmp\\"
+#       2 VerifyControllerAttachedVolume started for volume \\"shop-data\\"
 \`\`\`
 
 kubelet tạo \`/mnt/shop-data\` (\`DirectoryOrCreate\`, root, 0755) lần đầu có Pod mount. Container busybox chạy bằng root nên ghi được; image shop chạy UID 10001 (s10) sẽ cần thư mục cho UID đó ghi (hostPath không áp \`fsGroup\`).
@@ -287,8 +301,8 @@ Lời giải tự động: \`labs/cka/sessions/s22/apply.sh\` (chạy bài empty
 ./labs/lab verify cka s22
 \`\`\`
 
-Verify kiểm PV và PVC (dung lượng, access mode, lớp, reclaim policy, \`nodeAffinity\`, Bound hai chiều), đọc thẳng \`probe.txt\` trên đĩa của cka-w2 theo đường dẫn trong PV, so với đáp án của bạn, và kiểm hai Pod nháp đã xoá.`,
-      verifyOutput: "lab: kiểm s22\n  (chờ apiserver, nếu đang khởi động: tối đa ~3 phút)\n  ✓ PV shop-data: hostPath, 1Gi, ReadWriteOnce, storageClassName manual, Retain, nodeAffinity ghim cka-w2\n  ✓ PVC shop/shop-data: 1Gi, ReadWriteOnce, storageClassName manual; Bound với PV shop-data\n  ✓ probe.txt trên hostPath của cka-w2 có nội dung (Pod pvc-probe đã ghi)\n  ✓ answers.env: PVC_REUSE_CONTENT khớp dòng đầu probe.txt; Pod nháp scratch, pvc-probe (shop) đã xoá\n  → 4/4 đạt",
+Verify kiểm PV và PVC (dung lượng, access mode, lớp, reclaim policy, \`nodeAffinity\`, Bound hai chiều), đọc thẳng \`probe.txt\` trên đĩa của cka-w2 theo đường dẫn trong PV, đọc journal của kubelet trên hai worker để biết Pod scratch có emptyDir và hai Pod pvc-probe (UID khác nhau) đã thật sự chạy và mount volume, so với đáp án của bạn, và kiểm hai Pod nháp đã xoá. Journal nằm trên đĩa của VM nên vẫn đọc được sau khi VM khởi động lại.`,
+      verifyOutput: "lab: kiểm s22\n  (chờ apiserver, nếu đang khởi động: tối đa ~3 phút)\n  ✓ PV shop-data: hostPath, 1Gi, ReadWriteOnce, storageClassName manual, Retain, nodeAffinity ghim cka-w2\n  ✓ PVC shop/shop-data: 1Gi, ReadWriteOnce, storageClassName manual; Bound với PV shop-data\n  ✓ probe.txt trên cka-w2 = UID Pod pvc-probe đã ghi; Pod pvc-probe tạo lại (UID khác) mount lại shop-data; PVC_REUSE_CONTENT khớp\n  ✓ Pod scratch (emptyDir) đã chạy, SCRATCH_RO_ERROR là lỗi ghi vào mount readOnly; Pod nháp scratch, pvc-probe (shop) đã xoá\n  → 4/4 đạt",
       projectDelta: "shop có PV shop-data và PVC shop-data (ghép tay, hostPath trên cka-w2). Buổi sau thay việc ghép tay bằng StorageClass và provisioner động, thứ PostgreSQL ở s24 sẽ dùng.",
     },
     review: [
@@ -362,11 +376,11 @@ Với CSI driver của cloud thì bước 3 là gọi API cloud để tạo đĩ
     tasks: [
       { id: "t1", text: "`./labs/lab begin cka s23`. Trên cka-cp: `k get sc` (chưa có gì). Tải manifest ghim phiên bản: `curl -L -o ~/drills/s23/local-path-storage-v0.0.37.yaml https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.37/deploy/local-path-storage.yaml`. Đọc tệp: có những đối tượng nào (`grep '^kind' …`)? StorageClass trong đó có `volumeBindingMode` gì, `reclaimPolicy` gì, có annotation mặc định không?" },
       { id: "t2", text: "Sửa tệp trước khi apply: Deployment `local-path-provisioner` thêm `nodeSelector: node-role.kubernetes.io/control-plane: \"\"` và toleration `node-role.kubernetes.io/control-plane` (`operator: Exists`, `effect: NoSchedule`); trong ConfigMap `local-path-config`, khoá `helperPod.yaml`, đổi `image: docker.io/library/busybox` thành `docker.io/library/busybox:1.37`. Apply, `k -n local-path-storage rollout status deploy/local-path-provisioner`, `k -n local-path-storage get pod -o wide`: Pod phải ở cka-cp. Đo `free -m` trên cka-cp trước và sau." },
-      { id: "t3", text: "Đặt local-path làm StorageClass mặc định: `k patch storageclass local-path -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}'`. `k get sc`: cột nào đổi?" },
+      { id: "t3", text: "Đặt local-path làm StorageClass mặc định: `k patch storageclass local-path -p '{\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"}}}'`. `k get sc`: cột nào đổi? Rồi tự viết `~/drills/s23/slow-sc.yaml`: StorageClass `slow` (`rancher.io/local-path`, `WaitForFirstConsumer`, `reclaimPolicy: Retain`, **không** mặc định; khung từ trang Storage Classes). Apply, `k get sc` (chỉ `local-path` có `(default)`), rồi `k delete -f ~/drills/s23/slow-sc.yaml`." },
       { id: "t4", text: "`~/drills/s23/wffc-lab.yaml`: PVC `wffc-lab` (shop, RWO, 128Mi, **không** ghi `storageClassName`). Apply. `k get pvc wffc-lab -o jsonpath='{.spec.storageClassName}'` (ai điền?), `k get pvc wffc-lab`, `k describe pvc wffc-lab`. Đợi một phút: vẫn Pending? Ghi `WFFC_REASON=<reason của Event trên PVC>` vào `~/drills/s23/answers.env`." },
       { id: "t5", text: "`~/drills/s23/wffc-pod.yaml`: Pod `wffc-pod` (busybox:1.37, ghi `/data/hello.txt` rồi `sleep 3600`) mount PVC `wffc-lab` ở `/data`. Apply và theo dõi `k get pvc,pv` cùng `k -n local-path-storage get pod -w` (helper Pod). PVC có annotation gì mới (`k get pvc wffc-lab -o yaml | grep selected-node`)? PV sinh ra: hostPath nào, `nodeAffinity` gì, `RECLAIM POLICY` gì? Trên node đó: `sudo ls /opt/local-path-provisioner/`." },
-      { id: "t6", text: "`k delete pod wffc-pod --now`, rồi `k delete pvc wffc-lab`. `k get pv`: PV còn không? Thư mục trên node còn không?" },
-      { id: "t7", text: "Làm lại t4–t5 (apply lại hai tệp). Lần này **trước khi xoá PVC**: `k patch pv <pv> -p '{\"spec\":{\"persistentVolumeReclaimPolicy\":\"Retain\"}}'`. Xoá Pod rồi PVC. `k get pv --sort-by=.spec.capacity.storage`: PV nháp ở phase nào, `CLAIM` còn ghi gì? Dọn: xoá PV Released, xoá thư mục của nó trên node. `k get pv,pvc` chỉ còn shop-data. Trên Mac: `./labs/lab verify cka s23` phải đạt 3/3." },
+      { id: "t6", text: "`k delete pod wffc-pod --now`, rồi `k delete pvc wffc-lab`. `k get pv`: PV còn không? Thư mục trên node còn không? Ghi `DELETED_PV=<tên PV của vòng này>` vào `~/drills/s23/answers.env`." },
+      { id: "t7", text: "Làm lại t4–t5 (apply lại hai tệp). Lần này **trước khi xoá PVC**: `k patch pv <pv> -p '{\"spec\":{\"persistentVolumeReclaimPolicy\":\"Retain\"}}'`. Xoá Pod rồi PVC. `k get pv --sort-by=.spec.capacity.storage`: PV nháp ở phase nào, `CLAIM` còn ghi gì? Ghi `RETAINED_PV=<tên PV>` và `RETAINED_PHASE=<phase của nó lúc này>`. Dọn: xoá PV Released, xoá thư mục của nó trên node. `k get pv,pvc` chỉ còn shop-data. Trên Mac: `./labs/lab verify cka s23` phải đạt 4/4 (hai PV đã xoá được nhận ra qua journal kubelet: Pod wffc-pod đã mount chúng)." },
     ],
     hints: [
       "Tải manifest không được: cka-cp cần Internet (`curl -sI https://raw.githubusercontent.com`). Đường dẫn có `v0.0.37` trong URL: đó là cách ghim phiên bản, đừng dùng nhánh `master`.",
@@ -438,6 +452,29 @@ k get sc
 # NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 # local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  2m52s
 \`\`\`
+
+StorageClass tự viết, không mặc định (\`~/drills/s23/slow-sc.yaml\`):
+
+\`\`\`yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: slow
+provisioner: rancher.io/local-path
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/drills/s23/slow-sc.yaml
+k get sc
+# NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+# local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  28s
+# slow                   rancher.io/local-path   Retain          WaitForFirstConsumer   false                  0s
+k delete -f ~/drills/s23/slow-sc.yaml
+\`\`\`
+
+Không có annotation thì không mặc định. Xoá \`slow\` để cụm chỉ còn một lớp như cuối buổi cần (PV đã sinh từ một lớp không bị xoá theo lớp).
 
 **4. PVC chờ consumer**
 
@@ -550,6 +587,7 @@ k get pv
 # NAME        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM            STORAGECLASS   …
 # shop-data   1Gi        RWO            Retain           Bound    shop/shop-data   manual         …
 ssh cka-w1 sudo ls /opt/local-path-provisioner/     # thư mục pvc-87273f83… đã bị xoá
+echo DELETED_PV=pvc-87273f83-ce6c-4ed3-8ecd-9da9d6cdbd27 >> ~/drills/s23/answers.env
 \`\`\`
 
 **7. Retain: PV ở lại, Released**
@@ -564,6 +602,7 @@ k get pv --sort-by=.spec.capacity.storage
 # NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS     CLAIM            STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
 # pvc-e7a85d77-d388-49fa-aa6a-8c312291b27b   128Mi      RWO            Retain           Released   shop/wffc-lab    local-path     <unset>                          11s
 # shop-data                                  1Gi        RWO            Retain           Bound      shop/shop-data   manual         <unset>                          5m48s
+printf 'RETAINED_PV=pvc-e7a85d77-d388-49fa-aa6a-8c312291b27b\\nRETAINED_PHASE=Released\\n' >> ~/drills/s23/answers.env
 \`\`\`
 
 \`CLAIM\` vẫn ghi \`shop/wffc-lab\`: \`claimRef\` giữ cả UID của PVC đã xoá, nên một PVC mới cùng tên cũng không bind vào PV này (s25 dạy cách gỡ). Dọn PV nháp và dữ liệu của nó:
@@ -578,7 +617,7 @@ Lời giải tự động: \`labs/cka/sessions/s23/apply.sh\` (sửa manifest b�
     exam: {
       patterns: [
         "\"Tạo StorageClass X, provisioner Y, WaitForFirstConsumer, đặt làm mặc định\" — YAML từ trang Storage Classes, thêm annotation `storageclass.kubernetes.io/is-default-class: \"true\"`; lớp mặc định cũ phải gỡ annotation (đặt `\"false\"`).",
-        "\"PVC dùng StorageClass X đang Pending\" — xem Events: `WaitForFirstConsumer` là chờ Pod (bình thường); `storageclass … not found` là sai tên lớp; không Event nào là provisioner không chạy.",
+        "\"PVC dùng StorageClass X đang Pending\" — xem Events: `WaitForFirstConsumer` là chờ Pod (bình thường); `storageclass … not found` là sai tên lớp (hoặc, với lớp ghép tay, không PV nào khớp); có Pod rồi mà chỉ thấy `ExternalProvisioning` lặp lại, không có `Provisioning`, là provisioner không chạy hoặc sai tên.",
         "\"Đổi reclaim policy của PV thành Retain\" — `k patch pv … -p '{\"spec\":{\"persistentVolumeReclaimPolicy\":\"Retain\"}}'`.",
         "\"Liệt kê PV sắp theo dung lượng, ghi vào tệp\" — `k get pv --sort-by=.spec.capacity.storage > …`.",
       ],
@@ -609,8 +648,8 @@ Lời giải tự động: \`labs/cka/sessions/s23/apply.sh\` (sửa manifest b�
 ./labs/lab verify cka s23
 \`\`\`
 
-Verify kiểm provisioner (phiên bản ghim, Available, chạy trên cka-cp, image helper Pod có tag), StorageClass mặc định duy nhất, đáp án, và đã dọn hết PVC/PV nháp mà PV shop-data của s22 vẫn nguyên. Sau khi VM khởi động lại, verify chờ Pod provisioner Ready.`,
-      verifyOutput: "lab: kiểm s23\n  (chờ apiserver và local-path-provisioner, nếu đang khởi động: tối đa ~5 phút)\n  ✓ local-path-provisioner (local-path-storage): image ghim phiên bản, Available, Pod chạy trên cka-cp; image helper Pod ghim tag\n  ✓ StorageClass: đúng một mặc định và là local-path (rancher.io/local-path, WaitForFirstConsumer)\n  ✓ answers.env: WFFC_REASON=WaitForFirstConsumer; không còn PVC/PV nháp; PV shop-data vẫn Retain, Bound với shop/shop-data\n  → 3/3 đạt",
+Verify kiểm provisioner (phiên bản ghim, Available, chạy trên cka-cp, image helper Pod có tag), StorageClass mặc định duy nhất, đáp án, đã dọn hết PVC/PV nháp mà PV shop-data của s22 vẫn nguyên, và hai PV của vòng Delete/Retain: đúng là PV động mà Pod wffc-pod đã mount (journal kubelet của worker), nay không còn. Sau khi VM khởi động lại, verify chờ Pod provisioner Ready.`,
+      verifyOutput: "lab: kiểm s23\n  (chờ apiserver và local-path-provisioner, nếu đang khởi động: tối đa ~5 phút)\n  ✓ local-path-provisioner (local-path-storage): image ghim phiên bản, Available, Pod chạy trên cka-cp; image helper Pod ghim tag\n  ✓ StorageClass: đúng một mặc định và là local-path (rancher.io/local-path, WaitForFirstConsumer)\n  ✓ answers.env: WFFC_REASON=WaitForFirstConsumer; không còn PVC/PV nháp; PV shop-data vẫn Retain, Bound với shop/shop-data\n  ✓ Vòng Delete và Retain: DELETED_PV, RETAINED_PV là hai PV động Pod wffc-pod đã mount, nay đã xoá; RETAINED_PHASE=Released\n  → 4/4 đạt",
       projectDelta: "Cluster có StorageClass local-path mặc định (WaitForFirstConsumer) do local-path-provisioner cấp. Buổi sau PostgreSQL chạy bằng StatefulSet với volumeClaimTemplates xin volume từ chính lớp này.",
     },
     review: [

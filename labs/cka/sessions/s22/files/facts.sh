@@ -1,7 +1,8 @@
 # s22 — đọc PV shop-data, PVC shop/shop-data, Pod nháp scratch và pvc-probe trong shop, ~/drills/s22/answers.env.
 # In dạng KHOÁ=giá-trị. Chạy trên control plane bằng user ubuntu (kubectl + python3). Chỉ đọc.
 # Lệnh lỗi hay hết giờ → tệp ghi ERR: dòng tương ứng in "không đọc được", không xanh.
-# Tệp trên hostPath nằm ở cka-w2, không đọc được từ đây: verify.sh đọc nó bằng một lần gọi riêng vào cka-w2 theo HOSTPATH.
+# Tệp trên hostPath nằm ở cka-w2, không đọc được từ đây: verify.sh đọc nó (và journal kubelet của hai worker,
+# files/kubelet-mounts.sh) bằng lần gọi riêng vào worker.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
 k get pv shop-data -o json > "$tmp/pv.json" 2>"$tmp/pv.err" || echo ERR > "$tmp/pv.json"
@@ -69,6 +70,7 @@ if pv is not None:
 print("PVC=" + ("; ".join(bad) or "đạt"))
 
 print("ANSWER=" + ans.get("PVC_REUSE_CONTENT", ""))
+print("SCRATCH_RO=" + ans.get("SCRATCH_RO_ERROR", ""))
 left = open(f"{t}/pods.txt").read().strip()
 names = sorted(l.split("/", 1)[-1] for l in left.splitlines() if l.strip())
 print("PODS=" + ("không đọc được" if left == "ERR" else (f"còn {' '.join(names)}" if names else "đã xoá")))
