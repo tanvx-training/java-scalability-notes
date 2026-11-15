@@ -224,7 +224,7 @@ export const skills = [
   { id: "k-headless-svc", kind: "yaml", area: "kubernetes", label: "Headless Service (clusterIP: None)", ref: yaml("sn-svc-headless") },
   { id: "k-sts-dns", kind: "concept", area: "kubernetes", label: "postgres-0.postgres.shop.svc.cluster.local — danh tính ổn định của Pod StatefulSet" },
   { id: "k-sts-ordering", kind: "concept", area: "kubernetes", label: "Thứ tự tạo/xoá Pod StatefulSet; PVC vẫn còn sau khi xoá StatefulSet" },
-  { id: "k-exec-psql", kind: "command", area: "kubernetes", label: "k exec -it postgres-0 -n shop -- psql -U shop -c 'select count(*) from product'" },
+  { id: "k-exec-psql", kind: "command", area: "kubernetes", label: "k exec -it postgres-0 -n shop -- psql -U shop -d shop -c 'select count(*) from products'" },
 
   // ── s25 Sự cố chặng 4: PVC Pending, dữ liệu biến mất ──
   { id: "k-pvc-pending-reasons", kind: "concept", area: "kubernetes", label: "PVC Pending: không có StorageClass mặc định, sai storageClassName, access mode hoặc dung lượng không khớp, chờ consumer" },
