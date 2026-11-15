@@ -15,7 +15,7 @@ vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-time
     # Sự cố còn đó: đọc ngay, không chờ.
     o=\$(\$k -n shop get pvc -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Pending && break
     o=\$(\$k get pv -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Released && break
-    e=\$(\$k -n shop get sts postgres deploy/reports -o name 2>&1) || { case \"\$e\" in *NotFound*) break ;; esac; sleep 3; continue; }
+    e=\$(\$k -n shop get sts/postgres deploy/reports -o name 2>&1) || { case \"\$e\" in *NotFound*) break ;; esac; sleep 3; continue; }
     o=\$(\$k -n shop get deploy order -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name==\"DB_URL\")].value}' 2>/dev/null) \\
       && case \"\$o\" in *:5432/shop) ;; *) break ;; esac
     # Lệnh lỗi hay hết giờ là \"chưa sẵn sàng\": chỉ thoát khi postgres-0 Ready và mọi Deployment đủ Available.

@@ -1208,8 +1208,11 @@ Sau bước 4, catalog tự hồi (HikariCP mở kết nối mới), còn Pod or
 
 \`\`\`bash
 k get pod -l app=order
-k logs order-6764866d-wkndl --previous | grep 'Caused by' | tail -1
-#@@ORDER_OUT@@
+# order-5bd7cf8fc-j4xg2   1/1   Running            2 (24m ago)   81m
+# order-6764866d-9c5x5    0/1   CrashLoopBackOff   3 (49s ago)   96s
+k logs order-6764866d-9c5x5 --previous | grep 'Caused by' | tail -2
+# Caused by: org.postgresql.util.PSQLException: Connection to postgres-0.postgres.shop.svc.cluster.local:5433 refused. Check that the hostname and port are correct and that the postmaster is accepting T…
+# Caused by: java.net.ConnectException: Connection refused (connect failed)
 grep -A1 DB_URL ~/shop/order.yaml
 #         - name: DB_URL
 #           value: jdbc:postgresql://postgres-0.postgres.shop.svc.cluster.local:5433/shop
