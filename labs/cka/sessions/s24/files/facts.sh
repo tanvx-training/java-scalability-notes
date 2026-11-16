@@ -17,9 +17,10 @@ for f in postgres catalog order; do
 done
 # Số sản phẩm, số đơn hàng, thời điểm (epoch) của đơn hàng thứ ba theo id: Pod postgres-0 phải được tạo sau đơn đó.
 k -n shop exec postgres-0 -c postgres -- psql -U shop -d shop -tAc \
-  "select (select count(*) from products), (select count(*) from orders), coalesce((select floor(extract(epoch from created_at))::bigint from orders order by id offset 2 limit 1), 0)" \
+  "select (select count(*) from products), (select count(*) from orders), coalesce((select floor(extract(epoch from created_at at time zone current_setting('TimeZone')))::bigint from orders order by id offset 2 limit 1), 0)" \
   > "$tmp/psql.txt" 2>"$tmp/psql.err" || echo ERR > "$tmp/psql.txt"
-# Ngay sau khi postgres-0 được tạo lại, request đầu có thể lỗi trong lúc HikariCP thay kết nối cũ: thử tối đa 6 lần.
+# Ngay sau khi postgres-0 được tạo lại, tên DNS của nó vừa có lại (bản ghi headless chỉ có khi Pod Ready, cộng cache DNS âm
+# 10 giây của JVM): request đầu có thể lỗi. Thử tối đa 6 lần.
 for i in 1 2 3 4 5 6; do
   k get --raw /api/v1/namespaces/shop/services/gateway:8080/proxy/api/products > "$tmp/products.json" 2>/dev/null \
     && grep -q '"id":3' "$tmp/products.json" && break
@@ -185,7 +186,10 @@ except Exception:
     bad.append("gateway /api/products không trả JSON")
 print("DATA=" + ("; ".join(bad) or "đạt"))
 
-# 5. Node: cka-w2 schedulable, chỉ cka-w2 mang role=db; MOVE_REASON có "didn't match PersistentVolume's node affinity".
+# 5. Node: cka-w2 schedulable, chỉ cka-w2 mang role=db; MOVE_REASON có "didn't match PersistentVolume's node affinity" và
+#    "were unschedulable"; bằng chứng bền của bước dời node: Pod postgres-0 hiện tại đã đứng Pending ≥ 10 giây trước khi được
+#    xếp (lastTransitionTime của PodScheduled=True cách creationTimestamp). Xoá Pod thường được xếp lại trong vòng 1 giây;
+#    kubelet khởi động lại container sau khi VM bật lại vẫn giữ nguyên Pod và condition này.
 bad = []
 if nodes_j is None: bad.append("không đọc được node")
 else:
@@ -194,7 +198,12 @@ else:
     db = sorted(n for n, o in nodes.items() if (o["metadata"].get("labels") or {}).get("role") == "db")
     if db != ["cka-w2"]: bad.append(f"nhãn role=db trên {', '.join(db) or '(không node nào)'} (cần chỉ cka-w2)")
 mr = ans.get("MOVE_REASON", "")
-if "persistentvolume's node affinity" not in mr.lower(): bad.append(f"MOVE_REASON='{mr[:80]}'")
+if "persistentvolume's node affinity" not in mr.lower() or "unschedulable" not in mr.lower(): bad.append(f"MOVE_REASON='{mr[:80]}'")
+if pod is not None:
+    sched = [c.get("lastTransitionTime") for c in (pod.get("status") or {}).get("conditions") or [] if c.get("type") == "PodScheduled" and c.get("status") == "True"]
+    made, at = epoch(pod["metadata"].get("creationTimestamp", "")), epoch(sched[0] if sched else "")
+    if made is None or at is None or at - made < 10:
+        bad.append("Pod postgres-0 hiện tại chưa từng đứng Pending (bước dời node phải là lần cuối xoá postgres-0)")
 print("MOVE=" + ("; ".join(bad) or "đạt"))
 print("STS_POD_DNS=" + ans.get("STS_POD_DNS", "").rstrip("."))
 PY

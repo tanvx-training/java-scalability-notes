@@ -3,7 +3,8 @@
 # thêm DB_URL vào ~/shop/{catalog,order}.yaml bằng PyYAML rồi apply; chạy lại Job seed
 # (3 POST /api/orders qua gateway); xoá postgres-0, chờ nó lên lại, đơn hàng còn; PV data-postgres-0 sang Retain; thử dời
 # postgres-0 sang cka-w1 (gắn role=db cho cka-w1, cordon cka-w2, xoá Pod) → Pending vì node affinity của PV, rồi
-# trả lại; ghi ~/drills/s24/answers.env. Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
+# trả lại (bước cuối cùng xoá postgres-0: verify đọc thời gian Pending của Pod hiện tại); ghi ~/drills/s24/answers.env.
+# Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
 vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
   echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
@@ -77,6 +78,8 @@ reason="$(vm "$cp" "set -e
   done
   [ -z \"\$(kubectl -n shop get pod postgres-0 -o jsonpath='{.spec.nodeName}')\" ]
   mkdir -p ~/drills/s24; printf '%s' \"\$m\" > ~/drills/s24/.move-reason
+  # Người học đọc describe rồi mới trả node: Pod đứng Pending ít nhất ~15 giây (verify đòi ≥ 10 giây, bằng chứng bền).
+  sleep 15
   printf '%s' \"\$m\"")"
 echo "s24: FailedScheduling: $reason"
 vm "$cp" "set -e

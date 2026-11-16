@@ -1,6 +1,7 @@
 # s25 — kiểm đầu vào: phần của cuối s24 mà sự cố st4-storage không phá. StorageClass mặc định local-path; còn PV Retain
 # từng giữ shop/data-postgres-0 (Bound, hay Released/Available khi sự cố đang diễn ra), thư mục trên cka-w2; Service postgres
-# headless; ~/shop/postgres.yaml có StatefulSet postgres (volumeClaimTemplates data); catalog có DB_URL trỏ postgres-0;
+# headless; ~/shop/postgres.yaml có StatefulSet postgres (volumeClaimTemplates data); catalog có DB_URL trỏ postgres-0 (giá trị
+# thẳng hay qua Secret db-cred);
 # cka-w2 schedulable, chỉ cka-w2 mang role=db; ~/drills/s24/answers.env. In KHOÁ=giá-trị. Chạy trên control plane. Chỉ đọc.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
@@ -8,17 +9,28 @@ k get sc -o json > "$tmp/sc.json" 2>/dev/null || echo ERR > "$tmp/sc.json"
 k get pv -o json > "$tmp/pv.json" 2>/dev/null || echo ERR > "$tmp/pv.json"
 k -n shop get svc postgres -o json > "$tmp/svc.json" 2>/dev/null || echo ERR > "$tmp/svc.json"
 k -n shop get deploy catalog -o json > "$tmp/catalog.json" 2>/dev/null || echo ERR > "$tmp/catalog.json"
+k -n shop get secret db-cred -o json > "$tmp/secret.json" 2>/dev/null || echo ERR > "$tmp/secret.json"
 k get node -o json > "$tmp/nodes.json" 2>/dev/null || echo ERR > "$tmp/nodes.json"
 python3 -c 'import sys, yaml, json; print(json.dumps([d for d in yaml.safe_load_all(open(sys.argv[1])) if d]))' "$HOME/shop/postgres.yaml" > "$tmp/file.json" 2>/dev/null || echo ERR > "$tmp/file.json"
 cp "$HOME/drills/s24/answers.env" "$tmp/answers.env" 2>/dev/null || : > "$tmp/answers.env"
 python3 - "$tmp" <<'PY'
-import json, sys
+import base64, json, sys
 t = sys.argv[1]
 def load(name):
     try:
         with open(f"{t}/{name}.json") as f: return json.load(f)
     except Exception: return None
-sc, pv_j, svc, cat, nodes_j, docs = (load(x) for x in ("sc", "pv", "svc", "catalog", "nodes", "file"))
+sc, pv_j, svc, cat, nodes_j, docs, sec = (load(x) for x in ("sc", "pv", "svc", "catalog", "nodes", "file", "secret"))
+def db_url(c):
+    # DB_URL thẳng (value) hay qua secretKeyRef vào db-cred, như verify của s24 chấp nhận.
+    for e in c.get("env") or []:
+        if e.get("name") != "DB_URL": continue
+        if "value" in e: return e["value"]
+        ref = (e.get("valueFrom") or {}).get("secretKeyRef") or {}
+        if ref.get("name") == "db-cred":
+            v = ((sec or {}).get("data") or {}).get(ref.get("key"))
+            return base64.b64decode(v).decode(errors="replace") if v else None
+    return None
 ans = {}
 for line in open(f"{t}/answers.env"):
     if "=" in line:
@@ -49,7 +61,7 @@ else:
 if cat is None: bad.append("không đọc được Deployment catalog")
 else:
     c = [x for x in cat["spec"]["template"]["spec"].get("containers") or [] if x.get("name") == "catalog"] or [{}]
-    url = next((e.get("value") for e in c[0].get("env") or [] if e.get("name") == "DB_URL"), None)
+    url = db_url(c[0])
     if url != "jdbc:postgresql://postgres-0.postgres.shop.svc.cluster.local:5432/shop": bad.append(f"catalog: DB_URL={url}")
 print("SPEC=" + ("; ".join(bad) or "đạt"))
 

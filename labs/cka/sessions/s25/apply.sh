@@ -19,7 +19,7 @@ vm cka-w2 "df -h /opt/local-path-provisioner | tail -n1; sudo du -sh /opt/local-
 
 echo "s25: PV $pv giữ chỗ cho shop/data-postgres-0 (bỏ uid, resourceVersion của claimRef), apply lại ~/shop/postgres.yaml"
 vm "$cp" "set -e
-  kubectl patch pv $pv --type=json -p '[{\"op\":\"remove\",\"path\":\"/spec/claimRef/uid\"},{\"op\":\"remove\",\"path\":\"/spec/claimRef/resourceVersion\"}]' >/dev/null
+  kubectl patch pv $pv --type=merge -p '{\"spec\":{\"claimRef\":{\"uid\":null,\"resourceVersion\":null}}}' >/dev/null
   kubectl apply -f ~/shop/postgres.yaml >/dev/null
   kubectl -n shop rollout status sts/postgres --timeout=420s >/dev/null
   kubectl -n shop wait pod/postgres-0 --for=condition=Ready --timeout=300s >/dev/null

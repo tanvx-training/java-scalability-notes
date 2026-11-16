@@ -9,17 +9,18 @@ k get pv -o json > "$tmp/pv.json" 2>/dev/null || echo ERR > "$tmp/pv.json"
 k get sc -o json > "$tmp/sc.json" 2>/dev/null || echo ERR > "$tmp/sc.json"
 k -n shop get sts postgres -o json > "$tmp/sts.json" 2>"$tmp/sts.err" || echo ERR > "$tmp/sts.json"
 k -n shop get pod postgres-0 -o json > "$tmp/pod.json" 2>"$tmp/pod.err" || echo ERR > "$tmp/pod.json"
+k -n shop get secret db-cred -o json > "$tmp/secret.json" 2>/dev/null || echo ERR > "$tmp/secret.json"
 k -n shop get deploy catalog order reports --ignore-not-found -o json > "$tmp/deploy.json" 2>/dev/null || echo ERR > "$tmp/deploy.json"
 for f in order reports; do
   k apply --dry-run=server -f "$HOME/shop/$f.yaml" -o json > "$tmp/file-$f.json" 2>"$tmp/file-$f.err" || : > "$tmp/file-$f.json"
 done
 # Số sản phẩm, số đơn hàng, thời điểm (epoch) của đơn hàng đầu tiên: dữ liệu cũ phải có trước PVC data-postgres-0 hiện tại.
 k -n shop exec postgres-0 -c postgres -- psql -U shop -d shop -tAc \
-  "select (select count(*) from products), (select count(*) from orders), coalesce((select floor(extract(epoch from min(created_at)))::bigint from orders), 0)" \
+  "select (select count(*) from products), (select count(*) from orders), coalesce((select floor(extract(epoch from min(created_at at time zone current_setting('TimeZone'))))::bigint from orders), 0)" \
   > "$tmp/psql.txt" 2>"$tmp/psql.err" || echo ERR > "$tmp/psql.txt"
 cp "$HOME/drills/s25/answers.env" "$tmp/answers.env" 2>/dev/null || : > "$tmp/answers.env"
 python3 - "$tmp" <<'PY'
-import calendar, json, re, sys, time
+import base64, calendar, json, re, sys, time
 t = sys.argv[1]
 WANT_URL = "jdbc:postgresql://postgres-0.postgres.shop.svc.cluster.local:5432/shop"
 def load(name):
@@ -42,7 +43,17 @@ ans = {}
 for line in open(f"{t}/answers.env"):
     if "=" in line:
         key, val = line.split("=", 1); ans[key.strip()] = val.strip().strip('"').strip("'")
-pvc_j, pv_j, sc_j, sts, pod, dep_j = (load(x) for x in ("pvc", "pv", "sc", "sts", "pod", "deploy"))
+pvc_j, pv_j, sc_j, sts, pod, dep_j, sec = (load(x) for x in ("pvc", "pv", "sc", "sts", "pod", "deploy", "secret"))
+def db_url(c):
+    # DB_URL thẳng (value) hay qua secretKeyRef vào db-cred, như verify của s24 chấp nhận.
+    for e in c.get("env") or []:
+        if e.get("name") != "DB_URL": continue
+        if "value" in e: return e["value"]
+        ref = (e.get("valueFrom") or {}).get("secretKeyRef") or {}
+        if ref.get("name") == "db-cred":
+            v = ((sec or {}).get("data") or {}).get(ref.get("key"))
+            return base64.b64decode(v).decode(errors="replace") if v else None
+    return None
 pvcs = {c["metadata"]["name"]: c for c in (pvc_j or {}).get("items", [])}
 pvs = {p["metadata"]["name"]: p for p in (pv_j or {}).get("items", [])}
 deps = {d["metadata"]["name"]: d for d in (dep_j or {}).get("items", [])}
@@ -119,7 +130,7 @@ else:
         d = deps.get(name)
         if not d: bad.append(f"không có Deployment {name}"); continue
         cs = [x for x in d["spec"]["template"]["spec"].get("containers") or [] if x.get("name") == name] or [{}]
-        url = next((e.get("value") for e in cs[0].get("env") or [] if e.get("name") == "DB_URL"), None)
+        url = db_url(cs[0])
         if url != WANT_URL: bad.append(f"{name}: DB_URL={url}")
         p = avail(name)
         if p: bad.append(p)

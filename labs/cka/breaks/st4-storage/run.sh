@@ -5,8 +5,9 @@
 vm "$LAB_CP" "set -e
 for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 2; done
 # Điều kiện của sự cố: còn PV Retain từng giữ shop/data-postgres-0 (cuối s24). Không có thì không gây gì cả.
-pv=\$(kubectl get pv -o jsonpath='{range .items[?(@.spec.claimRef.name==\"data-postgres-0\")]}{.metadata.name} {.spec.claimRef.namespace} {.spec.persistentVolumeReclaimPolicy}{\"\\n\"}{end}' \\
-  | awk '\$2==\"shop\" && \$3==\"Retain\" {print \$1}' | head -n1)
+# Cũng nhận PV Retain đã bị gỡ hẳn claimRef (người học đang làm theo cách thứ hai), nhận ra qua đường dẫn …_shop_data-postgres-0.
+pv=\$(kubectl get pv -o jsonpath='{range .items[*]}{.metadata.name} {.spec.claimRef.namespace}/{.spec.claimRef.name} {.spec.persistentVolumeReclaimPolicy} {.spec.hostPath.path}{\"\\n\"}{end}' \\
+  | awk '\$3==\"Retain\" && (\$2==\"shop/data-postgres-0\" || (\$2==\"/\" && \$4 ~ /_shop_data-postgres-0\$/)) {print \$1}' | head -n1)
 [ -n \"\$pv\" ] || { echo 'lab: không thấy PV Retain của shop/data-postgres-0 (trạng thái cuối s24); thử: ./labs/lab restore cka s24' >&2; exit 1; }
 python3 - <<'PY'
 import os, sys, yaml
@@ -88,8 +89,14 @@ kubectl apply -f ~/shop/reports.yaml >/dev/null
 kubectl -n shop delete sts postgres --ignore-not-found --wait=true >/dev/null
 kubectl -n shop delete pod postgres-0 --ignore-not-found --wait=true --timeout=120s >/dev/null
 kubectl -n shop delete pvc data-postgres-0 --ignore-not-found --wait=true --timeout=120s >/dev/null
+# PV đã được người học gỡ claimRef (hẳn, hay chỉ uid) ở lần trước: đặt lại claimRef trỏ một PVC đã mất (uid giả) để PV về
+# đúng trạng thái Released của sự cố.
+uid=\$(kubectl get pv \$pv -o jsonpath='{.spec.claimRef.uid}')
+if [ -z \"\$uid\" ]; then
+  kubectl patch pv \$pv --type=merge -p '{\"spec\":{\"claimRef\":{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"shop\",\"name\":\"data-postgres-0\",\"uid\":\"00000000-0000-4000-8000-000000000000\"}}}' >/dev/null
+fi
 for i in \$(seq 1 30); do
   ph=\$(kubectl get pv \$pv -o jsonpath='{.status.phase}')
-  [ \"\$ph\" = Released ] || [ \"\$ph\" = Available ] && break; sleep 2
+  [ \"\$ph\" = Released ] && break; sleep 2
 done
 " >/dev/null
