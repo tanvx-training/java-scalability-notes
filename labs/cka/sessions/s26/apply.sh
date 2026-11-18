@@ -42,9 +42,11 @@ vm "$node" "command -v tcpdump >/dev/null || { sudo apt-get -o DPkg::Lock::Timeo
   sudo timeout 40 tcpdump -ni $tun -c 6 -l 'host $ip and tcp port 8080' > /tmp/lab-s26-tcpdump.txt 2>/dev/null &"
 vm "$cp" "set -e
   kubectl -n shop delete pod s26-tmp --ignore-not-found --now >/dev/null 2>&1
-  sleep 2
-  kubectl -n shop run s26-tmp --image=busybox:1.37 --restart=Never --rm -i --quiet \
-    --overrides='{\"spec\":{\"nodeName\":\"$src\"}}' --command -- wget -q -T 5 -O- http://$ip:8080/products | head -c 80; echo"
+  kubectl -n shop run s26-tmp --image=busybox:1.37 --restart=Never \
+    --overrides='{\"spec\":{\"nodeName\":\"$src\"}}' --command -- sleep 600 >/dev/null
+  kubectl -n shop wait pod/s26-tmp --for=condition=Ready --timeout=120s >/dev/null
+  kubectl -n shop exec s26-tmp -- wget -q -T 5 -O- http://$ip:8080/products | head -c 80; echo
+  kubectl -n shop delete pod s26-tmp --now >/dev/null"
 vm "$node" "for i in \$(seq 1 20); do [ \"\$(wc -l < /tmp/lab-s26-tcpdump.txt)\" -ge 1 ] && break; sleep 1; done
   sleep 2; cat /tmp/lab-s26-tcpdump.txt; sudo rm -f /tmp/lab-s26-tcpdump.txt"
 

@@ -246,11 +246,11 @@ export const skills = [
   { id: "k-svc-clusterip-yaml", kind: "yaml", area: "kubernetes", label: "Service ClusterIP", ref: yaml("sn-svc-clusterip") },
   { id: "k-svc-nodeport-yaml", kind: "yaml", area: "kubernetes", label: "Service NodePort: port, targetPort, nodePort", ref: yaml("sn-svc-nodeport") },
   { id: "k-get-endpoints", kind: "command", area: "kubernetes", label: "k get endpoints catalog", ref: cmd("c058") },
-  { id: "k-wget-svc", kind: "command", area: "kubernetes", label: "k run tmp --image=busybox --rm -it --restart=Never -- wget -qO- http://catalog:80", ref: cmd("c059") },
+  { id: "k-wget-svc", kind: "command", area: "kubernetes", label: "k run tmp --image=busybox --rm -it --restart=Never -- wget -qO- http://catalog:8080/products", ref: cmd("c059") },
   { id: "k-svc-loadbalancer", kind: "concept", area: "kubernetes", label: "Service LoadBalancer: EXTERNAL-IP <pending> khi không có cloud hoặc MetalLB" },
   { id: "net-iptables-kube-proxy", kind: "command", area: "network", label: "iptables -t nat -L KUBE-SERVICES -n | grep catalog" },
-  { id: "k-kube-proxy-mode", kind: "command", area: "kubernetes", label: "k -n kube-system get cm kube-proxy -o yaml | grep mode" },
-  { id: "k-create-svc-dry", kind: "command", area: "kubernetes", label: "k create svc clusterip catalog --tcp=80:8080 $do > svc.yaml", ref: cmd("c057") },
+  { id: "k-kube-proxy-mode", kind: "command", area: "kubernetes", label: "k -n kube-system get cm kube-proxy -o yaml | grep mode; curl -s localhost:10249/proxyMode trên node" },
+  { id: "k-create-svc-dry", kind: "command", area: "kubernetes", label: "k create svc clusterip catalog --tcp=8080:8080 $do > svc.yaml", ref: cmd("c057") },
 
   // ── s28 CoreDNS ──
   { id: "k-nslookup-svc", kind: "command", area: "kubernetes", label: "k run tmp --image=busybox --rm -it --restart=Never -- nslookup catalog.shop", ref: cmd("c060") },

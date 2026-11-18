@@ -61,7 +61,7 @@ Pod gateway 10.244.95.180 (cka-w1)                            Pod catalog 10.244
 
 Gói bên trong giữ nguyên \`10.244.95.180 → 10.244.62.157\`: không NAT, đúng luật thứ hai. Gói bên ngoài là IP thường giữa hai node, nên mạng Multipass (vốn không biết gì về \`10.244.0.0/16\`) vẫn chuyển được.
 
-**Calico trên lab: IPIP, mỗi node một khối /26.** IPPool \`default-ipv4-ippool\` (\`10.244.0.0/16\`, \`ipipMode: Always\`, \`vxlanMode: Never\`, \`blockSize: 26\`) là chế độ mặc định của manifest \`calico.yaml\` v3.33.0. Calico IPAM cắt pool thành khối 64 địa chỉ và gán khối cho node (\`k get blockaffinities.crd.projectcalico.org\`): cka-w2 giữ \`10.244.62.128/26\`, cka-w1 \`10.244.95.128/26\`, cka-cp \`10.244.160.0/26\`. Mỗi node biết khối của node khác nhờ BIRD (BGP, \`calico_backend: bird\` trong ConfigMap \`calico-config\`) chạy trong Pod \`calico-node\`; Felix (cũng trong \`calico-node\`) viết route \`/32\` cho Pod cục bộ và route \`blackhole\` cho phần còn trống của khối mình. Interface tunnel tuỳ chế độ: IPIP là \`tunl0\` (MTU 1480 = 1500 − 20 byte header IP ngoài), VXLAN là \`vxlan.calico\` (MTU 1450), không bọc (\`Never\`/\`Never\`, chỉ dùng được khi mạng giữa các node chịu định tuyến dải Pod) thì không có tunnel. \`tcpdump\` trên \`tunl0\` thấy gói **bên trong** (IP Pod), trên \`enp0s1\` thấy gói **bên ngoài** \`IP 192.168.252.36 > 192.168.252.37: IP 10.244.95.183.36458 > 10.244.62.139.5432\`.
+**Calico trên lab: IPIP, mỗi node một khối /26.** IPPool \`default-ipv4-ippool\` (\`10.244.0.0/16\`, \`ipipMode: Always\`, \`vxlanMode: Never\`, \`blockSize: 26\`) là chế độ mặc định của manifest \`calico.yaml\` v3.33.0. Calico IPAM cắt pool thành khối 64 địa chỉ và gán khối cho node (\`k get blockaffinities.crd.projectcalico.org\`): cka-w2 giữ \`10.244.62.128/26\`, cka-w1 \`10.244.95.128/26\`, cka-cp \`10.244.160.0/26\`. Felix, agent chạy trong Pod \`calico-node\` của mỗi node, đọc khối của mọi node từ API và tự viết route: \`/32\` cho từng Pod cục bộ, \`blackhole\` cho phần còn trống của khối mình, \`/26\` qua \`tunl0\` tới khối của node khác (\`k get felixconfiguration default -o yaml\`: \`programClusterRoutes: EnabledIPIPOnly\`; mọi route đó mang \`proto 80\`). BIRD (BGP, \`calico_backend: bird\` trong ConfigMap \`calico-config\`) vẫn chạy cạnh Felix, dùng khi cluster trao đổi route với router thật. Interface tunnel tuỳ chế độ: IPIP là \`tunl0\` (MTU 1480 = 1500 − 20 byte header IP ngoài), VXLAN là \`vxlan.calico\` (MTU 1450), không bọc (\`Never\`/\`Never\`, chỉ dùng được khi mạng giữa các node chịu định tuyến dải Pod) thì không có tunnel. \`tcpdump\` trên \`tunl0\` thấy gói **bên trong** (IP Pod), trên \`enp0s1\` thấy gói **bên ngoài** \`IP 192.168.252.36 > 192.168.252.37: IP 10.244.95.183.36458 > 10.244.62.139.5432\`.
 
 **Ai gọi CNI, khi nào.** kubelet không nói chuyện với CNI. kubelet gọi containerd qua CRI (\`RunPodSandbox\`); containerd tạo network namespace rồi đọc tệp cấu hình **đầu tiên theo thứ tự tên** trong \`/etc/cni/net.d/\` (ở lab: \`10-calico.conflist\`, chỉ root đọc được) và chạy lần lượt các plugin trong danh sách \`plugins\` của nó: binary cùng tên ở \`/opt/cni/bin/\` (\`calico\`, rồi \`portmap\`), truyền tham số qua biến môi trường (\`CNI_COMMAND=ADD\`, \`CNI_NETNS\`, \`CNI_IFNAME=eth0\`) và cấu hình JSON qua stdin. Plugin \`calico\` gọi \`calico-ipam\` lấy một IP trong khối của node, tạo cặp veth, đặt route, ghi WorkloadEndpoint. Thiếu tệp trong \`/etc/cni/net.d\` (Calico chưa cài, s07) là node \`NotReady\` với \`NetworkPluginNotReady\`, Pod đứng \`ContainerCreating\`. \`/opt/cni/bin\` còn nhiều plugin khác (\`bridge\`, \`host-local\`, \`flannel\`…) từ gói \`kubernetes-cni\`: có binary không có nghĩa là đang dùng, chỉ tệp trong \`net.d\` mới quyết định.
 
@@ -137,7 +137,7 @@ echo HOST_VETH=cali599a3c2b8b4 >> ~/drills/s26/answers.env     # trên cka-cp
 echo TUNNEL_IFACE=tunl0 >> ~/drills/s26/answers.env
 \`\`\`
 
-Pod của cka-w1 (\`10.244.95.128/26\`) đi qua \`tunl0\` tới \`192.168.252.36\`; \`proto 80\` là route do BIRD học qua BGP.
+Pod của cka-w1 (\`10.244.95.128/26\`) đi qua \`tunl0\` tới \`192.168.252.36\`; \`proto 80\` đánh dấu route do Felix của Calico viết.
 
 **3. nsenter vào Pod catalog**
 
@@ -159,7 +159,7 @@ ip -o link | grep '^9:'
 # 9: cali599a3c2b8b4@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1480 … link/ether ee:ee:ee:ee:ee:ee … link-netns cni-76c91d38-5724-6ba9-9be1-45d9508f986a
 \`\`\`
 
-\`eth0@if9\` ↔ ifindex 9 trên node là \`cali599a3c2b8b4\`, và nó trỏ ngược \`@if3\` (ifindex của \`eth0\` trong Pod). IP \`/32\`: Pod không có "mạng con" nào, mọi thứ đi qua \`169.254.1.1\`. \`k exec … -- ip addr\` báo \`executable file not found\`: image Temurin JRE không có \`iproute2\`.
+\`eth0@if9\` ↔ ifindex 9 trên node là \`cali599a3c2b8b4\`, và nó trỏ ngược \`@if3\` (ifindex của \`eth0\` trong Pod). IP \`/32\`: Pod không có "mạng con" nào, mọi thứ đi qua \`169.254.1.1\`. \`k exec deploy/catalog -- ip addr\` báo \`exec: "ip": executable file not found in $PATH\`: image Temurin JRE không có \`iproute2\`.
 
 **4. tcpdump trên tunnel**
 
