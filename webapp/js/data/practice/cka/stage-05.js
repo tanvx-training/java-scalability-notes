@@ -968,7 +968,7 @@ Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.sho
     domain: "networking",
     competencies: ["nw-ingress"],
     requires: ["s28"],
-    status: "skeleton",
+    status: "published",
     pieces: ["ingress"],
     goals: [
       "Cài ingress-nginx kiểu NodePort và đưa shop ra ngoài dưới tên shop.local với hai path.",
@@ -985,8 +985,300 @@ Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.sho
       { skill: "k-ingress-pathtype", level: "Giải thích được" },
     ],
     uses: ["k-svc-nodeport-yaml", "k-get-endpoints", "k-exam-vars", "net-etc-hosts"],
-    stateIn: "Đầu ra s28.",
-    stateOut: "ingress-nginx chạy; Ingress shop phục vụ http và https cho shop.local/api và shop.local/orders từ máy Mac.",
+    foundation: null,
+    mindset: `**Ingress là luật, controller là proxy.** Object \`Ingress\` (API \`networking.k8s.io/v1\`) chỉ ghi luật L7: host nào, path nào, tới Service nào, dùng Secret TLS nào. Không có gì trong Kubernetes thực thi các luật đó cho tới khi bạn cài một **Ingress controller**: một Deployment chạy proxy (ở đây là nginx) watch Ingress, Service, EndpointSlice, Secret và tự viết lại \`nginx.conf\`. Cluster kubeadm không có sẵn controller nào, nên bước đầu của buổi là cài nó. ingress-nginx gửi request **thẳng tới IP Pod** đọc từ EndpointSlice (không qua ClusterIP và kube-proxy), nên Service chỉ là nơi để nó tìm Pod.
+
+**ingress-nginx đã dừng bảo trì.** SIG Network thông báo (11/2025) dự án \`kubernetes/ingress-nginx\` chỉ được sửa lỗi "best-effort" tới tháng 3/2026. Các bản cuối là \`controller-v1.15.1\`, \`v1.14.5\`, \`v1.13.9\` (cùng ngày 19/3/2026), repo chuyển sang chỉ đọc (archived) ngày 23/3/2026. Image vẫn kéo được từ \`registry.k8s.io\` nhưng sẽ không còn bản vá bảo mật. Lab dùng nó vì ba lý do: đề CKA vẫn hỏi Ingress (API Ingress không bị bỏ, chỉ controller này dừng), cài bằng một manifest, và rất nhiều cluster đang chạy vẫn dùng nó. Hệ thống mới nên chọn Gateway API (buổi sau, s30) hay một controller Ingress khác còn bảo trì; đừng nhầm với "NGINX Ingress Controller" của F5 (\`nginx/kubernetes-ingress\`), đó là dự án khác.
+
+**IngressClass nối Ingress với controller.** Manifest tạo IngressClass \`nginx\` với \`spec.controller: k8s.io/ingress-nginx\`; controller chỉ nhận Ingress có \`spec.ingressClassName: nginx\` (hay class mặc định, nếu một IngressClass mang annotation \`ingressclass.kubernetes.io/is-default-class: "true"\`; manifest này không đặt). Ingress thiếu class thì không ai nhận: object vẫn tạo được, \`k get ingress\` có cột ADDRESS trống mãi, không Event nào, request trả 404 của controller. Đây là tình huống hỏng của buổi.
+
+**pathType.** \`Prefix\` so theo **phần tử path** tách bởi \`/\`: \`/api\` khớp \`/api\`, \`/api/\`, \`/api/products\`, nhưng không khớp \`/apis\`. \`Exact\` chỉ khớp đúng chuỗi, phân biệt hoa thường: \`/orders\` không khớp \`/orders/1\`. \`ImplementationSpecific\` để controller tự hiểu (ingress-nginx coi như Prefix, hay regex khi bật \`use-regex\`). Nhiều path cùng khớp thì path dài nhất thắng; cùng độ dài thì \`Exact\` thắng \`Prefix\`. Không path nào khớp thì controller trả 404 của chính nó (default backend), khác 404 dạng JSON của Spring: nhìn body là biết request có tới ứng dụng không.
+
+**TLS ở controller.** Secret kiểu \`kubernetes.io/tls\` (khoá \`tls.crt\`, \`tls.key\`) phải nằm **cùng namespace với Ingress**. Khối \`tls\` của Ingress gắn host với Secret; controller chọn chứng chỉ theo SNI của client. Host không có chứng chỉ khớp (hay Secret hỏng) thì controller trả chứng chỉ mặc định "Kubernetes Ingress Controller Fake Certificate": \`curl -k\` vẫn ra 200 và che mất lỗi, còn \`curl --cacert tls.crt\` chỉ qua khi đúng chứng chỉ của bạn được phục vụ. Chứng chỉ phải có **SAN** \`DNS:shop.local\`: client hiện đại (curl, Java) bỏ qua CN khi so tên. Ingress có \`tls\` thì ingress-nginx mặc định chuyển hướng http sang https (308); muốn http vẫn phục vụ thì annotation \`nginx.ingress.kubernetes.io/ssl-redirect: "false"\`.
+
+**Không có LoadBalancer thì NodePort.** Manifest bản \`baremetal\` để Service \`ingress-nginx-controller\` kiểu NodePort với cổng ngẫu nhiên; lab ghim \`30080\` (http) và \`30443\` (https) để gọi được từ máy Mac (\`30180\` là \`gateway-nodeport\` của s27, Gateway của s30 dùng \`30280\`). Controller đặt trên cka-cp (nodeSelector \`node-role.kubernetes.io/control-plane: ""\` + toleration của taint \`NoSchedule\`) để dành RAM worker cho JVM; NodePort vẫn mở trên mọi node, kube-proxy dẫn về cka-cp. Không có \`--publish-service\`, controller ghi vào ADDRESS của Ingress IP của node đang chạy nó.
+
+**X-Forwarded-* và Spring Boot.** Controller kết thúc TLS rồi gọi Pod bằng http thường, kèm \`X-Forwarded-For\` (IP client), \`X-Forwarded-Proto: https\`, \`X-Forwarded-Host\`, \`X-Forwarded-Port\`, \`X-Real-IP\`. Ứng dụng không đọc các header này thì thấy request là \`http://\` từ IP của Pod controller: \`redirect:\` của Spring MVC, \`redirect_uri\` của OAuth2 login, link tuyệt đối trong HATEOAS đều thành \`http://…\`. Spring Boot xử lý bằng \`server.forward-headers-strategy\`: \`native\` (Tomcat \`RemoteIpValve\` đọc \`X-Forwarded-For\`/\`-Proto\`), \`framework\` (\`ForwardedHeaderFilter\` của Spring, hiểu cả \`Forwarded\` RFC 7239 và \`X-Forwarded-Prefix\`), \`none\`. Mặc định là \`none\`, **trừ** khi Boot nhận ra nó chạy trên một nền cloud được hỗ trợ: trong Pod, biến \`KUBERNETES_SERVICE_HOST\`/\`_PORT\` làm Boot chọn \`native\`. Tomcat chỉ tin header từ proxy nằm trong \`server.tomcat.remoteip.internal-proxies\` (mặc định gồm 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16…), IP Pod controller \`10.244.x.y\` nằm trong đó. Chạy cùng jar ngoài Kubernetes sau một nginx thì phải tự đặt \`server.forward-headers-strategy=native\`.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Ingress + IngressClass; cài ingress controller", href: "#/roadmap/cka/cka-w6-4" },
+      { label: "CKA Study Guide, chương 18 — Ingress", href: "#/docs/ckabook-18" },
+      { label: "kubernetes.io: Ingress (pathType, IngressClass, TLS)", href: "https://kubernetes.io/docs/concepts/services-networking/ingress/" },
+      { label: "kubernetes.io: Ingress Controllers", href: "https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/" },
+      { label: "Kubernetes blog: Ingress NGINX Retirement", href: "https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/" },
+      { label: "ingress-nginx: Bare-metal considerations (NodePort)", href: "https://kubernetes.github.io/ingress-nginx/deploy/baremetal/" },
+      { label: "Spring Boot: Running Behind a Front-end Proxy Server (server.forward-headers-strategy)", href: "https://docs.spring.io/spring-boot/how-to/webserver.html#howto.webserver.use-behind-a-proxy-server" },
+    ],
+    stateIn: "Đầu ra s28: Service gateway, catalog, order cổng http 8080, gateway-nodeport 30180, postgres-rw và khối hosts db.shop.internal trong CoreDNS; chưa có Ingress controller, chưa có IngressClass. `./labs/lab begin cka s29` kiểm đầu vào bằng verify của s28, tạo ~/drills/s29 và xoá answers.env cũ.",
+    stateOut: "ingress-nginx controller-v1.15.1 ở namespace ingress-nginx (controller trên cka-cp, Service NodePort http 30080, https 30443), IngressClass nginx; Secret tls shop-tls (tự ký, SAN shop.local); Ingress shop trong ~/shop/ingress.yaml (shop.local: /api Prefix → gateway:8080, /orders Exact → order:8080, tls, ssl-redirect tắt) gọi được http và https từ máy Mac; shop.local trong /etc/hosts của cka-cp; ~/drills/s29/answers.env.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s29`. Đọc trước: `k get ingressclass` (rỗng?), `k get svc`, `k get endpointslice -l kubernetes.io/service-name=gateway` (địa chỉ nào controller sẽ gọi?). Trên cka-cp đo `free -m`, rồi tải manifest đã ghim: `curl -fsSLo ~/drills/s29/ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/baremetal/deploy.yaml`. `grep -nE 'kind:|image:|type: NodePort' ~/drills/s29/ingress-nginx.yaml`: có những object nào, image nào?",
+      },
+      {
+        id: "t2",
+        text: "Sửa `~/drills/s29/ingress-nginx.yaml` trước khi apply: Service `ingress-nginx-controller` thêm `nodePort: 30080` cho cổng `http`, `nodePort: 30443` cho cổng `https`; Deployment `ingress-nginx-controller` thêm `node-role.kubernetes.io/control-plane: \"\"` vào `nodeSelector` và một toleration cho taint `node-role.kubernetes.io/control-plane:NoSchedule`. `k apply -f`, `k -n ingress-nginx rollout status deploy/ingress-nginx-controller`, `k -n ingress-nginx get pod,svc -o wide` (Pod ở node nào, cột PORT(S)?), `k get ingressclass nginx -o yaml`. Đo lại `free -m` trên cka-cp.",
+      },
+      { id: "t3", text: "Chứng chỉ tự ký trong `~/drills/s29`: `openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout tls.key -out tls.crt -subj '/CN=shop.local' -addext 'subjectAltName=DNS:shop.local'`. Kiểm `openssl x509 -in tls.crt -noout -subject -ext subjectAltName`. `k create secret tls shop-tls --cert=tls.crt --key=tls.key`, `k get secret shop-tls` (TYPE?)." },
+      {
+        id: "t4",
+        text: "Ingress `shop`: sinh khung `k create ingress shop --class=nginx --rule='shop.local/api*=gateway:8080,tls=shop-tls' --rule='shop.local/orders=order:8080' --annotation=nginx.ingress.kubernetes.io/ssl-redirect=false $do > ~/shop/ingress.yaml`. Đọc tệp: `*` sinh pathType gì, rule không có `*` sinh gì? Bỏ khối `status`, `k apply -f ~/shop/ingress.yaml`, `k get ingress shop` (ADDRESS là IP nào?), `k describe ingress shop`.",
+      },
+      {
+        id: "t5",
+        text: "Tên shop.local: trên cka-cp thêm `<IP cka-cp> shop.local` vào `/etc/hosts` (`echo … | sudo tee -a /etc/hosts`), `curl http://shop.local:30080/api/products`. Không sửa hosts mà vẫn gọi được: `curl -H 'Host: shop.local' http://<IP cka-w1>:30080/api/products`. Trên **Mac**: thêm `<IP một node> shop.local` vào `/etc/hosts` của Mac (`sudo vim /etc/hosts`, việc của bạn; verify không dựa vào nó), chép chứng chỉ về `multipass transfer cka-cp:/home/ubuntu/drills/s29/tls.crt /tmp/shop.crt`, rồi `curl --cacert /tmp/shop.crt https://shop.local:30443/api/products` và `curl -k -v https://shop.local:30443/api/products 2>&1 | grep -E 'subject|issuer'`. Không có `/etc/hosts` trên Mac: `curl --resolve shop.local:30443:<IP> --cacert /tmp/shop.crt https://shop.local:30443/api/products`.",
+      },
+      {
+        id: "t6",
+        text: "pathType: gọi `/api/products`, `/api`, `/orders`, `/orders/1` qua `http://shop.local:30080` với `curl -s -o /dev/null -w '%{http_code}\\n'`, rồi `curl -s http://shop.local:30080/orders/1 | head -3` (404 này của ai?). Ghi `PATH_EXACT_RESULT=<mã HTTP của /orders/1>` vào `~/drills/s29/answers.env`. Thử `k annotate ingress shop nginx.ingress.kubernetes.io/ssl-redirect-` rồi `curl -I http://shop.local:30080/api/products`: mã gì, `Location` trỏ đâu? Apply lại `~/shop/ingress.yaml`.",
+      },
+      {
+        id: "t7",
+        text: "Tình huống hỏng: `~/drills/s29/noclass.yaml`, Ingress `shop-noclass` (host `noclass.shop.local`, `/api` Prefix → gateway:8080) **không** có `ingressClassName`. Apply, chờ nửa phút: `k get ingress` (ADDRESS?), `k describe ingress shop-noclass` (Events?), `curl -s -o /dev/null -w '%{http_code}\\n' -H 'Host: noclass.shop.local' http://shop.local:30080/api/products`. Vì sao? Xoá `shop-noclass`. Trên Mac: `./labs/lab verify cka s29` phải đạt 8/8.",
+      },
+    ],
+    hints: [
+      "Manifest của ingress-nginx có hai Job `ingress-nginx-admission-create`/`-patch` (image `kube-webhook-certgen`) tạo chứng chỉ cho ValidatingWebhook. Ngay sau `rollout status`, `k apply` Ingress có thể lỗi `failed calling webhook \"validate.nginx.ingress.kubernetes.io\"`: controller chưa nghe ở cổng 8443. Chờ vài giây rồi apply lại.",
+      "Pod controller đứng `ImagePullBackOff` với `TLS handshake timeout` từ `cdn.registry.k8s.io`: đường mạng của máy lab có MTU nhỏ. `begin cka s06`/`s28` đã bật `net.ipv4.tcp_mtu_probing=1`; lần kéo đầu đôi khi vẫn hỏng một lần rồi kubelet tự kéo lại (đo: lần hai xong trong 26 giây). Kiểm `cat /proc/sys/net/ipv4/tcp_mtu_probing` trên node, rồi chờ.",
+      "`nodePort` nằm trong mỗi phần tử của `spec.ports` của Service (cạnh `port`, `targetPort`), trong dải 30000–32767. Muốn đặt sau khi đã apply: `k -n ingress-nginx edit svc ingress-nginx-controller` cũng được.",
+      "Toleration cho control plane: `tolerations: [{key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}]` dưới `spec.template.spec`. Chỉ toleration thì Pod **được phép** lên cka-cp, không **bắt buộc**: cần thêm `nodeSelector`.",
+      "`k create ingress`: `--rule='host/path*=svc:port'` (`*` → `Prefix`, không `*` → `Exact`), `,tls=secret` ở một rule sinh khối `tls` cho host đó. Thêm `$do` để xem trước, đừng tạo thẳng rồi sửa.",
+      "`curl -k` ra 200 không chứng minh gì về Secret: controller có chứng chỉ giả mặc định. Đọc `issuer`/`subject` bằng `curl -kv`, hay dùng `--cacert`.",
+      "Ingress không có ADDRESS: `k get ingressclass` (có class nào, tên gì), `k get ingress -o yaml | grep ingressClassName`, rồi log controller `k -n ingress-nginx logs deploy/ingress-nginx-controller --tail=20`.",
+    ],
+    solution: `Output là của máy soạn bài; IP và tên Pod sẽ khác. Context đã ở namespace shop. IP: cka-cp \`192.168.252.35\`, cka-w1 \`192.168.252.36\`.
+
+**1–2. Cài ingress-nginx** (trên cka-cp)
+
+\`\`\`bash
+free -m | awk '/Mem:/{print $7}'          # 1964 (MB available trước khi cài)
+mkdir -p ~/drills/s29 && cd ~/drills/s29
+curl -fsSLo ingress-nginx.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.15.1/deploy/static/provider/baremetal/deploy.yaml
+grep -nE 'image:|type: NodePort' ingress-nginx.yaml
+vim ingress-nginx.yaml                      # nodePort 30080/30443, nodeSelector + toleration (bên dưới)
+k apply -f ingress-nginx.yaml
+k -n ingress-nginx rollout status deploy/ingress-nginx-controller
+k -n ingress-nginx get pod,svc -o wide
+# pod/ingress-nginx-controller-684b947cc6-95bks   1/1   Running   0   114s   10.244.160.39   cka-cp
+# service/ingress-nginx-controller   NodePort   10.96.71.134   <none>   80:30080/TCP,443:30443/TCP
+k get ingressclass
+# NAME    CONTROLLER             PARAMETERS   AGE
+# nginx   k8s.io/ingress-nginx   <none>       114s
+k -n ingress-nginx top pod                  # 20m   37Mi
+free -m | awk '/Mem:/{print $7}'          # 1910
+\`\`\`
+
+Phần sửa trong manifest (Service \`ingress-nginx-controller\` và Deployment cùng tên):
+
+\`\`\`yaml
+  ports:
+  - appProtocol: http
+    name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+    nodePort: 30080
+  - appProtocol: https
+    name: https
+    port: 443
+    protocol: TCP
+    targetPort: https
+    nodePort: 30443
+# …
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ''
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+\`\`\`
+
+**3. Chứng chỉ và Secret TLS**
+
+\`\`\`bash
+cd ~/drills/s29
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout tls.key -out tls.crt -subj '/CN=shop.local' -addext 'subjectAltName=DNS:shop.local'
+openssl x509 -in tls.crt -noout -subject -ext subjectAltName
+# subject=CN = shop.local
+# X509v3 Subject Alternative Name:
+#     DNS:shop.local
+k create secret tls shop-tls --cert=tls.crt --key=tls.key
+k get secret shop-tls
+# NAME       TYPE                DATA   AGE
+# shop-tls   kubernetes.io/tls   2      0s
+\`\`\`
+
+**4. Ingress shop** (\`~/shop/ingress.yaml\`)
+
+\`\`\`bash
+k create ingress shop --class=nginx --rule='shop.local/api*=gateway:8080,tls=shop-tls' --rule='shop.local/orders=order:8080' \\
+  --annotation=nginx.ingress.kubernetes.io/ssl-redirect=false $do > ~/shop/ingress.yaml
+\`\`\`
+
+Sau khi bỏ \`status\` và xếp lại cho dễ đọc:
+
+\`\`\`yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop
+  namespace: shop
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - shop.local
+    secretName: shop-tls
+  rules:
+  - host: shop.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway
+            port:
+              number: 8080
+      - path: /orders
+        pathType: Exact
+        backend:
+          service:
+            name: order
+            port:
+              number: 8080
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/ingress.yaml
+k get ingress shop
+# NAME   CLASS   HOSTS        ADDRESS          PORTS     AGE
+# shop   nginx   shop.local   192.168.252.35   80, 443   31s
+\`\`\`
+
+ADDRESS là IP của cka-cp, node chạy controller. \`/orders\` trỏ Service \`order\` (gateway không có \`/orders\`, chỉ có \`/api/orders\`).
+
+**5. Gọi bằng tên shop.local**
+
+\`\`\`bash
+echo "192.168.252.35 shop.local" | sudo tee -a /etc/hosts
+curl -s http://shop.local:30080/api/products | head -c 80; echo
+curl -s -H 'Host: shop.local' http://192.168.252.36:30080/api/products | head -c 80; echo
+\`\`\`
+
+Trên Mac (không sửa \`/etc/hosts\` của Mac thì dùng \`--resolve\`):
+
+\`\`\`bash
+multipass transfer cka-cp:/home/ubuntu/drills/s29/tls.crt /tmp/shop.crt
+curl --resolve shop.local:30443:192.168.252.36 --cacert /tmp/shop.crt https://shop.local:30443/api/products
+curl --resolve shop.local:30080:192.168.252.36 http://shop.local:30080/orders
+\`\`\`
+
+**6. pathType**
+
+\`\`\`bash
+for p in /api/products /orders /orders/1 /api; do
+  printf '%-14s http %s  https %s\\n' "$p" "$(curl -s -o /dev/null -w '%{http_code}' http://shop.local:30080$p)" \\
+    "$(curl -s --cacert ~/drills/s29/tls.crt -o /dev/null -w '%{http_code}' https://shop.local:30443$p)"
+done
+# /api/products  http 200  https 200
+# /orders        http 200  https 200
+# /orders/1      http 404  https 404
+# /api           http 404  https 404
+echo PATH_EXACT_RESULT=404 >> ~/drills/s29/answers.env
+\`\`\`
+
+\`/orders/1\` không khớp \`/orders\` (Exact) cũng không khớp \`/api\`: controller tự trả trang 404 HTML của nginx, request không tới Pod nào. \`/api\` thì có khớp (Prefix) và tới gateway, 404 là của Spring (không có handler cho \`/api\`). Bỏ annotation \`ssl-redirect\`: \`curl -I http://shop.local:30080/api/products\` trả \`308 Permanent Redirect\`, \`Location: https://shop.local/api/products\` (cổng 443 mặc định, không phải 30443): sau NodePort, chuyển hướng tự động còn đưa client tới sai cổng.
+
+**7. Tình huống hỏng: Ingress không có ingressClassName** (\`~/drills/s29/noclass.yaml\`)
+
+\`\`\`yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop-noclass
+  namespace: shop
+spec:
+  rules:
+  - host: noclass.shop.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway
+            port:
+              number: 8080
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/drills/s29/noclass.yaml
+k get ingress shop-noclass
+# NAME           CLASS    HOSTS                ADDRESS   PORTS   AGE
+# shop-noclass   <none>   noclass.shop.local             80      15s
+curl -s -o /dev/null -w '%{http_code}\\n' -H 'Host: noclass.shop.local' http://shop.local:30080/api/products
+# 404
+k delete ingress shop-noclass
+\`\`\`
+
+Không có IngressClass mặc định, controller chỉ nhận Ingress có \`ingressClassName: nginx\`. Sửa thật thì thêm \`spec.ingressClassName: nginx\` (hay \`k patch ingress shop-noclass --type=merge -p '{"spec":{"ingressClassName":"nginx"}}'\`).
+
+Lời giải tự động: \`labs/cka/sessions/s29/apply.sh\` (sửa manifest bằng \`files/patch-ingress-nginx.py\` thay cho vim, chép \`files/ingress.yaml\`; chạy lại được).`,
+    exam: {
+      patterns: [
+        "\"Tạo Ingress X ở namespace Y: host a.example.com, path /foo tới Service svc cổng 80\" — `k -n Y create ingress X --class=nginx --rule='a.example.com/foo*=svc:80' $do > x.yaml`, sửa nếu cần, apply. Đọc kỹ đề: Prefix hay Exact.",
+        "\"Ingress đã tạo nhưng không truy cập được / không có ADDRESS\" — `k get ingressclass`, so `ingressClassName`; `k get endpointslice` của Service đích; log controller.",
+        "\"Bật TLS cho Ingress bằng cert/key cho sẵn\" — `k create secret tls <tên> --cert=… --key=…` **cùng namespace** với Ingress, thêm `spec.tls: [{hosts: [...], secretName: <tên>}]`.",
+        "\"Cài ingress controller rồi kiểm bằng curl\" — đề thường cho sẵn manifest/Helm; kiểm bằng `curl -H 'Host: …' http://<IP node>:<nodePort>/…`.",
+      ],
+      timeTargetMin: 10,
+      drills: [
+        {
+          text: "Trong 3 phút: Ingress `catalog-direct` (class nginx) cho host `catalog.shop.local`, path `/products` kiểu Prefix → Service `catalog` cổng 8080. Kiểm bằng curl với header Host qua NodePort 30080, rồi xoá.",
+          timeLimitMin: 3,
+          solution: "```bash\nk create ingress catalog-direct --class=nginx --rule='catalog.shop.local/products*=catalog:8080'\ncurl -s -H 'Host: catalog.shop.local' http://shop.local:30080/products | head -c 60; echo\nk delete ingress catalog-direct\n```",
+        },
+        {
+          text: "Trong 4 phút: tạo chứng chỉ tự ký cho `admin.shop.local`, Secret `admin-tls`, và Ingress `admin` (class nginx, `/api` Prefix → gateway:8080, tls với `admin-tls`). Chứng minh https trả đúng chứng chỉ đó.",
+          timeLimitMin: 4,
+          solution: "```bash\nopenssl req -x509 -newkey rsa:2048 -nodes -days 30 -keyout a.key -out a.crt -subj '/CN=admin.shop.local' -addext 'subjectAltName=DNS:admin.shop.local'\nk create secret tls admin-tls --cert=a.crt --key=a.key\nk create ingress admin --class=nginx --rule='admin.shop.local/api*=gateway:8080,tls=admin-tls'\ncurl --resolve admin.shop.local:30443:$(getent hosts shop.local | cut -d' ' -f1) --cacert a.crt https://admin.shop.local:30443/api/info\nk delete ingress admin; k delete secret admin-tls\n```\n`--cacert` chỉ qua khi controller phục vụ đúng `a.crt` (không phải chứng chỉ giả mặc định).",
+        },
+      ],
+    },
+    tips: [
+      "`k create ingress … $do` nhanh hơn chép YAML từ tài liệu: `*` cuối path là Prefix, không có là Exact; `,tls=<secret>` thêm khối tls.",
+      "Ingress không có ADDRESS gần như luôn là class: sai tên, thiếu, hay controller chưa chạy.",
+      "Secret TLS phải cùng namespace với Ingress; controller không đọc Secret ở namespace khác.",
+      "Kiểm https bằng `--cacert` (hay đọc `issuer` với `curl -kv`), không dừng ở `curl -k` ra 200.",
+    ],
+    outcome: {
+      md: `shop có một cửa vào L7 dưới tên shop.local, cả http lẫn https, và bạn đã thấy Ingress thiếu class im lặng thế nào. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s29
+\`\`\`
+
+Verify tìm controller theo nhãn \`app.kubernetes.io/component=controller\` ở namespace \`ingress-nginx\` (cài bằng manifest hay Helm đều được): Available, Pod chạy trên cka-cp, Service NodePort 30080/30443. Nó so Ingress \`shop\` (class, host, hai path và pathType, backend, tls, ADDRESS) với cluster và với \`~/shop/\`, giải chứng chỉ trong \`shop-tls\` bằng openssl (SAN, khoá khớp, còn hạn), kiểm \`/etc/hosts\` và curl trên cka-cp, rồi **gọi từ chính máy Mac**: http \`/api/products\` và \`/orders\`, https \`/api/products\` với \`--cacert\` là chứng chỉ của \`shop-tls\`, đều qua \`--resolve shop.local:<cổng>:<IP cka-w1>\` (IP đọc từ API) nên không cần \`/etc/hosts\` của Mac. Ingress nháp không class phải đã xoá.`,
+      verifyOutput: "lab: kiểm s29\n  (chờ apiserver, CoreDNS, postgres-0, ba Deployment và ingress-nginx, nếu đang khởi động: tối đa ~11 phút)\n  ✓ ingress-nginx: controller Available, chạy trên cka-cp; Service NodePort http 30080, https 30443\n  ✓ IngressClass nginx (controller k8s.io/ingress-nginx)\n  ✓ Ingress shop: class nginx, shop.local, /api Prefix → gateway:8080, /orders Exact → order:8080, tls shop-tls, có ADDRESS; YAML trong ~/shop/\n  ✓ Secret shop-tls: kubernetes.io/tls, SAN DNS:shop.local, khoá khớp chứng chỉ, còn hạn\n  ✓ cka-cp: shop.local trong /etc/hosts trỏ IP một node; curl http://shop.local:30080/api/products trả 200\n  ✓ Từ máy Mac: http://shop.local:30080/api/products (3 sản phẩm) và /orders trả 200 (--resolve tới IP cka-w1)\n  ✓ Từ máy Mac: https://shop.local:30443/api/products trả 200, chứng chỉ là shop-tls (--cacert, không -k)\n  ✓ answers.env: PATH_EXACT_RESULT=404; Ingress nháp không có ingressClassName đã xoá\n  → 8/8 đạt",
+      projectDelta: "Mảnh \"Ingress\" của project: shop.local/api tới gateway, shop.local/orders tới order, TLS kết thúc ở ingress-nginx. Buổi sau dựng cùng đường đó bằng Gateway API và chia lưu lượng giữa hai phiên bản gateway.",
+    },
+    review: [
+      { q: "Ingress `shop` có `/api` Prefix và `/orders` Exact. `/api/products`, `/apis`, `/orders/`, `/orders/1` đi đâu?", a: "`/api/products` khớp Prefix `/api` (theo phần tử path) → gateway. `/apis` không khớp (`apis` ≠ `api`), `/orders/` và `/orders/1` không khớp Exact `/orders`: cả ba nhận 404 của controller (default backend), không tới Pod nào." },
+      { q: "Ingress tạo thành công nhưng `k get ingress` không có ADDRESS và mọi request trả 404. Nghi gì?", a: "Không controller nào nhận nó: thiếu `ingressClassName` (và không có IngressClass mặc định), sai tên class, hay controller không chạy. `k get ingressclass`, so `spec.controller` với controller đang chạy, xem log controller." },
+      { q: "`curl -k https://shop.local:30443/api/products` trả 200. Vì sao chưa đủ để nói TLS đã đúng?", a: "`-k` bỏ qua kiểm chứng chỉ; Secret sai (không có, sai namespace, SAN không khớp) thì ingress-nginx vẫn phục vụ bằng \"Kubernetes Ingress Controller Fake Certificate\". `--cacert tls.crt` (hay đọc `issuer`) mới chứng minh đúng chứng chỉ của bạn được dùng." },
+      {
+        q: "Sau khi thêm `tls` vào Ingress, `curl http://shop.local:30080/api/products` trả 308. Vì sao, và sửa thế nào ở lab?",
+        a: "ingress-nginx mặc định chuyển hướng http sang https cho host có TLS (`ssl-redirect: true`). `Location` là `https://shop.local/...` cổng 443, không phải NodePort 30443. Lab tắt bằng annotation `nginx.ingress.kubernetes.io/ssl-redirect: \"false\"`; sau một LoadBalancer thật ở cổng 443 thì chuyển hướng là điều nên giữ.",
+      },
+      {
+        q: "Ứng dụng Spring Boot sau Ingress TLS tạo link `http://…` trong redirect. Vì sao, và trong Pod thì có xảy ra không?",
+        a: "Controller gọi Pod bằng http và báo scheme gốc qua `X-Forwarded-Proto: https`; ứng dụng không đọc header thì nghĩ request là http. Spring Boot đọc khi `server.forward-headers-strategy` là `native` hay `framework`. Trong Pod, Boot nhận ra Kubernetes (`KUBERNETES_SERVICE_HOST`) và mặc định `native`, Tomcat tin proxy trong dải 10.0.0.0/8; ngoài Kubernetes mặc định là `none`, phải tự đặt.",
+      },
+    ],
   },
   {
     id: "s30",
