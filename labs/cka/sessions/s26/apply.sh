@@ -3,6 +3,9 @@
 # -n ip addr; tcpdump trên tunnel trong lúc một Pod tạm ghim worker kia gọi thẳng IP Pod catalog; đọc /etc/cni/net.d và
 # /opt/cni/bin; ghi ~/drills/s26/answers.env. Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
+# Ngay sau khi VM bật lại (vd. selftest chụp st4-done rồi chạy s26), API còn status của trước lúc tắt: rollout status qua ngay,
+# Pod catalog "Running" nhưng chưa có IP. Chờ như verify (files/wait.sh: Pod Ready sau lúc boot, tối đa 420 giây).
+vm "$cp" "$(cat "$SESSION_DIR/files/wait.sh")" >/dev/null 2>&1 || true
 vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
   echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
 vm "$cp" "set -e
