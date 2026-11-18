@@ -2389,7 +2389,9 @@ Verify kiểm policy \`default-deny\` (mọi Pod, Ingress + Egress, không rule)
 | Service \`catalog\` không có endpoint | treo 4 s | \`Connection refused\` (kube-proxy REJECT) | — |
 | Service \`order\`, \`targetPort\` 8081 | treo 4 s | treo (policy \`order\` không nhận \`default\`) | — |
 | IP Pod order cổng 8081 | treo 4 s | treo | \`Connection refused\` |
-| IP Pod order cổng 8080 | mở | treo | mở |
+| IP Pod order cổng 8080 | mở (suy ra) | treo (suy ra) | mở |
+
+Hai ô "suy ra" không đo riêng: gateway → order:8080 mở là dòng FLOWS của verify s31, Pod ở namespace khác → order bị chặn là dòng OUTSIDE.
 
 - **Pod có policy** (mọi Pod của shop): egress chỉ cho tới IP Pod ở đúng cổng, nên gói tới ClusterIP không có endpoint, hay tới cổng sai, bị Calico bỏ trước khi ai kịp từ chối. Ở đây "treo" **không** chứng minh lỗi nằm ở policy.
 - **Pod không có policy**: Service rỗng hiện đúng là \`refused\`; nhưng đích có policy (order) thì vẫn treo.
