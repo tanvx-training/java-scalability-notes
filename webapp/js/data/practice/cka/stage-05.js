@@ -843,7 +843,6 @@ k -n kube-system get cm coredns -o jsonpath='{.data.Corefile}' | sed -n '/hosts/
 #     }
 # chờ plugin reload (đo: khoảng 40 giây tới một phút rưỡi):
 k -n kube-system logs -l k8s-app=kube-dns --tail=3 | grep -i reload
-__RELOAD_LOG__
 k exec deploy/order -- getent hosts db.shop.internal
 # 10.101.112.159  db.shop.internal
 k exec deploy/order -- getent hosts catalog.shop.svc.cluster.local
