@@ -24,7 +24,8 @@ pod() {
     awk '$2=="Running" && $3=="True" && NF==3 {print $1; exit}'
 }
 # tcp <tên luồng> <Pod> <container> <host> <cổng>: tra tên (2 giây) rồi mở TCP bằng bash /dev/tcp trong container (3 giây). open / timeout (gói bị
-# bỏ: NetworkPolicy) / refused (không ai nghe, Service không có endpoint) / dns (không phân giải được) / nopod.
+# bỏ: NetworkPolicy; nguồn là Pod của shop thì cổng sai hay Service rỗng cũng rơi vào đây, xem s32) / refused (không ai nghe hay
+# Service rỗng, chỉ thấy khi gói không bị policy bỏ trước) / dns (không phân giải được) / nopod.
 tcp() {
   local out rc r
   if [ -z "$2" ]; then echo "$1 nopod" >> "$tmp/flows.txt"; return; fi
@@ -88,10 +89,18 @@ YAML
 then
   if kubectl -n "$ns" wait --for=condition=Ready pod/probe --timeout=90s >/dev/null 2>&1; then
     # in() <tên luồng> <host> <cổng>: nc của busybox, 3 giây. Thành công = mở; "timed out" hay hết giờ = bị chặn.
+    # in_ <tên luồng> <host> <cổng>: nc của busybox (không -z: nối rồi đóng vì stdin /dev/null), tối đa 3–4 giây. Đối chứng
+    # trong cùng lệnh: nc tới httpd của chính Pod tạm (127.0.0.1:8080) phải mở, không thì công cụ hỏng và không kết luận gì.
+    # Chỉ hết giờ thật (rc 124, "timed out") là bị chặn; refused là refused, còn lại là err (đều đỏ).
     in_() {
       local o r
-      o=$(k -n "$ns" exec probe -- sh -c "nslookup $2 >/dev/null 2>&1 || { echo NODNS; exit 0; }; timeout 4 nc -z -w 3 $2 $3 && echo OPEN || echo FAIL\$?" 2>&1)
-      case "$o" in *NODNS*) r=dns ;; *OPEN*) r=open ;; *FAIL*) r=timeout ;; *) r=err ;; esac
+      o=$(k -n "$ns" exec probe -- sh -c "nslookup $2 >/dev/null 2>&1 || { echo NODNS; exit 0; }
+        timeout 4 nc -w 3 127.0.0.1 8080 </dev/null >/dev/null 2>&1 || { echo NOSELF; exit 0; }
+        timeout 4 nc -w 3 $2 $3 </dev/null 2>&1; echo RC=\$?" 2>&1)
+      case "$o" in
+        *NODNS*) r=dns ;; *NOSELF*) r=noself ;; *RC=0*) r=open ;;
+        *RC=124*|*"timed out"*) r=timeout ;; *refused*) r=refused ;; *) r=err ;;
+      esac
       echo "$1 $r" >> "$tmp/flows.txt"
     }
     out=$(k -n "$ns" exec probe -- sh -c 'nslookup catalog.shop.svc.cluster.local >/dev/null 2>&1 || echo NODNS; wget -q -T 3 -O /dev/null http://catalog.shop.svc.cluster.local:8080/actuator/health/readiness 2>&1 && echo OPEN' 2>&1)
@@ -191,9 +200,13 @@ for n, p in sorted(pols.items()):
     for direction, key in (("ingress", "from"), ("egress", "to")):
         for r in p["spec"].get(direction) or []:
             peers = r.get(key)
-            if not peers or any(not x for x in peers):
+            # Phần tử chỉ có selector rỗng (podSelector: {} = mọi Pod của shop, namespaceSelector: {} = mọi namespace) cũng là mở toang.
+            def empty_peer(x):
+                return not x or (not x.get("ipBlock") and all(not ((x.get(k) or {}).get("matchLabels") or (x.get(k) or {}).get("matchExpressions"))
+                                                                for k in ("podSelector", "namespaceSelector")))
+            if not peers or any(empty_peer(x) for x in peers):
                 if direction == "ingress" and selects_only_public(p): continue
-                bad.append(f"{n}: {direction} mở cho mọi {'nguồn' if direction == 'ingress' else 'đích'} (rule không có {key})")
+                bad.append(f"{n}: {direction} mở cho mọi {'nguồn' if direction == 'ingress' else 'đích'} (rule không có {key}, hay selector rỗng)")
 # Service gateway, catalog, order: ~/shop/ là nguồn sự thật như s27 (selector, cổng, targetPort khớp cluster).
 def svc_shape(sp):
     sp = sp or {}
@@ -236,7 +249,8 @@ for f, what in (("outside-catalog", "catalog:8080"), ("outside-order", "order:80
     if r == "timeout": continue
     bad.append({"open": f"Pod ở namespace khác vẫn gọi được {what}", "dns": f"Pod tạm không phân giải được {what.split(':')[0]}.shop",
                 "nopod": "không tạo được Pod tạm busybox:1.37 trong namespace tạm",
-                "refused": f"{what} từ chối kết nối (Service không có endpoint?)"}.get(r, f"Pod tạm → {what}: {r}"))
+                "refused": f"{what} từ chối kết nối (Service không có endpoint?)",
+                "noself": "nc của Pod tạm không nối được httpd của chính nó: không thử được chiều vào"}.get(r, f"Pod tạm → {what}: {r}"))
 print("OUTSIDE=" + ("; ".join(dict.fromkeys(bad)) or "đạt"))
 
 # 4. Luồng trong shop, thử từ Pod thật: các luồng của ứng dụng mở, luồng không cần thiết bị chặn.

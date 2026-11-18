@@ -2404,7 +2404,7 @@ Nhiều lỗi chồng nhau thì lỗi ở tầng dưới che lỗi ở tầng tr
 
 - **Pod netshoot ở namespace không có policy** (\`default\`): \`dig\` tên Service qua \`10.96.0.10\` (CoreDNS có trả lời không), \`curl\` NodePort, \`nc\` tới IP node. Bị chặn khi gọi vào shop: đó là policy làm đúng việc, không phải lỗi.
 - **\`k exec\` vào Pod nguồn thật** với công cụ image có (\`getent\`, \`bash /dev/tcp\`, \`wget\` của busybox).
-- **Node chứa Pod đích** (\`multipass shell\` hay ssh): \`nc -zv -w 3 <IP Pod> <cổng>\` không bị policy chặn, tách cổng sai khỏi gói bị bỏ.
+- **Node chứa Pod đích** (cột NODE của \`k get pod -o wide\`; \`multipass shell <node>\` từ Mac, hay ssh): \`nc -zv -w 3 <IP Pod> <cổng>\` không bị policy chặn, tách cổng sai khỏi gói bị bỏ.
 - **\`k debug -it <pod> --image=nicolaka/netshoot:v0.16 --target=<container>\`**: container tạm chung network namespace với Pod thật, mang đúng IP và nhãn của nó, có đủ \`dig\`, \`curl\`, \`nc\`, \`tcpdump\`. Container tạm không xoá được khỏi Pod (Pod mới khi rollout sẽ không có nó); thoát shell là nó dừng.
 
 \`nicolaka/netshoot\` ghim \`v0.16\` (1/7/2026, có \`arm64\`, ~213 MB nén): lần đầu kéo mất cả phút.
@@ -2436,7 +2436,7 @@ Nhiều lỗi chồng nhau thì lỗi ở tầng dưới che lỗi ở tầng tr
       },
       {
         id: "t4",
-        text: "targetPort: cột PORTS của EndpointSlice order là gì? `k get svc order -o jsonpath='{.spec.ports}'` so với `k get pod -l app=order -o jsonpath='{..containerPort}'`. Thử thẳng IP Pod với cổng đó từ gateway: `k exec deploy/gateway -c gateway -- timeout 3 bash -c '</dev/tcp/<IP Pod order>/8081'` (treo: vì sao, khi policy `order` nhận gateway?), rồi trên **node chứa Pod order** `nc -zv -w 3 <IP Pod order> 8081` và `… 8080`. Sửa, apply. `k get pod`: có Pod nào không Ready không?",
+        text: "targetPort: cột PORTS của EndpointSlice order là gì? `k get svc order -o jsonpath='{.spec.ports}'` so với `k get pod -l app=order -o jsonpath='{..containerPort}'`. Thử thẳng IP Pod với cổng đó từ gateway: `k exec deploy/gateway -c gateway -- timeout 3 bash -c '</dev/tcp/<IP Pod order>/8081'` (treo: vì sao, khi policy `order` nhận gateway?), rồi trên **node chứa Pod order** (cột NODE của `k get pod -l app=order -o wide`; vào node bằng `multipass shell <node>` từ Mac, hay `ssh <node>` từ cka-cp như s01) `nc -zv -w 3 <IP Pod order> 8081` và `… 8080`. Sửa, apply. `k get pod`: có Pod nào không Ready không?",
       },
       {
         id: "t5",
