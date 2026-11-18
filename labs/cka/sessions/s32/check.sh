@@ -9,7 +9,7 @@ vm "$cp" "end=\$((\$(date +%s) + 180))
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/check-facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }
-expect_eq "shop có NetworkPolicy default-deny (podSelector {}, Ingress + Egress) và ~/shop/ có các policy gateway, allow-dns-egress" \
+expect_eq "shop có NetworkPolicy default-deny (podSelector {}, Ingress + Egress) và ~/shop/ có các policy order, allow-dns-egress" \
   "đạt" echo "$(fact NP)"
 expect_eq "~/shop/ có Service catalog và order; ~/drills/s31/answers.env đúng (DEFAULT_NS_TO_CATALOG, DRAFT_TWO_PEERS)" "đạt" echo "$(fact S31)"
 assert_summary

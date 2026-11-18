@@ -1,5 +1,5 @@
 # s32 — kiểm đầu vào: NetworkPolicy của shop (có default-deny), ~/shop/*.yaml có Service catalog, order và NetworkPolicy
-# gateway, allow-dns-egress (thứ st5-network sửa), ~/drills/s31/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane
+# order, allow-dns-egress (thứ st5-network sửa), ~/drills/s31/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane
 # (kubectl + python3). Chỉ đọc.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 kubectl --request-timeout=10s -n shop get networkpolicy -o json > "$tmp/np.json" 2>/dev/null || echo ERR > "$tmp/np.json"
@@ -26,7 +26,7 @@ else:
     deny = [p for p in np if not (p["spec"].get("podSelector") or {}) and sorted(p["spec"].get("policyTypes") or []) == ["Egress", "Ingress"]
             and not p["spec"].get("ingress") and not p["spec"].get("egress")]
     if not deny: bad.append("chưa có default-deny trong shop")
-for n in ("gateway", "allow-dns-egress"):
+for n in ("order", "allow-dns-egress"):
     if ("NetworkPolicy", n) not in files: bad.append(f"~/shop/ chưa có NetworkPolicy {n}")
 print("NP=" + ("; ".join(bad) or "đạt"))
 bad = []

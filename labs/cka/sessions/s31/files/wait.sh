@@ -1,4 +1,4 @@
-# s30 — chờ có giới hạn (420 giây theo đồng hồ, mỗi lệnh có --request-timeout) trước khi đọc dữ kiện: apiserver, postgres-0,
+# s31 (chép từ s30, thêm vòng chờ HPA) — chờ có giới hạn (420 giây theo đồng hồ, mỗi lệnh có --request-timeout) trước khi đọc dữ kiện: apiserver, postgres-0,
 # CoreDNS, Deployment gateway, gateway-v1, catalog, order, controller ingress-nginx, control plane NGF (namespace nginx-gateway)
 # và data plane của shop-gw (nhãn gateway.networking.k8s.io/gateway-name=shop-gw); thứ chưa có thì không chờ. Ngay sau khi VM bật lại, status trong API còn là của trước lúc tắt (node chưa bị coi là
 # NotReady), nên "replicas = available" chưa đủ: chờ tới khi mọi Pod kể trên đã Ready
@@ -42,4 +42,10 @@ counts() {
 }
 until { { [ "$recent" = 0 ] || fresh; } && counts; } || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
 until [ "$recent" = 0 ] || k -n shop exec postgres-0 -c postgres -- getent hosts catalog.shop.svc.cluster.local >/dev/null 2>&1 || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
+# metrics-server khởi động lại cùng VM: HPA catalog báo FailedGetResourceMetric khoảng 1–2 phút đầu (đo sau down + up).
+hpa_ok() {
+  [ "$(k -n shop get hpa catalog -o jsonpath='{.status.conditions[?(@.type=="ScalingActive")].status}' 2>/dev/null)" = True ] &&
+    k -n shop get hpa catalog -o jsonpath='{.status.currentMetrics[*].resource.current.averageUtilization}' 2>/dev/null | grep -q '[0-9]'
+}
+until [ "$recent" = 0 ] || hpa_ok || [ "$(date +%s)" -ge "$end" ]; do sleep 5; done
 exit 0

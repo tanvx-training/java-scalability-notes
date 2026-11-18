@@ -1,5 +1,5 @@
 // Chặng 5 — Networking.
-// s26–s28 đã phát hành (đợt 3); s29–s32 là buổi khung (check-data PR7), nội dung đầy đủ ở các task sau.
+// s26–s32 đã phát hành (đợt 3).
 
 export const sessions = [
 // ───────────────────────────── s26 ─────────────────────────────
@@ -1775,6 +1775,7 @@ Verify kiểm ba CRD (\`gatewayclasses\`, \`gateways\`, \`httproutes\`) phục v
       { q: "Gọi NodePort 30280 qua IP của cka-w1 thì treo, qua IP của cka-cp thì chạy. Vì sao Ingress của s29 không bị như vậy?", a: "Service data plane của NGF có `externalTrafficPolicy: Local`: node chỉ nhận gói NodePort khi chính nó có Pod đích (giữ IP nguồn của client), Pod data plane ở cka-cp. Service của ingress-nginx dùng mặc định `Cluster`: node nào cũng DNAT sang Pod ở node khác (và SNAT, mất IP client)." },
     ],
   },
+// ───────────────────────────── s31 ─────────────────────────────
   {
     id: "s31",
     stage: "st5",
@@ -1783,12 +1784,12 @@ Verify kiểm ba CRD (\`gatewayclasses\`, \`gateways\`, \`httproutes\`) phục v
     domain: "networking",
     competencies: ["nw-netpol"],
     requires: ["s30"],
-    status: "skeleton",
+    status: "published",
     pieces: ["netpol"],
     goals: [
-      "Đặt default-deny cho namespace shop rồi mở đúng các luồng gateway → catalog/order, order → catalog, hai service → postgres.",
-      "Mở egress DNS để Pod vẫn phân giải tên sau khi chặn.",
-      "Chứng minh mỗi luồng bị chặn hay được mở bằng nc từ đúng Pod nguồn.",
+      "Đặt default-deny (Ingress + Egress) cho namespace shop rồi mở đúng các luồng mà shop cuối s30 cần, kể cả DNS.",
+      "Giữ ba cửa vào từ máy Mac (NodePort 30180, Ingress 30080, Gateway 30280) chạy dưới default-deny.",
+      "Chứng minh mỗi luồng mở hay bị chặn bằng lệnh chạy từ đúng Pod nguồn, và giải thích AND/OR trong from.",
     ],
     skills: [
       { skill: "k-netpol-default-deny", level: "Viết được không tra" },
@@ -1799,9 +1800,552 @@ Verify kiểm ba CRD (\`gatewayclasses\`, \`gateways\`, \`httproutes\`) phục v
       { skill: "k-netpol-ns-selector", level: "Viết được có tra" },
     ],
     uses: ["net-curl-nc", "k-labels-selectors", "k-svc-fqdn", "k-calico-status", "net-tcpdump"],
-    stateIn: "Đầu ra s30: mọi Pod trong cluster gọi nhau tự do.",
-    stateOut: "Namespace shop mặc định chặn; chỉ các luồng cần thiết và DNS được mở; ingress controller vẫn tới được gateway.",
+    foundation: null,
+    mindset: `**Mặc định là mở, NetworkPolicy là danh sách cho phép.** Không có NetworkPolicy nào thì mọi Pod gọi được mọi Pod, xuyên namespace. Một Pod trở nên **bị cô lập theo một chiều** (Ingress hay Egress) khi có ít nhất một policy chọn nó (\`podSelector\`) và khai chiều đó trong \`policyTypes\`. Từ lúc đó chiều ấy chỉ còn đúng những gì các policy chọn nó cho phép:
+
+- **Cộng dồn, không có deny tường minh.** Mọi policy chọn cùng một Pod gộp lại thành phép hợp các luồng được phép. Không viết được "chặn riêng luồng X": muốn chặn thì đừng cho phép, và một policy rộng ở đâu đó sẽ mở luồng bất kể policy hẹp. Thứ tự policy không có nghĩa gì.
+- **Hai đầu đều phải cho phép.** Luồng gateway → catalog trong cùng namespace đã default-deny cần **egress** của gateway tới catalog *và* **ingress** của catalog từ gateway. Thiếu một nửa là gói bị bỏ.
+- **Theo kết nối, không theo gói.** Cho phép chiều đi là đủ cho gói trả lời của cùng kết nối (CNI theo dõi trạng thái kết nối, như security group của AWS chứ không như network ACL).
+- **Chỉ CNI thực thi.** NetworkPolicy là object của API; Calico (\`calico-node\` trên mỗi node, Felix viết rule iptables) mới bỏ gói. Cluster dùng CNI không hỗ trợ (flannel thuần) thì policy được tạo, \`k get netpol\` vẫn thấy, mà không chặn gì.
+
+**\`default-deny\` cho cả hai chiều:**
+
+\`\`\`yaml
+spec:
+  podSelector: {}        # mọi Pod trong namespace
+  policyTypes: [Ingress, Egress]
+                         # không có ingress:/egress: → không gì được phép
+\`\`\`
+
+Egress bị chặn thì **DNS cũng chết**: Pod hỏi \`10.96.0.10:53\` (Service \`kube-dns\`, tức Pod CoreDNS ở \`kube-system\`) và gói bị bỏ. Đo trên lab: \`getent hosts catalog\` trong order treo tới hết \`timeout 10\`; ứng dụng Java nhận \`UnknownHostException\`. Policy DNS là thứ đầu tiên phải mở lại sau default-deny, cổng 53 **cả UDP lẫn TCP** (câu trả lời lớn hơn 512 byte chuyển sang TCP).
+
+**AND hay OR trong \`from\`/\`to\`.** Mỗi phần tử của danh sách là một nguồn được phép; các phần tử OR với nhau; trong **một** phần tử, \`namespaceSelector\` và \`podSelector\` AND với nhau:
+
+\`\`\`yaml
+from:                                   # một phần tử: Pod role=probe VÀ ở namespace default
+- namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: default}}
+  podSelector: {matchLabels: {role: probe}}
+
+from:                                   # hai phần tử: MỌI Pod ở default, HOẶC Pod role=probe ở chính namespace của policy
+- namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: default}}
+- podSelector: {matchLabels: {role: probe}}
+\`\`\`
+
+Khác nhau đúng một dấu \`-\`, và bản thứ hai mở rộng hơn ý muốn (đo ở t7: Pod không nhãn ở \`default\` vẫn vào được catalog). \`podSelector\` đứng một mình chỉ chọn Pod **trong namespace của policy**. Mỗi namespace có sẵn nhãn \`kubernetes.io/metadata.name: <tên>\` (do apiserver gắn từ 1.21), nên chọn namespace theo tên không cần tự gắn nhãn. \`ipBlock\` chọn theo IP, dành cho nguồn ngoài cluster.
+
+**Thứ NetworkPolicy không chạm tới, đo trên Calico của lab.**
+
+- **Probe của kubelet và metrics-server vẫn chạy.** kubelet gọi probe từ chính node chứa Pod; Calico cho phép lưu lượng từ host tới Pod cục bộ (tài liệu Kubernetes cũng nói lưu lượng tới/từ node chứa Pod luôn được phép). Đo: sau default-deny không có Event \`Unhealthy\` mới, Pod vẫn Ready; HPA \`catalog\` vẫn có \`cpu: 1%/60%\` vì metrics-server lấy số liệu từ kubelet (\`node:10250\`), không gọi vào Pod.
+- **NodePort bị SNAT.** \`gateway-nodeport\` (\`externalTrafficPolicy: Cluster\`) đổi IP nguồn: tcpdump trên cka-w1 thấy gói tới Pod gateway ở node khác mang nguồn \`10.244.95.128\` (IP \`tunl0\` của cka-w1), không phải IP của Mac. Không chọn được "máy Mac" bằng selector, nên policy của gateway mở cổng 8080 cho mọi nguồn: gateway là cửa công khai, giống security group của một ALB mở 443 cho \`0.0.0.0/0\`. Data plane \`shop-gw-nginx\` (Service \`externalTrafficPolicy: Local\`, giữ IP Mac) cũng vậy ở cổng 80.
+
+**Các luồng của shop cuối s30** (mỗi dòng là một cặp egress + ingress, trừ khi nguồn ở namespace không bị chặn):
+
+| Nguồn | Đích | Vì sao |
+|---|---|---|
+| mọi Pod | CoreDNS (\`kube-system\`, \`k8s-app=kube-dns\`) UDP/TCP 53 | tên Service |
+| ingress-nginx (\`ingress-nginx\`), data plane, Job, NodePort | gateway, gateway-v1 :8080 | cửa vào (s27, s29, s30) |
+| ingress-nginx | order :8080 | Ingress \`/orders\` (s29) |
+| data plane \`shop-gw-nginx\` | NGF \`nginx-gateway\` :8443 | agent trong Pod nginx nhận cấu hình qua gRPC (Service \`nginx-gateway:443\` → 8443) |
+| gateway, gateway-v1 | catalog, order :8080 | API của shop |
+| order | catalog :8080 | kiểm sản phẩm khi đặt hàng |
+| catalog, order | postgres :5432 | JDBC (qua \`postgres-0.postgres\` hay \`postgres-rw\`: policy so sau DNAT, tức IP và cổng của Pod) |
+| Pod của Job (\`batch.kubernetes.io/job-name\` Exists) | gateway :8080 | CronJob \`order-report\` (s15) |
+
+\`log-agent\` (DaemonSet) và \`reports\` chỉ đọc ghi đĩa: không cần luồng nào ngoài DNS. Nhãn \`batch.kubernetes.io/job-name\` được Job controller gắn cho mọi Pod nó tạo: \`matchExpressions\` với \`operator: Exists\` chọn được Pod của mọi Job mà không phải sửa CronJob.
+
+**Least privilege cho một service Spring.** Đây là security group của từng service, viết bằng nhãn thay vì IP: catalog chỉ nhận từ gateway/order và chỉ ra được tới postgres. Hệ quả cho Java: kết nối bị policy chặn **không bị từ chối mà treo** (gói bị bỏ, không RST): \`RestClient\` không đặt timeout thì thread treo tới timeout của hệ điều hành (hàng phút), HikariCP báo \`Connection is not available, request timed out after 30000ms\` hay \`SocketTimeoutException\`. Phân biệt khi đọc log: \`Connection refused\` là tới được nhưng không ai nghe (sai cổng, Service không có endpoint); treo rồi timeout là bị chặn; \`UnknownHostException\` là DNS.`,
+    refs: [
+      { label: "Bài lộ trình CKA: NetworkPolicies (ôn từ CKAD)", href: "#/roadmap/cka/cka-w6-6" },
+      { label: "CKA Study Guide, chương 20 — Network Policy", href: "#/docs/ckabook-20" },
+      { label: "kubernetes.io: Network Policies (Concepts › Services, Load Balancing, and Networking)", href: "https://kubernetes.io/docs/concepts/services-networking/network-policies/" },
+      { label: "kubernetes.io: Declare Network Policy (Tasks › Administer a Cluster)", href: "https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy/" },
+      { label: "Calico: Get started with Kubernetes network policy", href: "https://docs.tigera.io/calico/latest/network-policy/get-started/kubernetes-policy/kubernetes-network-policy" },
+      { label: "Bài thực hành s26 — mạng Pod tới Pod, tunl0", href: "#/practice/cka/s26" },
+    ],
+    stateIn: "Đầu ra s30: shop (gateway 2×, gateway-v1, catalog có HPA, order, postgres, reports, log-agent, CronJob order-report) cùng ingress-nginx (30080/30443) và NGINX Gateway Fabric (Gateway shop-gw, 30280); chưa có NetworkPolicy nào, mọi Pod gọi nhau tự do. `./labs/lab begin cka s31` kiểm đầu vào bằng verify của s30, tạo ~/drills/s31 (có allow-probe.yaml) và xoá answers.env cũ.",
+    stateOut: "Namespace shop có default-deny (Ingress + Egress), allow-dns-egress và policy mở đúng luồng cho gateway/gateway-v1, catalog, order, postgres, data plane shop-gw và Pod của Job, tất cả trong ~/shop/netpol.yaml; NodePort 30180, Ingress 30080 và Gateway 30280 vẫn trả 200 từ Mac; HPA catalog vẫn có số liệu; ~/drills/s31/answers.env.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s31`. Trước khi chặn: `k get netpol -A` (rỗng), `k -n kube-system get pods -l k8s-app=calico-node -o wide` (ai sẽ thực thi policy). Pod tạm ở namespace default: `k -n default run probe --image=busybox:1.37 --restart=Never -- sleep 3600`, rồi `k -n default exec probe -- wget -q -T 3 -O- http://catalog.shop.svc.cluster.local:8080/products | head -c 80`. Image của shop không có `nc`/`curl` (`k exec deploy/gateway -c gateway -- sh -c 'command -v nc curl wget bash timeout'`): từ Pod Java, thử cổng bằng `k exec deploy/gateway -c gateway -- timeout 2 bash -c '</dev/tcp/catalog/8080' && echo open || echo blocked`.",
+      },
+      {
+        id: "t2",
+        text: "`~/shop/netpol.yaml`, tài liệu đầu tiên: NetworkPolicy `default-deny` (`podSelector: {}`, `policyTypes: [Ingress, Egress]`, không rule). Apply. Thử lại: gateway → catalog, `k exec deploy/order -c order -- timeout 10 getent hosts catalog; echo $?` (DNS), trên **Mac** `curl -s -m 5 -o /dev/null -w '%{http_code}\\n' http://<IP cka-w1>:30180/api/products`. Chờ một phút: `k get pod` (còn Ready không?), `k get events --field-selector reason=Unhealthy`, `k get hpa catalog` (còn số liệu không?). Vì sao probe của kubelet không bị chặn?",
+      },
+      {
+        id: "t3",
+        text: "Thêm `allow-dns-egress` vào cùng tệp: mọi Pod (`podSelector: {}`), `policyTypes: [Egress]`, egress tới **một** phần tử có cả `namespaceSelector` (`kubernetes.io/metadata.name: kube-system`) và `podSelector` (`k8s-app: kube-dns`), cổng 53 UDP và 53 TCP. Apply, `getent hosts catalog` trong order chạy lại; gateway → catalog vẫn `blocked`. Nhãn của Pod CoreDNS: `k -n kube-system get pod -l k8s-app=kube-dns --show-labels`.",
+      },
+      {
+        id: "t4",
+        text: "Mở luồng nội bộ theo bảng trong Tư duy, mỗi nhóm Pod một policy: `gateway` (chọn `app in (gateway, gateway-v1)`: ingress cổng 8080 từ mọi nguồn, egress tới catalog/order 8080), `catalog` (ingress từ gateway, gateway-v1, order; egress tới postgres 5432), `order` (ingress từ gateway, gateway-v1 và Pod controller ở namespace `ingress-nginx`; egress tới catalog 8080 và postgres 5432), `postgres` (ingress 5432 từ catalog, order). Apply, `k get netpol`, `k describe netpol order`. Trong lúc chưa có policy `catalog`, xem gói bị bỏ ở đâu: trên node của một Pod catalog `sudo tcpdump -ni any 'tcp port 8080 and dst host <IP Pod order>'` khi catalog gọi order.",
+      },
+      {
+        id: "t5",
+        text: "Các cửa vào và Pod phụ: `shop-gw-data-plane` (chọn `gateway.networking.k8s.io/gateway-name: shop-gw`; ingress cổng 80; egress tới gateway/gateway-v1 8080 và tới Pod `app.kubernetes.io/name: nginx-gateway` ở namespace `nginx-gateway` cổng 8443), `jobs` (chọn Pod có nhãn `batch.kubernetes.io/job-name`, `operator: Exists`; egress tới gateway 8080). Đọc cổng thật trước khi viết: `k -n nginx-gateway get svc nginx-gateway -o jsonpath='{.spec.ports}'`, `k get pod -l gateway.networking.k8s.io/gateway-name=shop-gw -o jsonpath='{.items[0].spec.containers[0].ports}'`. Trên **Mac**: 30180 (IP cka-w1), `--resolve shop.local:30080:<IP cka-w1>` cho `/api/products` và `/orders`, `--resolve shop.local:30280:<IP cka-cp>` cho `/api/products`: đều 200. Job kế tiếp của `order-report` có `Complete` không (`k get job`)?",
+      },
+      {
+        id: "t6",
+        text: "Chứng minh từ đúng Pod nguồn: mở `gateway → catalog`, `gateway → order`, `gateway-v1 → catalog`, `order → catalog`, `order → postgres-rw:5432`, `catalog → postgres-0.postgres:5432`; chặn `catalog → order:8080`, `gateway → postgres-rw:5432`. Từ data plane (image có busybox): `k exec deploy/shop-gw-nginx -c nginx -- wget -q -T 3 -O- http://gateway-v1:8080/api/info`. Từ `probe` ở default tới catalog: ghi `DEFAULT_NS_TO_CATALOG=<open hay blocked>` vào `~/drills/s31/answers.env`.",
+      },
+      {
+        id: "t7",
+        text: "Tình huống hỏng: `~/drills/s31/allow-probe.yaml` muốn cho \"chỉ Pod `role=probe` ở namespace default\" vào catalog nhưng viết `from` hai phần tử. Apply, rồi từ `probe` (không có nhãn `role`) gọi catalog. Ghi `DRAFT_TWO_PEERS=<open hay blocked>`. Sửa thành một phần tử (bỏ dấu `-` trước `podSelector`), apply, thử lại; `k -n default label pod probe role=probe`, thử lần nữa. Giải thích bằng `k describe netpol allow-probe` trước và sau. Xoá `allow-probe` và Pod `probe`. Trên Mac: `./labs/lab verify cka s31` phải đạt 7/7.",
+      },
+    ],
+    hints: [
+      "Sau default-deny mọi thứ \"treo\" chứ không báo lỗi: gói bị bỏ, không có RST. Luôn đặt timeout cho lệnh thử (`timeout 2`, `wget -T 3`, `nc -w 2`, `curl -m 5`), không thì mỗi lần thử mất cả phút.",
+      "Mở policy rồi mà vẫn `blocked`: thiếu nửa kia. Trong namespace đã default-deny cả hai chiều, gateway → catalog cần egress trên gateway **và** ingress trên catalog. `k describe netpol` của cả hai bên.",
+      "DNS vẫn chết sau khi thêm policy DNS: so `k -n kube-system get pod --show-labels` của CoreDNS (nhãn là `k8s-app=kube-dns`, không phải `coredns`), và namespace (`kubernetes.io/metadata.name=kube-system`). Thiếu TCP 53 thì hầu hết vẫn chạy nhưng câu trả lời lớn hỏng.",
+      "`namespaceSelector` và `podSelector` cùng một phần tử (cùng một dấu `-`) là AND. Viết thành hai phần tử là OR: `k describe netpol` in hai khối `From:` riêng.",
+      "Ingress `/orders` của s29 trỏ thẳng Service `order`: ingress-nginx gọi IP Pod order, nên policy `order` phải nhận Pod controller ở namespace `ingress-nginx` (`app.kubernetes.io/component=controller`), không chỉ gateway.",
+      "NodePort 30180 trả `000` sau khi gateway chỉ nhận từ các controller: kube-proxy SNAT nguồn thành IP node hay IP `tunl0` của node khác (Tư duy). Gateway là cửa công khai: ingress cổng 8080 không có `from`.",
+      "Gateway 30280 trả 200 nhưng `/api/info` không bao giờ ra `1.0`: data plane thiếu egress tới `gateway-v1` (10% request). `wget` từ chính Pod data plane tới `gateway-v1:8080`.",
+      "Data plane mất kết nối với control plane thì Gateway vẫn phục vụ cấu hình cũ, nhưng đổi HTTPRoute không có tác dụng: egress tới namespace `nginx-gateway` cổng **8443** (cổng của Pod, policy so sau DNAT, không phải 443 của Service).",
+    ],
+    solution: `Output là của máy soạn bài; IP và tên Pod sẽ khác. Context đã ở namespace shop.
+
+**1. Trước khi chặn**
+
+\`\`\`bash
+k get netpol -A
+# No resources found
+k -n kube-system get pods -l k8s-app=calico-node -o wide
+# calico-node-4vf9l   1/1   Running   …   192.168.252.35   cka-cp
+# calico-node-bhzlq   1/1   Running   …   192.168.252.36   cka-w1
+# calico-node-qn2dk   1/1   Running   …   192.168.252.37   cka-w2
+k -n default run probe --image=busybox:1.37 --restart=Never -- sleep 3600
+k -n default exec probe -- wget -q -T 3 -O- http://catalog.shop.svc.cluster.local:8080/products | head -c 80; echo
+# [{"id":1,"name":"Bàn phím cơ","price":49.90},{"id":2,"name":"Chuột không d
+k exec deploy/order -c order -- sh -c 'for t in nc curl wget bash timeout getent; do printf "%s=%s " $t $(command -v $t || echo -); done; echo'
+# nc=- curl=- wget=- bash=/usr/bin/bash timeout=/usr/bin/timeout getent=/usr/bin/getent
+k exec deploy/gateway -c gateway -- timeout 2 bash -c '</dev/tcp/catalog/8080' && echo open || echo blocked
+# open
+\`\`\`
+
+Image \`eclipse-temurin:25-jre\` của shop không có \`nc\`, \`curl\`, \`wget\`; \`bash\` mở được TCP qua \`/dev/tcp/<host>/<cổng>\`. \`postgres-0\` (Alpine) và data plane nginx có busybox \`nc\`, \`wget\`.
+
+**2. default-deny: mọi thứ hỏng, kể cả DNS**
+
+\`\`\`yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: shop
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/netpol.yaml
+k exec deploy/gateway -c gateway -- timeout 2 bash -c '</dev/tcp/catalog/8080' && echo open || echo blocked
+# command terminated with exit code 124
+# blocked
+k exec deploy/order -c order -- bash -c 'time timeout 10 getent hosts catalog; echo rc=$?'
+# real    0m10.005s
+# rc=124
+\`\`\`
+
+Trên Mac \`curl -s -m 5 -o /dev/null -w '%{http_code}\\n' http://192.168.252.36:30180/api/products\` in \`000\` (qua cả ba node). Một phút sau \`k get pod\` vẫn \`1/1 Running\`, \`k get events --field-selector reason=Unhealthy\` chỉ có Event từ lúc khởi động (trước default-deny), \`k get hpa catalog\` vẫn \`cpu: 1%/60%\`: probe của kubelet đi từ chính node, metrics-server đọc kubelet.
+
+**3–5. DNS rồi từng luồng.** Tệp đầy đủ \`~/shop/netpol.yaml\` (default-deny ở đầu):
+
+\`\`\`yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: shop
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: shop
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway
+  namespace: shop
+spec:
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values: [gateway, gateway-v1]
+  policyTypes:
+  - Ingress
+  - Egress
+  # gateway là cửa vào công khai: ingress-nginx, data plane shop-gw, Job của shop, và NodePort 30180 (gateway-nodeport) mà
+  # kube-proxy SNAT sang IP node hay IP tunl0 của node khác. Không chọn được nguồn hẹp hơn: mở cổng 8080 cho mọi nguồn.
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values: [catalog, order]
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: catalog
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      app: catalog
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values: [gateway, gateway-v1, order]
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: order
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      app: order
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values: [gateway, gateway-v1]
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/component: controller
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: catalog
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values: [catalog, order]
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: shop-gw-data-plane
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: shop-gw
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  - to:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values: [gateway, gateway-v1]
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: nginx-gateway
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: nginx-gateway
+    ports:
+    - protocol: TCP
+      port: 8443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jobs
+  namespace: shop
+spec:
+  podSelector:
+    matchExpressions:
+    - key: batch.kubernetes.io/job-name
+      operator: Exists
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/netpol.yaml
+k get netpol
+# NAME                 POD-SELECTOR                                     AGE
+# allow-dns-egress     <none>                                           4m34s
+# catalog              app=catalog                                      2m11s
+# default-deny         <none>                                           4m34s
+# gateway              app in (gateway,gateway-v1)                      2m11s
+# jobs                 batch.kubernetes.io/job-name                     2m11s
+# order                app=order                                        2m11s
+# postgres             app=postgres                                     2m11s
+# shop-gw-data-plane   gateway.networking.k8s.io/gateway-name=shop-gw   2m11s
+k describe netpol order
+#   PodSelector:     app=order
+#   Allowing ingress traffic:
+#     To Port: 8080/TCP
+#     From:
+#       PodSelector: app in (gateway,gateway-v1)
+#     From:
+#       NamespaceSelector: kubernetes.io/metadata.name=ingress-nginx
+#       PodSelector: app.kubernetes.io/component=controller
+#   Allowing egress traffic:
+#     To Port: 8080/TCP
+#     To:
+#       PodSelector: app=catalog
+#     ----------
+#     To Port: 5432/TCP
+#     To:
+#       PodSelector: app=postgres
+#   Policy Types: Ingress, Egress
+\`\`\`
+
+Hai khối \`From:\` của order là hai nguồn OR; trong khối thứ hai \`NamespaceSelector\` và \`PodSelector\` cùng khối là AND. Cổng NGF đọc từ cluster: Service \`nginx-gateway\` \`{"name":"agent-grpc","port":443,"targetPort":8443}\`; Pod data plane nghe \`port-80\` (80) và \`metrics\` (9113), readiness \`/readyz\` cổng 8081 do kubelet gọi.
+
+Gói bị bỏ ở đâu (trước khi có policy \`catalog\`, catalog trên cka-w2 gọi order \`10.244.95.149\` trên cka-w1):
+
+\`\`\`bash
+sudo tcpdump -ni any 'tcp port 8080 and dst host 10.244.95.149'     # trên cka-w2
+# calic784e4b7bfe In  IP 10.244.62.163.51896 > 10.244.95.149.8080: Flags [S], seq 346484757, …
+# calic784e4b7bfe In  IP 10.244.62.163.51896 > 10.244.95.149.8080: Flags [S], seq 346484757, …   (gửi lại sau 1 giây)
+\`\`\`
+
+SYN đi ra khỏi veth của Pod rồi mất ngay trên node nguồn (không thấy trên \`tunl0\`): egress của catalog không cho phép, Calico bỏ gói trước khi định tuyến. Chính dòng này vẫn đúng sau khi có đủ policy: catalog → order là luồng không cần.
+
+NodePort 30180 khi gateway chỉ nhận từ các controller (bản nháp đầu của bài soạn): \`000\` qua cả ba node. tcpdump trên cka-w1 lúc gọi \`192.168.252.36:30180\`:
+
+\`\`\`
+tunl0 Out IP 10.244.95.128.22122 > 10.244.62.161.8080: Flags [S]       # Pod gateway ở cka-w2: nguồn là IP tunl0 của cka-w1
+\`\`\`
+
+Nên policy \`gateway\` nhận cổng 8080 từ mọi nguồn.
+
+Trên Mac:
+
+\`\`\`bash
+curl -s -o /dev/null -w '%{http_code}\\n' http://192.168.252.36:30180/api/products                                   # 200
+curl -s -o /dev/null -w '%{http_code}\\n' --resolve shop.local:30080:192.168.252.36 http://shop.local:30080/orders   # 200
+curl -s -o /dev/null -w '%{http_code}\\n' --resolve shop.local:30280:192.168.252.35 http://shop.local:30280/api/products  # 200
+\`\`\`
+
+\`k get job\`: \`order-report-29916555   Complete   1/1   2s\` (Job chạy trước khi có policy \`jobs\` mất 71 giây vì wget thử lại).
+
+**6. Chứng minh từ đúng Pod nguồn**
+
+\`\`\`bash
+t() { k exec deploy/$1 -c $2 -- timeout 3 bash -c "</dev/tcp/$3/$4" 2>/dev/null && echo "$1 → $3:$4 open" || echo "$1 → $3:$4 blocked"; }
+t gateway gateway catalog 8080; t gateway gateway order 8080; t gateway-v1 gateway catalog 8080; t order order catalog 8080
+t order order postgres-rw 5432; t catalog catalog postgres-0.postgres 5432
+t catalog catalog order 8080; t gateway gateway postgres-rw 5432
+# gateway → catalog:8080 open
+# gateway → order:8080 open
+# gateway-v1 → catalog:8080 open
+# order → catalog:8080 open
+# order → postgres-rw:5432 open
+# catalog → postgres-0.postgres:5432 open
+# catalog → order:8080 blocked
+# gateway → postgres-rw:5432 blocked
+k exec deploy/shop-gw-nginx -c nginx -- wget -q -T 3 -O- http://gateway-v1:8080/api/info; echo
+# {"service":"gateway","version":"1.0","hostname":"gateway-v1-d58549bff-m6j7n","greeting":"Xin chào từ ConfigMap"}
+k -n default exec probe -- wget -q -T 3 -O /dev/null http://catalog.shop.svc.cluster.local:8080/products
+# wget: download timed out
+# command terminated with exit code 1
+echo DEFAULT_NS_TO_CATALOG=blocked >> ~/drills/s31/answers.env
+\`\`\`
+
+**7. Tình huống hỏng: hai phần tử from** (\`~/drills/s31/allow-probe.yaml\`)
+
+\`\`\`yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-probe
+  namespace: shop
+spec:
+  podSelector:
+    matchLabels:
+      app: catalog
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+    - podSelector:
+        matchLabels:
+          role: probe
+    ports:
+    - protocol: TCP
+      port: 8080
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/drills/s31/allow-probe.yaml
+k -n default exec probe -- wget -q -T 3 -O /dev/null http://catalog.shop.svc.cluster.local:8080/products && echo open
+# open        (probe không có nhãn role: phần tử namespaceSelector một mình đã cho cả namespace default)
+echo DRAFT_TWO_PEERS=open >> ~/drills/s31/answers.env
+\`\`\`
+
+Sửa: bỏ dấu \`-\` trước \`podSelector\` để hai selector nằm trong một phần tử. Apply: probe → \`download timed out\`; \`k -n default label pod probe role=probe\` → \`open\`. Rồi \`k delete netpol allow-probe\`, \`k -n default delete pod probe\`.
+
+Lời giải tự động: \`labs/cka/sessions/s31/apply.sh\` (tệp chuẩn \`files/netpol.yaml\`, \`files/allow-probe.yaml\`; chạy lại được).`,
+    exam: {
+      patterns: [
+        "\"Pod trong namespace X chỉ được nhận kết nối từ Pod nhãn app=frontend, cổng 8080\" — một policy chọn Pod đích, `policyTypes: [Ingress]`, một phần tử `from` với `podSelector`, `ports`.",
+        "\"Chặn mọi lưu lượng vào/ra namespace, trừ DNS\" — `podSelector: {}` + `policyTypes: [Ingress, Egress]`, cộng egress tới `kube-system`/`k8s-app: kube-dns` UDP+TCP 53.",
+        "\"Cho phép từ namespace có nhãn team=a\" — `namespaceSelector`; nếu đề nói \"Pod nhãn X **trong** namespace đó\" thì cùng phần tử với `podSelector` (AND).",
+        "\"Policy đã tạo mà vẫn gọi được / vẫn không gọi được\" — `k describe netpol` hai đầu, nhãn Pod (`--show-labels`), nhãn namespace, AND/OR, cổng của Pod chứ không phải của Service.",
+      ],
+      timeTargetMin: 8,
+      drills: [
+        {
+          text: "Trong 3 phút: namespace `drill` chưa có policy. Viết NetworkPolicy `deny-in` chặn mọi ingress vào mọi Pod của `drill` (egress vẫn tự do), apply, rồi `k describe` để kiểm.",
+          timeLimitMin: 3,
+          solution: "```yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: deny-in\n  namespace: drill\nspec:\n  podSelector: {}\n  policyTypes:\n  - Ingress\n```\n```bash\nk create ns drill\nk apply -f deny-in.yaml\nk -n drill describe netpol deny-in\nk delete ns drill\n```\nChỉ khai `Ingress` trong `policyTypes`: egress không bị chọn nên vẫn mở.",
+        },
+        {
+          text: "Trong 4 phút: cho Pod `app=catalog` của shop nhận thêm kết nối cổng 8080 từ Pod `app=monitor` ở namespace `monitoring` (chỉ Pod đó, không phải cả namespace), không sửa policy `catalog` có sẵn.",
+          timeLimitMin: 4,
+          solution: "```yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: catalog-from-monitor\n  namespace: shop\nspec:\n  podSelector:\n    matchLabels:\n      app: catalog\n  policyTypes:\n  - Ingress\n  ingress:\n  - from:\n    - namespaceSelector:\n        matchLabels:\n          kubernetes.io/metadata.name: monitoring\n      podSelector:\n        matchLabels:\n          app: monitor\n    ports:\n    - protocol: TCP\n      port: 8080\n```\nPolicy cộng dồn: policy mới cộng thêm nguồn cho catalog, không cần sửa policy cũ. Pod `monitor` ở namespace `monitoring` không bị policy nào chọn nên egress của nó tự do. Xoá policy khi xong để `~/shop/` khớp cluster.",
+        },
+      ],
+    },
+    tips: [
+      "Trang Network Policies của kubernetes.io có ví dụ đầy đủ (ingress + egress, ipBlock, namespaceSelector + podSelector): chép rồi sửa nhanh hơn viết từ đầu.",
+      "`policyTypes` luôn ghi rõ: không ghi thì API điền `Ingress`, thêm `Egress` chỉ khi policy có khối `egress:`. default-deny viết `podSelector: {}` mà không `policyTypes` vì thế chỉ chặn chiều vào, egress vẫn mở.",
+      "`podSelector: {}` là mọi Pod; bỏ hẳn `podSelector` trong một phần tử `from` (chỉ để `namespaceSelector`) là mọi Pod của namespace được chọn.",
+      "Thử bằng lệnh có timeout từ Pod nguồn thật: Pod tạm mang nhãn khác không chứng minh gì về luồng của Pod thật.",
+    ],
+    outcome: {
+      md: `Namespace shop đóng mặc định, chỉ các luồng shop cần và DNS được mở, ba cửa vào từ máy Mac vẫn chạy. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s31
+\`\`\`
+
+Verify kiểm policy \`default-deny\` (mọi Pod, Ingress + Egress, không rule) và mọi NetworkPolicy của shop có YAML trong \`~/shop/\` khớp cluster; policy egress DNS cho mọi Pod với \`kube-system\` **và** \`k8s-app=kube-dns\` trong một phần tử, UDP+TCP 53, và order phân giải được tên. Rồi **thử thật**: một Pod busybox trong namespace tạm của verify (xoá khi xong) gọi catalog phải hết giờ; \`kubectl exec\` vào Pod thật của gateway, gateway-v1, order, catalog và data plane: các luồng của ứng dụng mở, \`catalog → order\` và \`gateway → postgres\` bị chặn. Dưới default-deny, từ máy Mac 30180, Ingress 30080 (\`/api/products\`, \`/orders\`) và Gateway 30280 trả 200; HPA catalog có số liệu CPU; Deployment, data plane, postgres và hai controller sẵn sàng. Cuối cùng \`DEFAULT_NS_TO_CATALOG\`, \`DRAFT_TWO_PEERS\` và policy nháp đã xoá.`,
+      verifyOutput: "lab: kiểm s31\n  (chờ apiserver, CoreDNS, postgres-0, Deployment của shop, ingress-nginx và NGF, nếu đang khởi động: tối đa ~14 phút)\n  ✓ default-deny: podSelector {}, policyTypes Ingress + Egress, không rule; mọi NetworkPolicy của shop có YAML trong ~/shop/\n  ✓ Egress DNS cho mọi Pod: kube-system VÀ k8s-app=kube-dns (một phần tử), UDP+TCP 53; order phân giải được tên\n  ✓ Pod tạm trong namespace tạm của verify → catalog:8080 bị chặn (hết giờ), DNS của nó vẫn chạy\n  ✓ kubectl exec từ Pod thật: luồng của app mở (gateway, gateway-v1, order, data plane), catalog→order, gateway→postgres chặn\n  ✓ Dưới default-deny, từ máy Mac: :30180, Ingress :30080 (/api/products, /orders), Gateway :30280 đều trả 200\n  ✓ Dưới default-deny: HPA catalog có số liệu CPU; gateway, gateway-v1, catalog, order, data plane, postgres, controller sẵn sàng\n  ✓ answers.env: DEFAULT_NS_TO_CATALOG=blocked, DRAFT_TWO_PEERS=open; NetworkPolicy nháp allow-probe đã xoá\n  → 7/7 đạt",
+      projectDelta: "Mảnh \"NetworkPolicy\" của project: shop có security group cho từng service bằng nhãn, đóng mặc định, DNS mở riêng; cửa vào NodePort, Ingress và Gateway vẫn chạy. Buổi sau là sự cố mạng nhiều tầng trên chính trạng thái này.",
+    },
+    review: [
+      { q: "Có hai policy cùng chọn Pod catalog: một cho phép từ gateway, một cho phép từ order. Request từ order tới catalog có qua không? Còn nếu policy thứ hai được viết để \"chặn order\"?", a: "Qua: các policy chọn cùng một Pod cộng dồn, Pod nhận hợp của mọi nguồn được phép. NetworkPolicy không có rule deny: không thể viết policy \"chặn order\"; muốn order không vào được thì không policy nào được cho phép nó." },
+      { q: "Sau default-deny, vì sao Pod vẫn Ready và HPA vẫn có số liệu, trong khi gateway không gọi được catalog?", a: "Probe do kubelet gọi từ chính node chứa Pod, và Calico (như tài liệu Kubernetes nói) cho phép lưu lượng từ node tới Pod cục bộ. metrics-server lấy số liệu CPU từ kubelet (`node:10250`), không gọi vào Pod. gateway → catalog là lưu lượng Pod tới Pod, nên bị chặn ở egress của gateway và ingress của catalog." },
+      { q: "`from: [{namespaceSelector: …default}, {podSelector: {role: probe}}]` khác `from: [{namespaceSelector: …default, podSelector: {role: probe}}]` thế nào?", a: "Bản đầu là hai phần tử, OR: mọi Pod của namespace default, hoặc Pod `role=probe` trong namespace của policy (shop). Bản sau là một phần tử, AND: chỉ Pod `role=probe` nằm ở default. Đo ở t7: với bản đầu, Pod probe không nhãn ở default vẫn vào được catalog." },
+      { q: "Vì sao policy của gateway mở cổng 8080 cho mọi nguồn thay vì chỉ ingress-nginx và data plane?", a: "NodePort `gateway-nodeport` (externalTrafficPolicy Cluster) bị kube-proxy SNAT: gói tới Pod gateway mang IP của node hay IP `tunl0` của node khác (đo bằng tcpdump), không phải IP của Mac, và không selector nào chọn được. gateway là cửa công khai, như security group của load balancer mở cổng cho mọi nơi; catalog, order, postgres phía sau mới khoá chặt." },
+      { q: "Spring gọi catalog bị NetworkPolicy chặn. Trong log bạn thấy gì, khác gì khi Service catalog không có endpoint?", a: "Bị chặn: gói bị bỏ, không có RST, nên kết nối treo tới timeout (`SocketTimeoutException`/`connect timed out`, hay treo hàng phút nếu client không đặt timeout). Service không có endpoint: kube-proxy trả REJECT ngay, log là `Connection refused`. Không phân giải được tên là `UnknownHostException`." },
+    ],
   },
+// ───────────────────────────── s32 ─────────────────────────────
   {
     id: "s32",
     stage: "st5",
@@ -1810,11 +2354,11 @@ Verify kiểm ba CRD (\`gatewayclasses\`, \`gateways\`, \`httproutes\`) phục v
     domain: "troubleshooting",
     competencies: ["ts-net"],
     requires: ["s31"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
       "Đưa shop gọi được lại từ máy Mac trong 25 phút khi lỗi nằm ở nhiều tầng mạng cùng lúc.",
-      "Kiểm Service theo thứ tự: endpoints → selector/nhãn → targetPort → Pod Ready → NetworkPolicy.",
+      "Kiểm Service theo thứ tự: endpoints → selector/nhãn → targetPort → Pod Ready → NetworkPolicy → DNS.",
       "Dùng Pod netshoot để thử từng chặng từ trong cluster.",
     ],
     skills: [
@@ -1824,8 +2368,213 @@ Verify kiểm ba CRD (\`gatewayclasses\`, \`gateways\`, \`httproutes\`) phục v
       { skill: "k-netshoot", level: "Gõ được không tra" },
       { skill: "k-endpointslice", level: "Gõ được có tra" },
     ],
-    uses: ["k-get-endpoints", "k-get-netpol", "net-dig", "k-ingressclass", "k-wget-svc"],
-    stateIn: "Đầu ra s31 cộng `./labs/lab break`: shop.local trả 503, vài luồng nội bộ hỏng.",
-    stateOut: "shop.local và HTTPRoute phục vụ bình thường, mọi luồng nội bộ đúng như cuối s31.",
+    uses: ["k-get-endpoints", "k-get-netpol", "net-dig", "k-ingressclass", "k-wget-svc", "k-debug-container"],
+    foundation: null,
+    mindset: `**Đi theo request, từng chặng một.** Một request tới \`shop.local:30080/api/products\` đi qua: Mac → NodePort của ingress-nginx → Pod controller → Service \`gateway\` → Pod gateway → Service \`catalog\` → Pod catalog → postgres. Chặng nào trả lời thì mọi chặng trước nó đã đi được: **đọc kỹ ai trả lời**. Trang 504 HTML có \`<center>nginx</center>\` là controller tự trả (nó không nối được backend); JSON \`{"error":"không kết nối được catalog"}\` với mã 503 là gateway (Spring) trả: request đã qua controller và tới gateway, chặng hỏng là gateway → catalog. Mỗi lần sửa xong một chặng, gọi lại từ đầu.
+
+**Tại mỗi Service, kiểm theo thứ tự này** (từ rẻ tới đắt):
+
+1. **Endpoints**: \`k get endpointslice -l kubernetes.io/service-name=<svc>\`. ENDPOINTS \`<unset>\` là Service không chọn được Pod Ready nào.
+2. **Selector và nhãn**: \`k get svc <svc> -o jsonpath='{.spec.selector}'\` so với \`k get pod --show-labels\`. Lệch một ký tự là rỗng; selector chọn thừa thì endpoints có Pod lạ.
+3. **targetPort**: \`k get svc <svc> -o jsonpath='{.spec.ports}'\` so với \`k get pod -l app=<x> -o jsonpath='{..containerPort}'\`. EndpointSlice có địa chỉ nhưng cột PORTS là cổng không ai nghe → \`Connection refused\` từ Pod.
+4. **Pod Ready**: \`k get pod\`; Pod Running mà 0/1 thì không vào endpoints (readiness, s13).
+5. **NetworkPolicy**: \`k get netpol\`, \`k describe netpol\` của **cả nguồn và đích**: nhãn trong selector, \`namespaceSelector\` đúng tên namespace thật, cổng của Pod.
+6. **DNS**: \`getent hosts <svc>\` từ Pod nguồn; \`dig @10.96.0.10 <svc>.<ns>.svc.cluster.local\` từ Pod không bị chặn. Tên phân giải được từ nơi khác mà không từ Pod nguồn: egress DNS của Pod nguồn.
+
+**Ba kiểu thất bại, ba nghĩa** (đo trên lab):
+
+| Thấy | Nghĩa | Thường do |
+|---|---|---|
+| \`Connection refused\`, ngay lập tức | gói tới nơi, không ai nghe; hay kube-proxy REJECT vì Service không có endpoint | EndpointSlice rỗng (selector), targetPort sai |
+| treo tới hết timeout | gói bị bỏ | NetworkPolicy (ingress của đích hay egress của nguồn) |
+| \`UnknownHostException\`, \`getent\` treo, \`bad address\` | không phân giải được tên | egress DNS bị chặn, CoreDNS không chạy, tên sai |
+
+Nhiều lỗi chồng nhau thì lỗi ở tầng dưới che lỗi ở tầng trên: gateway mất DNS thì không ai thấy Service catalog rỗng qua log của gateway, cả hai chỉ hiện là "không kết nối được catalog".
+
+**Thử từ đâu.** Trong namespace đã default-deny, Pod tạm mới (kể cả netshoot) bị chặn mọi hướng, nên không dùng nó thay cho Pod nguồn thật. Có ba chỗ đứng:
+
+- **Pod netshoot ở namespace không có policy** (\`default\`): \`dig\` tên Service qua \`10.96.0.10\` (CoreDNS có trả lời không), \`curl\` NodePort, \`nc\` tới IP node. Bị chặn khi gọi vào shop: đó là policy làm đúng việc, không phải lỗi.
+- **\`k exec\` vào Pod nguồn thật** với công cụ image có (\`getent\`, \`bash /dev/tcp\`, \`wget\` của busybox).
+- **\`k debug -it <pod> --image=nicolaka/netshoot:v0.16 --target=<container>\`**: container tạm chung network namespace với Pod thật, mang đúng IP và nhãn của nó, có đủ \`dig\`, \`curl\`, \`nc\`, \`tcpdump\`. Container tạm không xoá được khỏi Pod (Pod mới khi rollout sẽ không có nó); thoát shell là nó dừng.
+
+\`nicolaka/netshoot\` ghim \`v0.16\` (1/7/2026, có \`arm64\`, ~213 MB nén): lần đầu kéo mất cả phút.
+
+**Java.** Spring \`RestClient\` không đặt timeout thì request vào gateway treo theo DNS hay theo gói bị bỏ: đo trên lab, \`/api/products\` qua NodePort mất tới 20 giây mới ra 503 khi gateway mất DNS. JVM giữ kết quả DNS thành công 30 giây (\`networkaddress.cache.ttl\` khi không có security manager), nên DNS hỏng có thể chưa lộ ngay sau sự cố và sửa xong cũng không phải đợi lâu.`,
+    refs: [
+      { label: "Bài lộ trình CKA: NetworkPolicies (ôn từ CKAD)", href: "#/roadmap/cka/cka-w6-6" },
+      { label: "CKA Study Guide, chương 21 — Xử lý sự cố ứng dụng", href: "#/docs/ckabook-21" },
+      { label: "CKA Study Guide, chương 17 — Service", href: "#/docs/ckabook-17" },
+      { label: "kubernetes.io: Debug Services", href: "https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/" },
+      { label: "kubernetes.io: Debugging DNS Resolution", href: "https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/" },
+      { label: "kubernetes.io: Debug Running Pods (ephemeral containers, kubectl debug)", href: "https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/" },
+      { label: "Bài thực hành s31 — NetworkPolicy", href: "#/practice/cka/s31" },
+    ],
+    stateIn: "Đầu ra s31. Trên Mac chạy `./labs/lab begin cka s32`: lệnh kiểm đầu vào rồi **gây sự cố**: \"một đồng nghiệp dọn lại mạng của shop\", sửa vài tệp trong `~/shop/` (bằng một công cụ YAML: comment mất) rồi apply. shop.local từ Mac trả 503/504, vài luồng nội bộ hỏng. Bấm giờ 25 phút.",
+    stateOut: "Mọi dòng verify của s31 xanh lại: Service catalog có endpoints, order đúng targetPort, NetworkPolicy của shop như cuối s31 (DNS và ingress-nginx → order mở), ba cửa vào từ Mac trả 200; ~/shop/ khớp cluster; Pod netshoot đã xoá; ~/drills/s32/answers.env.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s32`, bấm giờ 25 phút. Trên cka-cp, chưa sửa gì: `curl -s -m 30 -w ' %{http_code}\\n' http://shop.local:30080/api/products` và `/orders`, `curl -s -m 30 -w ' %{http_code}\\n' http://shop.local:30280/api/products`. Ai trả lời mỗi request (trang HTML của nginx hay JSON của Spring)? Request `/api/products` qua Ingress đi được tới chặng nào? Ghi `FIRST_BROKEN_HOP=<nguồn>-><đích>` (chặng hỏng đầu tiên của `shop.local:30080/api/products`, ví dụ `ingress-nginx->gateway`) vào `~/drills/s32/answers.env`.",
+      },
+      {
+        id: "t2",
+        text: "Pod netshoot ở default: `k -n default run netshoot --image=nicolaka/netshoot:v0.16@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 -- sleep 3600`. Từ đó `dig +short catalog.shop.svc.cluster.local`, `dig +short @10.96.0.10 order.shop.svc.cluster.local`: CoreDNS có trả lời không? Rồi từ Pod nguồn thật: `k exec deploy/gateway -c gateway -- timeout 3 getent hosts catalog; echo $?`. Hai kết quả khác nhau nói gì?",
+      },
+      {
+        id: "t3",
+        text: "Endpoints và selector: `k get endpointslice -l 'kubernetes.io/service-name in (gateway,catalog,order)'`. Service nào ENDPOINTS `<unset>`? `k get svc catalog -o jsonpath='{.spec.selector}'`, `k get pod -l app=catalog --show-labels`. Sửa trong tệp chứa Service đó ở `~/shop/`, apply, endpoints có địa chỉ chưa?",
+      },
+      {
+        id: "t4",
+        text: "targetPort: cột PORTS của EndpointSlice order là gì? `k get svc order -o jsonpath='{.spec.ports}'` so với `k get pod -l app=order -o jsonpath='{..containerPort}'`. Thử thẳng IP Pod với cổng đó từ Pod nguồn được phép: `k exec deploy/gateway -c gateway -- timeout 3 bash -c '</dev/tcp/<IP Pod order>/8081'` (refused hay treo?). Sửa, apply. `k get pod`: có Pod nào không Ready không?",
+      },
+      {
+        id: "t5",
+        text: "NetworkPolicy: `k get netpol`, `k describe netpol allow-dns-egress` và `k describe netpol order`, so từng selector với nhãn thật: `k -n kube-system get pod -l k8s-app=kube-dns --show-labels`, `k get ns --show-labels`, `k -n ingress-nginx get pod --show-labels`. Thử DNS từ chính Pod gateway bằng netshoot tạm: `k debug -it <Pod gateway> --image=nicolaka/netshoot:v0.16@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 --target=gateway -- dig +time=2 +tries=1 catalog.shop.svc.cluster.local`. Sửa `~/shop/netpol.yaml`, apply.",
+      },
+      {
+        id: "t6",
+        text: "Gọi lại từ đầu sau mỗi lần sửa: cka-cp `curl` ba URL của t1; trên Mac 30180, `--resolve shop.local:30080:<IP cka-w1>` cho `/api/products` và `/orders`, `--resolve shop.local:30280:<IP cka-cp>`. `k get netpol -o yaml` khớp `~/shop/netpol.yaml` chưa (verify so tệp với cluster)?",
+      },
+      {
+        id: "t7",
+        text: "`k -n default delete pod netshoot`. Kiểm `~/drills/s32/answers.env`. Trên Mac: `./labs/lab verify cka s32` phải đạt 8/8 (mọi dòng của s31 cộng đáp án). Dừng đồng hồ: bao nhiêu phút, lỗi nào tốn thời gian nhất?",
+      },
+    ],
+    hints: [
+      "Đừng sửa theo triệu chứng ở Mac. Request đầu tiên cho biết chặng nào đã đi được: 503 JSON là gateway trả lời, tức Mac → controller → gateway ổn.",
+      "`dig` từ netshoot ở default ra IP nhưng `getent` trong gateway treo: CoreDNS chạy, chỉ Pod của shop không tới được nó. Đó là egress DNS (NetworkPolicy), không phải CoreDNS.",
+      "ENDPOINTS `<unset>` mà Pod Running và Ready: selector của Service không khớp nhãn Pod. So từng ký tự.",
+      "EndpointSlice có IP nhưng cổng là 8081: `targetPort` của Service trỏ cổng mà container không nghe. Container khai cổng tên `http` (8080, từ s27): `targetPort: http` là cách s27 để lại.",
+      "Pod CoreDNS mang nhãn `k8s-app=kube-dns` (giữ từ thời kube-dns để tương thích), không phải `coredns`. Namespace của controller là `ingress-nginx`; `nginx-ingress` là tên của controller khác (F5).",
+      "`/orders` qua Ingress vẫn 504 sau khi sửa targetPort: ingress-nginx gọi thẳng IP Pod order, policy `order` phải nhận Pod controller ở đúng namespace. Hai lỗi nằm trên cùng một chặng.",
+      "`k apply -f ~/shop/` cả thư mục là đủ sau khi sửa tệp, nhưng nhớ sửa **tệp**: verify so `~/shop/` với cluster, và `k edit` thẳng trên cluster làm tệp lệch.",
+    ],
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài; tên Pod, IP sẽ khác. Context đã ở namespace shop.
+
+**1. Ai trả lời** (trên cka-cp)
+
+\`\`\`bash
+curl -s -m 30 -w ' %{http_code}\\n' http://shop.local:30080/api/products
+# {"error":"không kết nối được catalog"} 503
+curl -s -m 30 -o /dev/null -w '%{http_code} %{time_total}s\\n' http://shop.local:30080/orders
+# 504 15.043473s
+curl -s -m 30 -w ' %{http_code}\\n' http://shop.local:30280/api/products
+# {"error":"không kết nối được catalog"} 503
+\`\`\`
+
+\`/api/products\`: JSON của Spring, tức controller đã nối được gateway và gateway trả lời. Chặng hỏng đầu tiên là gateway → catalog. \`/orders\`: trang 504 của nginx sau 15 giây, controller không nối được order (treo: gói bị bỏ hay không ai trả lời).
+
+\`\`\`bash
+echo 'FIRST_BROKEN_HOP=gateway->catalog' >> ~/drills/s32/answers.env
+\`\`\`
+
+**2. netshoot: DNS của cluster vẫn chạy**
+
+\`\`\`bash
+k -n default run netshoot --image=nicolaka/netshoot:v0.16@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 -- sleep 3600
+k -n default exec netshoot -- dig +short +time=2 +tries=1 catalog.shop.svc.cluster.local
+# 10.101.94.107
+k exec deploy/gateway -c gateway -- timeout 3 getent hosts catalog; echo $?
+# 124
+\`\`\`
+
+CoreDNS trả lời Pod ở default, không trả lời Pod gateway: egress DNS của shop. Ghi lại, đi tiếp theo thứ tự.
+
+**3. Endpoints, selector, targetPort**
+
+\`\`\`bash
+k get endpointslice -l 'kubernetes.io/service-name in (catalog,order)' -o wide
+# NAME            ADDRESSTYPE   PORTS     ENDPOINTS       AGE
+# catalog-jkwjt   IPv4          <unset>   <unset>         3d14h
+# order-v65n5     IPv4          8081      10.244.95.167   3d14h
+k get svc catalog -o jsonpath='{.spec.selector}'; echo
+# {"app":"catalogue"}
+k get svc order -o jsonpath='{.spec.ports}'; echo
+# [{"name":"http","port":8080,"protocol":"TCP","targetPort":8081}]
+k get pod -l app=order -o jsonpath='{..containerPort}'; echo
+# 8080
+\`\`\`
+
+Sửa \`~/shop/services.yaml\` về như s27 (selector \`app: catalog\`, \`targetPort: http\`), \`k apply -f ~/shop/services.yaml\`:
+
+\`\`\`bash
+k get endpointslice -l 'kubernetes.io/service-name in (catalog,order)'
+# catalog-jkwjt   IPv4          8080    10.244.95.170,10.244.62.162   3d14h
+# order-v65n5     IPv4          8080    10.244.95.167                 3d14h
+\`\`\`
+
+\`k get pod\`: mọi Pod của shop Ready (chặng 4 không hỏng).
+
+**4. NetworkPolicy**
+
+\`\`\`bash
+k get netpol allow-dns-egress -o jsonpath='{.spec.egress[0].to[0]}'; echo
+# {"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},"podSelector":{"matchLabels":{"k8s-app":"coredns"}}}
+k -n kube-system get pod -l k8s-app=kube-dns --show-labels | head -2
+# coredns-…   1/1   Running   …   k8s-app=kube-dns,pod-template-hash=…
+k get netpol order -o jsonpath='{.spec.ingress[0].from[1]}'; echo
+# {"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"nginx-ingress"}},"podSelector":{"matchLabels":{"app.kubernetes.io/component":"controller"}}}
+\`\`\`
+
+Hai selector sai: CoreDNS mang \`k8s-app=kube-dns\`, namespace của controller là \`ingress-nginx\`. Sửa hai chỗ trong \`~/shop/netpol.yaml\` (đúng như tệp của s31), \`k apply -f ~/shop/netpol.yaml\`.
+
+**5. Gọi lại từ đầu, dọn**
+
+\`\`\`bash
+curl -s http://shop.local:30080/api/products | head -c 80; echo
+# [{"id":1,"name":"Bàn phím cơ","price":49.90},{"id":2,"name":"Chuột không d
+curl -s -o /dev/null -w '%{http_code}\\n' http://shop.local:30080/orders
+# 200
+k -n default delete pod netshoot
+\`\`\`
+
+Bốn lỗi của sự cố: Service \`catalog\` selector \`app: catalogue\` (EndpointSlice rỗng); Service \`order\` \`targetPort: 8081\` (container nghe 8080); policy \`order\` nhận controller từ namespace \`nginx-ingress\` (không tồn tại); policy \`allow-dns-egress\` chọn CoreDNS bằng \`k8s-app: coredns\` (mọi Pod của shop mất DNS).
+
+Lời giải tự động: \`labs/cka/sessions/s32/apply.sh\` (gây sự cố bằng \`lab_break st5-network\`, sửa bằng tệp chuẩn của s27 và s31; chạy lại được).`,
+    exam: {
+      patterns: [
+        "\"Service X không trả lời, sửa để Pod Y gọi được\" — `k get endpointslice`, selector vs nhãn, targetPort vs containerPort, readiness; sửa đúng object, không tạo object mới.",
+        "\"Pod không phân giải được tên Service\" — `k exec … -- nslookup/getent`, CoreDNS chạy không (`k -n kube-system get pod -l k8s-app=kube-dns`), NetworkPolicy egress 53, `dnsPolicy` của Pod (s28).",
+        "\"Ingress trả 502/503/504\" — Service backend có endpoints không, cổng trong Ingress là cổng của Service, NetworkPolicy của Pod backend có nhận namespace của controller không.",
+      ],
+      timeTargetMin: 15,
+      drills: [
+        {
+          text: "Trong 2 phút: chỉ bằng một lệnh, in ra selector và các cổng (port, targetPort) của mọi Service trong shop.",
+          timeLimitMin: 2,
+          solution: "```bash\nk get svc -o custom-columns='NAME:.metadata.name,SELECTOR:.spec.selector,PORTS:.spec.ports[*].port,TARGET:.spec.ports[*].targetPort'\n```\nSo cột SELECTOR với `k get pod --show-labels`, cột TARGET với `k get pod -o jsonpath='{..containerPort}'`.",
+        },
+        {
+          text: "Trong 3 phút: từ chính network namespace của một Pod catalog, kiểm catalog có tới được postgres-rw cổng 5432 và có phân giải được tên không, mà không sửa image hay Deployment.",
+          timeLimitMin: 3,
+          solution: "```bash\nk debug -it $(k get pod -l app=catalog -o name | head -1) --image=nicolaka/netshoot:v0.16@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 --target=catalog -- sh -c 'dig +short postgres-rw.shop.svc.cluster.local; nc -zv -w 2 postgres-rw 5432'\n```\nContainer tạm chung network namespace với Pod, nên đi đúng NetworkPolicy của catalog. Thoát là nó dừng; Pod giữ nó trong `spec.ephemeralContainers` tới khi bị thay.",
+        },
+      ],
+    },
+    tips: [
+      "Ghi giờ lúc bắt đầu, và ghi từng chặng đã kiểm: sự cố nhiều lớp dễ làm bạn kiểm lại thứ đã đúng.",
+      "`k get endpointslice` trước mọi thứ khác: một lệnh trả lời được cả selector (rỗng), targetPort (cột PORTS) và readiness (địa chỉ không ready).",
+      "Phân biệt refused / treo / không phân giải: ba kiểu lỗi trỏ ba tầng khác nhau, đừng gộp chung là \"không kết nối được\".",
+      "Sửa trong tệp ở `~/shop/` rồi apply, đừng `k edit`: đề thi không chấm tệp, nhưng cluster thật của bạn sẽ bị ghi đè bởi lần apply sau.",
+    ],
+    outcome: {
+      md: `shop phục vụ lại qua cả ba cửa, mọi luồng nội bộ đúng như cuối s31. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s32
+\`\`\`
+
+Verify chạy lại **mọi dòng của s31** (cùng facts và cùng các luồng thử thật từ Pod thật, từ namespace tạm và từ máy Mac), cộng một dòng: \`FIRST_BROKEN_HOP\` là chặng hỏng đầu tiên của \`shop.local:30080/api/products\` và không còn Pod netshoot (cả container tạm netshoot của \`kubectl debug\` đang chạy).`,
+      verifyOutput: "lab: kiểm s32\n  (chờ apiserver, CoreDNS, postgres-0, Deployment của shop, ingress-nginx và NGF, nếu đang khởi động: tối đa ~14 phút)\n  ✓ default-deny: podSelector {}, policyTypes Ingress + Egress, không rule; mọi NetworkPolicy của shop có YAML trong ~/shop/\n  ✓ Egress DNS cho mọi Pod: kube-system VÀ k8s-app=kube-dns (một phần tử), UDP+TCP 53; order phân giải được tên\n  ✓ Pod tạm trong namespace tạm của verify → catalog:8080 bị chặn (hết giờ), DNS của nó vẫn chạy\n  ✓ kubectl exec từ Pod thật: luồng của app mở (gateway, gateway-v1, order, data plane), catalog→order, gateway→postgres chặn\n  ✓ Dưới default-deny, từ máy Mac: :30180, Ingress :30080 (/api/products, /orders), Gateway :30280 đều trả 200\n  ✓ Dưới default-deny: HPA catalog có số liệu CPU; gateway, gateway-v1, catalog, order, data plane, postgres, controller sẵn sàng\n  ✓ answers.env: DEFAULT_NS_TO_CATALOG=blocked, DRAFT_TWO_PEERS=open; NetworkPolicy nháp allow-probe đã xoá\n  ✓ answers.env: FIRST_BROKEN_HOP của shop.local:30080/api/products; Pod netshoot (và kubectl debug netshoot) đã xoá\n  → 8/8 đạt",
+      projectDelta: "Chặng 5 xong: shop có mạng Pod (Calico), Service đặt tên cổng, DNS nội bộ có bản ghi riêng, ba cửa vào (NodePort, Ingress với TLS, Gateway API với canary 90/10) và NetworkPolicy đóng mặc định; bạn đã sửa một sự cố mạng nhiều tầng trên chính nó. Mốc snapshot st5-done.",
+    },
+    review: [
+      { q: "`/api/products` qua Ingress trả `{\"error\":\"không kết nối được catalog\"}` 503. Chặng nào đã đi được, chặng nào hỏng?", a: "Body là JSON của gateway (Spring), nên Mac → NodePort → controller → Service gateway → Pod gateway đều đi được. Chặng hỏng là gateway → catalog: kiểm Service catalog (endpoints, selector, targetPort), Pod catalog Ready, NetworkPolicy của gateway (egress) và catalog (ingress), DNS từ gateway." },
+      { q: "EndpointSlice của Service có địa chỉ, cột PORTS là 8081, nhưng gọi Service bị từ chối. Lỗi ở đâu, sửa thế nào?", a: "`targetPort` của Service trỏ cổng container không nghe (container nghe 8080). Endpoint controller không kiểm cổng có ai nghe; Pod vẫn Ready vì probe gọi cổng 8080. Sửa `targetPort` về 8080 hay tên cổng `http`." },
+      { q: "`dig` từ netshoot ở default ra IP, `getent hosts catalog` trong gateway treo. CoreDNS có hỏng không?", a: "Không: CoreDNS trả lời Pod ở default. Pod của shop không tới được CoreDNS, tức egress DNS bị NetworkPolicy chặn (selector sai nhãn CoreDNS hay sai namespace, thiếu cổng 53 UDP)." },
+      { q: "Vì sao không thử luồng bằng một Pod netshoot mới tạo trong namespace shop?", a: "shop đã default-deny: Pod mới không khớp policy cho phép nào nên bị chặn mọi hướng, kể cả DNS; kết quả không nói gì về luồng của Pod thật. Thử bằng `k exec` vào Pod nguồn thật, hay `k debug --target` để có netshoot trong đúng network namespace (cùng IP, cùng nhãn) của Pod đó." },
+      { q: "Bốn lỗi của sự cố nằm ở tầng nào trong quy trình, và lỗi nào che lỗi nào?", a: "Selector sai (endpoints), targetPort sai (cổng), policy `order` sai namespace của controller và policy DNS sai nhãn CoreDNS (NetworkPolicy/DNS). Gateway mất DNS che Service catalog rỗng: log của gateway chỉ nói không kết nối được catalog. `/orders` có hai lỗi trên cùng chặng controller → order: sửa targetPort xong vẫn 504 cho tới khi sửa policy." },
+    ],
   },
 ];

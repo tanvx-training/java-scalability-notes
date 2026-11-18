@@ -289,7 +289,7 @@ export const skills = [
   { id: "k-svc-no-endpoints-flow", kind: "procedure", area: "kubernetes", label: "Debug Service không có endpoints", ref: pb("pb-svc-no-endpoints") },
   { id: "k-selector-mismatch", kind: "concept", area: "kubernetes", label: "Ba nguyên nhân Service rỗng: selector lệch nhãn, targetPort lệch containerPort, Pod chưa Ready" },
   { id: "k-svc-ports-jsonpath", kind: "command", area: "kubernetes", label: "k get svc catalog -o jsonpath='{.spec.ports}'; k get pod -l app=catalog -o jsonpath='{..containerPort}'" },
-  { id: "k-netshoot", kind: "command", area: "kubernetes", label: "k run tmp --rm -it --image=nicolaka/netshoot -- bash" },
+  { id: "k-netshoot", kind: "command", area: "kubernetes", label: "k -n default run netshoot --image=nicolaka/netshoot:v0.16 -- sleep 3600; k debug -it <pod> --image=nicolaka/netshoot:v0.16 --target=<container>" },
   { id: "k-endpointslice", kind: "command", area: "kubernetes", label: "k get endpointslices -l kubernetes.io/service-name=catalog" },
 
   // ── s33 PKI, openssl, CSR ──
