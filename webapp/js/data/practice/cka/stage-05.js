@@ -386,7 +386,26 @@ for d in catalog order gateway; do k rollout status deploy/$d; done
 **3. ~/shop/services.yaml**
 
 \`\`\`bash
-for d in gateway catalog order; do echo ---; k create svc clusterip $d --tcp=8080:8080 $do; done > ~/shop/services.yaml
+k -n shop create svc clusterip catalog --tcp=8080:8080 $do
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   labels:
+#     app: catalog
+#   name: catalog
+#   namespace: shop
+# spec:
+#   ports:
+#   - name: 8080-8080
+#     port: 8080
+#     protocol: TCP
+#     targetPort: 8080
+#   selector:
+#     app: catalog
+#   type: ClusterIP
+# status:
+#   loadBalancer: {}
+for d in gateway catalog order; do echo ---; k -n shop create svc clusterip $d --tcp=8080:8080 $do; done > ~/shop/services.yaml
 vim ~/shop/services.yaml
 \`\`\`
 
