@@ -89,3 +89,5 @@ Pod nháp: `dnspolicy-lab` (`dnsPolicy: None`, nameserver `10.96.0.10`, searches
 
 
 Vòng chờ của verify s26–s28 nằm ở `files/wait.sh` (chạy trên cka-cp, 420 giây theo đồng hồ): ngay sau khi VM bật lại, status Deployment/StatefulSet trong API còn là của trước lúc tắt, nên điều kiện "replicas = available" của s24/s25 thoát ngay và verify đỏ giả (đo ở s28: 3/5, 4/5). `wait.sh` chờ mọi Pod gateway, catalog, order, postgres (s28 thêm coredns và `getent` trong `postgres-0`) Ready với `lastTransitionTime` ≥ thời điểm boot của cka-cp. Đo sau `down` + `up` sạch: verify s27 8/8 (1 phút 34, có chờ), s28 5/5, s26 4/4.
+
+Đáp án giống nhau trên mọi cluster lab (như s12, s13, s15): `KUBE_SVC_CHAIN` (băm của `shop/catalog:http` + `tcp`, dòng chấm vẫn đòi cổng đã đặt tên và đọc chuỗi lúc chấm), `PROXY_MODE=iptables`, `LB_EXTERNAL_IP_STATE=<pending>` (s27), `NDOTS=5`, `KUBE_DNS_IP=10.96.0.10` (s28). Các dòng chấm khác của hai buổi đọc trạng thái cluster thật, nên chép lời giải không đủ để xanh.
