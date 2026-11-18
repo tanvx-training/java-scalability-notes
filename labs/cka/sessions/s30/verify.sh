@@ -1,4 +1,4 @@
-# s30 — kiểm (9 dòng): CRD Gateway API v1.6.3 kênh standard (gatewayclasses, gateways, httproutes phục vụ v1); control plane
+# s30 — kiểm (8 dòng): CRD Gateway API v1.6.3 kênh standard (gatewayclasses, gateways, httproutes phục vụ v1); control plane
 # NGINX Gateway Fabric trên cka-cp, GatewayClass nginx Accepted; Gateway shop-gw (HTTP :80 shop.local) Programmed, Service data
 # plane NodePort 30280; gateway-v1 (1 replica, image 1.0, probe/tài nguyên như gateway) và Service của nó; HTTPRoute shop
 # (shop-gw, shop.local, PathPrefix /api, gateway 90 / gateway-v1 10) Accepted và ResolvedRefs, YAML trong ~/shop/; curl TỪ MÁY
@@ -42,10 +42,14 @@ expect_eq "gateway-v1: 1 replica shop/gateway:1.0, probe và tài nguyên như g
   "đạt" echo "$(fact V1)"
 expect_eq "HTTPRoute shop: shop-gw, shop.local, PathPrefix /api → gateway 90 / gateway-v1 10; Accepted, ResolvedRefs; ~/shop/ khớp" \
   "đạt" echo "$(fact ROUTE)"
-expect_eq "Từ máy Mac: http://shop.local:30280/api/products qua Gateway trả 200 với 3 sản phẩm (--resolve tới node chạy data plane)" \
-  "đạt" mac_get "$(fact DP_IP)" "node chạy data plane" 30280
-expect_eq "Từ máy Mac: Ingress của s29 vẫn phục vụ: http://shop.local:30080/api/products trả 200 (--resolve tới IP cka-w1)" \
-  "đạt" mac_get "$(fact W1_IP)" cka-w1 30080
+# Gateway (30280) và Ingress của s29 (30080) cùng một dòng: Ingress đã đạt từ s29, dòng riêng của nó sẽ xanh trên đầu vào.
+mac_both() {
+  local a b
+  a="$(mac_get "$(fact DP_IP)" "node chạy data plane" 30280)"; b="$(mac_get "$(fact W1_IP)" cka-w1 30080)"
+  [ "$a$b" = "đạtđạt" ] && { echo "đạt"; return 0; }
+  printf '%s\n' "$a" "$b" | grep -v '^đạt$' | paste -sd ';' - | sed 's/;/; /g'
+}
+expect_eq "Từ máy Mac: shop.local:30280/api/products qua Gateway và :30080 qua Ingress s29 đều trả 200 với 3 sản phẩm" "đạt" mac_both
 expect_eq "answers.env: V1_HITS (số lần /api/info trả version 1.0 trên 100 request) trong 3–20" "đạt" echo "$(fact HITS)"
 expect_eq "answers.env: ROUTE_BAD_REASON là lý do của ResolvedRefs khi backend sai tên; HTTPRoute nháp đã xoá" "đạt" echo "$(fact BAD)"
 assert_summary

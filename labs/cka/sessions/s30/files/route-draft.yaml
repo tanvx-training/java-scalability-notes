@@ -7,12 +7,12 @@ spec:
   parentRefs:
   - name: shop-gw
   hostnames:
-  - draft.shop.local
+  - shop.local
   rules:
   - matches:
     - path:
         type: PathPrefix
-        value: /api
+        value: /v2
     backendRefs:
     - name: gateway-v2
       port: 8080

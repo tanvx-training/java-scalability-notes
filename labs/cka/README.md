@@ -46,6 +46,7 @@ Phần chung của bộ lệnh `lab` (cài đặt, các lệnh, hợp đồng sc
 | s25 | `setup.sh` | tạo `~/drills/s25`, xoá `answers.env` cũ, rồi `lab_break st4-storage` (không in ra đã làm gì) |
 | s27 | `check.sh` | thay verify của s26: shop Available, `~/drills/s26/answers.env` đủ năm khoá, `TUNNEL_IFACE` theo IPPool, `CNI_CONF` theo `/etc/cni/net.d` của cka-cp, IP/node/veth đúng dạng. Không đòi Pod catalog đã chọn ở s26 còn chạy: rollout ở t2 của s27 hay HPA thay Pod làm dòng đó đỏ, nên `begin cka s27` chạy lại giữa buổi mới được |
 | s26, s27, s28 | `setup.sh` | tạo `~/drills/<buổi>`, xoá `answers.env` cũ (không có sự cố gây bằng script: tình huống hỏng của ba buổi do người học tự dựng trên Service/Pod nháp) |
+| s29, s30 | `setup.sh` | tạo `~/drills/<buổi>` (manifest tải về, chứng chỉ, object nháp nằm ở đó), xoá `answers.env` cũ. Không cần `check.sh` riêng: bước của s29 không đụng thứ verify s28 chấm, bước của s30 không đụng thứ verify s29 chấm (đo: `begin cka s30` sau khi làm xong s30 vẫn 8/8 đầu vào) |
 
 Lỗi có chủ ý: `breaks/st1-node-notready/run.sh` — `cka-w1`: `/etc/default/kubelet` ghi đè `--config` bằng đường dẫn không tồn tại; `cka-w2`: kubelet `stop` + `disable`. Hai worker `NotReady` sau khoảng một phút.
 

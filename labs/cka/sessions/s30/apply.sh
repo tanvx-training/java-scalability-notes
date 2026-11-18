@@ -22,8 +22,14 @@ vm "$cp" "set -e; mkdir -p ~/drills/s30; cd ~/drills/s30
   get '$gwapi_url' gateway-api-standard.yaml 'bundle-version: $GWAPI_VERSION'
   get '$ngf_base/crds.yaml' ngf-crds.yaml 'nginxproxies.gateway.nginx.org'
   get '$ngf_base/nodeport/deploy.yaml' ngf-deploy.yaml 'nginx-gateway-fabric:${NGF_VERSION#v}'
-  kubectl apply --server-side -f gateway-api-standard.yaml >/dev/null
-  kubectl apply --server-side -f ngf-crds.yaml >/dev/null
+  # CRD lớn (~1 MB mỗi tệp): chỉ apply khi chưa đúng bản. Apply lại vô ích trên control plane 3 GB đang tải nặng đã làm apiserver
+  # hết giờ với etcd và bị kubelet khởi động lại (đo 2026-11-18).
+  have=\$(kubectl get crd gateways.gateway.networking.k8s.io -o jsonpath='{.metadata.annotations.gateway\\.networking\\.k8s\\.io/bundle-version}' 2>/dev/null || true)
+  [ \"\$have\" = $GWAPI_VERSION ] || kubectl apply --server-side -f gateway-api-standard.yaml >/dev/null
+  # CRD của NGF không ghi phiên bản: dấu là sha256 của tệp đã apply thành công (~/drills/s30/.ngf-crds.sha256).
+  if ! kubectl get crd nginxproxies.gateway.nginx.org >/dev/null 2>&1 || ! sha256sum -c --status .ngf-crds.sha256 2>/dev/null; then
+    kubectl apply --server-side -f ngf-crds.yaml >/dev/null && sha256sum ngf-crds.yaml > .ngf-crds.sha256
+  fi
   kubectl wait --for=condition=Established --timeout=120s crd/gatewayclasses.gateway.networking.k8s.io crd/gateways.gateway.networking.k8s.io \
     crd/httproutes.gateway.networking.k8s.io crd/nginxproxies.gateway.nginx.org >/dev/null
   kubectl get crd -o 'custom-columns=NAME:.metadata.name,VERSION:.metadata.annotations.gateway\\.networking\\.k8s\\.io/bundle-version,CHANNEL:.metadata.annotations.gateway\\.networking\\.k8s\\.io/channel' | grep -E 'NAME|gateway.networking'
