@@ -1,5 +1,5 @@
 // Chặng 5 — Networking.
-// Buổi khung: đủ trường cấu trúc (check-data PR7); nội dung đầy đủ ở đợt sau.
+// s26–s28 đã phát hành (đợt 3); s29–s32 là buổi khung (check-data PR7), nội dung đầy đủ ở các task sau.
 
 export const sessions = [
 // ───────────────────────────── s26 ─────────────────────────────
@@ -254,6 +254,7 @@ Verify so từng đáp án với giá trị đọc **lúc chấm**: \`CATALOG_PO
       { q: "Đổi IPPool sang VXLAN thì `TUNNEL_IFACE` và MTU đổi thế nào?", a: "Interface tunnel thành `vxlan.calico`, MTU Pod 1450 (VXLAN thêm 50 byte: IP, UDP, header VXLAN và Ethernet trong) thay cho 1480 của IPIP. Gói ngoài là UDP cổng 4789 thay vì IP protocol 4." },
     ],
   },
+// ───────────────────────────── s27 ─────────────────────────────
   {
     id: "s27",
     stage: "st5",
@@ -262,7 +263,7 @@ Verify so từng đáp án với giá trị đọc **lúc chấm**: \`CATALOG_PO
     domain: "networking",
     competencies: ["nw-svc"],
     requires: ["s26"],
-    status: "skeleton",
+    status: "published",
     pieces: ["services"],
     goals: [
       "Viết lại Service của shop cho đúng port/targetPort, mở gateway ra ngoài bằng NodePort và gọi từ máy Mac.",
@@ -280,9 +281,324 @@ Verify so từng đáp án với giá trị đọc **lúc chấm**: \`CATALOG_PO
       { skill: "k-create-svc-dry", level: "Gõ được không tra" },
     ],
     uses: ["k-expose", "k-labels-selectors", "net-iptables-read", "net-curl-nc", "k-tmp-pod"],
-    stateIn: "Đầu ra s26.",
-    stateOut: "Ba Service ClusterIP đúng port; Service gateway-nodeport gọi được từ máy Mac qua IP node.",
+    foundation: null,
+    mindset: `**Service là một lời hứa, không phải một tiến trình.** \`k get svc catalog\` cho một ClusterIP (\`10.x.y.z\`), nhưng không có máy nào giữ IP đó, không có cổng nào lắng nghe trên nó. Ba thứ cùng giữ lời hứa:
+
+| Thành phần | Làm gì |
+|---|---|
+| Service (API) | ghi \`selector\`, \`port\` (cổng của ClusterIP), \`targetPort\` (cổng trên Pod, số hay **tên**) |
+| EndpointSlice controller (trong kube-controller-manager) | tìm Pod khớp \`selector\`, dịch \`targetPort\` ra số cổng **của từng Pod**, ghi địa chỉ kèm điều kiện \`ready\`/\`serving\`/\`terminating\` vào EndpointSlice \`<service>-xxxxx\` |
+| kube-proxy (DaemonSet, mỗi node một Pod) | đọc Service + EndpointSlice, viết rule iptables trên **chính node đó**: gói tới ClusterIP:port bị DNAT sang một IP Pod:cổng |
+
+Vì thế lỗi Service luôn rơi vào một trong ba tầng: selector không khớp (EndpointSlice rỗng, s11), \`targetPort\` sai (EndpointSlice có địa chỉ, nhưng cổng trên Pod không có ai nghe: \`Connection refused\`), hoặc Pod chưa Ready (địa chỉ có nhưng \`ready: false\`, kube-proxy bỏ qua).
+
+**targetPort theo tên.** \`targetPort: http\` nghĩa là "cổng mà container đặt tên \`http\`". EndpointSlice controller đọc tên đó trong spec của **từng Pod** và ghi số thật vào slice. Lợi: đổi cổng của ứng dụng (8080 → 9090) chỉ sửa Deployment, Service giữ nguyên; trong lúc rolling update, Pod cũ và Pod mới có thể nghe hai cổng khác nhau và Service vẫn đúng cho cả hai. Bẫy: Pod **không** có cổng tên đó thì bị loại khỏi slice, không báo lỗi. Đổi Service sang \`targetPort: http\` trước khi Pod có tên cổng là làm Service mất hết endpoint: luôn thêm tên cổng vào Deployment, chờ rollout, rồi mới sửa Service.
+
+**Ba kiểu Service chồng lên nhau.**
+
+| Kiểu | Thêm gì so với kiểu trước | Ở lab |
+|---|---|---|
+| \`ClusterIP\` | IP ảo trong Service CIDR \`10.96.0.0/12\`, chỉ trong cluster | \`catalog\`, \`order\`, \`gateway\` |
+| \`NodePort\` | cổng \`30000–32767\` mở trên **mọi** node (cả cka-cp), gói tới \`<IP node>:<nodePort>\` được DNAT như ClusterIP | \`gateway-nodeport\` 30180, gọi từ máy Mac |
+| \`LoadBalancer\` | nhờ một controller ngoài (cloud-controller-manager, MetalLB…) cấp IP ngoài và trỏ load balancer vào NodePort | không có controller nào: \`EXTERNAL-IP <pending>\` mãi |
+
+**Rule iptables của kube-proxy.** Ở chế độ iptables (mặc định trên Linux khi \`mode: ""\`), mỗi Service có ba lớp chuỗi trong bảng \`nat\`:
+
+\`\`\`text
+KUBE-SERVICES      -d <ClusterIP>/32 --dport 8080          -j KUBE-SVC-<hash>     (một dòng mỗi cổng Service)
+KUBE-NODEPORTS     --dport 30180                           -j KUBE-EXT-<hash>     (NodePort)
+KUBE-SVC-<hash>    -m statistic --mode random --probability 0.5  -j KUBE-SEP-<hash1>
+                                                           -j KUBE-SEP-<hash2>    (dòng cuối nhận phần còn lại)
+KUBE-SEP-<hash1>   -j DNAT --to-destination 10.244.x.y:8080
+\`\`\`
+
+\`<hash>\` tính từ \`namespace/service:tên-cổng\` và giao thức: đổi tên cổng từ rỗng sang \`http\` là đổi luôn tên chuỗi (vì thế \`KUBE_SVC_CHAIN\` phải đọc **sau** khi sửa Service). Chọn Pod là ngẫu nhiên theo xác suất, cho **mỗi kết nối mới** (conntrack giữ kết nối cũ đi đúng Pod cũ), không theo tải, không round-robin. Không có tiến trình nào ở giữa: gói đi thẳng từ Pod nguồn tới Pod đích sau DNAT ngay trên node nguồn.
+
+**Spring Cloud LoadBalancer làm việc đó ở phía client.** Trong Spring Cloud (Eureka, Consul…), \`@LoadBalanced RestTemplate\`/\`WebClient\` tự giữ danh sách instance và tự chọn một (round-robin hay random) cho mỗi request. Trên Kubernetes với Service ClusterIP, ứng dụng chỉ thấy **một** địa chỉ \`http://catalog:8080\`; việc chọn Pod nằm ở kernel của node, theo từng kết nối TCP. Hệ quả cho JVM: HTTP client giữ kết nối (keep-alive, pool của Apache HttpClient/Reactor Netty) thì **mọi request đi trên kết nối đó tới cùng một Pod**; HPA thêm Pod catalog thứ ba, kết nối cũ không chuyển sang nó cho tới khi pool đóng kết nối. Muốn cân bằng theo request (gRPC, HTTP/2 một kết nối dài) thì cần client-side LB thật (Spring Cloud Kubernetes đọc EndpointSlice, hoặc headless Service + resolver của gRPC) hay service mesh, không phải kube-proxy.`,
+    refs: [
+      { label: "Bài lộ trình CKA: kube-proxy làm gì — iptables/ipvs mode", href: "#/roadmap/cka/cka-w6-1" },
+      { label: "CKA Study Guide, chương 17 — Service", href: "#/docs/ckabook-17" },
+      { label: "Bài thực hành s11 — Deployment, Service và selector", href: "#/practice/cka/s11" },
+      { label: "kubernetes.io: Service (port, targetPort theo tên, các kiểu Service)", href: "https://kubernetes.io/docs/concepts/services-networking/service/" },
+      { label: "kubernetes.io: EndpointSlices (điều kiện ready, serving, terminating)", href: "https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/" },
+      { label: "kubernetes.io: Virtual IPs and Service Proxies (kube-proxy, chế độ iptables)", href: "https://kubernetes.io/docs/reference/networking/virtual-ips/" },
+      { label: "Spring Cloud Commons: Spring Cloud LoadBalancer", href: "https://docs.spring.io/spring-cloud-commons/reference/spring-cloud-commons/loadbalancer.html" },
+    ],
+    stateIn: "Đầu ra s26 (cluster như cuối s25): ba Service gateway, catalog, order do `kubectl expose` tạo ở s11, cổng 8080 → targetPort 8080, không tên cổng, không có trong ~/shop/; kube-proxy chế độ iptables. `./labs/lab begin cka s27` kiểm đầu vào bằng verify của s26, tạo ~/drills/s27 và xoá answers.env cũ.",
+    stateOut: "Ba Service ClusterIP gateway, catalog, order trong ~/shop/services.yaml, cổng 8080 tên http, targetPort http; Deployment khai containerPort 8080 tên http; Service gateway-nodeport (NodePort 30180) trong ~/shop/gateway-nodeport.yaml gọi được từ máy Mac qua IP node; ~/drills/s27/answers.env.",
+    tasks: [
+      { id: "t1", text: "`./labs/lab begin cka s27`. Đọc Service hiện tại: `k get svc -o wide`, `k get svc catalog -o yaml | sed -n '/^spec:/,/^status:/p'` (cổng có tên không, targetPort là số hay tên?), `k get endpointslice -l kubernetes.io/service-name=catalog -o yaml | grep -A4 -E '^(endpoints|ports):'`. Trên cka-cp: `sudo iptables-save -t nat | grep 'shop/catalog'`: ghi lại tên chuỗi `KUBE-SVC-…` hiện tại (chưa phải đáp án)." },
+      { id: "t2", text: "Đặt tên cổng trong Pod **trước**: trong container của `~/shop/gateway.yaml`, `~/shop/catalog.yaml`, `~/shop/order.yaml` thay `ports` bằng `- name: http`, `containerPort: 8080`, `protocol: TCP`. `k apply -f` ba tệp, `k rollout status` từng Deployment. Vì sao không sửa Service trước?" },
+      { id: "t3", text: "`~/shop/services.yaml`: sinh khung `k create svc clusterip gateway --tcp=8080:8080 $do` (rồi catalog, order) gộp vào một tệp, ngăn bằng `---`. Sửa: `namespace: shop`, cổng `name: http`, `targetPort: http`, bỏ `creationTimestamp` và `status`. `k apply -f ~/shop/services.yaml`: ba Service `configured` (không tạo mới, ClusterIP giữ nguyên). `k get endpointslice`: cột PORTS và số địa chỉ có đúng không? `k get endpointslice -l kubernetes.io/service-name=catalog -o jsonpath='{.items[0].ports}'`." },
+      { id: "t4", text: "NodePort: `~/shop/gateway-nodeport.yaml` (`k create svc nodeport gateway-nodeport --tcp=8080:8080 --node-port=30180 $do`, đổi selector thành `app: gateway`, cổng `name: http`, `targetPort: http`). Apply. Trên **Mac**: IP của cka-w1 (`multipass list` hay `k get node cka-w1 -o wide`, cột INTERNAL-IP), `curl http://<IP>:30180/api/products`. Gọi bằng IP của cka-cp và cka-w2 có được không, dù Pod gateway không chạy ở đó?" },
+      { id: "t5", text: "iptables: `sudo iptables-save -t nat | grep 'shop/catalog'` lần nữa. Tên chuỗi `KUBE-SVC-…` có đổi không, vì sao? Lần theo `KUBE-SERVICES` → `KUBE-SVC-…` → `KUBE-SEP-…` → `DNAT`; `sudo iptables-save -t nat | grep 30180`. Ghi `KUBE_SVC_CHAIN=<chuỗi KUBE-SVC hiện tại của shop/catalog:http>`. Chế độ kube-proxy: `k -n kube-system get cm kube-proxy -o yaml | grep -E '^ *mode:'` (rỗng là gì?), `curl -s localhost:10249/proxyMode` trên node, `k -n kube-system logs ds/kube-proxy | grep Proxier`. Ghi `PROXY_MODE=<chế độ>`." },
+      { id: "t6", text: "LoadBalancer nháp: `k expose deploy gateway --name=gateway-lb --type=LoadBalancer --port=8080 --target-port=http`, `k get svc gateway-lb`. Cột EXTERNAL-IP và PORT(S) ghi gì? Ghi `LB_EXTERNAL_IP_STATE=<giá trị cột EXTERNAL-IP>` (bọc nháy đơn vì có dấu `<`). `k delete svc gateway-lb`." },
+      { id: "t7", text: "Tình huống hỏng: `k expose deploy catalog --name=catalog-bad --port=8080 --target-port=9090`. `k get endpointslice -l kubernetes.io/service-name=catalog-bad`: có địa chỉ không, cổng nào? Pod tạm: `k run tmp --image=busybox:1.37 --rm -it --restart=Never -- wget -qO- -T 3 http://catalog-bad:8080/products`: lỗi gì? So với Service selector sai ở s11 (EndpointSlice rỗng). `k delete svc catalog-bad`. Trên Mac: `./labs/lab verify cka s27` phải đạt 8/8." },
+    ],
+    hints: [
+      "Sửa Service sang `targetPort: http` khi Pod chưa có cổng tên `http`: EndpointSlice controller không dịch được tên, Pod bị loại khỏi slice, Service mất hết địa chỉ. Gateway trả lỗi ngay. Thứ tự đúng: tên cổng trong Deployment, chờ rollout, rồi mới Service.",
+      "`k create svc clusterip catalog --tcp=8080:8080` sinh cổng tên `8080-8080` và selector `app: catalog`. Nhớ đổi tên cổng; selector đúng sẵn vì Service trùng tên Deployment.",
+      "`--node-port` phải nằm trong `30000–32767` (`--service-node-port-range` của apiserver). Trùng cổng của Service khác thì apply báo `provided port is already allocated`.",
+      "curl từ Mac treo hay `Connection refused`: thử từ chính node trước (`curl -s localhost:30180/api/products` trên cka-w1). Được trên node mà không được từ Mac là chuyện mạng Multipass; không được cả trên node là Service/EndpointSlice.",
+      "`iptables-save` cần root. Dòng `# Warning: iptables-legacy tables present, use iptables-legacy-save to see them` nghĩa là node có bảng của cả hai backend iptables (nft và legacy); rule của kube-proxy nằm ở bảng mà `iptables-save` in ra, bỏ qua cảnh báo được.",
+      "`mode: \"\"` trong ConfigMap `kube-proxy` không phải lỗi: rỗng là mặc định của nền tảng, trên Linux là `iptables`. Muốn chắc thì hỏi chính kube-proxy: cổng metrics `127.0.0.1:10249/proxyMode` trên node.",
+      "`LB_EXTERNAL_IP_STATE=<pending>` không bọc nháy thì `source answers.env` hiểu `<` là chuyển hướng: viết `LB_EXTERNAL_IP_STATE='<pending>'` (verify chấp nhận cả hai cách).",
+    ],
+    solution: `Output là của máy soạn bài; IP, tên chuỗi và tên Pod sẽ khác. Context đã ở namespace shop, \`do='--dry-run=client -o yaml'\`.
+
+**1. Service hiện tại**
+
+\`\`\`bash
+k get svc -o wide
+# catalog    ClusterIP   10.101.94.107    <none>   8080/TCP   3d8h   app=catalog
+# gateway    ClusterIP   10.105.152.32    <none>   8080/TCP   3d8h   app=gateway
+# order      ClusterIP   10.108.134.164   <none>   8080/TCP   3d8h   app=order
+# postgres   ClusterIP   None             <none>   5432/TCP   2d9h   app=postgres
+k get endpointslice
+# catalog-jkwjt    IPv4   8080   10.244.62.157,10.244.95.176   3d8h
+# gateway-bfrns    IPv4   8080   10.244.62.155,10.244.95.180   3d8h
+# order-v65n5      IPv4   8080   10.244.62.147                 3d8h
+sudo iptables-save -t nat | grep 'shop/catalog'      # trên cka-cp
+# -A KUBE-SERVICES -d 10.101.94.107/32 -p tcp -m comment --comment "shop/catalog cluster IP" -m tcp --dport 8080 -j KUBE-SVC-OWLUSNPMDHU62CCK
+# -A KUBE-SVC-OWLUSNPMDHU62CCK -m comment --comment "shop/catalog -> 10.244.62.157:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-B7IJILS7NPHYPRQ3
+# -A KUBE-SVC-OWLUSNPMDHU62CCK -m comment --comment "shop/catalog -> 10.244.95.176:8080" -j KUBE-SEP-2YACMSHYDBS4VFEM
+# …
+\`\`\`
+
+Cổng không tên (comment chỉ ghi \`shop/catalog\`), \`targetPort: 8080\` là số.
+
+**2. Tên cổng trong ba Deployment** (\`~/shop/gateway.yaml\`, \`catalog.yaml\`, \`order.yaml\`, trong container cùng tên)
+
+\`\`\`yaml
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/gateway.yaml -f ~/shop/catalog.yaml -f ~/shop/order.yaml
+for d in catalog order gateway; do k rollout status deploy/$d; done
+\`\`\`
+
+Đổi \`ports\` là đổi Pod template: mỗi Deployment rolling update một lần. Service cũ (\`targetPort: 8080\` số) vẫn đúng trong lúc đó.
+
+**3. ~/shop/services.yaml**
+
+\`\`\`bash
+for d in gateway catalog order; do echo ---; k create svc clusterip $d --tcp=8080:8080 $do; done > ~/shop/services.yaml
+vim ~/shop/services.yaml
+\`\`\`
+
+Từ khung đó, sửa thành ba Service (\`~/shop/services.yaml\`):
+
+\`\`\`yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: shop
+  labels:
+    app: gateway
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: shop
+  labels:
+    app: catalog
+spec:
+  type: ClusterIP
+  selector:
+    app: catalog
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order
+  namespace: shop
+  labels:
+    app: order
+spec:
+  type: ClusterIP
+  selector:
+    app: order
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/services.yaml
+# service/gateway configured
+# service/catalog configured
+# service/order configured
+k get endpointslice -l kubernetes.io/service-name=catalog -o jsonpath='{.items[0].ports}'; echo
+# [{"name":"http","port":8080,"protocol":"TCP"}]
+\`\`\`
+
+Slice giữ tên (\`catalog-jkwjt\`), cổng có tên \`http\`, số 8080 là số mà controller dịch từ \`containerPort\` tên \`http\` của từng Pod.
+
+**4. NodePort 30180** (\`~/shop/gateway-nodeport.yaml\`)
+
+\`\`\`yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-nodeport
+  namespace: shop
+  labels:
+    app: gateway
+spec:
+  type: NodePort
+  selector:
+    app: gateway
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    nodePort: 30180
+    protocol: TCP
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/gateway-nodeport.yaml
+k get svc gateway-nodeport
+# gateway-nodeport   NodePort   10.111.169.21   <none>   8080:30180/TCP   0s
+k get node cka-w1 -o wide | awk '{print $1, $6}'
+# NAME INTERNAL-IP
+# cka-w1 192.168.252.36
+\`\`\`
+
+Trên Mac:
+
+\`\`\`bash
+curl -s http://192.168.252.36:30180/api/products; echo
+# [{"id":1,"name":"Bàn phím cơ","price":49.90},{"id":2,"name":"Chuột không dây","price":19.90},{"id":3,"name":"Màn hình 27 inch","price":229.00}]
+curl -s -o /dev/null -w '%{http_code}\n' http://192.168.252.35:30180/api/products    # cka-cp
+# 200
+curl -s -o /dev/null -w '%{http_code}\n' http://192.168.252.37:30180/api/products    # cka-w2
+# 200
+\`\`\`
+
+Cả hai Pod gateway lúc đó đều ở cka-w1, vậy mà IP cka-cp và cka-w2 vẫn trả 200: kube-proxy trên mọi node mở cổng 30180.
+
+**5. iptables và chế độ kube-proxy**
+
+\`\`\`bash
+sudo iptables-save -t nat | grep 'shop/catalog'
+# -A KUBE-SEP-XSLDX5LZP5D6YRJC -p tcp -m comment --comment "shop/catalog:http" -m tcp -j DNAT --to-destination 10.244.95.136:8080
+# -A KUBE-SEP-YEWDKZ2QLYGDHEHC -p tcp -m comment --comment "shop/catalog:http" -m tcp -j DNAT --to-destination 10.244.62.158:8080
+# -A KUBE-SERVICES -d 10.101.94.107/32 -p tcp -m comment --comment "shop/catalog:http cluster IP" -m tcp --dport 8080 -j KUBE-SVC-ITBI3OHKD3FRXPDK
+# -A KUBE-SVC-ITBI3OHKD3FRXPDK ! -s 10.244.0.0/16 -d 10.101.94.107/32 -p tcp -m comment --comment "shop/catalog:http cluster IP" -m tcp --dport 8080 -j KUBE-MARK-MASQ
+# -A KUBE-SVC-ITBI3OHKD3FRXPDK -m comment --comment "shop/catalog:http -> 10.244.62.158:8080" -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-YEWDKZ2QLYGDHEHC
+# -A KUBE-SVC-ITBI3OHKD3FRXPDK -m comment --comment "shop/catalog:http -> 10.244.95.136:8080" -j KUBE-SEP-XSLDX5LZP5D6YRJC
+sudo iptables-save -t nat | grep 30180
+# -A KUBE-NODEPORTS -p tcp -m comment --comment "shop/gateway-nodeport:http" -m tcp --dport 30180 -j KUBE-EXT-DNGBDWSWJ73WPUKF
+echo KUBE_SVC_CHAIN=KUBE-SVC-ITBI3OHKD3FRXPDK >> ~/drills/s27/answers.env
+k -n kube-system get cm kube-proxy -o yaml | grep -E '^ *mode:'
+#     mode: ""
+curl -s localhost:10249/proxyMode; echo
+# iptables
+k -n kube-system logs ds/kube-proxy | grep Proxier | head -1
+# I1118 03:26:24.984789       1 server_linux.go:137] "Using iptables Proxier"
+echo PROXY_MODE=iptables >> ~/drills/s27/answers.env
+\`\`\`
+
+Tên chuỗi đổi từ \`KUBE-SVC-OWLUSNPMDHU62CCK\` sang \`KUBE-SVC-ITBI3OHKD3FRXPDK\` vì tên cổng là một phần của chuỗi băm. Pod catalog cũng đổi (rollout ở bước 2) nên hai \`KUBE-SEP\` mới. Dòng \`! -s 10.244.0.0/16 … KUBE-MARK-MASQ\`: gói tới ClusterIP từ ngoài dải Pod (ví dụ từ chính node) được SNAT để Pod trả lời quay về đúng đường.
+
+**6. LoadBalancer không có cloud**
+
+\`\`\`bash
+k expose deploy gateway --name=gateway-lb --type=LoadBalancer --port=8080 --target-port=http
+k get svc gateway-lb
+# NAME         TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+# gateway-lb   LoadBalancer   10.102.138.46   <pending>     8080:32285/TCP   4s
+echo "LB_EXTERNAL_IP_STATE='<pending>'" >> ~/drills/s27/answers.env
+k delete svc gateway-lb
+\`\`\`
+
+**7. targetPort sai số**
+
+\`\`\`bash
+k expose deploy catalog --name=catalog-bad --port=8080 --target-port=9090
+k get endpointslice -l kubernetes.io/service-name=catalog-bad
+# NAME                ADDRESSTYPE   PORTS   ENDPOINTS                     AGE
+# catalog-bad-vjtd5   IPv4          9090    10.244.62.158,10.244.95.136   1s
+k run tmp --image=busybox:1.37 --rm -it --restart=Never -- wget -qO- -T 3 http://catalog-bad:8080/products
+# wget: can't connect to remote host (10.102.47.137): Connection refused
+k run tmp --image=busybox:1.37 --rm -it --restart=Never -- wget -qO- -T 3 http://catalog:8080/products | head -c 40; echo
+# [{"id":1,"name":"Bàn phím cơ","price"
+k delete svc catalog-bad
+\`\`\`
+
+EndpointSlice có đủ hai Pod (selector đúng, Pod Ready) nhưng cổng 9090: kube-proxy DNAT tới \`10.244.x.y:9090\`, không ai nghe, kernel của Pod trả RST, wget báo \`Connection refused\`. Ở s11, selector sai cho slice rỗng: khi đó gói tới ClusterIP bị kube-proxy từ chối ngay (rule \`REJECT\` cho Service không có endpoint). Hai lỗi trông giống nhau từ phía client, khác nhau ở \`k get endpointslice\`.
+
+Lời giải tự động: \`labs/cka/sessions/s27/apply.sh\` (thêm cổng bằng PyYAML, chép \`files/services.yaml\`, \`files/gateway-nodeport.yaml\` vào \`~/shop/\`, làm các bước còn lại, rồi gọi NodePort bằng curl từ chính máy Mac).`,
+    exam: {
+      patterns: [
+        "\"Expose Deployment X trên cổng 80, targetPort 8080, kiểu NodePort cổng 30080\" — `k expose deploy X --type=NodePort --port=80 --target-port=8080 $do > svc.yaml`, thêm `nodePort: 30080` vào yaml (expose không có cờ nodePort), apply.",
+        "\"Service Y không có endpoint, sửa\" — `k get endpointslice -l kubernetes.io/service-name=Y`; rỗng → so `k get svc Y -o jsonpath='{.spec.selector}'` với `k get pod --show-labels`; có địa chỉ mà gọi bị từ chối → `targetPort` sai so với `containerPort`.",
+        "\"kube-proxy đang chạy chế độ nào\" — `k -n kube-system get cm kube-proxy -o yaml | grep mode`; rỗng thì `curl localhost:10249/proxyMode` trên node hay đọc log `Using iptables Proxier`.",
+        "\"Tìm rule iptables của Service Z\" — `sudo iptables-save -t nat | grep '<ns>/Z'`: dòng `KUBE-SERVICES` (ClusterIP), `KUBE-SVC-…` (chọn ngẫu nhiên), `KUBE-SEP-…` (DNAT tới từng Pod).",
+      ],
+      timeTargetMin: 10,
+      drills: [
+        {
+          text: "Trong 4 phút: Deployment `web` (nginx, cổng container tên `www`=80) ở namespace default. Tạo Service `web` kiểu NodePort cổng 8080 → targetPort `www`, nodePort 30999, rồi gọi `curl <IP node>:30999` từ cka-cp.",
+          timeLimitMin: 4,
+          solution: "```bash\nk -n default create svc nodeport web --tcp=8080:80 --node-port=30999 $do > web-svc.yaml\n# sửa: ports[0].name: www, targetPort: www (selector app: web có sẵn)\nk apply -f web-svc.yaml\nk -n default get endpointslice -l kubernetes.io/service-name=web\ncurl -s $(k get node cka-w1 -o jsonpath='{.status.addresses[0].address}'):30999 | head -4\n```",
+        },
+        {
+          text: "Trong 3 phút: ghi vào `/tmp/sep.txt` mọi địa chỉ đích (IP:cổng) mà kube-proxy DNAT tới cho Service `shop/order`.",
+          timeLimitMin: 3,
+          solution: "```bash\nsudo iptables-save -t nat | grep 'shop/order:http' | grep -o 'to-destination [0-9.:]*' | cut -d' ' -f2 > /tmp/sep.txt\ncat /tmp/sep.txt\n# 10.244.62.168:8080\n```\nĐối chiếu: `k -n shop get endpointslice -l kubernetes.io/service-name=order`.",
+        },
+      ],
+    },
+    tips: [
+      "`k get endpointslice -l kubernetes.io/service-name=<svc>` thay cho `k get endpoints` (Endpoints vẫn chạy nhưng đã bị đánh dấu deprecated từ 1.33 và chỉ giữ tối đa 1000 địa chỉ).",
+      "Đặt tên cổng (`http`, `metrics`, `grpc`) ngay từ Deployment: Service, NetworkPolicy, ServiceMonitor đều tham chiếu được bằng tên, đổi số cổng chỉ sửa một chỗ.",
+      "`k get svc` không hiện tên cổng; `k get svc X -o jsonpath='{.spec.ports}'` thì có.",
+      "Kiểm Service theo thứ tự: selector → EndpointSlice có địa chỉ ready → cổng trong slice khớp cổng ứng dụng nghe → gọi từ Pod tạm → mới tới NodePort từ ngoài.",
+    ],
+    outcome: {
+      md: `Service của shop có cổng tên \`http\`, YAML nằm trong \`~/shop/\`, và gateway gọi được từ máy Mac qua NodePort. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s27
+\`\`\`
+
+Verify kiểm ba Service (một cổng 8080 tên \`http\`, \`targetPort\` là tên một cổng 8080 có thật trong Pod, YAML trong \`~/shop/\` khớp cluster), cổng tên \`http\` trong ba Deployment và trong tệp của chúng, EndpointSlice (cổng \`http\`, số địa chỉ ready bằng replicas), Service \`gateway-nodeport\` (30180), rồi **chạy \`curl\` từ chính máy Mac** tới \`InternalIP\` của cka-w1 (đọc từ API, không ghi cứng) cổng 30180, tối đa 6 lần, mỗi lần 5 giây. \`KUBE_SVC_CHAIN\` được so với chuỗi đọc bằng \`iptables-save\` lúc chấm, \`PROXY_MODE\` với điều kube-proxy tự báo; Service nháp phải đã xoá.`,
+      verifyOutput: "lab: kiểm s27\n  (chờ apiserver, postgres-0 và ba Deployment, nếu đang khởi động: tối đa ~10 phút)\n  ✓ Service gateway, catalog, order: ClusterIP, một cổng 8080 tên http, targetPort là tên cổng 8080 có trong Pod; YAML của chúng trong ~/shop/ khớp\n  ✓ Deployment gateway, catalog, order khai containerPort 8080 tên http và rollout xong; ~/shop/ khớp\n  ✓ EndpointSlice của ba Service: cổng http/8080, số địa chỉ ready (bỏ terminating) bằng replicas\n  ✓ Service gateway-nodeport: NodePort 30180, port 8080 → cổng 8080 của gateway, selector app=gateway\n  ✓ Từ máy Mac: curl http://<IP cka-w1>:30180/api/products trả 200 với 3 sản phẩm\n  ✓ answers.env: KUBE_SVC_CHAIN là chuỗi KUBE-SVC-… hiện hành của shop/catalog:http\n  ✓ answers.env: PROXY_MODE=iptables (kube-proxy trên node báo: iptables)\n  ✓ Service nháp (LoadBalancer, catalog-bad) đã xoá; answers.env: LB_EXTERNAL_IP_STATE=<pending>\n  → 8/8 đạt",
+      projectDelta: "Mảnh \"Service\" của project: ba Service ClusterIP khai bằng YAML với cổng tên http, gateway mở ra máy Mac ở cổng 30180. Ingress (s29) và Gateway API (s30) sẽ đứng trước chính các Service này.",
+    },
+    review: [
+      { q: "EndpointSlice của Service có đủ địa chỉ Pod nhưng gọi Service bị `Connection refused`. Nghi gì đầu tiên?", a: "`targetPort` (hay cổng mà tên của nó trỏ tới) không phải cổng ứng dụng đang nghe. Selector đúng (nên có địa chỉ), kube-proxy DNAT đúng địa chỉ, nhưng tới cổng không ai nghe. So cột PORTS của slice với `containerPort` và cổng thật (`nsenter … ss -ltn`, s26)." },
+      { q: "Vì sao đổi tên cổng Service từ rỗng sang `http` làm đổi tên chuỗi `KUBE-SVC-…`?", a: "Tên chuỗi là băm của `namespace/service:tên-cổng` và giao thức. Đổi tên cổng là một \"cổng Service\" khác với kube-proxy: chuỗi mới được tạo, chuỗi cũ bị xoá. Đáp án phải đọc sau khi sửa." },
+      { q: "NodePort 30180 gọi được qua IP của cka-cp dù không có Pod gateway nào ở đó. Vì sao, và `externalTrafficPolicy: Local` đổi gì?", a: "kube-proxy trên mọi node viết rule `KUBE-NODEPORTS` cho cổng đó; gói vào node nào cũng được DNAT (và SNAT) tới một Pod gateway ở node khác. Với `Local`, node chỉ chuyển tới Pod trên chính nó (giữ IP nguồn của client), node không có Pod thì gói bị bỏ." },
+      { q: "Service LoadBalancer trên cluster kubeadm của lab đứng `<pending>` mãi. Nó có dùng được không?", a: "Không có controller nào (cloud-controller-manager, MetalLB, kube-vip) cấp IP ngoài, nên `status.loadBalancer` rỗng. Nhưng LoadBalancer bao gồm cả NodePort và ClusterIP: cột PORT(S) `8080:32285/TCP` cho thấy NodePort vẫn được cấp và dùng được." },
+      { q: "catalog scale từ 2 lên 3 Pod, nhưng gateway vẫn chỉ gọi hai Pod cũ. Vì sao, và khác gì Spring Cloud LoadBalancer?", a: "kube-proxy chọn Pod theo **kết nối** (iptables random + conntrack). HTTP client của gateway giữ kết nối keep-alive tới hai Pod cũ; Pod mới chỉ nhận kết nối mới. Spring Cloud LoadBalancer chọn instance theo **request** ở phía client từ danh sách instance; trên Kubernetes cần Spring Cloud Kubernetes (đọc EndpointSlice) hay headless Service để làm được như vậy." },
+    ],
   },
+// ───────────────────────────── s28 ─────────────────────────────
   {
     id: "s28",
     stage: "st5",
@@ -307,8 +623,198 @@ Verify so từng đáp án với giá trị đọc **lúc chấm**: \`CATALOG_PO
       { skill: "k-coredns-restart", level: "Gõ được không tra" },
     ],
     uses: ["net-resolv", "k-tmp-pod", "k-sts-dns", "k-kubelet-config"],
-    stateIn: "Đầu ra s27.",
-    stateOut: "CoreDNS có thêm mục hosts db.shop.internal trỏ về Service postgres; Pod của shop phân giải được tên này.",
+    foundation: null,
+    mindset: `**Ai trả lời câu hỏi DNS của một Pod.** kubelet viết \`/etc/resolv.conf\` cho mỗi Pod (với \`dnsPolicy: ClusterFirst\`, mặc định) từ hai giá trị trong \`/var/lib/kubelet/config.yaml\`: \`clusterDNS\` (ClusterIP của Service \`kube-dns\`) và \`clusterDomain\` (\`cluster.local\`). Gói DNS tới ClusterIP đó đi qua kube-proxy (s27) tới một trong hai Pod \`coredns\` ở \`kube-system\`. Tên Service vẫn là \`kube-dns\` (di sản từ thời kube-dns), nhãn Pod là \`k8s-app=kube-dns\`, nhưng Deployment và ConfigMap tên \`coredns\`.
+
+**search và ndots.** resolv.conf của Pod trong shop:
+
+\`\`\`text
+search shop.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.96.0.10
+options ndots:5
+\`\`\`
+
+Quy tắc của resolver (glibc và musl giống nhau ở điểm này): tên có **ít hơn** \`ndots\` dấu chấm thì thử ghép lần lượt từng search domain **trước**, rồi mới hỏi tên như đã gõ. \`catalog\` (0 dấu chấm) → \`catalog.shop.svc.cluster.local\` trúng ngay câu đầu. \`catalog.shop\` → \`catalog.shop.shop.svc.cluster.local\` (NXDOMAIN), rồi \`catalog.shop.svc.cluster.local\` (trúng). Tên kết thúc bằng dấu chấm (\`catalog.shop.svc.cluster.local.\`) là tên tuyệt đối, không ghép gì.
+
+**Công cụ nào thật sự dùng resolver đó.** \`getent hosts\`, \`curl\`, JVM (\`InetAddress\`) đi qua resolver của libc nên áp đúng quy tắc trên. \`nslookup\` và \`dig\` tự gửi câu hỏi: \`dig\` không ghép search (trừ \`+search\`), còn \`nslookup\` của busybox hỏi nguyên tên có dấu chấm trước. Ở lab điều này lộ ra rất rõ: namespace tên \`shop\` trùng TLD \`.shop\` có thật, \`nslookup catalog.shop\` trong Pod busybox in hai IP công cộng \`216.150.x.x\` (máy chủ của TLD trả lời mọi tên con), trong khi \`getent hosts catalog.shop\` trong Pod order ra đúng ClusterIP \`10.101.94.107\`. Muốn biết ứng dụng thấy gì, hỏi bằng resolver của ứng dụng; muốn chắc chắn trong đề thi, gõ FQDN.
+
+**ndots:5 và độ trễ của JVM.** Gọi ra ngoài cluster, ví dụ \`api.stripe.com\` (2 dấu chấm < 5): resolver hỏi \`api.stripe.com.shop.svc.cluster.local\`, \`api.stripe.com.svc.cluster.local\`, \`api.stripe.com.cluster.local\` (ba NXDOMAIN), rồi mới tới tên thật; mỗi lần hỏi cả A lẫn AAAA. Tám câu hỏi cho một tên. JVM tra tên qua \`InetAddress\` (gọi \`getaddrinfo\` của hệ điều hành), và giữ kết quả trong cache của chính nó: \`networkaddress.cache.ttl\` (không có SecurityManager thì mặc định **30 giây**) cho tên tra được, \`networkaddress.cache.negative.ttl\` (mặc định **10 giây**) cho tên tra hỏng. Hết 30 giây là lại tám câu hỏi; HikariCP mở kết nối mới, WebClient gọi dịch vụ ngoài đều trả độ trễ đó. Ba cách giảm: viết FQDN có dấu chấm cuối cho tên ngoài (\`api.stripe.com.\`); đặt \`dnsConfig.options: [{name: ndots, value: "2"}]\` cho Pod gọi ra ngoài nhiều; tăng \`networkaddress.cache.ttl\` (đặt trong \`$JAVA_HOME/conf/security/java.security\` hay \`-Dsun.net.inetaddr.ttl=…\`). Đừng đặt TTL vô hạn (\`-1\`): IP Pod sau headless Service (\`postgres-0.postgres\`, s24) đổi mỗi lần Pod tạo lại, cache vĩnh viễn là ứng dụng nối mãi vào IP chết.
+
+**Corefile.** ConfigMap \`coredns\` (do kubeadm tạo) chứa một server block \`.:53\` với chuỗi plugin. Thứ tự chạy plugin do bản build của CoreDNS quyết định, **không** do thứ tự dòng trong Corefile: \`hosts\` luôn chạy trước \`kubernetes\`, \`kubernetes\` trước \`forward\`.
+
+| Plugin | Làm gì |
+|---|---|
+| \`errors\`, \`health\`, \`ready\`, \`prometheus :9153\` | log lỗi, \`/health\` cho liveness, \`/ready\` cho readiness, metrics |
+| \`kubernetes cluster.local in-addr.arpa ip6.arpa\` | trả lời tên Service/Pod từ API (watch Service, EndpointSlice) |
+| \`forward . /etc/resolv.conf\` | tên còn lại gửi lên DNS của node (resolv.conf **của Pod coredns**, tức của node) |
+| \`cache 30 { disable success cluster.local; disable denial cluster.local }\` | cache câu trả lời tối đa 30 giây, **trừ** \`cluster.local\` (Corefile của kubeadm 1.36): tên Service luôn hỏi \`kubernetes\`, vốn đã giữ sẵn dữ liệu từ watch |
+| \`loop\`, \`reload\`, \`loadbalance\` | phát hiện vòng lặp forward, tự đọc lại Corefile khi ConfigMap đổi, xáo thứ tự bản ghi A |
+
+**hosts và fallthrough.** Plugin \`hosts\` trả lời từ một danh sách tĩnh dạng \`/etc/hosts\`. Không ghi vùng thì nó nhận mọi tên của server block (\`.\`): tên không có trong danh sách thì trả NXDOMAIN ngay, **cả \`catalog.shop.svc.cluster.local\`**, vì \`hosts\` chạy trước \`kubernetes\`. \`fallthrough\` bảo nó chuyển tên không có trong danh sách sang plugin kế tiếp. Thiếu một dòng đó là cả cluster mất DNS.
+
+**Vì sao cần Service postgres-rw.** \`db.shop.internal\` cần một IP ổn định để ghi tĩnh. Service headless \`postgres\` không có ClusterIP (\`None\`), và IP của \`postgres-0\` đổi mỗi lần Pod tạo lại. Service ClusterIP thường \`postgres-rw\` (cùng selector \`app: postgres\`) có IP ảo sống cùng Service, nên ghi vào Corefile được.
+
+**dnsPolicy.** \`ClusterFirst\` (mặc định): như trên. \`Default\`: Pod nhận resolv.conf **của node** (kubelet đọc tệp \`resolvConf\` trong config, trên Ubuntu là \`/run/systemd/resolve/resolv.conf\`), nên tên Service không phân giải được: tên này dễ nhầm, "Default" không phải là mặc định. \`ClusterFirstWithHostNet\`: cho Pod \`hostNetwork: true\` vẫn dùng CoreDNS. \`None\`: kubelet bỏ hết, chỉ dùng \`dnsConfig\` bạn viết (\`nameservers\`, \`searches\`, \`options\`); \`dnsConfig\` cũng dùng được với các policy khác để thêm vào.`,
+    refs: [
+      { label: "Bài lộ trình CKA: CoreDNS — Pod ở kube-system, ConfigMap coredns, debug khi DNS hỏng", href: "#/roadmap/cka/cka-w6-2" },
+      { label: "CKA Study Guide, chương 17 — Service (DNS của Service)", href: "#/docs/ckabook-17" },
+      { label: "kubernetes.io: DNS for Services and Pods (dnsPolicy, dnsConfig)", href: "https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/" },
+      { label: "kubernetes.io: Debugging DNS Resolution", href: "https://kubernetes.io/docs/tasks/administer-cluster/dns-debugging-resolution/" },
+      { label: "kubernetes.io: Customizing DNS Service (Corefile)", href: "https://kubernetes.io/docs/tasks/administer-cluster/dns-custom-nameservers/" },
+      { label: "CoreDNS: plugin hosts (fallthrough)", href: "https://coredns.io/plugins/hosts/" },
+      { label: "Oracle: Networking properties (networkaddress.cache.ttl)", href: "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/doc-files/net-properties.html" },
+    ],
+    stateIn: "Đầu ra s27: Service gateway, catalog, order cổng http, gateway-nodeport 30180; Service postgres headless (không ClusterIP); CoreDNS 2 Pod trên cka-cp với Corefile mặc định của kubeadm. `./labs/lab begin cka s28` kiểm đầu vào bằng verify của s27, tạo ~/drills/s28 và xoá answers.env cũ.",
+    stateOut: "Service postgres-rw (ClusterIP thường, selector app: postgres, cổng 5432) trong ~/shop/postgres-rw.yaml; Corefile trong ConfigMap coredns có khối hosts `db.shop.internal` → ClusterIP của postgres-rw với fallthrough; Pod của shop phân giải được tên này; ~/drills/s28/answers.env.",
+    tasks: [
+      { id: "t1", text: "`./labs/lab begin cka s28`. Pod tạm: `k run tmp --image=busybox:1.37 --rm -it --restart=Never -- sh`, trong đó `cat /etc/resolv.conf`, rồi `nslookup catalog`, `nslookup catalog.shop`, `nslookup catalog.shop.svc.cluster.local`. Dạng thứ hai ra IP gì, vì sao? Làm lại ba tên bằng resolver của hệ thống trong một Pod ứng dụng: `k exec deploy/order -- getent hosts catalog.shop`. Ghi `NDOTS=<giá trị ndots>` vào `~/drills/s28/answers.env`." },
+      { id: "t2", text: "Hỏi thẳng CoreDNS từ node: `k -n kube-system get svc kube-dns` (ClusterIP?), `grep -A1 clusterDNS /var/lib/kubelet/config.yaml`, rồi trên cka-cp `dig @<ClusterIP> catalog.shop.svc.cluster.local +short` và `dig @<ClusterIP> catalog.shop +short`. Vì sao dig không ghép search domain? Ghi `KUBE_DNS_IP=<ClusterIP của kube-dns>`." },
+      { id: "t3", text: "Đọc Corefile: `k -n kube-system get cm coredns -o jsonpath='{.data.Corefile}'`. Plugin nào trả lời tên `*.cluster.local`, tên ngoài cluster đi đâu, cache có áp cho `cluster.local` không? `k -n kube-system get pod -l k8s-app=kube-dns -o wide`." },
+      { id: "t4", text: "Service ClusterIP cho postgres: `~/shop/postgres-rw.yaml` (Service `postgres-rw`, `type: ClusterIP`, selector `app: postgres`, cổng `postgres` 5432 → 5432). Apply, `k get svc postgres postgres-rw`, `k get endpointslice -l kubernetes.io/service-name=postgres-rw`. Vì sao không dùng được Service `postgres` cho bản ghi tĩnh?" },
+      { id: "t5", text: "Bản ghi tĩnh: `k -n kube-system edit cm coredns`, thêm vào server block `.:53` (trước dòng `kubernetes`) khối `hosts { <ClusterIP postgres-rw> db.shop.internal` / `fallthrough }`. Lưu, `k -n kube-system rollout restart deploy/coredns`, `k -n kube-system rollout status deploy/coredns` (hoặc chờ plugin `reload`, tới khoảng hai phút). Kiểm từ Pod order: `k exec deploy/order -- getent hosts db.shop.internal` và `k exec deploy/order -- getent hosts catalog.shop.svc.cluster.local` (tên Service vẫn phải phân giải)." },
+      { id: "t6", text: "dnsPolicy: `~/drills/s28/dnspolicy-lab.yaml` — Pod `dnspolicy-lab` (busybox:1.37, `sleep 3600`) với `dnsPolicy: None` và `dnsConfig` (nameserver = ClusterIP kube-dns, searches `shop.svc.cluster.local`, `svc.cluster.local`, option `ndots: \"2\"`). `k exec dnspolicy-lab -- cat /etc/resolv.conf`, `k exec dnspolicy-lab -- nslookup catalog`. Xoá Pod." },
+      { id: "t7", text: "Tình huống hỏng: `k run dns-default --image=busybox:1.37 --restart=Never --overrides='{\"spec\":{\"dnsPolicy\":\"Default\"}}' -- sleep 3600`. `k exec dns-default -- cat /etc/resolv.conf`, `k exec dns-default -- nslookup catalog.shop.svc.cluster.local`: vì sao hỏng? Xoá Pod. Trên Mac: `./labs/lab verify cka s28` phải đạt 5/5." },
+    ],
+    hints: [
+      "`nslookup` của busybox không phải resolver mà ứng dụng dùng: nó tự gửi câu hỏi và với tên có dấu chấm thì hỏi nguyên tên trước. `catalog.shop` là tên hợp lệ trên Internet (`.shop` là một TLD có thật, trả IP cho mọi tên con), nên busybox in IP công cộng. JVM, `getent`, `curl` đi qua libc và áp search domain theo `ndots`: `catalog.shop` ra đúng ClusterIP.",
+      "dig không đọc `search` (mặc định `+nosearch`), luôn hỏi đúng tên bạn gõ. Muốn dig ghép search như Pod: `dig +search …` nhưng trên node thì `search` là của node, không phải của Pod.",
+      "Sửa ConfigMap mà tra vẫn chưa ra: kubelet đồng bộ ConfigMap vào volume của Pod coredns sau tối đa khoảng một phút, rồi plugin `reload` mới đọc lại (kiểm 30 giây một lần). `rollout restart` nhanh và chắc hơn trong phòng thi.",
+      "Sau khi sửa Corefile mà mọi tên đều NXDOMAIN: khối `hosts` thiếu `fallthrough`. Pod coredns vẫn Running và Ready: chỉ câu trả lời sai.",
+      "Corefile sai cú pháp (thiếu `}`): Pod coredns mới `CrashLoopBackOff`, log `Error during parsing`. Pod cũ vẫn phục vụ nếu bạn dùng `rollout restart` (rolling update chờ Pod mới Ready); đừng xoá hết Pod coredns bằng tay.",
+      "`--overrides` với `dnsPolicy` cần `--restart=Never` và JSON đúng dạng `{\"spec\":{…}}`; dễ hơn là `$do > pod.yaml`, sửa, apply.",
+    ],
+    solution: `Output là của máy soạn bài; IP sẽ khác. Context đã ở namespace shop.
+
+**1. resolv.conf và ba dạng tên**
+
+\`\`\`bash
+k run tmp --image=busybox:1.37 --rm -it --restart=Never -- sh
+/ # cat /etc/resolv.conf
+search shop.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.96.0.10
+options ndots:5
+/ # nslookup catalog | tail -3
+Name:	catalog.shop.svc.cluster.local
+Address: 10.101.94.107
+/ # nslookup catalog.shop | tail -4
+Name:	catalog.shop
+Address: 216.150.1.65
+Name:	catalog.shop
+Address: 216.150.16.1
+/ # nslookup catalog.shop.svc.cluster.local | tail -2
+Name:	catalog.shop.svc.cluster.local
+Address: 10.101.94.107
+/ # exit
+k exec deploy/order -- getent hosts catalog
+# 10.101.94.107   catalog.shop.svc.cluster.local
+k exec deploy/order -- getent hosts catalog.shop
+# 10.101.94.107   catalog.shop.svc.cluster.local
+k exec deploy/order -- getent hosts catalog.shop.svc.cluster.local
+# 10.101.94.107   catalog.shop.svc.cluster.local
+echo NDOTS=5 >> ~/drills/s28/answers.env
+\`\`\`
+
+\`catalog.shop\` qua busybox ra hai IP công cộng: busybox hỏi nguyên tên có dấu chấm trước, và \`.shop\` là TLD thật trả lời mọi tên con. \`getent\` (glibc của image Temurin) áp search theo \`ndots:5\`: \`catalog.shop.shop.svc.cluster.local\` (NXDOMAIN) rồi \`catalog.shop.svc.cluster.local\` (trúng). Ứng dụng Java thấy đúng điều \`getent\` thấy.
+
+**2. dig thẳng CoreDNS từ node**
+
+\`\`\`bash
+k -n kube-system get svc kube-dns
+# kube-dns   ClusterIP   10.96.0.10   <none>   53/UDP,53/TCP,9153/TCP   4d9h
+sudo grep -A1 clusterDNS /var/lib/kubelet/config.yaml
+# clusterDNS:
+# - 10.96.0.10
+dig @10.96.0.10 catalog.shop.svc.cluster.local +short
+# 10.101.94.107
+dig @10.96.0.10 kubernetes.default.svc.cluster.local +short
+# 10.96.0.1
+echo KUBE_DNS_IP=10.96.0.10 >> ~/drills/s28/answers.env
+\`\`\`
+
+Node gọi được ClusterIP vì kube-proxy cũng viết rule trong chuỗi \`OUTPUT\` của node. dig không đọc \`search\`, nên chỉ FQDN mới ra.
+
+**3. Corefile**
+
+\`\`\`bash
+k -n kube-system get cm coredns -o jsonpath='{.data.Corefile}'
+\`\`\`
+
+\`\`\`text
+.:53 {
+    errors
+    health {
+       lameduck 5s
+    }
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+       pods insecure
+       fallthrough in-addr.arpa ip6.arpa
+       ttl 30
+    }
+    prometheus :9153
+    forward . /etc/resolv.conf {
+       max_concurrent 1000
+    }
+    cache 30 {
+       disable success cluster.local
+       disable denial cluster.local
+    }
+    loop
+    reload
+    loadbalance
+}
+\`\`\`
+
+\`kubernetes\` trả lời \`cluster.local\` (và tra ngược \`in-addr.arpa\`), tên khác \`forward\` lên resolv.conf của Pod coredns (DNS của node); cache 30 giây chỉ áp cho tên ngoài.
+
+__S28_REST__
+
+Lời giải tự động: \`labs/cka/sessions/s28/apply.sh\` (sửa Corefile bằng Python trên JSON của ConfigMap thay cho \`k edit\`, rồi làm các bước còn lại; chạy lại được: khối \`hosts\` cũ có \`db.shop.internal\` được thay, không nhân đôi).`,
+    exam: {
+      patterns: [
+        "\"Từ Pod X, phân giải Service Y ở namespace Z và ghi kết quả vào tệp\" — `k exec X -- nslookup Y.Z.svc.cluster.local > /tmp/out` (dùng FQDN để khỏi phụ thuộc search domain và cách nslookup xử lý).",
+        "\"Thêm bản ghi tĩnh / forward một miền cho CoreDNS\" — `k -n kube-system edit cm coredns`: khối `hosts { IP tên; fallthrough }` hay server block mới `example.local:53 { forward . 10.0.0.53 }`, rồi `k -n kube-system rollout restart deploy/coredns`.",
+        "\"Pod không phân giải được tên Service\" — `k exec <pod> -- cat /etc/resolv.conf` (dnsPolicy?), `k -n kube-system get pod -l k8s-app=kube-dns`, `k get endpointslice -n kube-system -l kubernetes.io/service-name=kube-dns`, `dig @<ClusterIP kube-dns> <FQDN>` từ node.",
+        "\"Pod dùng nameserver riêng 8.8.8.8\" — `dnsPolicy: None` + `dnsConfig.nameservers`; thiếu `dnsConfig` với `None` thì Pod bị từ chối.",
+      ],
+      timeTargetMin: 8,
+      drills: [
+        {
+          text: "Trong 3 phút: ghi FQDN của Service `order` và ClusterIP mà CoreDNS trả cho nó vào `/tmp/dns.txt`, chỉ dùng `dig` trên cka-cp.",
+          timeLimitMin: 3,
+          solution: "```bash\nDNS=$(k -n kube-system get svc kube-dns -o jsonpath='{.spec.clusterIP}')\necho \"order.shop.svc.cluster.local $(dig @$DNS order.shop.svc.cluster.local +short)\" > /tmp/dns.txt\ncat /tmp/dns.txt\n# order.shop.svc.cluster.local 10.108.134.164\n```",
+        },
+        {
+          text: "Trong 4 phút: Pod `dns-test` (busybox:1.37, `sleep 3600`) chỉ dùng nameserver `10.96.0.10`, search `shop.svc.cluster.local`, `ndots: 1`. Kiểm `nslookup catalog` trong Pod.",
+          timeLimitMin: 4,
+          solution: "```yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: dns-test\nspec:\n  dnsPolicy: None\n  dnsConfig:\n    nameservers: [10.96.0.10]\n    searches: [shop.svc.cluster.local]\n    options:\n    - name: ndots\n      value: \"1\"\n  containers:\n  - name: sh\n    image: busybox:1.37\n    command: [sleep, \"3600\"]\n```\n`k exec dns-test -- cat /etc/resolv.conf` phải đúng ba dòng đó. Dọn: `k delete pod dns-test --now`.",
+        },
+      ],
+    },
+    tips: [
+      "Trong đề, dùng FQDN `<svc>.<ns>.svc.cluster.local` khi được hỏi \"phân giải Service\": không phụ thuộc namespace của Pod tạm, search domain hay cách công cụ xử lý ndots.",
+      "`dig @<IP> <tên> +short` từ node tách được ba lỗi: CoreDNS không trả lời (timeout), Service không tồn tại (rỗng), Pod gọi sai (dig đúng mà Pod sai: xem resolv.conf của Pod).",
+      "Nhãn của Pod CoreDNS là `k8s-app=kube-dns`, Service là `kube-dns`, nhưng Deployment và ConfigMap là `coredns`.",
+      "Sửa ConfigMap coredns xong luôn chạy lại một câu tra tên Service bình thường, không chỉ tên mới thêm.",
+    ],
+    outcome: {
+      md: `Bạn đã đọc được đường đi của một câu hỏi DNS (resolv.conf → Service kube-dns → CoreDNS → plugin), thêm một bản ghi tĩnh mà không làm hỏng các tên khác, và thấy \`dnsPolicy\` đổi resolv.conf ra sao. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s28
+\`\`\`
+
+Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.shop.internal\` đúng ClusterIP của \`postgres-rw\` và \`fallthrough\`), Service \`postgres-rw\` và EndpointSlice của nó (đúng IP \`postgres-0\`), rồi tra \`db.shop.internal\` **và** \`catalog.shop.svc.cluster.local\` bằng \`getent\` trong \`postgres-0\` (tên mới đúng, tên cũ vẫn đúng); \`NDOTS\` so với resolv.conf của chính Pod đó, \`KUBE_DNS_IP\` với Service \`kube-dns\`; Pod nháp phải đã xoá. ConfigMap bền nên sau khi VM khởi động lại verify vẫn đạt (đo: \`down\` + \`up\`).`,
+      verifyOutput: "__S28_VERIFY__",
+      projectDelta: "CoreDNS của cluster có bản ghi `db.shop.internal` cho database; shop biết đọc và sửa DNS của chính nó. Buổi sau đưa shop ra ngoài bằng Ingress dưới tên shop.local.",
+    },
+    review: [
+      { q: "Pod ở namespace `shop` gọi `http://order.default:8080`. Resolver hỏi những tên nào, theo thứ tự nào?", a: "`order.default` có 1 dấu chấm < ndots 5 nên ghép search trước: `order.default.shop.svc.cluster.local` (NXDOMAIN), `order.default.svc.cluster.local` (trúng nếu Service `order` có ở `default`). Hết search mà chưa trúng mới hỏi `order.default.` như tên tuyệt đối." },
+      { q: "Thêm khối `hosts { 10.101.112.159 db.shop.internal }` (không fallthrough) vào Corefile. Điều gì hỏng?", a: "`hosts` chạy trước `kubernetes` và nhận mọi tên của server block `.`: tên không có trong danh sách bị trả NXDOMAIN, kể cả `catalog.shop.svc.cluster.local`. Cả cluster mất DNS dù Pod coredns vẫn Ready." },
+      { q: "Vì sao bản ghi tĩnh phải trỏ ClusterIP của `postgres-rw` chứ không phải IP của `postgres-0`?", a: "IP của `postgres-0` đổi mỗi lần Pod tạo lại (s24) hay VM khởi động lại (s26); Service headless `postgres` không có ClusterIP. ClusterIP của Service thường sống cùng Service, kube-proxy dẫn tới Pod hiện tại." },
+      { q: "Pod `dnsPolicy: Default` không phân giải được `catalog.shop.svc.cluster.local`. Vì sao tên gây nhầm?", a: "`Default` nghĩa là \"dùng DNS của node\": kubelet chép resolv.conf của node (`resolvConf`, trên Ubuntu `/run/systemd/resolve/resolv.conf`) vào Pod, nameserver là DNS của mạng Multipass, không biết `cluster.local`. Mặc định thật của Pod là `ClusterFirst`." },
+      { q: "Ứng dụng Spring Boot gọi `api.partner.com` chậm thêm vài chục mili giây mỗi 30 giây. Liên quan gì tới ndots và JVM?", a: "Tên 2 dấu chấm < ndots 5: mỗi lần tra là ba câu NXDOMAIN qua search domain (A và AAAA) trước câu thật. JVM giữ kết quả 30 giây (`networkaddress.cache.ttl`), hết hạn là tra lại. Sửa: gọi `api.partner.com.` (dấu chấm cuối), đặt `ndots: 2` qua `dnsConfig`, hay tăng TTL của JVM có chừng mực." },
+    ],
   },
   {
     id: "s29",

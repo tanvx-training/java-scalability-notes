@@ -1,7 +1,7 @@
 # s28 — lời giải chuẩn: tra catalog ở ba dạng từ Pod tạm, đọc resolv.conf (search, ndots), dig thẳng ClusterIP kube-dns từ
 # node; ~/shop/postgres-rw.yaml (ClusterIP thường, cùng selector với headless postgres); thêm khối hosts (db.shop.internal →
-# ClusterIP postgres-rw, fallthrough) vào ConfigMap coredns bằng PyYAML/JSON (thay cho `k edit`), rollout restart CoreDNS, tra
-# từ Pod order; Pod nháp dnspolicy-lab (dnsPolicy None + dnsConfig) và dns-default (dnsPolicy Default: không phân giải được tên
+# ClusterIP postgres-rw, fallthrough) vào ConfigMap coredns bằng Python trên JSON (thay cho `k edit`), chờ plugin reload (rollout
+# restart CoreDNS nếu quá 180 giây), tra từ Pod order; Pod nháp dnspolicy-lab (dnsPolicy None + dnsConfig) và dns-default (dnsPolicy Default: không phân giải được tên
 # Service) rồi xoá; ghi ~/drills/s28/answers.env. Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
 vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
@@ -37,7 +37,7 @@ vm "$cp" "set -e
   [ -n \"\$(dig @$dns catalog.shop.svc.cluster.local +short)\" ]
   kubectl -n kube-system get cm coredns -o jsonpath='{.data.Corefile}'"
 
-echo "s28: Service postgres-rw (ClusterIP thường), khối hosts db.shop.internal trong Corefile, rollout restart CoreDNS"
+echo "s28: Service postgres-rw (ClusterIP thường), khối hosts db.shop.internal trong Corefile, chờ CoreDNS reload"
 vm "$cp" "set -e
   install -m 644 /tmp/lab-s28-postgres-rw.yaml ~/shop/postgres-rw.yaml; rm -f /tmp/lab-s28-postgres-rw.yaml
   kubectl apply -f ~/shop/postgres-rw.yaml >/dev/null
@@ -63,12 +63,19 @@ json.dump(cm, open(p, 'w'))
 PY
   kubectl replace -f /tmp/lab-s28-cm.json >/dev/null; rm -f /tmp/lab-s28-cm.json
   kubectl -n kube-system get cm coredns -o jsonpath='{.data.Corefile}' | sed -n '/hosts/,/}/p'
-  kubectl -n kube-system rollout restart deploy/coredns >/dev/null
-  kubectl -n kube-system rollout status deploy/coredns --timeout=300s >/dev/null
-  for i in \$(seq 1 30); do
+  # Chờ plugin reload (kubelet đồng bộ ConfigMap vào volume, reload kiểm 30 giây một lần): không dời Pod coredns. rollout restart
+  # chỉ khi quá 180 giây; nó có thể xếp Pod coredns mới lên worker, nơi image chưa có và phải kéo từ registry.k8s.io (README).
+  got=''
+  for i in \$(seq 1 60); do
     got=\$(kubectl -n shop exec deploy/order -c order -- getent hosts db.shop.internal 2>/dev/null | awk '{print \$1}')
-    [ \"\$got\" = \"\$ip\" ] && break; sleep 2
+    [ \"\$got\" = \"\$ip\" ] && break; sleep 3
   done
+  if [ \"\$got\" != \"\$ip\" ]; then
+    kubectl -n kube-system rollout restart deploy/coredns >/dev/null
+    kubectl -n kube-system rollout status deploy/coredns --timeout=300s >/dev/null
+    got=\$(kubectl -n shop exec deploy/order -c order -- getent hosts db.shop.internal 2>/dev/null | awk '{print \$1}')
+  fi
+  kubectl -n kube-system rollout status deploy/coredns --timeout=300s >/dev/null
   echo \"order: db.shop.internal → \$got (postgres-rw \$ip)\"
   [ \"\$got\" = \"\$ip\" ]
   kubectl -n shop exec deploy/order -c order -- getent hosts catalog.shop.svc.cluster.local"
