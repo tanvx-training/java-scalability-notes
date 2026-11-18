@@ -698,7 +698,7 @@ Quy tắc của resolver (glibc và musl giống nhau ở điểm này): tên c�
       "`nslookup` của busybox không phải resolver mà ứng dụng dùng: nó tự gửi câu hỏi và với tên có dấu chấm thì hỏi nguyên tên trước. `catalog.shop` tình cờ là một tên miền đã đăng ký dưới gTLD `.shop` có thật, nên câu hỏi nguyên tên đó có câu trả lời công cộng (IP đổi theo ngày; `gateway.shop` chưa ai đăng ký thì không ra gì). Đó chính là lý do thứ tự search domain và `ndots` quan trọng, và lý do nên gõ FQDN. JVM, `getent`, `curl` đi qua libc và áp search domain theo `ndots`: `catalog.shop` ra đúng ClusterIP.",
       "dig không đọc `search` (mặc định `+nosearch`), luôn hỏi đúng tên bạn gõ. Muốn dig ghép search như Pod: `dig +search …` nhưng trên node thì `search` là của node, không phải của Pod.",
       "Sửa ConfigMap mà tra vẫn chưa ra: kubelet đồng bộ ConfigMap vào volume của Pod coredns sau tối đa khoảng một phút, rồi plugin `reload` mới đọc lại (kiểm 30 giây một lần). `rollout restart` nhanh và chắc hơn trong phòng thi.",
-      "`rollout restart deploy/coredns` tạo hai Pod mới, và anti-affinity ưu tiên của Deployment kubeadm đẩy chúng sang worker (hai Pod cũ ở cka-cp chỉ vì worker join sau `kubeadm init`). Worker chưa có image `registry.k8s.io/coredns/coredns` nên phải kéo về; kéo không được thì Pod mới `ImagePullBackOff`, rollout dừng giữa chừng với một Pod cũ phục vụ, verify báo đúng tên Pod. Gỡ: `k -n kube-system rollout undo deploy/coredns` (về ReplicaSet cũ, Pod ở cka-cp có sẵn image), rồi chờ `reload`.",
+      "`rollout restart deploy/coredns` tạo hai Pod mới, và anti-affinity ưu tiên của Deployment kubeadm đẩy chúng sang worker (hai Pod cũ ở cka-cp chỉ vì worker join sau `kubeadm init`). Worker chưa có image `registry.k8s.io/coredns/coredns` nên phải kéo về; kéo không được thì Pod mới `ImagePullBackOff`, rollout dừng giữa chừng với một Pod cũ phục vụ, verify báo đúng tên Pod. Gỡ: `k -n kube-system rollout undo deploy/coredns` (về ReplicaSet cũ, Pod ở cka-cp có sẵn image), rồi chờ `reload`. (`begin cka s28` đã bật `net.ipv4.tcp_mtu_probing=1` trên ba node: đường mạng của máy lab có MTU nhỏ hơn 1500 làm containerd kéo image từ registry.k8s.io treo ở bước TLS.)",
       "Sau khi sửa Corefile mà mọi tên đều NXDOMAIN: khối `hosts` thiếu `fallthrough`. Pod coredns vẫn Running và Ready: chỉ câu trả lời sai.",
       "Corefile sai cú pháp (thiếu `}`): Pod coredns mới `CrashLoopBackOff`, log `Error during parsing`. Pod cũ vẫn phục vụ nếu bạn dùng `rollout restart` (rolling update chờ Pod mới Ready); đừng xoá hết Pod coredns bằng tay.",
       "`--overrides` với `dnsPolicy` cần `--restart=Never` và JSON đúng dạng `{\"spec\":{…}}`; dễ hơn là `$do > pod.yaml`, sửa, apply.",
@@ -843,6 +843,9 @@ k -n kube-system get cm coredns -o jsonpath='{.data.Corefile}' | sed -n '/hosts/
 #     }
 # chờ plugin reload (đo: khoảng 40 giây tới một phút rưỡi):
 k -n kube-system logs -l k8s-app=kube-dns --tail=3 | grep -i reload
+# [INFO] Reloading
+# [INFO] plugin/reload: Running configuration SHA512 = c36214a5…
+# [INFO] Reloading complete
 k exec deploy/order -- getent hosts db.shop.internal
 # 10.101.112.159  db.shop.internal
 k exec deploy/order -- getent hosts catalog.shop.svc.cluster.local

@@ -67,11 +67,14 @@ PY
   kubectl -n kube-system get cm coredns -o jsonpath='{.data.Corefile}' | sed -n '/hosts/,/}/p'
   # Chờ plugin reload (kubelet đồng bộ ConfigMap vào volume, reload kiểm 30 giây một lần): không dời Pod coredns. rollout restart
   # chỉ khi quá 180 giây; nó có thể xếp Pod coredns mới lên worker, nơi image chưa có và phải kéo từ registry.k8s.io (README).
+  # Hai Pod coredns reload độc lập: hỏi thẳng từng Pod bằng dig từ node, chỉ xong khi mọi Pod đều trả IP mới.
+  allpods() {
+    pods=\$(kubectl -n kube-system get pod -l k8s-app=kube-dns -o jsonpath='{.items[*].status.podIP}')
+    [ -n \"\$pods\" ] || return 1
+    for p in \$pods; do [ \"\$(dig @\$p db.shop.internal +short +time=2 +tries=1)\" = \"\$ip\" ] || return 1; done
+  }
   got=''
-  for i in \$(seq 1 60); do
-    got=\$(kubectl -n shop exec deploy/order -c order -- getent hosts db.shop.internal 2>/dev/null | awk '{print \$1}')
-    [ \"\$got\" = \"\$ip\" ] && break; sleep 3
-  done
+  for i in \$(seq 1 60); do allpods && { got=\$ip; break; }; sleep 3; done
   if [ \"\$got\" != \"\$ip\" ]; then
     kubectl -n kube-system rollout restart deploy/coredns >/dev/null
     kubectl -n kube-system rollout status deploy/coredns --timeout=300s >/dev/null
