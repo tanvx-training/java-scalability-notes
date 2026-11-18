@@ -1,7 +1,7 @@
 # s27 — lời giải chuẩn: thêm cổng tên http (containerPort 8080) vào ~/shop/{gateway,catalog,order}.yaml bằng PyYAML, apply,
 # chờ rollout (Pod có tên cổng TRƯỚC khi Service trỏ targetPort theo tên); ~/shop/services.yaml (ba Service ClusterIP, cổng
-# http 8080 → targetPort http) sinh bằng `kubectl create svc … --dry-run=client -o yaml` rồi sửa bằng PyYAML;
-# ~/shop/gateway-nodeport.yaml (NodePort 30180); thử Service catalog-bad (targetPort 9090: EndpointSlice có địa chỉ, gọi bị
+# http 8080 → targetPort http) và ~/shop/gateway-nodeport.yaml (NodePort 30180) chép từ files/ (người học sinh khung bằng
+# `kubectl create svc … --dry-run=client -o yaml` rồi sửa); thử Service catalog-bad (targetPort 9090: EndpointSlice có địa chỉ, gọi bị
 # từ chối) và Service gateway-lb kiểu LoadBalancer (EXTERNAL-IP <pending>) rồi xoá; đọc chuỗi KUBE-SVC của
 # shop/catalog:http và chế độ kube-proxy; ghi ~/drills/s27/answers.env. Chạy lại nhiều lần được.
 # Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
@@ -25,27 +25,14 @@ kubectl apply -f ~/shop/gateway.yaml -f ~/shop/catalog.yaml -f ~/shop/order.yaml
 for d in catalog order gateway; do kubectl -n shop rollout status deploy/\$d --timeout=600s >/dev/null; done"
 
 echo "s27: ~/shop/services.yaml (targetPort http) và ~/shop/gateway-nodeport.yaml (30180)"
+vm_put "$SESSION_DIR/files/services.yaml" "$cp" /tmp/lab-s27-services.yaml
+vm_put "$SESSION_DIR/files/gateway-nodeport.yaml" "$cp" /tmp/lab-s27-nodeport.yaml
 vm "$cp" "set -e
-  do='--dry-run=client -o yaml'
-  { for d in gateway catalog order; do echo ---; kubectl -n shop create service clusterip \$d --tcp=8080:8080 \$do; done; } > /tmp/lab-s27-svc.yaml
-  kubectl -n shop create service nodeport gateway-nodeport --tcp=8080:8080 --node-port=30180 \$do > /tmp/lab-s27-np.yaml
-python3 - <<'PY'
-import os, yaml
-home = os.path.expanduser('~')
-def fix(doc, app):
-    doc['metadata'].pop('creationTimestamp', None)
-    doc['metadata']['namespace'] = 'shop'
-    doc['spec']['selector'] = {'app': app}
-    p = doc['spec']['ports'][0]
-    p['name'] = 'http'; p['targetPort'] = 'http'
-    doc.pop('status', None)
-    return doc
-with open('/tmp/lab-s27-svc.yaml') as f: docs = [fix(d, d['metadata']['name']) for d in yaml.safe_load_all(f) if d]
-with open(f'{home}/shop/services.yaml', 'w') as f: yaml.safe_dump_all(docs, f, sort_keys=False, allow_unicode=True, width=1000)
-with open('/tmp/lab-s27-np.yaml') as f: doc = fix([d for d in yaml.safe_load_all(f) if d][0], 'gateway')
-with open(f'{home}/shop/gateway-nodeport.yaml', 'w') as f: f.write(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=1000))
-PY
-  rm -f /tmp/lab-s27-svc.yaml /tmp/lab-s27-np.yaml
+  # Khung người học sinh bằng dry-run (in ra để so), tệp chuẩn là files/services.yaml.
+  kubectl -n shop create service clusterip catalog --tcp=8080:8080 --dry-run=client -o yaml
+  install -m 644 /tmp/lab-s27-services.yaml ~/shop/services.yaml
+  install -m 644 /tmp/lab-s27-nodeport.yaml ~/shop/gateway-nodeport.yaml
+  rm -f /tmp/lab-s27-services.yaml /tmp/lab-s27-nodeport.yaml
   kubectl apply -f ~/shop/services.yaml -f ~/shop/gateway-nodeport.yaml >/dev/null
   kubectl -n shop get svc gateway catalog order gateway-nodeport
   for i in \$(seq 1 60); do
