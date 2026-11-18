@@ -12,9 +12,9 @@ vm_put "$SESSION_DIR/files/allow-probe.yaml" "$cp" /tmp/lab-s31-allow-probe.yaml
 echo "s31: Pod tạm probe ở default; gọi catalog trước khi chặn"
 vm "$cp" "set -e; mkdir -p ~/drills/s31
   install -m 644 /tmp/lab-s31-allow-probe.yaml ~/drills/s31/allow-probe.yaml; rm -f /tmp/lab-s31-allow-probe.yaml
-  kubectl -n default get pod probe >/dev/null 2>&1 || kubectl -n default run probe --image=busybox:1.37 --restart=Never -- sleep 3600 >/dev/null
+  kubectl -n default delete pod probe --ignore-not-found --grace-period=1 --wait=true >/dev/null
+  kubectl -n default run probe --image=busybox:1.37 --restart=Never -- sleep 3600 >/dev/null
   kubectl -n default wait --for=condition=Ready pod/probe --timeout=180s >/dev/null
-  kubectl -n default label pod probe role- >/dev/null 2>&1 || true
   w() { kubectl -n default exec probe -- wget -q -T 3 -O /dev/null http://catalog.shop.svc.cluster.local:8080/actuator/health/readiness >/dev/null 2>&1 && echo open || echo blocked; }
   echo \"probe → catalog: \$(w)\"
   install -m 644 /tmp/lab-s31-netpol.yaml ~/shop/netpol.yaml; rm -f /tmp/lab-s31-netpol.yaml
@@ -27,7 +27,7 @@ vm "$cp" "set -e; mkdir -p ~/drills/s31
   d=blocked; for i in \$(seq 1 10); do d=\$(w); [ \$d = open ] && break; sleep 2; done
   echo \"allow-probe hai phần tử from: probe (không nhãn role) → catalog: \$d\"; [ \$d = open ]
   kubectl -n shop delete networkpolicy allow-probe >/dev/null
-  kubectl -n default delete pod probe --wait=false >/dev/null
+  kubectl -n default delete pod probe --grace-period=1 --wait=false >/dev/null
   printf 'DEFAULT_NS_TO_CATALOG=%s\nDRAFT_TWO_PEERS=%s\n' \"\$r\" \"\$d\" > ~/drills/s31/answers.env
   cat ~/drills/s31/answers.env"
 

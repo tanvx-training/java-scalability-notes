@@ -1,5 +1,5 @@
 # s32 — lời giải chuẩn: gây sự cố st5-network (như `begin`), rồi đi theo thứ tự của buổi: curl tới shop.local:30080 từ cka-cp
-# (controller tự trả 504 → chặng hỏng đầu tiên là ingress-nginx → gateway, FIRST_BROKEN_HOP); Pod netshoot (image ghim) ở
+# (gateway tự trả 503 "không kết nối được catalog" → chặng hỏng đầu tiên là gateway → catalog, FIRST_BROKEN_HOP); Pod netshoot (image ghim) ở
 # default: dig tên Service qua kube-dns (DNS của cluster vẫn chạy); EndpointSlice và cổng của Service; NetworkPolicy của shop.
 # Sửa bằng tệp chuẩn: ~/shop/services.yaml (s27) và ~/shop/netpol.yaml (s31), apply; xoá netshoot; chờ shop phục vụ lại.
 # Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
@@ -12,14 +12,14 @@ vm_put "$SESSION_DIR/../s31/files/netpol.yaml" "$cp" /tmp/lab-s32-netpol.yaml
 
 echo "s32: chặng đầu: curl http://shop.local:30080/api/products trên cka-cp"
 vm "$cp" "set -e
-  code=000; for i in \$(seq 1 20); do
-    code=\$(curl -s -o /dev/null --max-time 15 -w '%{http_code}' http://shop.local:30080/api/products || true)
-    [ \"\$code\" = 504 ] && break; sleep 3
+  out=''; for i in \$(seq 1 20); do
+    out=\$(curl -s --max-time 30 -w ' %{http_code}' http://shop.local:30080/api/products || true)
+    case \"\$out\" in *catalog*' 503') break ;; esac; sleep 3
   done
-  echo \"shop.local:30080/api/products → \$code (controller tự trả lời: Mac → controller đi được)\"
-  [ \"\$code\" = 504 ]
-  kubectl -n ingress-nginx logs deploy/ingress-nginx-controller --since=2m 2>/dev/null | grep -m1 -o 'upstream timed out[^,]*' || true
-  printf 'FIRST_BROKEN_HOP=%s\n' 'ingress-nginx->gateway' > ~/drills/s32/answers.env"
+  echo \"shop.local:30080/api/products → \$out (gateway tự trả lời: Mac → controller → gateway đi được)\"
+  case \"\$out\" in *catalog*' 503') ;; *) exit 1 ;; esac
+  echo \"shop.local:30080/orders → \$(curl -s -o /dev/null --max-time 30 -w '%{http_code}' http://shop.local:30080/orders || true)\"
+  printf 'FIRST_BROKEN_HOP=%s\n' 'gateway->catalog' > ~/drills/s32/answers.env"
 
 echo "s32: netshoot ở default, EndpointSlice, cổng Service, NetworkPolicy"
 vm "$cp" "set -e
@@ -30,7 +30,7 @@ vm "$cp" "set -e
   kubectl -n shop get endpointslice -l 'kubernetes.io/service-name in (catalog,order)' -o wide
   kubectl -n shop get svc catalog -o jsonpath='{.spec.selector}'; echo
   kubectl -n shop get svc order -o jsonpath='{.spec.ports}'; echo
-  kubectl -n shop get networkpolicy gateway -o jsonpath='{.spec.ingress[0].from[0]}'; echo
+  kubectl -n shop get networkpolicy order -o jsonpath='{.spec.ingress[0].from[1]}'; echo
   kubectl -n shop get networkpolicy allow-dns-egress -o jsonpath='{.spec.egress[0].to[0]}'; echo"
 
 echo "s32: sửa ~/shop/services.yaml và ~/shop/netpol.yaml, apply; xoá netshoot"

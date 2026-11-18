@@ -25,12 +25,11 @@ else:
         for s in (p.get("status") or {}).get("ephemeralContainerStatuses") or []:
             if s.get("name") in eph and "running" in (s.get("state") or {}): left.append(f"{name} (kubectl debug {s['name']})")
     print("NETSHOOT=" + ("đạt" if not left else "còn " + ", ".join(left)[:70]))
-# 2. FIRST_BROKEN_HOP: request http://shop.local:30080/api/products từ Mac tới được controller (nó tự trả 504), chặng hỏng đầu
-# tiên là ingress-nginx → gateway (NetworkPolicy gateway chọn nhầm namespace nginx-ingress). So khoan dung: hoa thường, dấu cách,
-# mũi tên → hay ->.
+# 2. FIRST_BROKEN_HOP: request http://shop.local:30080/api/products đi Mac → ingress-nginx → gateway → catalog. gateway tự trả
+# 503 JSON "không kết nối được catalog" (nên Mac → controller → gateway đi được): chặng hỏng đầu tiên là gateway → catalog
+# (Service catalog rỗng, và gateway mất DNS). So khoan dung: hoa thường, dấu cách, mũi tên → hay ->.
 v = (ans.get("FIRST_BROKEN_HOP") or "").strip().lower().replace(" ", "").replace("→", "->").replace("=>", "->")
 parts = v.split("->")
-ok = len(parts) == 2 and parts[0] in ("ingress-nginx", "ingress", "ingress-nginx-controller", "ingress-controller", "controller", "nginx-ingress") \
-    and parts[1] in ("gateway", "app=gateway", "gateway-pod")
+ok = len(parts) == 2 and parts[0] in ("gateway", "app=gateway", "shop/gateway") and parts[1] in ("catalog", "app=catalog", "shop/catalog")
 print("HOP=" + ("đạt" if ok else f"FIRST_BROKEN_HOP='{ans.get('FIRST_BROKEN_HOP', '')[:30]}'"))
 PY
