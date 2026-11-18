@@ -1291,7 +1291,7 @@ Verify tìm controller theo nhãn \`app.kubernetes.io/component=controller\` ở
     domain: "networking",
     competencies: ["nw-gateway"],
     requires: ["s29"],
-    status: "skeleton",
+    status: "published",
     pieces: ["gateway-api"],
     goals: [
       "Cài CRD Gateway API và một implementation, tạo Gateway shop-gw và HTTPRoute tương đương Ingress của s29.",
@@ -1307,8 +1307,472 @@ Verify tìm controller theo nhãn \`app.kubernetes.io/component=controller\` ở
       { skill: "k-docs-gateway", level: "Tìm được trong 30 giây" },
     ],
     uses: ["k-ingress-yaml", "net-curl-host", "k-set-image", "k-svc-clusterip-yaml"],
-    stateIn: "Đầu ra s29.",
-    stateOut: "Gateway shop-gw Programmed; HTTPRoute shop chia 90/10 giữa gateway 1.0 và 2.0, gọi được từ máy Mac.",
+    foundation: null,
+    mindset: `**Vì sao có Gateway API.** Ingress (s29) gói mọi thứ vào một object: cổng và chứng chỉ (việc của người vận hành cluster) nằm chung với path và backend (việc của đội ứng dụng), và mọi tính năng ngoài host/path (chia lưu lượng, rewrite, header, timeout) là annotation riêng của từng controller: \`nginx.ingress.kubernetes.io/…\` không có nghĩa gì với Traefik. Gateway API (dự án của SIG Network, CRD cài riêng, không có sẵn trong Kubernetes) tách theo vai trò và đưa các tính năng đó vào spec chung:
+
+| Tài nguyên | Phạm vi | Ai sở hữu | Nói gì |
+|---|---|---|---|
+| \`GatewayClass\` | cluster | nhà cung cấp hạ tầng | controller nào xử lý (\`spec.controllerName\`), tham số (\`parametersRef\`) |
+| \`Gateway\` | namespace | người vận hành cluster | listener: giao thức, cổng, hostname, TLS, Route ở namespace nào được gắn vào (\`allowedRoutes\`, mặc định \`Same\`) |
+| \`HTTPRoute\` | namespace | đội ứng dụng | gắn vào Gateway nào (\`parentRefs\`), host, match (path, header, method), filter, \`backendRefs\` có \`weight\` |
+
+So với Ingress: IngressClass ≈ GatewayClass, phần \`tls\`/cổng của controller ≈ Gateway, \`rules\` của Ingress ≈ HTTPRoute. \`PathPrefix\` của HTTPRoute khớp theo phần tử path như \`Prefix\` của Ingress; \`Exact\` giống nhau.
+
+**Kênh và phiên bản.** Mỗi bản Gateway API phát hành hai bộ CRD: \`standard\` (chỉ trường GA và beta, chính là thứ đề thi hỏi: GatewayClass, Gateway, HTTPRoute ở \`v1\` từ bản v1.0) và \`experimental\` (thêm trường, tài nguyên alpha). Mỗi CRD mang annotation \`gateway.networking.k8s.io/bundle-version\` và \`…/channel\`. Implementation hỗ trợ một bản cụ thể: NGINX Gateway Fabric 2.8.1 ghi Gateway API **1.6.3**, Kubernetes 1.32+; bản Gateway API v1.7.0 (29/10/2026) đã có nhưng NGF chưa ghi hỗ trợ, nên lab ghim v1.6.3. CRD rất lớn, nên tài liệu của cả hai dự án cài bằng \`kubectl apply --server-side\`: apply thường (phía client) chép cả object vào annotation \`kubectl.kubernetes.io/last-applied-configuration\`, mà annotation có giới hạn 256 KB. CRD \`httproutes\` của Gateway API v1.6.3 khoảng 240 KB (còn lọt), CRD \`nginxproxies\` của NGF khoảng 350 KB: apply thường bị từ chối (đo: \`metadata.annotations: Too long: may not be more than 262144 bytes\`).
+
+**NGINX Gateway Fabric chạy thế nào.** Control plane là Deployment \`nginx-gateway\` (namespace \`nginx-gateway\`): watch GatewayClass \`nginx\` và mọi thứ gắn vào nó. Mỗi \`Gateway\` được cấp một **data plane riêng**: Deployment và Service \`<gateway>-<class>\` (ở đây \`shop-gw-nginx\`) **trong namespace của Gateway**, nên Pod nginx của shop-gw tính vào ResourceQuota của \`shop\`. Control plane đẩy cấu hình xuống agent trong Pod nginx qua gRPC. Khuôn cho data plane là \`NginxProxy\` mà GatewayClass trỏ tới qua \`parametersRef\`: kiểu Service (bản manifest \`nodeport\` đặt \`NodePort\`), \`nodePorts\` (\`30280\` cho listener cổng 80), nodeSelector/toleration, tài nguyên. Manifest để \`externalTrafficPolicy: Local\`: chỉ node đang chạy Pod data plane trả lời NodePort (các node khác bỏ gói, khác ingress-nginx của s29). Lab đặt cả hai Pod NGF trên cka-cp, nên gọi bằng IP của cka-cp.
+
+**Đọc trạng thái.** Mọi tài nguyên Gateway API báo kết quả bằng \`status.conditions\` theo cùng một mẫu (\`type\`, \`status\`, \`reason\`, \`message\`):
+
+| Tài nguyên | Điều kiện | \`False\` thường do |
+|---|---|---|
+| GatewayClass | \`Accepted\` | không controller nào nhận \`controllerName\`, \`parametersRef\` hỏng |
+| Gateway | \`Accepted\`, \`Programmed\` (và theo từng listener) | cổng/giao thức không hỗ trợ, data plane chưa nhận cấu hình |
+| HTTPRoute, theo từng \`status.parents[]\` | \`Accepted\` | \`NotAllowedByListeners\`, \`NoMatchingListenerHostname\`, \`NoMatchingParent\` |
+| | \`ResolvedRefs\` | \`BackendNotFound\` (Service không có), \`RefNotPermitted\` (backend ở namespace khác mà thiếu ReferenceGrant), \`InvalidKind\` |
+
+Điều kiện của Route nằm **dưới từng parent**: một HTTPRoute có thể gắn vào nhiều Gateway và mỗi Gateway (controller của nó) báo riêng. Hệ quả hay gặp: \`parentRefs\` trỏ tên Gateway không tồn tại thì **không controller nào viết status**, \`status.parents\` rỗng, không có dòng \`Accepted=False\` nào để đọc: thiếu điều kiện chính là tín hiệu.
+
+**Chia lưu lượng theo weight.** \`backendRefs\` có \`weight\` thì mỗi **request** đi tới backend với xác suất \`weight / tổng weight\`: 90/10 nghĩa là khoảng 10% request tới \`gateway-v1\`, **không phụ thuộc số Pod** (gateway 2 Pod, gateway-v1 1 Pod, vẫn 90/10 chứ không phải 67/33). So với s14: rolling update đổi tỷ lệ theo số Pod mới/cũ và không dừng ở giữa được, Service chia theo kết nối (kube-proxy). Ở đây canary điều khiển bằng con số trong YAML, tăng dần 10 → 50 → 100 rồi xoá backend cũ. 100 request với xác suất 0,1: kỳ vọng 10, độ lệch chuẩn 3; khoảng 3–20 chứa hơn 99% kết quả, nên verify chấm \`V1_HITS\` trong khoảng đó chứ không đòi đúng 10.
+
+**Java và canary.** Hai phiên bản gateway chạy song song nghĩa là cùng một người dùng có thể đi qua 2.0 rồi 1.0 ở hai request liền nhau: ứng dụng phải chịu được điều đó (API tương thích ngược, không giữ phiên trong bộ nhớ JVM; Spring Session lưu ra ngoài nếu cần). Lỗi của bản canary hiện ra theo tỷ lệ request (10% lỗi 5xx) chứ không theo Pod, nên đọc metric theo \`version\` (Micrometer tag) mới thấy.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Gateway API — GatewayClass, Gateway, HTTPRoute", href: "#/roadmap/cka/cka-w6-5" },
+      { label: "CKA Study Guide, chương 19 — Gateway API", href: "#/docs/ckabook-19" },
+      { label: "kubernetes.io: Gateway API (Concepts › Services, Load Balancing, and Networking)", href: "https://kubernetes.io/docs/concepts/services-networking/gateway/" },
+      { label: "Gateway API: HTTP traffic splitting (weight)", href: "https://gateway-api.sigs.k8s.io/guides/traffic-splitting/" },
+      { label: "Gateway API: Versioning (standard và experimental channel)", href: "https://gateway-api.sigs.k8s.io/concepts/versioning/" },
+      { label: "NGINX Gateway Fabric: Install with manifests", href: "https://docs.nginx.com/nginx-gateway-fabric/install/manifests/" },
+      { label: "Bài thực hành s14 — rollout và rollback", href: "#/practice/cka/s14" },
+    ],
+    stateIn: "Đầu ra s29: ingress-nginx (NodePort 30080/30443) và Ingress shop phục vụ shop.local từ máy Mac; Service gateway, catalog, order cổng http 8080; chưa có CRD Gateway API. `./labs/lab begin cka s30` kiểm đầu vào bằng verify của s29, tạo ~/drills/s30 và xoá answers.env cũ.",
+    stateOut: "CRD Gateway API v1.6.3 (standard); NGINX Gateway Fabric v2.8.1 (control plane ở nginx-gateway và data plane shop-gw-nginx ở shop, cả hai trên cka-cp; NodePort 30280, externalTrafficPolicy Local), GatewayClass nginx; Gateway shop-gw (HTTP :80 shop.local) Programmed trong ~/shop/shop-gw.yaml; Deployment + Service gateway-v1 (1 replica, shop/gateway:1.0) trong ~/shop/gateway-v1.yaml; HTTPRoute shop (/api → gateway 90, gateway-v1 10) trong ~/shop/httproute.yaml; Ingress của s29 vẫn phục vụ; ~/drills/s30/answers.env.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s30`. Trên cka-cp đo `free -m`. CRD Gateway API kênh standard đã ghim: `kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml`. `k get crd | grep gateway.networking`, `k api-resources --api-group=gateway.networking.k8s.io`, `k get crd httproutes.gateway.networking.k8s.io -o jsonpath='{.metadata.annotations}'` (bản nào, kênh nào?), `k explain httproute.spec.rules.backendRefs`.",
+      },
+      {
+        id: "t2",
+        text: "NGINX Gateway Fabric v2.8.1: CRD của nó `kubectl apply --server-side -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v2.8.1/deploy/crds.yaml`, rồi tải `https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v2.8.1/deploy/nodeport/deploy.yaml` vào `~/drills/s30/ngf-deploy.yaml`. Sửa trước khi apply: Deployment `nginx-gateway` thêm nodeSelector + toleration của control plane (như s29); NginxProxy `nginx-gateway-proxy-config` thêm `service.nodePorts: [{port: 30280, listenerPort: 80}]`, `deployment.pod` (cùng nodeSelector + toleration) và `deployment.container.resources` (requests 50m/64Mi, limits memory 128Mi: data plane sẽ nằm trong namespace shop có quota). Apply, `k -n nginx-gateway rollout status deploy/nginx-gateway`, `k get gatewayclass`, `k describe gatewayclass nginx` (controllerName, parametersRef, Conditions).",
+      },
+      {
+        id: "t3",
+        text: "Gateway: `~/shop/shop-gw.yaml` (Gateway `shop-gw`, `gatewayClassName: nginx`, listener `http`: HTTP, cổng 80, hostname `shop.local`). Apply, `k get gateway shop-gw` (ADDRESS, PROGRAMMED), `k describe gateway shop-gw` (điều kiện của Gateway và của listener, `Attached Routes`). Ai tạo `k get deploy,svc,pod -l gateway.networking.k8s.io/gateway-name=shop-gw -o wide`, ở namespace nào, Pod ở node nào? `k describe quota` có đổi không?",
+      },
+      {
+        id: "t4",
+        text: "HTTPRoute tương đương path `/api` của s29 (đọc lại `~/shop/ingress.yaml`): `~/shop/httproute.yaml`, HTTPRoute `shop`, `parentRefs: [{name: shop-gw}]`, `hostnames: [shop.local]`, một rule `PathPrefix /api` → `gateway:8080`. Apply, `k get httproute`, `k get httproute shop -o jsonpath='{.status.parents[0].conditions}'`. Trên **Mac**: `curl --resolve shop.local:30280:<IP cka-cp> http://shop.local:30280/api/products` và `/api/info`. Thử cùng lệnh với IP của cka-w1: vì sao không trả lời?",
+      },
+      {
+        id: "t5",
+        text: "Bản 1.0 chạy song song: `cp ~/shop/gateway.yaml ~/shop/gateway-v1.yaml`, đổi tên và nhãn thành `gateway-v1` (metadata, selector, template), `replicas: 1`; đổi image bằng `k set image --local -f ~/shop/gateway-v1.yaml gateway=shop/gateway:1.0 -o yaml` (ghi đè tệp). Thêm Service `gateway-v1` (ClusterIP, cổng `http` 8080 → targetPort `http`, selector `app: gateway-v1`) vào cùng tệp sau `---`. Apply, `k rollout status deploy/gateway-v1`. Đo `free -m` trên hai worker và `k describe quota`. Vì sao nhãn của gateway-v1 không được là `app: gateway`?",
+      },
+      {
+        id: "t6",
+        text: "Chia 90/10: trong `~/shop/httproute.yaml` cho rule `/api` hai `backendRefs`: `gateway` cổng 8080 `weight: 90` và `gateway-v1` cổng 8080 `weight: 10`. Apply, kiểm `Accepted`/`ResolvedRefs`. Trên Mac gọi 100 lần: `for i in $(seq 100); do curl -s --resolve shop.local:30280:<IP cka-cp> http://shop.local:30280/api/info; echo; done | grep -c '\"version\":\"1.0\"'`. Ghi `V1_HITS=<số đếm được>` vào `~/drills/s30/answers.env` trên cka-cp. Chạy lại vòng lặp: số có giống lần trước không?",
+      },
+      {
+        id: "t7",
+        text: "Tình huống hỏng: `~/drills/s30/route-draft.yaml`, HTTPRoute `shop-draft` (host `shop.local`, `PathPrefix /v2` → Service `gateway-v2` cổng 8080) với `parentRefs: [{name: shop-gateway}]` (sai tên). Apply, `k get httproute shop-draft -o yaml | sed -n '/^status/,$p'`: có điều kiện `Accepted` nào không? Sửa `parentRefs` thành `shop-gw`, apply lại, đọc `k get httproute shop-draft -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} {.reason}{\"\\n\"}{end}'`. Ghi `ROUTE_BAD_REASON=<reason của ResolvedRefs>`. `curl … http://shop.local:30280/v2/x` trả gì? Xoá `shop-draft`. Trên Mac: `./labs/lab verify cka s30` phải đạt 8/8.",
+      },
+    ],
+    hints: [
+      "`kubectl apply -f …/crds.yaml` của NGF (không `--server-side`) báo `The CustomResourceDefinition \"nginxproxies.gateway.nginx.org\" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes` (đo): apply phía client lưu cả object vào annotation `last-applied-configuration`. Dùng `--server-side`.",
+      "GatewayClass `nginx` không `Accepted`: control plane chưa chạy (`k -n nginx-gateway get pod`), hay thiếu CRD của NGF (NginxProxy, NginxGateway) nên Pod lỗi lúc khởi động: đọc `k -n nginx-gateway logs deploy/nginx-gateway`.",
+      "Pod data plane `shop-gw-nginx-…` không tạo được, `k get rs -l gateway.networking.k8s.io/gateway-name=shop-gw` báo `exceeded quota`: namespace shop có ResourceQuota; NginxProxy phải có `resources` (hay LimitRange điền mặc định). Pod `Pending` với `untolerated taint`: thiếu toleration trong `deployment.pod` của NginxProxy.",
+      "`nodePorts` trong NginxProxy là danh sách `{port, listenerPort}`: `listenerPort` phải khớp `port` của một listener trong Gateway (80), không khớp thì NGF bỏ qua và Kubernetes cấp cổng ngẫu nhiên.",
+      "`curl` từ Mac tới IP của cka-w1 cổng 30280 treo: Service data plane có `externalTrafficPolicy: Local` (manifest `nodeport` đặt sẵn) nên chỉ node có Pod data plane (cka-cp) nhận gói; các node khác không chuyển tiếp. `k -n shop get svc shop-gw-nginx -o jsonpath='{.spec.externalTrafficPolicy}'`.",
+      "`V1_HITS` không phải 10 đúng: mỗi request rơi vào gateway-v1 với xác suất 10%, 100 lần ra 5–15 là bình thường. Ra 0: rule chưa có `gateway-v1`, hay `ResolvedRefs=False` (Service `gateway-v1` sai tên/cổng). Ra khoảng 40: nhãn của gateway-v1 trùng `app: gateway` nên Service `gateway` cũng chọn Pod 1.0 (90% chia cho ba Pod, cộng 10% của gateway-v1).",
+      "Route không có `status` gì sau khi apply: không Gateway nào nhận nó. So `parentRefs[].name` (và `namespace`, `sectionName` nếu có) với `k get gateway -A`.",
+    ],
+    solution: `Output là của máy soạn bài; IP và tên Pod sẽ khác. Context đã ở namespace shop. IP: cka-cp \`192.168.252.35\`, cka-w1 \`192.168.252.36\`.
+
+**1. CRD Gateway API v1.6.3, kênh standard**
+
+\`\`\`bash
+free -m | awk '/Mem:/{print $7}'          # 1938 (MB available trên cka-cp trước khi cài)
+mkdir -p ~/drills/s30 && cd ~/drills/s30
+kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.3/standard-install.yaml
+k get crd -o 'custom-columns=NAME:.metadata.name,VERSION:.metadata.annotations.gateway\\.networking\\.k8s\\.io/bundle-version,CHANNEL:.metadata.annotations.gateway\\.networking\\.k8s\\.io/channel' | grep -E 'NAME|gateway.networking'
+# NAME                                           VERSION   CHANNEL
+# backendtlspolicies.gateway.networking.k8s.io   v1.6.3    standard
+# gatewayclasses.gateway.networking.k8s.io       v1.6.3    standard
+# gateways.gateway.networking.k8s.io             v1.6.3    standard
+# grpcroutes.gateway.networking.k8s.io           v1.6.3    standard
+# httproutes.gateway.networking.k8s.io           v1.6.3    standard
+# listenersets.gateway.networking.k8s.io         v1.6.3    standard
+# referencegrants.gateway.networking.k8s.io      v1.6.3    standard
+# tcproutes.gateway.networking.k8s.io            v1.6.3    standard
+# tlsroutes.gateway.networking.k8s.io            v1.6.3    standard
+# udproutes.gateway.networking.k8s.io            v1.6.3    standard
+\`\`\`
+
+**2. NGINX Gateway Fabric v2.8.1**
+
+\`\`\`bash
+kubectl apply --server-side -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v2.8.1/deploy/crds.yaml
+curl -fsSLo ngf-deploy.yaml https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v2.8.1/deploy/nodeport/deploy.yaml
+vim ngf-deploy.yaml                         # các phần bên dưới
+k apply -f ngf-deploy.yaml
+k -n nginx-gateway rollout status deploy/nginx-gateway
+k -n nginx-gateway get pod -o wide
+# nginx-gateway-7fb4f695f5-6zmrh       1/1   Running     0   45s   10.244.160.45   cka-cp
+# nginx-gateway-cert-generator-f9fgc   0/1   Completed   0   45s   10.244.160.44   cka-cp
+k get gatewayclass
+# NAME    CONTROLLER                                   ACCEPTED   AGE
+# nginx   gateway.nginx.org/nginx-gateway-controller   True       45s
+k get gatewayclass nginx -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}{"\\n"}{end}'
+# Accepted=True Accepted
+# SupportedVersion=True SupportedVersion
+# ResolvedRefs=True ResolvedRefs
+\`\`\`
+
+Deployment \`nginx-gateway\` (dưới \`spec.template.spec\`, như s29):
+
+\`\`\`yaml
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ''
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+\`\`\`
+
+NginxProxy sau khi sửa (khuôn cho data plane của mọi Gateway thuộc class \`nginx\`):
+
+\`\`\`yaml
+apiVersion: gateway.nginx.org/v1alpha2
+kind: NginxProxy
+metadata:
+  name: nginx-gateway-proxy-config
+  namespace: nginx-gateway
+spec:
+  kubernetes:
+    deployment:
+      container:
+        image:
+          pullPolicy: IfNotPresent
+          repository: ghcr.io/nginx/nginx-gateway-fabric/nginx
+          tag: 2.8.1
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 128Mi
+      replicas: 1
+      pod:
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ''
+        tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+    service:
+      externalTrafficPolicy: Local
+      type: NodePort
+      nodePorts:
+      - port: 30280
+        listenerPort: 80
+\`\`\`
+
+**3. Gateway shop-gw** (\`~/shop/shop-gw.yaml\`)
+
+\`\`\`yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shop-gw
+  namespace: shop
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    hostname: shop.local
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/shop-gw.yaml
+k get gateway shop-gw
+# NAME      CLASS   ADDRESS        PROGRAMMED   AGE
+# shop-gw   nginx   10.111.5.181   True         13m
+k get deploy,svc,pod -l gateway.networking.k8s.io/gateway-name=shop-gw -o wide
+# deployment.apps/shop-gw-nginx   1/1   1   1   13m   nginx   ghcr.io/nginx/nginx-gateway-fabric/nginx:2.8.1
+# service/shop-gw-nginx   NodePort   10.111.5.181   <none>   80:30280/TCP   13m
+# pod/shop-gw-nginx-5d5b66d846-hgcws   1/1   Running   0   13m   10.244.160.46   cka-cp
+k get gateway shop-gw -o jsonpath='{range .status.listeners[*].conditions[*]}{.type}={.status} {.reason}{"\\n"}{end}'
+# Programmed=True Programmed
+# Accepted=True Accepted
+# ResolvedRefs=True ResolvedRefs
+# Conflicted=False NoConflicts
+\`\`\`
+
+ADDRESS là ClusterIP của Service data plane. Data plane \`shop-gw-nginx\` do control plane tạo **trong namespace shop**: Pod của nó tính vào quota của shop.
+
+**4–6. gateway-v1 và HTTPRoute chia 90/10**
+
+\`\`\`bash
+cp ~/shop/gateway.yaml ~/shop/gateway-v1.yaml
+vim ~/shop/gateway-v1.yaml                  # tên, nhãn, selector → gateway-v1; replicas: 1
+k set image --local -f ~/shop/gateway-v1.yaml gateway=shop/gateway:1.0 -o yaml > /tmp/v1.yaml && mv /tmp/v1.yaml ~/shop/gateway-v1.yaml
+vim ~/shop/gateway-v1.yaml                  # thêm --- và Service gateway-v1
+\`\`\`
+
+\`~/shop/gateway-v1.yaml\` (\`set image --local\` in lại tệp với khoá xếp theo bảng chữ cái và thêm \`status: {}\`; bản dưới đã xếp lại cho dễ đọc và bỏ \`status\`):
+
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: gateway-v1
+  name: gateway-v1
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-v1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: gateway-v1
+    spec:
+      priorityClassName: shop-critical
+      terminationGracePeriodSeconds: 45
+      initContainers:
+      - name: wait-catalog
+        image: busybox:1.37
+        command:
+        - sh
+        - -c
+        - until wget -q -T 2 -O /dev/null http://catalog:8080/actuator/health/readiness; do echo chờ catalog; sleep 2; done
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 32Mi
+      containers:
+      - image: shop/gateway:1.0
+        name: gateway
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: JAVA_OPTS
+          value: -XX:MaxRAMPercentage=50
+        envFrom:
+        - configMapRef:
+            name: shop-config
+        volumeMounts:
+        - name: app-config
+          mountPath: /config
+          readOnly: true
+        startupProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sleep
+              - '10'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 384Mi
+      volumes:
+      - name: app-config
+        configMap:
+          name: gateway-files
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: gateway-v1
+  name: gateway-v1
+  namespace: shop
+spec:
+  type: ClusterIP
+  selector:
+    app: gateway-v1
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+\`\`\`
+
+\`~/shop/httproute.yaml\` (bản cuối; ở t4 rule chỉ có một backend \`gateway\`):
+
+\`\`\`yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: shop
+  namespace: shop
+spec:
+  parentRefs:
+  - name: shop-gw
+  hostnames:
+  - shop.local
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    backendRefs:
+    - name: gateway
+      port: 8080
+      weight: 90
+    - name: gateway-v1
+      port: 8080
+      weight: 10
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/gateway-v1.yaml && k rollout status deploy/gateway-v1
+k apply -f ~/shop/httproute.yaml
+k get httproute shop -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} {.reason}{"\\n"}{end}'
+# Accepted=True Accepted
+# ResolvedRefs=True ResolvedRefs
+\`\`\`
+
+Trên Mac (\`--resolve\` thay cho \`/etc/hosts\`; cka-cp là node chạy data plane):
+
+\`\`\`bash
+curl --resolve shop.local:30280:192.168.252.35 http://shop.local:30280/api/products
+for i in $(seq 100); do curl -s --resolve shop.local:30280:192.168.252.35 http://shop.local:30280/api/info; echo; done | grep -c '"version":"1.0"'
+# 13          (lần sau 9: mỗi request độc lập, xác suất 10%)
+curl -s -o /dev/null --max-time 4 -w '%{http_code}\\n' --resolve shop.local:30280:192.168.252.36 http://shop.local:30280/api/products
+# 000         (cka-w1 không có Pod data plane, externalTrafficPolicy: Local)
+\`\`\`
+
+Trên cka-cp: \`echo V1_HITS=13 >> ~/drills/s30/answers.env\`.
+
+Bộ nhớ (đo): cka-cp available 1938 → 1500 MB sau CRD, NGF và data plane (\`kubectl top\`: \`kube-apiserver\` 693Mi lúc đo, sau khi thêm 24 CRD; Pod \`nginx-gateway\` 27Mi, \`shop-gw-nginx\` 25Mi); gateway-v1 lên cka-w2 (requests 256Mi), cka-w2 available 1067 → 890 MB, cka-w1 989 MB. Thêm Pod catalog thứ ba (HPA max) vẫn xếp được và Ready trên cka-w1 (931 MB còn lại), nên trạng thái cuối giữ gateway-v1 và 90/10.
+
+**7. Tình huống hỏng: parentRefs sai tên, rồi backend sai tên** (\`~/drills/s30/route-draft.yaml\`, bản đã sửa parentRefs)
+
+\`\`\`yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: shop-draft
+  namespace: shop
+spec:
+  parentRefs:
+  - name: shop-gw
+  hostnames:
+  - shop.local
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /v2
+    backendRefs:
+    - name: gateway-v2
+      port: 8080
+\`\`\`
+
+\`\`\`bash
+sed 's/name: shop-gw$/name: shop-gateway/' ~/drills/s30/route-draft.yaml | k apply -f -
+k get httproute shop-draft -o yaml | sed -n '/^status/,$p'
+#             (không in gì: không Gateway nào nhận Route này, không controller nào viết status)
+k apply -f ~/drills/s30/route-draft.yaml
+k get httproute shop-draft -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} {.reason}: {.message}{"\\n"}{end}'
+# Accepted=True Accepted: The Route is accepted
+# ResolvedRefs=False BackendNotFound: spec.rules[0].backendRefs[0].name: Not found: "gateway-v2"
+curl -s -o /dev/null -w '%{http_code}\\n' -H 'Host: shop.local' http://192.168.252.35:30280/v2/x
+# 500
+echo ROUTE_BAD_REASON=BackendNotFound >> ~/drills/s30/answers.env
+k delete httproute shop-draft
+\`\`\`
+
+Route được nhận (\`Accepted=True\`) nhưng backend không có: NGF vẫn cài rule và trả 500 cho request khớp \`/v2\`, các path khác không ảnh hưởng. Ở bản nháp đầu tiên của bài soạn, host \`draft.shop.local\` cho \`Accepted=False NoMatchingListenerHostname\`: listener chỉ nhận \`shop.local\`.
+
+Lời giải tự động: \`labs/cka/sessions/s30/apply.sh\` (sửa manifest bằng \`files/patch-ngf.py\` thay cho vim, chép các tệp trong \`files/\`, gọi 100 lần từ Mac; chạy lại được, CRD chỉ apply khi chưa đúng bản).`,
+    exam: {
+      patterns: [
+        "\"Tạo HTTPRoute X gắn vào Gateway Y có sẵn: host a.example.com, path /api tới Service svc cổng 8080\" — viết từ trang Gateway API trên kubernetes.io (không có `kubectl create httproute`): `parentRefs`, `hostnames`, `rules[].matches[].path`, `backendRefs`.",
+        "\"Chia 80/20 giữa svc-v1 và svc-v2\" — hai phần tử trong `backendRefs` với `weight: 80` và `weight: 20`; kiểm `ResolvedRefs=True`.",
+        "\"HTTPRoute không hoạt động, tìm lỗi\" — `k describe httproute`: status rỗng → `parentRefs` sai; `Accepted=False` → listener/hostname/namespace; `ResolvedRefs=False` → backend (tên, cổng, namespace + ReferenceGrant).",
+        "\"Chuyển Ingress sang Gateway API\" — host → `hostnames`, `Prefix` → `PathPrefix`, backend `service.name/port.number` → `backendRefs[].name/port`; TLS chuyển sang listener HTTPS của Gateway.",
+      ],
+      timeTargetMin: 10,
+      drills: [
+        {
+          text: "Trong 4 phút: HTTPRoute `catalog-direct` gắn vào `shop-gw`, host `shop.local`, path `/products` kiểu PathPrefix → Service `catalog` cổng 8080. Kiểm `Accepted` và gọi thử qua NodePort 30280, rồi xoá.",
+          timeLimitMin: 4,
+          solution: "```yaml\napiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata:\n  name: catalog-direct\nspec:\n  parentRefs:\n  - name: shop-gw\n  hostnames:\n  - shop.local\n  rules:\n  - matches:\n    - path:\n        type: PathPrefix\n        value: /products\n    backendRefs:\n    - name: catalog\n      port: 8080\n```\n```bash\nk apply -f catalog-direct.yaml\nk get httproute catalog-direct -o jsonpath='{.status.parents[0].conditions[*].type}'\ncurl -s -H 'Host: shop.local' http://192.168.252.35:30280/products | head -c 60; echo\nk delete httproute catalog-direct\n```",
+        },
+        {
+          text: "Trong 2 phút: đưa canary của shop lên 50/50, kiểm bằng 20 request, rồi trả về 90/10.",
+          timeLimitMin: 2,
+          solution: "```bash\nk patch httproute shop --type=json -p '[{\"op\":\"replace\",\"path\":\"/spec/rules/0/backendRefs/0/weight\",\"value\":50},{\"op\":\"replace\",\"path\":\"/spec/rules/0/backendRefs/1/weight\",\"value\":50}]'\nfor i in $(seq 20); do curl -s -H 'Host: shop.local' http://192.168.252.35:30280/api/info; echo; done | sort | uniq -c\nk apply -f ~/shop/httproute.yaml\n```\nThứ tự `backendRefs` trong cluster là thứ tự trong tệp (gateway trước, gateway-v1 sau). `k apply` tệp gốc trả về 90/10 và giữ `~/shop/` khớp cluster.",
+        },
+      ],
+    },
+    tips: [
+      "Trang Gateway API của kubernetes.io có ví dụ Gateway và HTTPRoute chép được: tìm \"Gateway API\" trong ô tìm kiếm, mục Concepts › Services, Load Balancing, and Networking.",
+      "Đọc điều kiện của Route ở `status.parents[]`, không phải `status.conditions`: mỗi Gateway cha báo riêng.",
+      "Không có điều kiện nào trên Route nghĩa là không Gateway nào nhận nó: kiểm `parentRefs` trước.",
+      "`weight` là tỷ lệ request, không phải số Pod; `weight: 0` giữ backend trong YAML mà không gửi request nào.",
+    ],
+    outcome: {
+      md: `shop có cửa thứ hai bằng Gateway API, và 10% request tới gateway đi vào bản 1.0 chạy song song. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s30
+\`\`\`
+
+Verify kiểm ba CRD (\`gatewayclasses\`, \`gateways\`, \`httproutes\`) phục vụ \`v1\`, kênh \`standard\`, bản v1.6.3; control plane NGF trên cka-cp và GatewayClass \`nginx\` \`Accepted\`; Gateway \`shop-gw\` (listener HTTP :80 \`shop.local\`) \`Programmed\` với Service data plane NodePort 30280; Deployment \`gateway-v1\` (1 replica, \`shop/gateway:1.0\`, probe và tài nguyên giống \`gateway\`, nhãn không lọt vào Service \`gateway\`) và Service của nó; HTTPRoute \`shop\` (parent, host, \`PathPrefix /api\`, hai backend 90/10) với \`Accepted\` và \`ResolvedRefs\` từ \`shop-gw\`, YAML trong \`~/shop/\` khớp. Rồi **gọi từ chính máy Mac** cả Gateway (IP node chạy data plane, đọc từ API) lẫn Ingress của s29, đều qua \`--resolve\`. Tỷ lệ chia không bền và không đếm lại được lúc chấm, nên chấm qua \`V1_HITS\` (3–20); \`ROUTE_BAD_REASON\` phải là reason của \`ResolvedRefs\` khi backend sai tên, Route nháp phải đã xoá.`,
+      verifyOutput: "lab: kiểm s30\n  (chờ apiserver, CoreDNS, postgres-0, Deployment của shop, ingress-nginx và NGF, nếu đang khởi động: tối đa ~11 phút)\n  ✓ CRD Gateway API v1.6.3 kênh standard: gatewayclasses, gateways, httproutes phục vụ v1\n  ✓ NGINX Gateway Fabric: control plane Available trên cka-cp; GatewayClass nginx Accepted=True\n  ✓ Gateway shop-gw: class nginx, listener HTTP :80 shop.local, Programmed=True; data plane NodePort 30280; YAML trong ~/shop/\n  ✓ gateway-v1: 1 replica shop/gateway:1.0, probe và tài nguyên như gateway, Available; Service gateway-v1 http 8080; ~/shop/\n  ✓ HTTPRoute shop: shop-gw, shop.local, PathPrefix /api → gateway 90 / gateway-v1 10; Accepted, ResolvedRefs; ~/shop/ khớp\n  ✓ Từ máy Mac: shop.local:30280/api/products qua Gateway và :30080 qua Ingress s29 đều trả 200 với 3 sản phẩm\n  ✓ answers.env: V1_HITS (số lần /api/info trả version 1.0 trên 100 request) trong 3–20\n  ✓ answers.env: ROUTE_BAD_REASON là lý do của ResolvedRefs khi backend sai tên; HTTPRoute nháp đã xoá\n  → 8/8 đạt",
+      projectDelta: "Mảnh \"Gateway API\" của project: Gateway shop-gw và HTTPRoute shop chạy cạnh Ingress, canary 90/10 giữa gateway 2.0 và 1.0 điều khiển bằng weight. Buổi sau khoá namespace shop bằng NetworkPolicy mà vẫn giữ cả hai cửa vào.",
+    },
+    review: [
+      {
+        q: "Ba tài nguyên GatewayClass, Gateway, HTTPRoute: ai sở hữu cái nào, và cái nào tương ứng với phần nào của Ingress?",
+        a: "GatewayClass (cluster-scoped, nhà cung cấp hạ tầng) chọn controller, như IngressClass. Gateway (người vận hành) giữ listener: cổng, giao thức, hostname, TLS, namespace nào được gắn Route; ở Ingress đó là Service và cấu hình của controller cộng khối `tls`. HTTPRoute (đội ứng dụng) giữ host, match, backend: phần `rules` của Ingress.",
+      },
+      {
+        q: "HTTPRoute vừa apply không có `status` gì. Khác gì với `Accepted=False`?",
+        a: "Không có status nghĩa là không controller nào coi Route là của mình: `parentRefs` trỏ Gateway không tồn tại (sai tên, sai namespace) hay Gateway thuộc class không ai xử lý. `Accepted=False` nghĩa là Gateway có thấy Route nhưng từ chối: hostname không khớp listener (`NoMatchingListenerHostname`), namespace không được phép (`NotAllowedByListeners`).",
+      },
+      { q: "`backendRefs` 90/10 giữa `gateway` (2 Pod) và `gateway-v1` (1 Pod). Bao nhiêu phần trăm request tới bản 1.0, và khác rolling update ở s14 thế nào?", a: "Khoảng 10%: weight là tỷ lệ request, không phụ thuộc số Pod. Rolling update đổi tỷ lệ theo số Pod mới/cũ trong cùng một Service, không dừng ở giữa có chủ ý, và kube-proxy chia theo kết nối; canary bằng weight dừng ở tỷ lệ bạn chọn và tăng dần được." },
+      { q: "Route `Accepted=True` nhưng `ResolvedRefs=False` với reason `BackendNotFound`. Request khớp rule đó nhận gì?", a: "NGF vẫn cài rule nhưng không có upstream: request khớp nhận 500 (đo trên lab với `/v2`). Các rule khác của cùng Route và các Route khác không bị ảnh hưởng. Sửa tên/cổng Service, hay thêm ReferenceGrant nếu backend ở namespace khác (`RefNotPermitted`)." },
+      { q: "Gọi NodePort 30280 qua IP của cka-w1 thì treo, qua IP của cka-cp thì chạy. Vì sao Ingress của s29 không bị như vậy?", a: "Service data plane của NGF có `externalTrafficPolicy: Local`: node chỉ nhận gói NodePort khi chính nó có Pod đích (giữ IP nguồn của client), Pod data plane ở cka-cp. Service của ingress-nginx dùng mặc định `Cluster`: node nào cũng DNAT sang Pod ở node khác (và SNAT, mất IP client)." },
+    ],
   },
   {
     id: "s31",

@@ -262,7 +262,7 @@ export const skills = [
 
   // ── s29 Ingress ──
   { id: "k-ingress-nginx-install", kind: "procedure", area: "kubernetes", label: "Cài ingress-nginx controller kiểu NodePort trên cluster kubeadm" },
-  { id: "k-create-ingress", kind: "command", area: "kubernetes", label: `k create ingress shop --rule="shop.local/api*=gateway:80" $do > ing.yaml`, ref: cmd("c061") },
+  { id: "k-create-ingress", kind: "command", area: "kubernetes", label: `k create ingress shop --class=nginx --rule="shop.local/api*=gateway:8080" $do > ing.yaml`, ref: cmd("c061") },
   { id: "k-ingress-yaml", kind: "yaml", area: "kubernetes", label: "Ingress hai path và TLS", ref: yaml("sn-ingress") },
   { id: "k-ingressclass", kind: "command", area: "kubernetes", label: "k get ingressclass; spec.ingressClassName" },
   { id: "k-tls-secret", kind: "command", area: "kubernetes", label: "k create secret tls shop-tls --cert=tls.crt --key=tls.key", ref: cmd("c042") },

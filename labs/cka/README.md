@@ -92,3 +92,36 @@ Pod nháp: `dnspolicy-lab` (`dnsPolicy: None`, nameserver `10.96.0.10`, searches
 Vòng chờ của verify s26–s28 nằm ở `files/wait.sh` (chạy trên cka-cp, 420 giây theo đồng hồ): ngay sau khi VM bật lại, status Deployment/StatefulSet trong API còn là của trước lúc tắt, nên điều kiện "replicas = available" của s24/s25 thoát ngay và verify đỏ giả (đo ở s28: 3/5, 4/5). `wait.sh` chờ mọi Pod gateway, catalog, order, postgres (s28 thêm coredns và `getent` trong `postgres-0`) Ready với `lastTransitionTime` ≥ thời điểm boot của cka-cp. Đo sau `down` + `up` sạch: verify s27 8/8 (1 phút 34, có chờ), s28 5/5, s26 4/4.
 
 Đáp án giống nhau trên mọi cluster lab (như s12, s13, s15): `KUBE_SVC_CHAIN` (băm của `shop/catalog:http` + `tcp`, dòng chấm vẫn đòi cổng đã đặt tên và đọc chuỗi lúc chấm), `PROXY_MODE=iptables`, `LB_EXTERNAL_IP_STATE=<pending>` (s27), `NDOTS=5`, `KUBE_DNS_IP=10.96.0.10` (s28). Các dòng chấm khác của hai buổi đọc trạng thái cluster thật, nên chép lời giải không đủ để xanh.
+
+## Ingress và Gateway API (s29–s30)
+
+Phiên bản (tra ngày 2026-11-18):
+
+| Thứ | Bản ghim | Nguồn | arm64 |
+|---|---|---|---|
+| ingress-nginx | **controller-v1.15.1** (19/3/2026, bản cuối; cùng ngày có v1.14.5, v1.13.9), manifest `deploy/static/provider/baremetal/deploy.yaml` | GitHub releases `kubernetes/ingress-nginx`; repo **archived** 23/3/2026; [Ingress NGINX Retirement](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) (best-effort tới 3/2026, sau đó không bản vá) | image `registry.k8s.io/ingress-nginx/controller:v1.15.1@sha256:594ceea7…` và `kube-webhook-certgen:v1.6.9@sha256:01038e7d…` chạy trên VM arm64 (kéo và chạy được, đo) |
+| Gateway API CRD | **v1.6.3**, kênh `standard` (`standard-install.yaml` của release) | GitHub releases `kubernetes-sigs/gateway-api`; v1.7.0 (29/10/2026) đã có nhưng bảng tương thích của NGF 2.8.1 ghi Gateway API **1.6.3** | — |
+| NGINX Gateway Fabric | **v2.8.1** (3/11/2026), manifest `deploy/crds.yaml` + `deploy/nodeport/deploy.yaml` | README của `nginx/nginx-gateway-fabric` tag v2.8.1: NGF 2.8.1 ↔ Gateway API 1.6.3, Kubernetes 1.32+ | `ghcr.io/nginx/nginx-gateway-fabric:2.8.1` và `…/nginx:2.8.1` chạy trên VM arm64 (đo) |
+
+NodePort cố định của chương trình: **30180** `gateway-nodeport` (s27), **30080/30443** ingress-nginx http/https (s29), **30280** listener 80 của Gateway `shop-gw` (s30, `NginxProxy.spec.kubernetes.service.nodePorts`). Controller đặt trên cka-cp (nodeSelector `node-role.kubernetes.io/control-plane: ""` + toleration): Pod `ingress-nginx-controller` (s29, `files/patch-ingress-nginx.py`), control plane `nginx-gateway` và data plane `shop-gw-nginx` (s30, `files/patch-ngf.py`; data plane lấy nodeSelector/toleration/tài nguyên từ `NginxProxy`). Data plane của NGF nằm **trong namespace của Gateway** (`shop`), tính vào ResourceQuota (`requests` 50m/64Mi, `limits.memory` 128Mi). Service data plane của manifest `nodeport` có `externalTrafficPolicy: Local`: chỉ IP của cka-cp trả lời 30280 (đo: qua cka-w1 hết giờ), nên verify s30 gọi IP của node chạy Pod data plane (đọc từ API); Service của ingress-nginx là `Cluster`, verify s29 gọi IP cka-w1.
+
+RAM (đo 2026-11-18, `free -m` cột available / `kubectl describe node` requests):
+
+| Thời điểm | cka-cp | cka-w1 | cka-w2 | quota shop (requests.memory, pods) |
+|---|---|---|---|---|
+| cuối s28 | 1964 MB, req 100Mi | 1013 MB, req 854Mi | 929 MB, req 1166Mi | 1680Mi/3Gi, 11/20 |
+| sau ingress-nginx (s29) | 1910 MB, req 190Mi (controller 37Mi `top`) | 979 MB | 873 MB | không đổi (controller ở `ingress-nginx`) |
+| sau CRD + NGF + Gateway (s30) | 1500 MB, req 254Mi (`nginx-gateway` 27Mi, `shop-gw-nginx` 25Mi; `kube-apiserver` 693Mi sau khi thêm 24 CRD) | 989 MB | — | +64Mi (data plane) |
+| sau `gateway-v1` (s30, lên cka-w2, requests 256Mi) | — | 989 MB, req 854Mi | 890 MB, req 1166Mi (62%), limits 85% | 1744Mi/3Gi, 12/20 (catalog lúc đó 2 replica) |
+| + catalog thứ 3 (HPA max, thử bằng `scale`) | — | 931 MB, req 1110Mi (59%), limits 93% | 900 MB | +256Mi, vẫn dưới 3Gi |
+
+**Quyết định `gateway-v1`: giữ.** Ở trạng thái cuối mỗi worker còn ~900 MB available, Pod catalog thứ ba (HPA max) vẫn xếp được và Ready, quota còn > 1Gi: không có Pod Pending/OOMKilled. Nên trạng thái cuối của s30 là HTTPRoute `shop` chia `gateway` 90 / `gateway-v1` 10; verify chấm weight trong cluster và chấm tỷ lệ đếm được qua `V1_HITS` (3–20). Đo `V1_HITS` ba lần: 13, 9, 6. s31 phải mở luồng từ data plane `shop-gw-nginx` (namespace `shop`) tới cả `gateway` và `gateway-v1`, và từ ingress-nginx tới `gateway` và `order` (Ingress `/orders` trỏ `order`).
+
+Ghi chú đo:
+
+- `/orders` của Ingress trỏ Service **`order`** (gateway không có `/orders`, chỉ có `/api/orders`); `/orders/1` với `Exact` → 404 HTML của nginx (default backend), `/api` → 404 JSON của Spring. Ingress có `tls` thì ingress-nginx mặc định trả `308` sang `https://shop.local/api/products` (cổng 443): Ingress của lab đặt `nginx.ingress.kubernetes.io/ssl-redirect: "false"`.
+- `shop.local` trên cka-cp phải ghi cả vào `/etc/cloud/templates/hosts.debian.tmpl` (cloud-init dựng lại `/etc/hosts` khi khởi động; đo: sau `down` + `up` dòng chỉ ở `/etc/hosts` mất, verify s29 7/8).
+- Lần kéo đầu `controller:v1.15.1` trên cka-cp (đã có `tcp_mtu_probing=1`) vẫn lỗi một lần `TLS handshake timeout`, kubelet kéo lại xong sau 26 giây; `kube-webhook-certgen` 20–22 giây. `raw.githubusercontent.com`/`github.com` trả 503 vài lần khi tải manifest (`curl --retry 3` qua được).
+- Ingress không `ingressClassName`: ADDRESS trống, không Event, log controller `"Ignoring ingress because of error while validating ingress class" … error="ingress does not contain a valid IngressClass"`, request trả 404.
+- Gateway `shop-gw` báo `Programmed=True` ngay khi Pod data plane còn `Init:0/1` (1 giây sau khi tạo); verify vẫn gọi thật qua NodePort. HTTPRoute `parentRefs` sai tên: không có `status` nào. Backend sai tên: `Accepted=True`, `ResolvedRefs=False BackendNotFound`, request khớp rule nhận 500 của nginx. Host không khớp listener: `Accepted=False NoMatchingListenerHostname`.
+- CRD: `kubectl apply` phía client với `crds.yaml` của NGF bị từ chối (`nginxproxies` ~350 KB, `metadata.annotations: Too long: may not be more than 262144 bytes`); `httproutes` của Gateway API ~240 KB thì lọt. `apply.sh` s30 dùng `--server-side` và chỉ apply lại CRD khi chưa đúng bản (annotation `bundle-version`; NGF: sha256 của tệp trong `~/drills/s30/.ngf-crds.sha256`): một lần apply lại CRD lúc máy chủ tải ~30 làm etcd chậm, apiserver hết giờ và bị kubelet khởi động lại, controller khác CrashLoop vài phút rồi tự hồi.
