@@ -992,7 +992,7 @@ Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.sho
 
 **IngressClass nối Ingress với controller.** Manifest tạo IngressClass \`nginx\` với \`spec.controller: k8s.io/ingress-nginx\`; controller chỉ nhận Ingress có \`spec.ingressClassName: nginx\` (hay class mặc định, nếu một IngressClass mang annotation \`ingressclass.kubernetes.io/is-default-class: "true"\`; manifest này không đặt). Ingress thiếu class thì không ai nhận: object vẫn tạo được, \`k get ingress\` có cột ADDRESS trống mãi, không Event nào, request trả 404 của controller. Đây là tình huống hỏng của buổi.
 
-**pathType.** \`Prefix\` so theo **phần tử path** tách bởi \`/\`: \`/api\` khớp \`/api\`, \`/api/\`, \`/api/products\`, nhưng không khớp \`/apis\`. \`Exact\` chỉ khớp đúng chuỗi, phân biệt hoa thường: \`/orders\` không khớp \`/orders/1\`. \`ImplementationSpecific\` để controller tự hiểu (ingress-nginx coi như Prefix, hay regex khi bật \`use-regex\`). Nhiều path cùng khớp thì path dài nhất thắng; cùng độ dài thì \`Exact\` thắng \`Prefix\`. Không path nào khớp thì controller trả 404 của chính nó (default backend), khác 404 dạng JSON của Spring: nhìn body là biết request có tới ứng dụng không.
+**pathType.** \`Prefix\` so theo **phần tử path** tách bởi \`/\`: \`/api\` khớp \`/api\`, \`/api/\`, \`/api/products\`, nhưng không khớp \`/apis\`. \`Exact\` chỉ khớp đúng chuỗi, phân biệt hoa thường: \`/orders\` không khớp \`/orders/1\`. \`ImplementationSpecific\` để controller tự hiểu (ingress-nginx khớp theo chuỗi đầu như \`location\` của nginx, nên \`/api\` khớp cả \`/apis\`; hay regex khi bật \`use-regex\`). Nhiều path cùng khớp thì path dài nhất thắng; cùng độ dài thì \`Exact\` thắng \`Prefix\`. Không path nào khớp thì controller trả 404 của chính nó (default backend), khác 404 dạng JSON của Spring: nhìn body là biết request có tới ứng dụng không.
 
 **TLS ở controller.** Secret kiểu \`kubernetes.io/tls\` (khoá \`tls.crt\`, \`tls.key\`) phải nằm **cùng namespace với Ingress**. Khối \`tls\` của Ingress gắn host với Secret; controller chọn chứng chỉ theo SNI của client. Host không có chứng chỉ khớp (hay Secret hỏng) thì controller trả chứng chỉ mặc định "Kubernetes Ingress Controller Fake Certificate": \`curl -k\` vẫn ra 200 và che mất lỗi, còn \`curl --cacert tls.crt\` chỉ qua khi đúng chứng chỉ của bạn được phục vụ. Chứng chỉ phải có **SAN** \`DNS:shop.local\`: client hiện đại (curl, Java) bỏ qua CN khi so tên. Ingress có \`tls\` thì ingress-nginx mặc định chuyển hướng http sang https (308); muốn http vẫn phục vụ thì annotation \`nginx.ingress.kubernetes.io/ssl-redirect: "false"\`.
 
@@ -1030,7 +1030,7 @@ Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.sho
       },
       {
         id: "t6",
-        text: "pathType: gọi `/api/products`, `/api`, `/orders`, `/orders/1` qua `http://shop.local:30080` với `curl -s -o /dev/null -w '%{http_code}\\n'`, rồi `curl -s http://shop.local:30080/orders/1 | head -3` (404 này của ai?). Ghi `PATH_EXACT_RESULT=<mã HTTP của /orders/1>` vào `~/drills/s29/answers.env`. Thử `k annotate ingress shop nginx.ingress.kubernetes.io/ssl-redirect-` rồi `curl -I http://shop.local:30080/api/products`: mã gì, `Location` trỏ đâu? Apply lại `~/shop/ingress.yaml`.",
+        text: "pathType: gọi `/api/products`, `/api`, `/orders`, `/orders/1` qua `http://shop.local:30080` với `curl -s -o /dev/null -w '%{http_code}\\n'`, rồi `curl -s http://shop.local:30080/orders/1 | head -3` (404 này của ai?). Ghi `PATH_EXACT_RESULT=<mã HTTP của /orders/1>` và `PATH_EXACT_FROM=<nginx hay spring: ai trả 404 đó>` vào `~/drills/s29/answers.env`. Đổi tạm `/orders` sang `Prefix` (`k edit ingress shop`) và gọi lại `/orders/1`: mã có đổi không, body có đổi không? Apply lại `~/shop/ingress.yaml`. Thử `k annotate ingress shop nginx.ingress.kubernetes.io/ssl-redirect-` rồi `curl -I http://shop.local:30080/api/products`: mã gì, `Location` trỏ đâu? Apply lại `~/shop/ingress.yaml`.",
       },
       {
         id: "t7",
@@ -1190,6 +1190,7 @@ done
 # /orders/1      http 404  https 404
 # /api           http 404  https 404
 echo PATH_EXACT_RESULT=404 >> ~/drills/s29/answers.env
+echo PATH_EXACT_FROM=nginx >> ~/drills/s29/answers.env
 \`\`\`
 
 \`/orders/1\` không khớp \`/orders\` (Exact) cũng không khớp \`/api\`: controller tự trả trang 404 HTML của nginx, request không tới Pod nào. \`/api\` thì có khớp (Prefix) và tới gateway, 404 là của Spring (không có handler cho \`/api\`). Bỏ annotation \`ssl-redirect\`: \`curl -I http://shop.local:30080/api/products\` trả \`308 Permanent Redirect\`, \`Location: https://shop.local/api/products\` (cổng 443 mặc định, không phải 30443): sau NodePort, chuyển hướng tự động còn đưa client tới sai cổng.
@@ -1370,7 +1371,7 @@ So với Ingress: IngressClass ≈ GatewayClass, phần \`tls\`/cổng của con
       },
       {
         id: "t6",
-        text: "Chia 90/10: trong `~/shop/httproute.yaml` cho rule `/api` hai `backendRefs`: `gateway` cổng 8080 `weight: 90` và `gateway-v1` cổng 8080 `weight: 10`. Apply, kiểm `Accepted`/`ResolvedRefs`. Trên Mac gọi 100 lần: `for i in $(seq 100); do curl -s --resolve shop.local:30280:<IP cka-cp> http://shop.local:30280/api/info; echo; done | grep -c '\"version\":\"1.0\"'`. Ghi `V1_HITS=<số đếm được>` vào `~/drills/s30/answers.env` trên cka-cp. Chạy lại vòng lặp: số có giống lần trước không?",
+        text: "Chia 90/10: trong `~/shop/httproute.yaml` cho rule `/api` hai `backendRefs`: `gateway` cổng 8080 `weight: 90` và `gateway-v1` cổng 8080 `weight: 10`. Apply, kiểm `Accepted`/`ResolvedRefs`. Trên Mac gọi 100 lần: `for i in $(seq 100); do curl -s --noproxy '*' --max-time 5 --resolve shop.local:30280:<IP cka-cp> http://shop.local:30280/api/info; echo; done | grep -c '\"version\":\"1.0\"'`. Ghi `V1_HITS=<số đếm được>` vào `~/drills/s30/answers.env` trên cka-cp. Chạy lại vòng lặp: số có giống lần trước không?",
       },
       {
         id: "t7",
@@ -1672,7 +1673,7 @@ Trên Mac (\`--resolve\` thay cho \`/etc/hosts\`; cka-cp là node chạy data pl
 
 \`\`\`bash
 curl --resolve shop.local:30280:192.168.252.35 http://shop.local:30280/api/products
-for i in $(seq 100); do curl -s --resolve shop.local:30280:192.168.252.35 http://shop.local:30280/api/info; echo; done | grep -c '"version":"1.0"'
+for i in $(seq 100); do curl -s --noproxy '*' --max-time 5 --resolve shop.local:30280:192.168.252.35 http://shop.local:30280/api/info; echo; done | grep -c '"version":"1.0"'
 # 13          (lần sau 9: mỗi request độc lập, xác suất 10%)
 curl -s -o /dev/null --max-time 4 -w '%{http_code}\\n' --resolve shop.local:30280:192.168.252.36 http://shop.local:30280/api/products
 # 000         (cka-w1 không có Pod data plane, externalTrafficPolicy: Local)
@@ -1713,7 +1714,7 @@ k apply -f ~/drills/s30/route-draft.yaml
 k get httproute shop-draft -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} {.reason}: {.message}{"\\n"}{end}'
 # Accepted=True Accepted: The Route is accepted
 # ResolvedRefs=False BackendNotFound: spec.rules[0].backendRefs[0].name: Not found: "gateway-v2"
-curl -s -o /dev/null -w '%{http_code}\\n' -H 'Host: shop.local' http://192.168.252.35:30280/v2/x
+curl -s -o /dev/null -w '%{http_code}\\n' http://shop.local:30280/v2/x
 # 500
 echo ROUTE_BAD_REASON=BackendNotFound >> ~/drills/s30/answers.env
 k delete httproute shop-draft
@@ -1734,12 +1735,12 @@ Lời giải tự động: \`labs/cka/sessions/s30/apply.sh\` (sửa manifest b�
         {
           text: "Trong 4 phút: HTTPRoute `catalog-direct` gắn vào `shop-gw`, host `shop.local`, path `/products` kiểu PathPrefix → Service `catalog` cổng 8080. Kiểm `Accepted` và gọi thử qua NodePort 30280, rồi xoá.",
           timeLimitMin: 4,
-          solution: "```yaml\napiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata:\n  name: catalog-direct\nspec:\n  parentRefs:\n  - name: shop-gw\n  hostnames:\n  - shop.local\n  rules:\n  - matches:\n    - path:\n        type: PathPrefix\n        value: /products\n    backendRefs:\n    - name: catalog\n      port: 8080\n```\n```bash\nk apply -f catalog-direct.yaml\nk get httproute catalog-direct -o jsonpath='{.status.parents[0].conditions[*].type}'\ncurl -s -H 'Host: shop.local' http://192.168.252.35:30280/products | head -c 60; echo\nk delete httproute catalog-direct\n```",
+          solution: "```yaml\napiVersion: gateway.networking.k8s.io/v1\nkind: HTTPRoute\nmetadata:\n  name: catalog-direct\nspec:\n  parentRefs:\n  - name: shop-gw\n  hostnames:\n  - shop.local\n  rules:\n  - matches:\n    - path:\n        type: PathPrefix\n        value: /products\n    backendRefs:\n    - name: catalog\n      port: 8080\n```\n```bash\nk apply -f catalog-direct.yaml\nk get httproute catalog-direct -o jsonpath='{.status.parents[0].conditions[*].type}'\ncurl -s http://shop.local:30280/products | head -c 60; echo\nk delete httproute catalog-direct\n```",
         },
         {
           text: "Trong 2 phút: đưa canary của shop lên 50/50, kiểm bằng 20 request, rồi trả về 90/10.",
           timeLimitMin: 2,
-          solution: "```bash\nk patch httproute shop --type=json -p '[{\"op\":\"replace\",\"path\":\"/spec/rules/0/backendRefs/0/weight\",\"value\":50},{\"op\":\"replace\",\"path\":\"/spec/rules/0/backendRefs/1/weight\",\"value\":50}]'\nfor i in $(seq 20); do curl -s -H 'Host: shop.local' http://192.168.252.35:30280/api/info; echo; done | sort | uniq -c\nk apply -f ~/shop/httproute.yaml\n```\nThứ tự `backendRefs` trong cluster là thứ tự trong tệp (gateway trước, gateway-v1 sau). `k apply` tệp gốc trả về 90/10 và giữ `~/shop/` khớp cluster.",
+          solution: "```bash\nk patch httproute shop --type=json -p '[{\"op\":\"replace\",\"path\":\"/spec/rules/0/backendRefs/0/weight\",\"value\":50},{\"op\":\"replace\",\"path\":\"/spec/rules/0/backendRefs/1/weight\",\"value\":50}]'\nfor i in $(seq 20); do curl -s --max-time 5 http://shop.local:30280/api/info; echo; done | sort | uniq -c\nk apply -f ~/shop/httproute.yaml\n```\nThứ tự `backendRefs` trong cluster là thứ tự trong tệp (gateway trước, gateway-v1 sau). `k apply` tệp gốc trả về 90/10 và giữ `~/shop/` khớp cluster.",
         },
       ],
     },

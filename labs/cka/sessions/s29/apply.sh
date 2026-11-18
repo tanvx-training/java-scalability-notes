@@ -2,7 +2,7 @@
 # bằng files/patch-ingress-nginx.py (NodePort 30080/30443, controller trên cka-cp), apply, chờ controller và webhook; shop.local
 # trong /etc/hosts của cka-cp; chứng chỉ tự ký (openssl req -x509, SAN shop.local) và Secret tls shop-tls; Ingress nháp
 # shop-noclass (không ingressClassName: không có ADDRESS, gọi ra 404) rồi xoá; ~/shop/ingress.yaml (sinh khung bằng
-# `kubectl create ingress … --dry-run=client`, tệp chuẩn là files/ingress.yaml) và apply; ghi PATH_EXACT_RESULT; gọi từ Mac.
+# `kubectl create ingress … --dry-run=client`, tệp chuẩn là files/ingress.yaml) và apply; ghi PATH_EXACT_RESULT và PATH_EXACT_FROM; gọi từ Mac.
 # Chạy lại nhiều lần được (manifest đã tải và chứng chỉ còn đúng thì giữ). Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
 INGRESS_NGINX_VERSION=controller-v1.15.1
@@ -77,7 +77,12 @@ vm "$cp" "set -e
   done
   code=\$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' http://shop.local:30080/orders/1)
   [ \"\$code\" = 404 ]
-  printf 'PATH_EXACT_RESULT=%s\n' \"\$code\" > ~/drills/s29/answers.env
+  # Ai trả 404: trang HTML của nginx (default backend, không rule nào khớp) hay JSON của Spring (request đã tới order).
+  body=\$(curl -s --max-time 5 http://shop.local:30080/orders/1)
+  echo \"/orders/1 body: \$(printf '%s' \"\$body\" | head -c 80 | tr '\\n' ' ')\"
+  case \"\$body\" in *'<html>'*nginx*) from=nginx ;; *) from=spring ;; esac
+  [ \"\$from\" = nginx ]
+  printf 'PATH_EXACT_RESULT=%s\nPATH_EXACT_FROM=%s\n' \"\$code\" \"\$from\" > ~/drills/s29/answers.env
   cat ~/drills/s29/answers.env"
 
 ip="$(vm "$cp" "kubectl get node cka-w1 -o jsonpath='{.status.addresses[?(@.type==\"InternalIP\")].address}'")"

@@ -170,8 +170,8 @@ print("ROUTE=" + ("; ".join(bad) or "đạt"))
 v = ans.get("V1_HITS", "")
 print("HITS=" + ("đạt" if v.isdigit() and 3 <= int(v) <= 20 else f"V1_HITS='{v[:10]}' (cần số lần trúng 1.0 trên 100 request, 3–20)"))
 bad = []
-got = ans.get("ROUTE_BAD_REASON", "")
-if got != "BackendNotFound": bad.append(f"ROUTE_BAD_REASON='{got[:30]}'")
+got = ans.get("ROUTE_BAD_REASON", "").strip()
+if got.lower() != "backendnotfound": bad.append(f"ROUTE_BAD_REASON='{got[:30]}'")
 if rt is not None:
     left = sorted(f"{ns}/{n}" for (ns, n) in routes if (ns, n) != ("shop", "shop"))
     if left: bad.append("HTTPRoute nháp còn: " + ", ".join(left))

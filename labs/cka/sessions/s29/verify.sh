@@ -2,7 +2,7 @@
 # nginx; Ingress shop (class nginx, shop.local, /api Prefix → gateway:8080, /orders Exact → order:8080, tls shop-tls, có ADDRESS,
 # YAML trong ~/shop/); Secret shop-tls (kubernetes.io/tls, SAN shop.local, khoá khớp); /etc/hosts của cka-cp; curl TỪ MÁY MAC
 # http (30080) và https (30443, --cacert bằng chính chứng chỉ của shop-tls) tới shop.local qua IP cka-w1 đọc từ API, dùng
-# --resolve nên không phụ thuộc /etc/hosts của Mac; PATH_EXACT_RESULT, Ingress nháp đã xoá. Chỉ đọc. Nạp bởi `lab` trên máy Mac
+# --resolve nên không phụ thuộc /etc/hosts của Mac; PATH_EXACT_RESULT, PATH_EXACT_FROM, Ingress nháp đã xoá. Chỉ đọc. Nạp bởi `lab` trên máy Mac
 # (bash 3.2). Sau khi VM khởi động lại: chờ có giới hạn (420 giây cho apiserver, CoreDNS, postgres-0, ba Deployment và
 # controller, cộng facts.sh với --request-timeout 10 giây mỗi lệnh và hai vòng curl tối đa 6 × 7 giây: in ra ~11 phút).
 cp="$LAB_CP"
@@ -65,5 +65,5 @@ expect_eq "Secret shop-tls: kubernetes.io/tls, SAN DNS:shop.local, khoá khớp 
 expect_eq "cka-cp: shop.local trong /etc/hosts trỏ IP một node; curl http://shop.local:30080/api/products trả 200" "đạt" echo "$(fact CPHOSTS)"
 expect_eq "Từ máy Mac: http://shop.local:30080/api/products (3 sản phẩm) và /orders trả 200 (--resolve tới IP cka-w1)" "đạt" mac_http
 expect_eq "Từ máy Mac: https://shop.local:30443/api/products trả 200, chứng chỉ là shop-tls (--cacert, không -k)" "đạt" mac_https
-expect_eq "answers.env: PATH_EXACT_RESULT=404; Ingress nháp không có ingressClassName đã xoá" "đạt" echo "$(fact ANSWERS)"
+expect_eq "answers.env: PATH_EXACT_RESULT=404, PATH_EXACT_FROM=nginx; Ingress nháp không có ingressClassName đã xoá" "đạt" echo "$(fact ANSWERS)"
 assert_summary

@@ -158,10 +158,13 @@ else:
 print("CPHOSTS=" + ("; ".join(bad) or "đạt"))
 print("W1_IP=" + node_ip.get("cka-w1", ""))
 
-# 6. Đáp án và Ingress nháp: PATH_EXACT_RESULT=404; không còn Ingress nào thiếu ingressClassName.
+# 6. Đáp án và Ingress nháp: PATH_EXACT_RESULT=404, PATH_EXACT_FROM=nginx; không còn Ingress nào thiếu ingressClassName.
 bad = []
 got = ans.get("PATH_EXACT_RESULT", "")
 if got != "404": bad.append(f"PATH_EXACT_RESULT='{got[:20]}'")
+# Ai trả 404 cho /orders/1: Exact không khớp nên là controller (trang HTML nginx); với Prefix thì 404 là JSON của Spring (order).
+frm = ans.get("PATH_EXACT_FROM", "").strip().lower()
+if frm not in ("nginx", "ingress-nginx", "controller", "ingress"): bad.append(f"PATH_EXACT_FROM='{frm[:20]}' (ai trả 404: nginx hay spring)")
 if ing_j is not None:
     left = sorted(f"{ns}/{n}" for (ns, n), i in ings.items() if not i["spec"].get("ingressClassName"))
     if left: bad.append("Ingress không có ingressClassName còn: " + ", ".join(left))

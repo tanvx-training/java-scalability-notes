@@ -24,8 +24,14 @@ vm "$cp" "set -e; mkdir -p ~/drills/s30; cd ~/drills/s30
   get '$ngf_base/nodeport/deploy.yaml' ngf-deploy.yaml 'nginx-gateway-fabric:${NGF_VERSION#v}'
   # CRD lớn (~1 MB mỗi tệp): chỉ apply khi chưa đúng bản. Apply lại vô ích trên control plane 3 GB đang tải nặng đã làm apiserver
   # hết giờ với etcd và bị kubelet khởi động lại (đo 2026-11-18).
-  have=\$(kubectl get crd gateways.gateway.networking.k8s.io -o jsonpath='{.metadata.annotations.gateway\\.networking\\.k8s\\.io/bundle-version}' 2>/dev/null || true)
-  [ \"\$have\" = $GWAPI_VERSION ] || kubectl apply --server-side -f gateway-api-standard.yaml >/dev/null
+  # Đúng bản = mọi CRD trong tệp standard (gatewayclasses, gateways, httproutes, grpcroutes, referencegrants, backendtlspolicies,
+  # listenersets, tlsroutes... tuỳ bản) đều có và mang bundle-version + channel standard. Bản experimental cùng số (cài theo một
+  # trang tài liệu NGF) hay thiếu một CRD thì apply lại; --force-conflicts giành lại field do người khác apply phía server.
+  want=\$(awk '/^kind: CustomResourceDefinition/{c=1} c && /^  name: /{print \$2; c=0}' gateway-api-standard.yaml | sort -u)
+  have=\$(kubectl get crd -o 'jsonpath={range .items[*]}{.metadata.name} {.metadata.annotations.gateway\\.networking\\.k8s\\.io/bundle-version} {.metadata.annotations.gateway\\.networking\\.k8s\\.io/channel}{\"\\n\"}{end}' 2>/dev/null || true)
+  ok=1; [ -n \"\$want\" ] || ok=0
+  for c in \$want; do printf '%s\\n' \"\$have\" | grep -qx \"\$c $GWAPI_VERSION standard\" || { ok=0; break; }; done
+  [ \"\$ok\" = 1 ] || kubectl apply --server-side --force-conflicts -f gateway-api-standard.yaml >/dev/null
   # CRD của NGF không ghi phiên bản: dấu là sha256 của tệp đã apply thành công (~/drills/s30/.ngf-crds.sha256).
   if ! kubectl get crd nginxproxies.gateway.nginx.org >/dev/null 2>&1 || ! sha256sum -c --status .ngf-crds.sha256 2>/dev/null; then
     kubectl apply --server-side -f ngf-crds.yaml >/dev/null && sha256sum ngf-crds.yaml > .ngf-crds.sha256
@@ -87,7 +93,9 @@ vm "$cp" "set -e
   printf 'ROUTE_BAD_REASON=%s\n' \"\$reason\" > ~/drills/s30/answers.env.part"
 
 # IP của node chạy data plane (Service NodePort externalTrafficPolicy Local: chỉ node có Pod mới trả lời).
-ip="$(vm "$cp" "n=\$(kubectl -n shop get pod -l gateway.networking.k8s.io/gateway-name=shop-gw --field-selector=status.phase=Running -o jsonpath='{.items[0].spec.nodeName}')
+ip="$(vm "$cp" "kubectl -n shop rollout status deploy/shop-gw-nginx --timeout=600s >/dev/null
+  kubectl -n shop wait pod -l gateway.networking.k8s.io/gateway-name=shop-gw --for=condition=Ready --timeout=300s >/dev/null
+  n=\$(kubectl -n shop get pod -l gateway.networking.k8s.io/gateway-name=shop-gw --field-selector=status.phase=Running -o jsonpath='{.items[0].spec.nodeName}')
   kubectl get node \"\$n\" -o jsonpath='{.status.addresses[?(@.type==\"InternalIP\")].address}'")"
 echo "s30: từ máy Mac: 100 lần curl --resolve shop.local:30280:$ip http://shop.local:30280/api/info, đếm version 1.0"
 ok=0
