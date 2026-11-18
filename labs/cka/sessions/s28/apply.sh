@@ -2,10 +2,12 @@
 # node; ~/shop/postgres-rw.yaml (ClusterIP thường, cùng selector với headless postgres); thêm khối hosts (db.shop.internal →
 # ClusterIP postgres-rw, fallthrough) vào ConfigMap coredns bằng Python trên JSON (thay cho `k edit`), chờ plugin reload (rollout
 # restart CoreDNS nếu quá 180 giây), tra từ Pod order; Pod nháp dnspolicy-lab (dnsPolicy None + dnsConfig) và dns-default (dnsPolicy Default: không phân giải được tên
-# Service) rồi xoá; ghi ~/drills/s28/answers.env. Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
+# Service) rồi xoá; ghi ~/drills/s28/answers.env. Trước hết bật TCP MTU probing trên ba node (files/node-net.sh, như setup.sh). Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 cp="$LAB_CP"
 vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
   echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
+echo "s28: TCP MTU probing trên ba node (kéo image từ registry.k8s.io qua đường MTU < 1500)"
+for n in $LAB_VMS; do vm "$n" "$(cat "$SESSION_DIR/files/node-net.sh")"; done
 vm_put "$SESSION_DIR/files/postgres-rw.yaml" "$cp" /tmp/lab-s28-postgres-rw.yaml
 vm_put "$SESSION_DIR/files/dnspolicy-lab.yaml" "$cp" /tmp/lab-s28-dnspolicy-lab.yaml
 
