@@ -21,7 +21,10 @@ vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-time
           \$k -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}'; } 2>/dev/null) \\
       && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 4 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
     sleep 3
-  done" >/dev/null 2>&1 || true
+  done
+  # Ngay sau khi VM bật lại, status trong API còn là của trước lúc tắt (node chưa bị coi là NotReady): hai vòng trên có thể thoát
+  # ngay. Chờ thêm tới khi exec được vào postgres-0 và tên Service phân giải được từ đó (CoreDNS đã phục vụ).
+  until \$k -n shop exec postgres-0 -c postgres -- getent hosts catalog.shop.svc.cluster.local >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 3; done" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }

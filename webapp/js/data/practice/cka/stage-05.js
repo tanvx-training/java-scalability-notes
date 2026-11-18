@@ -626,7 +626,7 @@ Verify kiểm ba Service (một cổng 8080 tên \`http\`, \`targetPort\` là t�
     domain: "networking",
     competencies: ["nw-dns"],
     requires: ["s27"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
       "Phân giải tên Service ở ba dạng (ngắn, có namespace, FQDN) từ trong Pod và giải thích search domain.",
@@ -698,6 +698,7 @@ Quy tắc của resolver (glibc và musl giống nhau ở điểm này): tên c�
       "`nslookup` của busybox không phải resolver mà ứng dụng dùng: nó tự gửi câu hỏi và với tên có dấu chấm thì hỏi nguyên tên trước. `catalog.shop` là tên hợp lệ trên Internet (`.shop` là một TLD có thật, trả IP cho mọi tên con), nên busybox in IP công cộng. JVM, `getent`, `curl` đi qua libc và áp search domain theo `ndots`: `catalog.shop` ra đúng ClusterIP.",
       "dig không đọc `search` (mặc định `+nosearch`), luôn hỏi đúng tên bạn gõ. Muốn dig ghép search như Pod: `dig +search …` nhưng trên node thì `search` là của node, không phải của Pod.",
       "Sửa ConfigMap mà tra vẫn chưa ra: kubelet đồng bộ ConfigMap vào volume của Pod coredns sau tối đa khoảng một phút, rồi plugin `reload` mới đọc lại (kiểm 30 giây một lần). `rollout restart` nhanh và chắc hơn trong phòng thi.",
+      "`rollout restart deploy/coredns` tạo hai Pod mới mà scheduler có thể đặt lên worker: Deployment của kubeadm không ghim control plane, hai Pod cũ ở cka-cp chỉ vì worker join sau `kubeadm init`. Worker chưa có image `registry.k8s.io/coredns/coredns` nên phải kéo về; mạng chập chờn thì Pod mới `ImagePullBackOff` và rollout dừng giữa chừng (một Pod cũ vẫn phục vụ). Trên lab, chờ `reload` là cách êm hơn; trong đề thi `rollout restart` là phản xạ đúng.",
       "Sau khi sửa Corefile mà mọi tên đều NXDOMAIN: khối `hosts` thiếu `fallthrough`. Pod coredns vẫn Running và Ready: chỉ câu trả lời sai.",
       "Corefile sai cú pháp (thiếu `}`): Pod coredns mới `CrashLoopBackOff`, log `Error during parsing`. Pod cũ vẫn phục vụ nếu bạn dùng `rollout restart` (rolling update chờ Pod mới Ready); đừng xoá hết Pod coredns bằng tay.",
       "`--overrides` với `dnsPolicy` cần `--restart=Never` và JSON đúng dạng `{\"spec\":{…}}`; dễ hơn là `$do > pod.yaml`, sửa, apply.",
@@ -786,7 +787,129 @@ k -n kube-system get cm coredns -o jsonpath='{.data.Corefile}'
 
 \`kubernetes\` trả lời \`cluster.local\` (và tra ngược \`in-addr.arpa\`), tên khác \`forward\` lên resolv.conf của Pod coredns (DNS của node); cache 30 giây chỉ áp cho tên ngoài.
 
-__S28_REST__
+**4. Service postgres-rw** (\`~/shop/postgres-rw.yaml\`)
+
+\`\`\`yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-rw
+  namespace: shop
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/postgres-rw.yaml
+k get svc postgres postgres-rw
+# NAME          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+# postgres      ClusterIP   None             <none>        5432/TCP   2d10h
+# postgres-rw   ClusterIP   10.101.112.159   <none>        5432/TCP   5s
+k get endpointslice -l kubernetes.io/service-name=postgres-rw
+# NAME                ADDRESSTYPE   PORTS   ENDPOINTS       AGE
+# postgres-rw-n92zx   IPv4          5432    10.244.62.130   5s
+\`\`\`
+
+Cùng selector, cùng Pod: \`postgres\` (headless) cho tên riêng \`postgres-0.postgres…\` mà JDBC dùng, \`postgres-rw\` cho một IP ảo ổn định để ghi vào Corefile.
+
+**5. Khối hosts trong Corefile**
+
+\`\`\`bash
+k -n kube-system edit cm coredns
+\`\`\`
+
+Thêm vào server block \`.:53\`, trước dòng \`kubernetes\` (vị trí chỉ để dễ đọc; thứ tự chạy do CoreDNS quyết định):
+
+\`\`\`text
+    hosts {
+       10.101.112.159 db.shop.internal
+       fallthrough
+    }
+\`\`\`
+
+\`\`\`bash
+k -n kube-system get cm coredns -o jsonpath='{.data.Corefile}' | sed -n '/hosts/,/}/p'
+#     hosts {
+#        10.101.112.159 db.shop.internal
+#        fallthrough
+#     }
+# chờ plugin reload (đo: khoảng 40 giây tới một phút rưỡi), hoặc:
+k -n kube-system rollout restart deploy/coredns
+k -n kube-system rollout status deploy/coredns
+k exec deploy/order -- getent hosts db.shop.internal
+# 10.101.112.159  db.shop.internal
+k exec deploy/order -- getent hosts catalog.shop.svc.cluster.local
+# 10.101.94.107   catalog.shop.svc.cluster.local
+\`\`\`
+
+**6. dnsPolicy: None + dnsConfig** (\`~/drills/s28/dnspolicy-lab.yaml\`)
+
+\`\`\`yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dnspolicy-lab
+  namespace: shop
+spec:
+  dnsPolicy: None
+  dnsConfig:
+    nameservers:
+    - 10.96.0.10
+    searches:
+    - shop.svc.cluster.local
+    - svc.cluster.local
+    options:
+    - name: ndots
+      value: "2"
+  containers:
+  - name: sh
+    image: busybox:1.37
+    command: ["sleep", "3600"]
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 32Mi
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/drills/s28/dnspolicy-lab.yaml
+k exec dnspolicy-lab -- cat /etc/resolv.conf
+# search shop.svc.cluster.local svc.cluster.local
+# nameserver 10.96.0.10
+# options ndots:2
+k exec dnspolicy-lab -- nslookup catalog | grep -A1 ^Name
+# Name:	catalog.shop.svc.cluster.local
+# Address: 10.101.94.107
+k delete pod dnspolicy-lab --now
+\`\`\`
+
+**7. Tình huống hỏng: dnsPolicy: Default**
+
+\`\`\`bash
+k run dns-default --image=busybox:1.37 --restart=Never --overrides='{"spec":{"dnsPolicy":"Default"}}' -- sleep 3600
+k exec dns-default -- cat /etc/resolv.conf
+# nameserver 192.168.252.1
+# nameserver fe80::603e:5fff:fe01:267%2
+k exec dns-default -- nslookup catalog.shop.svc.cluster.local
+# Server:		192.168.252.1
+# Address:	192.168.252.1:53
+#
+# ** server can't find catalog.shop.svc.cluster.local: NXDOMAIN
+# command terminated with exit code 1
+k delete pod dns-default --now
+\`\`\`
+
+Không có \`search\`, nameserver là DNS của mạng Multipass (\`192.168.252.1\`, lấy từ \`/run/systemd/resolve/resolv.conf\` của node): máy đó không biết \`cluster.local\`, trả NXDOMAIN. Sửa: bỏ \`dnsPolicy\` (về \`ClusterFirst\`). Trước khi xoá Pod nháp, chạy lại verify sẽ đỏ dòng Pod nháp: verify đòi cả hai đã xoá.
 
 Lời giải tự động: \`labs/cka/sessions/s28/apply.sh\` (sửa Corefile bằng Python trên JSON của ConfigMap thay cho \`k edit\`, rồi làm các bước còn lại; chạy lại được: khối \`hosts\` cũ có \`db.shop.internal\` được thay, không nhân đôi).`,
     exam: {
@@ -824,7 +947,7 @@ Lời giải tự động: \`labs/cka/sessions/s28/apply.sh\` (sửa Corefile b�
 \`\`\`
 
 Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.shop.internal\` đúng ClusterIP của \`postgres-rw\` và \`fallthrough\`), Service \`postgres-rw\` và EndpointSlice của nó (đúng IP \`postgres-0\`), rồi tra \`db.shop.internal\` **và** \`catalog.shop.svc.cluster.local\` bằng \`getent\` trong \`postgres-0\` (tên mới đúng, tên cũ vẫn đúng); \`NDOTS\` so với resolv.conf của chính Pod đó, \`KUBE_DNS_IP\` với Service \`kube-dns\`; Pod nháp phải đã xoá. ConfigMap bền nên sau khi VM khởi động lại verify vẫn đạt (đo: \`down\` + \`up\`).`,
-      verifyOutput: "__S28_VERIFY__",
+      verifyOutput: "lab: kiểm s28\n  (chờ apiserver, CoreDNS, postgres-0 và ba Deployment, nếu đang khởi động: tối đa ~10 phút)\n  ✓ CoreDNS Available; Corefile có khối hosts: db.shop.internal → ClusterIP của postgres-rw, và fallthrough\n  ✓ Service postgres-rw: ClusterIP thường, cổng 5432, endpoint ready duy nhất là postgres-0; YAML trong ~/shop/\n  ✓ Từ postgres-0: db.shop.internal ra IP của postgres-rw, catalog.shop.svc.cluster.local vẫn ra ClusterIP của catalog; shop Available\n  ✓ answers.env: NDOTS khớp /etc/resolv.conf của Pod shop; Pod nháp dnspolicy-lab, dns-default đã xoá\n  ✓ answers.env: KUBE_DNS_IP là ClusterIP của Service kube-dns\n  → 5/5 đạt",
       projectDelta: "CoreDNS của cluster có bản ghi `db.shop.internal` cho database; shop biết đọc và sửa DNS của chính nó. Buổi sau đưa shop ra ngoài bằng Ingress dưới tên shop.local.",
     },
     review: [
