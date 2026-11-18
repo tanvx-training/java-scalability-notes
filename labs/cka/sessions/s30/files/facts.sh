@@ -63,7 +63,8 @@ print("CRD=" + ("; ".join(bad) or "đạt"))
 
 # 2. Control plane NGF Available, Pod trên cka-cp; GatewayClass nginx Accepted=True.
 bad = []
-if ngf is None or gc is None: bad.append("không đọc được namespace nginx-gateway / GatewayClass")
+if crd is None: bad.append("chưa có CRD Gateway API, chưa cài NGF")
+elif ngf is None or gc is None: bad.append("không đọc được namespace nginx-gateway / GatewayClass")
 else:
     ds = items(ngf, "Deployment")
     if not ds: bad.append("chưa có Deployment ở namespace nginx-gateway")
@@ -84,7 +85,7 @@ bad = []
 g = {x["metadata"]["name"]: x for x in items(gw)}.get("shop-gw")
 svcs = {x["metadata"]["name"]: x for x in items(shopj, "Service")}
 deps = {x["metadata"]["name"]: x for x in items(shopj, "Deployment")}
-if gw is None: bad.append("không đọc được Gateway")
+if gw is None: bad.append("chưa có CRD Gateway API" if crd is None else "không đọc được Gateway")
 elif not g: bad.append("không có Gateway shop-gw ở namespace shop")
 else:
     if g["spec"].get("gatewayClassName") != "nginx": bad.append(f"gatewayClassName {g['spec'].get('gatewayClassName')}")
@@ -147,7 +148,7 @@ def route_shape(spec):
 bad = []
 routes = {(x["metadata"]["namespace"], x["metadata"]["name"]): x for x in items(rt)}
 r = routes.get(("shop", "shop"))
-if rt is None: bad.append("không đọc được HTTPRoute")
+if rt is None: bad.append("chưa có CRD Gateway API" if crd is None else "không đọc được HTTPRoute")
 elif not r: bad.append("không có HTTPRoute shop ở namespace shop")
 else:
     parents, hosts, rules = route_shape(r["spec"])
