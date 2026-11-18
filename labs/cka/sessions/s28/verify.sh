@@ -6,25 +6,7 @@
 # --request-timeout 10 giây mỗi lệnh và tối đa 5 lần tra tên: in ra ~10 phút).
 cp="$LAB_CP"
 echo "  (chờ apiserver, CoreDNS, postgres-0 và ba Deployment, nếu đang khởi động: tối đa ~10 phút)"
-vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
-  end=\$((\$(date +%s) + 420))
-  until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
-  k='kubectl --request-timeout=10s'
-  while [ \$(date +%s) -lt \$end ]; do
-    o=\$(\$k -n shop get sts postgres -o jsonpath='{.spec.replicas} {.status.readyReplicas}' 2>/dev/null) \\
-      && [ -n \"\$o\" ] && [ \"\${o% *}\" = \"\${o#* }\" ] && break
-    sleep 3
-  done
-  # Lệnh lỗi hay hết giờ là \"chưa sẵn sàng\": chỉ thoát sớm khi đọc được cả bốn Deployment và cả bốn đủ Available.
-  while [ \$(date +%s) -lt \$end ]; do
-    o=\$( { \$k -n kube-system get deploy coredns -o jsonpath='{.spec.replicas} {.status.availableReplicas}{\"\\n\"}' &&
-          \$k -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}'; } 2>/dev/null) \\
-      && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 4 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
-    sleep 3
-  done
-  # Ngay sau khi VM bật lại, status trong API còn là của trước lúc tắt (node chưa bị coi là NotReady): hai vòng trên có thể thoát
-  # ngay. Chờ thêm tới khi exec được vào postgres-0 và tên Service phân giải được từ đó (CoreDNS đã phục vụ).
-  until \$k -n shop exec postgres-0 -c postgres -- getent hosts catalog.shop.svc.cluster.local >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 3; done" >/dev/null 2>&1 || true
+vm "$cp" "$(cat "$SESSION_DIR/files/wait.sh")" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }

@@ -8,21 +8,7 @@
 # --request-timeout 10 giây mỗi lệnh và một lần hỏi node: in ra ~9 phút).
 cp="$LAB_CP"
 echo "  (chờ apiserver, postgres-0 và ba Deployment, nếu đang khởi động: tối đa ~9 phút)"
-vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
-  end=\$((\$(date +%s) + 420))
-  until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
-  k='kubectl --request-timeout=10s'
-  while [ \$(date +%s) -lt \$end ]; do
-    o=\$(\$k -n shop get sts postgres -o jsonpath='{.spec.replicas} {.status.readyReplicas}' 2>/dev/null) \\
-      && [ -n \"\$o\" ] && [ \"\${o% *}\" = \"\${o#* }\" ] && break
-    sleep 3
-  done
-  # Lệnh lỗi hay hết giờ là \"chưa sẵn sàng\": chỉ thoát sớm khi đọc được cả ba Deployment và cả ba đủ Available.
-  while [ \$(date +%s) -lt \$end ]; do
-    o=\$(\$k -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null) \\
-      && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 3 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
-    sleep 3
-  done" >/dev/null 2>&1 || true
+vm "$cp" "$(cat "$SESSION_DIR/files/wait.sh")" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }
