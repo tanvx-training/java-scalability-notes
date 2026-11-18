@@ -7,7 +7,7 @@ cp="$LAB_CP"
 vm "$cp" "for i in \$(seq 1 90); do kubectl get --raw /readyz >/dev/null 2>&1 && exit 0; sleep 2; done
   echo 'apiserver chưa sẵn sàng sau 180 giây' >&2; exit 1"
 echo "s28: TCP MTU probing trên ba node (kéo image từ registry.k8s.io qua đường MTU < 1500)"
-for n in $LAB_VMS; do vm "$n" "$(cat "$SESSION_DIR/files/node-net.sh")"; done
+for n in $LAB_VMS; do vm "$n" "$(cat "$SESSION_DIR/files/node-net.sh")" || { echo "s28: $n: không bật được net.ipv4.tcp_mtu_probing" >&2; exit 1; }; done
 vm_put "$SESSION_DIR/files/postgres-rw.yaml" "$cp" /tmp/lab-s28-postgres-rw.yaml
 vm_put "$SESSION_DIR/files/dnspolicy-lab.yaml" "$cp" /tmp/lab-s28-dnspolicy-lab.yaml
 

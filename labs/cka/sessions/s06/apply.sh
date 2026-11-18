@@ -1,6 +1,6 @@
 # s06 — lời giải chuẩn: dọn container catalog (ctr) của s05 trên cka-cp; trên cả ba node tắt swap bền, nạp và khai
 # overlay + br_netfilter, ba sysctl mạng, containerd SystemdCgroup = true, kubeadm/kubelet/kubectl đúng minor và hold;
-# nạp image shop vào worker. Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
+# nạp image shop vào worker; bật net.ipv4.tcp_mtu_probing (môi trường lab, files/node-net.sh). Chạy lại nhiều lần được. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 vm "$LAB_CP" "sudo bash -c 'ns=\"ctr -n k8s.io\"
 \$ns task kill -s SIGKILL catalog >/dev/null 2>&1 || true
 for i in 1 2 3 4 5; do \$ns task ls -q 2>/dev/null | grep -qx catalog || break; sleep 1; done
@@ -11,6 +11,8 @@ for v in $LAB_VMS; do
   echo "s06: chuẩn bị $v"
   vm_put "$SESSION_DIR/files/prepare-node.sh" "$v" /tmp/s06-prepare.sh
   vm "$v" "sudo bash /tmp/s06-prepare.sh $K8S_INSTALL_MINOR && rm -f /tmp/s06-prepare.sh"
+  # Môi trường lab, không thuộc bài: TCP MTU probing để containerd kéo được image từ registry.k8s.io (files/node-net.sh).
+  vm "$v" "$(cat "$SESSION_DIR/files/node-net.sh")" || { echo "s06: $v: không bật được net.ipv4.tcp_mtu_probing" >&2; exit 1; }
 done
 # Worker cần image shop cho các chặng sau (containerd vừa cài trên worker)
 need=0
