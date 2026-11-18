@@ -99,7 +99,7 @@ else:
                 if (a.get("conditions") or {}).get("ready") and not (a.get("conditions") or {}).get("terminating"))
         r = (deps.get(name) or {}).get("spec", {}).get("replicas")
         if ports != [("http", 8080)]: bad.append(f"{name}: cổng của EndpointSlice {ports}")
-        if n != r: bad.append(f"{name}: {n} địa chỉ ready, replicas {r}")
+        if n != r: bad.append(f"{name}: {n} địa chỉ ready, replicas {r}" + (" (Pod mới do HPA/rollout chưa Ready? chạy lại verify sau một phút)" if n < (r or 0) else ""))
 print("SLICES=" + ("; ".join(bad) or "đạt"))
 
 # 4. gateway-nodeport: NodePort 30180, cổng 8080 → targetPort tên có trong Pod gateway, selector app=gateway, có endpoint.

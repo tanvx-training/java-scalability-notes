@@ -6,6 +6,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 k() { kubectl --request-timeout=10s "$@"; }
 k -n kube-system get deploy coredns -o json > "$tmp/coredns.json" 2>/dev/null || echo ERR > "$tmp/coredns.json"
 k -n kube-system get cm coredns -o json > "$tmp/cm.json" 2>/dev/null || echo ERR > "$tmp/cm.json"
+k -n kube-system get pod -l k8s-app=kube-dns -o json > "$tmp/dnspods.json" 2>/dev/null || echo ERR > "$tmp/dnspods.json"
 k -n kube-system get svc kube-dns -o json > "$tmp/kubedns.json" 2>/dev/null || echo ERR > "$tmp/kubedns.json"
 k -n shop get svc -o json > "$tmp/svc.json" 2>/dev/null || echo ERR > "$tmp/svc.json"
 k -n shop get endpointslice -l kubernetes.io/service-name=postgres-rw -o json > "$tmp/eps.json" 2>/dev/null || echo ERR > "$tmp/eps.json"
@@ -45,7 +46,13 @@ def avail(d):
 bad = []
 if cd is None or cm is None: bad.append("không đọc được Deployment/ConfigMap coredns")
 else:
-    if not avail(cd): bad.append("Deployment coredns chưa Available/rollout chưa xong")
+    if not avail(cd):
+        # Gọi tên nguyên nhân hay gặp sau `rollout restart`: Pod mới trên worker không kéo được image.
+        pull = [f"{p['metadata']['name']} trên {p['spec'].get('nodeName')}" for p in (load("dnspods") or {}).get("items", [])
+                for c in (p.get("status") or {}).get("containerStatuses") or []
+                if ((c.get("state") or {}).get("waiting") or {}).get("reason") in ("ImagePullBackOff", "ErrImagePull")]
+        if pull: bad.append("Pod coredns không kéo được image (" + ", ".join(pull) + "): k -n kube-system rollout undo deploy/coredns")
+        else: bad.append("Deployment coredns chưa Available/rollout chưa xong")
     core = (cm.get("data") or {}).get("Corefile", "")
     blocks = re.findall(r"^\s*hosts\b[^{\n]*\{([^}]*)\}", core, re.M)
     hb = [b for b in blocks if re.search(r"(^|\s)db\.shop\.internal(\s|$)", b)]

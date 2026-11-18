@@ -79,7 +79,7 @@ vm "$cp" "set -e
 ip="$(vm "$cp" "kubectl get node cka-w1 -o jsonpath='{.status.addresses[?(@.type==\"InternalIP\")].address}'")"
 echo "s27: từ máy Mac: curl http://$ip:30180/api/products"
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  curl -sf --max-time 5 "http://$ip:30180/api/products" | grep -q '"id":3' && { echo "s27: NodePort trả 3 sản phẩm"; exit 0; }
+  curl -sf --noproxy '*' --max-time 5 "http://$ip:30180/api/products" | grep -q '"id":3' && { echo "s27: NodePort trả 3 sản phẩm"; exit 0; }
   sleep 3
 done
 echo "s27: http://$ip:30180/api/products không trả 3 sản phẩm" >&2; exit 1

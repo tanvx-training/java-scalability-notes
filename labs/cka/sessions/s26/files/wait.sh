@@ -4,6 +4,9 @@
 # SAU lúc control plane khởi động (lastTransitionTime của condition Ready ≥ thời điểm boot của cka-cp). Lệnh lỗi hay hết giờ là "chưa sẵn sàng". Chạy trên cka-cp (kubectl + python3).
 end=$(($(date +%s) + 420))
 boot=$(date -d "$(uptime -s)" +%s)
+# Status cũ chỉ là chuyện của vài phút đầu sau khi bật VM: control plane đã chạy quá 15 phút thì bỏ điều kiện "Ready sau lúc boot"
+# (và vòng tra tên của s28), chỉ chờ replicas = available. Nhờ vậy lỗi thật của người học không bắt verify chờ đủ 420 giây.
+recent=0; [ $(($(date +%s) - boot)) -lt 900 ] && recent=1
 k() { kubectl --request-timeout=10s "$@"; }
 until k get --raw /readyz >/dev/null 2>&1 || [ "$(date +%s)" -ge "$end" ]; do sleep 2; done
 fresh() {
@@ -16,7 +19,8 @@ while i < len(raw):
     if i >= len(raw): break
     obj, i = dec.raw_decode(raw, i); pods += obj.get("items", [])
 def ok(p):
-    if p["metadata"].get("deletionTimestamp") or (p.get("status") or {}).get("phase") == "Succeeded": return True
+    # Pod đang xoá, đã xong hay Failed (bị evict: ReplicaSet đã tạo Pod thay) không chặn vòng chờ.
+    if p["metadata"].get("deletionTimestamp") or (p.get("status") or {}).get("phase") in ("Succeeded", "Failed"): return True
     for c in (p.get("status") or {}).get("conditions") or []:
         if c.get("type") == "Ready":
             return c.get("status") == "True" and calendar.timegm(time.strptime(c["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")) >= boot
@@ -27,5 +31,5 @@ counts() {
   o=$(k -n shop get deploy gateway catalog order -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{"\n"}{end}' 2>/dev/null) &&
     [ "$(printf '%s\n' "$o" | grep -c .)" = 3 ] && [ "$(printf '%s\n' "$o" | awk '$1!=$2' | grep -c .)" = 0 ]
 }
-until { fresh && counts; } || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
+until { { [ "$recent" = 0 ] || fresh; } && counts; } || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
 exit 0

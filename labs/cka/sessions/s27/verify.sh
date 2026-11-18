@@ -18,14 +18,19 @@ mac_curl() {
   local ip="$1" i body code
   case "$ip" in [0-9]*.[0-9]*.[0-9]*.[0-9]*) ;; *) echo "không đọc được IP của cka-w1"; return 0 ;; esac
   for i in 1 2 3 4 5 6; do
-    body="$(curl -s --max-time 5 -w '\n%{http_code}' "http://$ip:30180/api/products" 2>/dev/null)"
+    # --noproxy: máy Mac có http_proxy/all_proxy thì curl không được gửi IP của VM qua proxy.
+    body="$(curl -s --noproxy '*' --max-time 5 -w '\n%{http_code}' "http://$ip:30180/api/products" 2>/dev/null)"
     code="$(printf '%s' "$body" | tail -n1)"
     if [ "$code" = 200 ] && [ "$(printf '%s' "$body" | grep -o '"id":[0-9]*' | sort -u | wc -l | tr -d ' ')" = 3 ]; then
       echo "đạt"; return 0
     fi
     sleep 2
   done
-  echo "http://$ip:30180/api/products trả mã ${code:-000}"
+  case "${code:-000}" in
+    000) echo "máy Mac không kết nối được http://$ip:30180 (thử curl trên chính cka-w1 trước, xem gợi ý của t4)" ;;
+    200) echo "http://$ip:30180/api/products trả 200 nhưng không đủ 3 sản phẩm" ;;
+    *) echo "http://$ip:30180/api/products trả mã $code" ;;
+  esac
 }
 
 expect_eq "Service gateway, catalog, order: ClusterIP, một cổng 8080 tên http, targetPort là tên cổng 8080 có trong Pod; YAML của chúng trong ~/shop/ khớp" \

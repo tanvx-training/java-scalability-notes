@@ -10,8 +10,8 @@ vm_put "$SESSION_DIR/files/postgres-rw.yaml" "$cp" /tmp/lab-s28-postgres-rw.yaml
 vm_put "$SESSION_DIR/files/dnspolicy-lab.yaml" "$cp" /tmp/lab-s28-dnspolicy-lab.yaml
 
 echo "s28: tra catalog ở ba dạng: nslookup của busybox (Pod tạm) và getent (resolver của hệ thống, trong Pod order)"
-# nslookup của busybox tự gửi câu hỏi và hỏi nguyên tên có dấu chấm trước search domain: "catalog.shop" ra IP công cộng của
-# TLD .shop (wildcard). getent đi qua resolver của libc, áp search và ndots như ứng dụng Java: cả ba dạng ra ClusterIP catalog.
+# nslookup của busybox tự gửi câu hỏi và hỏi nguyên tên có dấu chấm trước search domain: "catalog.shop" là một tên miền đã
+# đăng ký dưới gTLD .shop nên ra IP công cộng. getent đi qua resolver của libc, áp search và ndots như ứng dụng Java: cả ba dạng ra ClusterIP catalog.
 vm "$cp" "set -e; mkdir -p ~/drills/s28
   kubectl -n shop delete pod dns-probe --ignore-not-found --now >/dev/null 2>&1
   kubectl -n shop run dns-probe --image=busybox:1.37 --restart=Never --command -- sleep 600 >/dev/null

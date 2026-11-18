@@ -253,7 +253,7 @@ export const skills = [
   { id: "k-create-svc-dry", kind: "command", area: "kubernetes", label: "k create svc clusterip catalog --tcp=8080:8080 $do > svc.yaml", ref: cmd("c057") },
 
   // ── s28 CoreDNS ──
-  { id: "k-nslookup-svc", kind: "command", area: "kubernetes", label: "k run tmp --image=busybox --rm -it --restart=Never -- nslookup catalog.shop", ref: cmd("c060") },
+  { id: "k-nslookup-svc", kind: "command", area: "kubernetes", label: "k run tmp --image=busybox --rm -it --restart=Never -- nslookup catalog.shop.svc.cluster.local", ref: cmd("c060") },
   { id: "net-dig", kind: "command", area: "network", label: "dig @10.96.0.10 catalog.shop.svc.cluster.local +short" },
   { id: "k-coredns-corefile", kind: "yaml", area: "kubernetes", label: "ConfigMap coredns (Corefile)", ref: yaml("sn-coredns-corefile") },
   { id: "k-svc-fqdn", kind: "concept", area: "kubernetes", label: "<service>.<namespace>.svc.cluster.local và search domain trong /etc/resolv.conf của Pod" },
