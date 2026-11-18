@@ -14,10 +14,12 @@ echo "s32: chặng đầu: curl http://shop.local:30080/api/products trên cka-c
 vm "$cp" "set -e
   out=''; for i in \$(seq 1 20); do
     out=\$(curl -s --max-time 30 -w ' %{http_code}' http://shop.local:30080/api/products || true)
-    case \"\$out\" in *catalog*' 503') break ;; esac; sleep 3
+    case \"\$out\" in *catalog*' 503') break ;; esac; [ \$i -ge 5 ] && break; sleep 3
   done
   echo \"shop.local:30080/api/products → \$out (gateway tự trả lời: Mac → controller → gateway đi được)\"
-  case \"\$out\" in *catalog*' 503') ;; *) exit 1 ;; esac
+  # Sau khi VM khởi động lại giữa sự cố, gateway kẹt ở initContainer (catalog rỗng, không DNS) và controller tự trả 503: chỉ in,
+  # không dừng; đáp án là chặng hỏng của sự cố như begin gây ra.
+  case \"\$out\" in *catalog*' 503') ;; *) echo '(gateway chưa chạy: chặng hỏng thấy được lúc này nằm trước gateway)' ;; esac
   echo \"shop.local:30080/orders → \$(curl -s -o /dev/null --max-time 30 -w '%{http_code}' http://shop.local:30080/orders || true)\"
   printf 'FIRST_BROKEN_HOP=%s\n' 'gateway->catalog' > ~/drills/s32/answers.env"
 
@@ -41,7 +43,9 @@ vm "$cp" "set -e
   rm -f /tmp/lab-s32-services.yaml /tmp/lab-s32-netpol.yaml
   kubectl apply -f ~/shop/services.yaml -f ~/shop/netpol.yaml
   kubectl -n default delete pod netshoot --wait=false >/dev/null 2>&1 || true
-  ok=0; for i in \$(seq 1 40); do
+  # Tối đa 600 giây: sau khi VM khởi động lại giữa sự cố, catalog/order CrashLoopBackOff (schema.sql cần DB, DNS hỏng) và chờ
+  # back-off của kubelet (tới 5 phút) mới lên lại.
+  ok=0; end=\$((\$(date +%s) + 600)); while [ \$(date +%s) -lt \$end ]; do
     [ \"\$(curl -s --max-time 5 http://shop.local:30080/api/products | grep -o '\"id\":[0-9]*' | sort -u | wc -l)\" = 3 ] &&
       [ \"\$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' http://shop.local:30080/orders)\" = 200 ] && { ok=1; break; }
     sleep 3

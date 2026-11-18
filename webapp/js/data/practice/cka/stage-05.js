@@ -2458,6 +2458,7 @@ Nhiều lỗi chồng nhau thì lỗi ở tầng dưới che lỗi ở tầng tr
       "EndpointSlice có IP nhưng cổng là 8081: `targetPort` của Service trỏ cổng mà container không nghe. Container khai cổng tên `http` (8080, từ s27): `targetPort: http` là cách s27 để lại.",
       "Pod CoreDNS mang nhãn `k8s-app=kube-dns` (giữ từ thời kube-dns để tương thích), không phải `coredns`. Namespace của controller là `ingress-nginx`; `nginx-ingress` là tên của controller khác (F5).",
       "`/orders` qua Ingress vẫn 504 sau khi sửa targetPort: ingress-nginx gọi thẳng IP Pod order, policy `order` phải nhận Pod controller ở đúng namespace. Hai lỗi nằm trên cùng một chặng.",
+      "Tắt máy giữa buổi rồi bật lại khi sự cố còn: catalog và order `CrashLoopBackOff` (`schema.sql` cần PostgreSQL lúc khởi động mà Pod không phân giải được tên), gateway kẹt ở initContainer `wait-catalog`, controller trả 503 của chính nó (đo). Lỗi vẫn là bốn chỗ cũ; sau khi sửa, chờ back-off của kubelet (tới 5 phút) hay `k rollout restart deploy/catalog deploy/order`.",
       "`k apply -f ~/shop/` cả thư mục là đủ sau khi sửa tệp, nhưng nhớ sửa **tệp**: verify so NetworkPolicy và Service `gateway`, `catalog`, `order` trong `~/shop/` với cluster, nên `k edit` thẳng trên cluster làm dòng đầu đỏ.",
     ],
     solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài; tên Pod, IP sẽ khác. Context đã ở namespace shop.
