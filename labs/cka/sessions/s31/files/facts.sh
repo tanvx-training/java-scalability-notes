@@ -89,17 +89,18 @@ YAML
 then
   if kubectl -n "$ns" wait --for=condition=Ready pod/probe --timeout=90s >/dev/null 2>&1; then
     # in() <tên luồng> <host> <cổng>: nc của busybox, 3 giây. Thành công = mở; "timed out" hay hết giờ = bị chặn.
-    # in_ <tên luồng> <host> <cổng>: nc của busybox (không -z: nối rồi đóng vì stdin /dev/null), tối đa 3–4 giây. Đối chứng
-    # trong cùng lệnh: nc tới httpd của chính Pod tạm (127.0.0.1:8080) phải mở, không thì công cụ hỏng và không kết luận gì.
-    # Chỉ hết giờ thật (rc 124, "timed out") là bị chặn; refused là refused, còn lại là err (đều đỏ).
+    # in_ <tên luồng> <host> <cổng>: nc của busybox (không -z: nối rồi đóng vì stdin /dev/null), -w 3, bọc timeout 4. busybox 1.37
+    # không in gì khi lỗi và trả 1 cho cả hai trường hợp (đo): bị bỏ gói thì hết 3 giây, bị từ chối thì 0 giây. Nên phân loại theo
+    # thời gian: mã 0 = mở; 124 hay ≥ 3 giây = bị chặn; ≤ 1 giây = refused; còn lại err (refused, err đều đỏ). Đối chứng trong
+    # cùng lệnh: nc tới httpd của chính Pod tạm (127.0.0.1:8080) phải mở, không thì công cụ hỏng và không kết luận gì.
     in_() {
       local o r
       o=$(k -n "$ns" exec probe -- sh -c "nslookup $2 >/dev/null 2>&1 || { echo NODNS; exit 0; }
         timeout 4 nc -w 3 127.0.0.1 8080 </dev/null >/dev/null 2>&1 || { echo NOSELF; exit 0; }
-        timeout 4 nc -w 3 $2 $3 </dev/null 2>&1; echo RC=\$?" 2>&1)
+        s=\$(date +%s); timeout 4 nc -w 3 $2 $3 </dev/null >/dev/null 2>&1; r=\$?; echo RC=\$r T=\$((\$(date +%s) - s))" 2>&1)
       case "$o" in
-        *NODNS*) r=dns ;; *NOSELF*) r=noself ;; *RC=0*) r=open ;;
-        *RC=124*|*"timed out"*) r=timeout ;; *refused*) r=refused ;; *) r=err ;;
+        *NODNS*) r=dns ;; *NOSELF*) r=noself ;; *RC=0\ *) r=open ;;
+        *RC=124\ *|*T=[3-9]*) r=timeout ;; *T=[01]) r=refused ;; *) r=err ;;
       esac
       echo "$1 $r" >> "$tmp/flows.txt"
     }
