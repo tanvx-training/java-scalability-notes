@@ -90,10 +90,10 @@ kubectl -n shop delete sts postgres --ignore-not-found --wait=true >/dev/null
 kubectl -n shop delete pod postgres-0 --ignore-not-found --wait=true --timeout=120s >/dev/null
 kubectl -n shop delete pvc data-postgres-0 --ignore-not-found --wait=true --timeout=120s >/dev/null
 # PV đã được người học gỡ claimRef (hẳn, hay chỉ uid) ở lần trước: đặt lại claimRef trỏ một PVC đã mất (uid giả) để PV về
-# đúng trạng thái Released của sự cố.
+# đúng trạng thái Released của sự cố (có cả resourceVersion để lệnh json-patch gỡ uid/resourceVersion trong bài vẫn chạy).
 uid=\$(kubectl get pv \$pv -o jsonpath='{.spec.claimRef.uid}')
 if [ -z \"\$uid\" ]; then
-  kubectl patch pv \$pv --type=merge -p '{\"spec\":{\"claimRef\":{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"shop\",\"name\":\"data-postgres-0\",\"uid\":\"00000000-0000-4000-8000-000000000000\"}}}' >/dev/null
+  kubectl patch pv \$pv --type=merge -p '{\"spec\":{\"claimRef\":{\"apiVersion\":\"v1\",\"kind\":\"PersistentVolumeClaim\",\"namespace\":\"shop\",\"name\":\"data-postgres-0\",\"uid\":\"00000000-0000-4000-8000-000000000000\",\"resourceVersion\":\"1\"}}}' >/dev/null
 fi
 for i in \$(seq 1 30); do
   ph=\$(kubectl get pv \$pv -o jsonpath='{.status.phase}')
