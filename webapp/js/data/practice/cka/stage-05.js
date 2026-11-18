@@ -1026,7 +1026,7 @@ Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.sho
       },
       {
         id: "t5",
-        text: "Tên shop.local: trên cka-cp thêm `<IP cka-cp> shop.local` vào `/etc/hosts` (`echo … | sudo tee -a /etc/hosts`), `curl http://shop.local:30080/api/products`. Không sửa hosts mà vẫn gọi được: `curl -H 'Host: shop.local' http://<IP cka-w1>:30080/api/products`. Trên **Mac**: thêm `<IP một node> shop.local` vào `/etc/hosts` của Mac (`sudo vim /etc/hosts`, việc của bạn; verify không dựa vào nó), chép chứng chỉ về `multipass transfer cka-cp:/home/ubuntu/drills/s29/tls.crt /tmp/shop.crt`, rồi `curl --cacert /tmp/shop.crt https://shop.local:30443/api/products` và `curl -k -v https://shop.local:30443/api/products 2>&1 | grep -E 'subject|issuer'`. Không có `/etc/hosts` trên Mac: `curl --resolve shop.local:30443:<IP> --cacert /tmp/shop.crt https://shop.local:30443/api/products`.",
+        text: "Tên shop.local: trên cka-cp thêm `<IP cka-cp> shop.local` vào `/etc/hosts` **và** `/etc/cloud/templates/hosts.debian.tmpl` (cloud-init viết lại `/etc/hosts` mỗi lần khởi động, như ở s01), `curl http://shop.local:30080/api/products`. Không sửa hosts mà vẫn gọi được: `curl -H 'Host: shop.local' http://<IP cka-w1>:30080/api/products`. Trên **Mac**: thêm `<IP một node> shop.local` vào `/etc/hosts` của Mac (`sudo vim /etc/hosts`, việc của bạn; verify không dựa vào nó), chép chứng chỉ về `multipass transfer cka-cp:/home/ubuntu/drills/s29/tls.crt /tmp/shop.crt`, rồi `curl --cacert /tmp/shop.crt https://shop.local:30443/api/products` và `curl -k -v https://shop.local:30443/api/products 2>&1 | grep -E 'subject|issuer'`. Không có `/etc/hosts` trên Mac: `curl --resolve shop.local:30443:<IP> --cacert /tmp/shop.crt https://shop.local:30443/api/products`.",
       },
       {
         id: "t6",
@@ -1044,7 +1044,8 @@ Verify đọc Corefile từ ConfigMap \`coredns\` (khối \`hosts\` có \`db.sho
       "Toleration cho control plane: `tolerations: [{key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}]` dưới `spec.template.spec`. Chỉ toleration thì Pod **được phép** lên cka-cp, không **bắt buộc**: cần thêm `nodeSelector`.",
       "`k create ingress`: `--rule='host/path*=svc:port'` (`*` → `Prefix`, không `*` → `Exact`), `,tls=secret` ở một rule sinh khối `tls` cho host đó. Thêm `$do` để xem trước, đừng tạo thẳng rồi sửa.",
       "`curl -k` ra 200 không chứng minh gì về Secret: controller có chứng chỉ giả mặc định. Đọc `issuer`/`subject` bằng `curl -kv`, hay dùng `--cacert`.",
-      "Ingress không có ADDRESS: `k get ingressclass` (có class nào, tên gì), `k get ingress -o yaml | grep ingressClassName`, rồi log controller `k -n ingress-nginx logs deploy/ingress-nginx-controller --tail=20`.",
+      "Ingress không có ADDRESS: `k get ingressclass` (có class nào, tên gì), `k get ingress -o yaml | grep ingressClassName`, rồi log controller `k -n ingress-nginx logs deploy/ingress-nginx-controller --tail=20`: Ingress thiếu class hiện là `\"Ignoring ingress because of error while validating ingress class\" ingress=\"shop/shop-noclass\" error=\"ingress does not contain a valid IngressClass\"`. `k describe ingress` không có Event nào.",
+      "Sau khi VM khởi động lại, `curl http://shop.local:30080` trên cka-cp báo `Could not resolve host`: dòng `shop.local` chỉ ghi vào `/etc/hosts` mà quên tệp mẫu `/etc/cloud/templates/hosts.debian.tmpl` (cloud-init dựng lại `/etc/hosts` từ đó).",
     ],
     solution: `Output là của máy soạn bài; IP và tên Pod sẽ khác. Context đã ở namespace shop. IP: cka-cp \`192.168.252.35\`, cka-w1 \`192.168.252.36\`.
 
@@ -1164,7 +1165,7 @@ ADDRESS là IP của cka-cp, node chạy controller. \`/orders\` trỏ Service \
 **5. Gọi bằng tên shop.local**
 
 \`\`\`bash
-echo "192.168.252.35 shop.local" | sudo tee -a /etc/hosts
+echo "192.168.252.35 shop.local" | sudo tee -a /etc/hosts /etc/cloud/templates/hosts.debian.tmpl
 curl -s http://shop.local:30080/api/products | head -c 80; echo
 curl -s -H 'Host: shop.local' http://192.168.252.36:30080/api/products | head -c 80; echo
 \`\`\`
@@ -1222,6 +1223,8 @@ k get ingress shop-noclass
 # shop-noclass   <none>   noclass.shop.local             80      15s
 curl -s -o /dev/null -w '%{http_code}\\n' -H 'Host: noclass.shop.local' http://shop.local:30080/api/products
 # 404
+k -n ingress-nginx logs deploy/ingress-nginx-controller --since=1m | grep noclass | tail -1
+# I1118 07:57:58.042448  7 store.go:439] "Ignoring ingress because of error while validating ingress class" ingress="shop/shop-noclass" error="ingress does not contain a valid IngressClass"
 k delete ingress shop-noclass
 \`\`\`
 

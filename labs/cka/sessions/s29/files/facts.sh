@@ -150,7 +150,7 @@ print("CA_B64=" + base64.b64encode(crt).decode())
 # 5. cka-cp: /etc/hosts có shop.local trỏ IP một node của cluster, curl http://shop.local:30080/api/products từ cka-cp trả 200.
 bad = []
 h = read("hosts.txt").split()
-if not h: bad.append("cka-cp chưa phân giải được shop.local (thêm vào /etc/hosts)")
+if not h: bad.append("cka-cp chưa phân giải shop.local: thêm vào /etc/hosts và hosts.debian.tmpl (s01)")
 elif h[0] not in node_ip.values(): bad.append(f"shop.local → {h[0]} không phải IP của node nào ({', '.join(sorted(node_ip.values()))})")
 else:
     code = read("cpcode.txt").strip()

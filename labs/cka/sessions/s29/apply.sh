@@ -26,11 +26,13 @@ vm "$cp" "set -e; mkdir -p ~/drills/s29; cd ~/drills/s29
   kubectl -n ingress-nginx get pod,svc -o wide
   kubectl get ingressclass"
 
-echo "s29: shop.local trong /etc/hosts của cka-cp (IP của chính cka-cp)"
+echo "s29: shop.local trong /etc/hosts của cka-cp (IP của chính cka-cp), cả tệp mẫu của cloud-init để bền qua reboot (như s01)"
 vm "$cp" "set -e
   ip=\$(kubectl get node $cp -o jsonpath='{.status.addresses[?(@.type==\"InternalIP\")].address}')
-  sudo sed -i '/[[:space:]]shop\\.local\$/d' /etc/hosts
-  echo \"\$ip shop.local\" | sudo tee -a /etc/hosts >/dev/null
+  for f in /etc/hosts /etc/cloud/templates/hosts.debian.tmpl; do
+    sudo sed -i '/[[:space:]]shop\\.local\$/d' \$f
+    echo \"\$ip shop.local\" | sudo tee -a \$f >/dev/null
+  done
   getent hosts shop.local"
 
 echo "s29: chứng chỉ tự ký cho shop.local và Secret tls shop-tls"
