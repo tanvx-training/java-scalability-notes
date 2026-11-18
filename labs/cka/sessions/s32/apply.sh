@@ -24,6 +24,8 @@ vm "$cp" "set -e
 echo "s32: netshoot ở default, EndpointSlice, cổng Service, NetworkPolicy"
 vm "$cp" "set -e
   install -m 644 /tmp/lab-s32-netshoot.yaml ~/drills/s32/netshoot.yaml; rm -f /tmp/lab-s32-netshoot.yaml
+  # netshoot của lần trước (hay do người học tạo bằng k run) có spec khác: xoá rồi tạo lại.
+  kubectl -n default delete pod netshoot --ignore-not-found --grace-period=1 --wait=true >/dev/null
   kubectl apply -f ~/drills/s32/netshoot.yaml >/dev/null
   kubectl -n default wait --for=condition=Ready pod/netshoot --timeout=600s >/dev/null
   echo \"dig catalog.shop.svc.cluster.local: \$(kubectl -n default exec netshoot -- dig +short +time=2 +tries=1 catalog.shop.svc.cluster.local)\"

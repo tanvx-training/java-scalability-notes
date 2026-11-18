@@ -41,7 +41,12 @@ counts() {
     [ "$(printf '%s\n' "$o" | grep -c .)" -ge 4 ] && [ "$(printf '%s\n' "$o" | awk '$1!=$2' | grep -c .)" = 0 ]
 }
 until { { [ "$recent" = 0 ] || fresh; } && counts; } || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
-until [ "$recent" = 0 ] || k -n shop exec postgres-0 -c postgres -- getent hosts catalog.shop.svc.cluster.local >/dev/null 2>&1 || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
+# Tối đa 120 giây cho vòng tra tên: ở s32 khi DNS của shop còn hỏng, vòng này không bao giờ thành công.
+# Có NetworkPolicy trong shop mà không policy nào mở egress tới k8s-app=kube-dns thì DNS của shop chắc chắn hỏng: bỏ vòng này.
+dns_end=$(($(date +%s) + 120)); [ "$dns_end" -gt "$end" ] && dns_end=$end
+np=$(k -n shop get networkpolicy -o name 2>/dev/null)
+if [ -n "$np" ] && ! k -n shop get networkpolicy -o jsonpath='{..egress[*].to[*].podSelector.matchLabels.k8s-app}' 2>/dev/null | grep -qw kube-dns; then dns_end=0; fi
+until [ "$recent" = 0 ] || k -n shop exec postgres-0 -c postgres -- getent hosts catalog.shop.svc.cluster.local >/dev/null 2>&1 || [ "$(date +%s)" -ge "$dns_end" ]; do sleep 3; done
 # metrics-server khởi động lại cùng VM: HPA catalog báo FailedGetResourceMetric khoảng 1–2 phút đầu (đo sau down + up).
 hpa_ok() {
   [ "$(k -n shop get hpa catalog -o jsonpath='{.status.conditions[?(@.type=="ScalingActive")].status}' 2>/dev/null)" = True ] &&

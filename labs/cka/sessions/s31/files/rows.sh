@@ -34,14 +34,14 @@ s31_mac_all() {
   echo "${out:-đạt}"
 }
 
-expect_eq "default-deny: podSelector {}, policyTypes Ingress + Egress, không rule; mọi NetworkPolicy của shop có YAML trong ~/shop/" \
+expect_eq "default-deny (Ingress + Egress), không rule mở toang ngoài cửa công khai; NetworkPolicy và Service gateway/catalog/order khớp ~/shop/" \
   "đạt" echo "$(fact DENY)"
 expect_eq "Egress DNS cho mọi Pod: kube-system VÀ k8s-app=kube-dns (một phần tử), UDP+TCP 53; order phân giải được tên" \
   "đạt" echo "$(fact DNS)"
-expect_eq "Pod tạm trong namespace tạm của verify → catalog:8080 bị chặn (hết giờ), DNS của nó vẫn chạy" "đạt" echo "$(fact OUTSIDE)"
-expect_eq "kubectl exec từ Pod thật: luồng của app mở (gateway, gateway-v1, order, data plane), catalog→order, gateway→postgres chặn" \
+expect_eq "Pod tạm trong namespace tạm của verify → catalog:8080, order:8080, postgres-rw:5432 bị chặn, DNS của nó vẫn chạy" "đạt" echo "$(fact OUTSIDE)"
+expect_eq "kubectl exec từ Pod thật: luồng của app mở; catalog→order, gateway→postgres, catalog/order→Pod ngoài shop chặn" \
   "đạt" echo "$(fact FLOWS)"
 expect_eq "Dưới default-deny, từ máy Mac: :30180, Ingress :30080 (/api/products, /orders), Gateway :30280 đều trả 200" "đạt" s31_mac_all
 expect_eq "Dưới default-deny: HPA catalog có số liệu CPU; gateway, gateway-v1, catalog, order, data plane, postgres, controller sẵn sàng" \
   "đạt" echo "$(fact HEALTH)"
-expect_eq "answers.env: DEFAULT_NS_TO_CATALOG=blocked, DRAFT_TWO_PEERS=open; NetworkPolicy nháp allow-probe đã xoá" "đạt" echo "$(fact ANSWERS)"
+expect_eq "answers.env: DEFAULT_NS_TO_CATALOG=blocked, DRAFT_TWO_PEERS=open; allow-probe và Pod probe ở default đã xoá" "đạt" echo "$(fact ANSWERS)"

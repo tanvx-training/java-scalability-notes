@@ -1,5 +1,5 @@
-# s32 — kiểm đầu vào: NetworkPolicy của shop (có default-deny), ~/shop/*.yaml có Service catalog, order và NetworkPolicy
-# order, allow-dns-egress (thứ st5-network sửa), ~/drills/s31/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane
+# s32 — kiểm đầu vào: NetworkPolicy của shop (có default-deny), ~/shop/*.yaml có Service catalog, order, một NetworkPolicy cho
+# order nhận ingress-nginx và một NetworkPolicy egress DNS, tìm theo nội dung (thứ st5-network sửa), ~/drills/s31/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane
 # (kubectl + python3). Chỉ đọc.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 kubectl --request-timeout=10s -n shop get networkpolicy -o json > "$tmp/np.json" 2>/dev/null || echo ERR > "$tmp/np.json"
@@ -10,12 +10,19 @@ import yaml
 t, shop = sys.argv[1], sys.argv[2]
 try: np = json.load(open(f"{t}/np.json")).get("items", [])
 except Exception: np = None
-files = set()
+files, fdocs = set(), {}
 for p in glob.glob(f"{shop}/*.yaml") + glob.glob(f"{shop}/*.yml"):
     try:
         for d in yaml.safe_load_all(open(p)):
-            if isinstance(d, dict) and d.get("kind"): files.add((d["kind"], (d.get("metadata") or {}).get("name")))
+            if isinstance(d, dict) and d.get("kind"):
+                files.add((d["kind"], (d.get("metadata") or {}).get("name"))); fdocs[(d["kind"], (d.get("metadata") or {}).get("name"))] = d
     except Exception: pass
+def peers(d, direction, key): return [x for r in (d.get("spec") or {}).get(direction) or [] for x in r.get(key) or []]
+nps = [d for (k, n), d in fdocs.items() if k == "NetworkPolicy"]
+has_ord = any(((d["spec"].get("podSelector") or {}).get("matchLabels") or {}).get("app") == "order" and any(
+    ((x.get("namespaceSelector") or {}).get("matchLabels") or {}).get("kubernetes.io/metadata.name") in ("ingress-nginx", "nginx-ingress")
+    for x in peers(d, "ingress", "from")) for d in nps)
+has_dns = any(((x.get("podSelector") or {}).get("matchLabels") or {}).get("k8s-app") in ("kube-dns", "coredns") for d in nps for x in peers(d, "egress", "to"))
 ans = {}
 for line in open(f"{t}/answers.env"):
     if "=" in line:
@@ -26,8 +33,8 @@ else:
     deny = [p for p in np if not (p["spec"].get("podSelector") or {}) and sorted(p["spec"].get("policyTypes") or []) == ["Egress", "Ingress"]
             and not p["spec"].get("ingress") and not p["spec"].get("egress")]
     if not deny: bad.append("chưa có default-deny trong shop")
-for n in ("order", "allow-dns-egress"):
-    if ("NetworkPolicy", n) not in files: bad.append(f"~/shop/ chưa có NetworkPolicy {n}")
+if not has_ord: bad.append("~/shop/ chưa có NetworkPolicy cho order nhận ingress-nginx")
+if not has_dns: bad.append("~/shop/ chưa có NetworkPolicy egress DNS")
 print("NP=" + ("; ".join(bad) or "đạt"))
 bad = []
 for n in ("catalog", "order"):

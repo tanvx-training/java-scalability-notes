@@ -14,6 +14,8 @@ k -n shop get pod -o json > "$tmp/pods.json" 2>/dev/null || echo ERR > "$tmp/pod
 k get deploy -n ingress-nginx -o json > "$tmp/ing.json" 2>/dev/null || echo ERR > "$tmp/ing.json"
 k get deploy -n nginx-gateway -o json > "$tmp/ngf.json" 2>/dev/null || echo ERR > "$tmp/ngf.json"
 k get node -o json > "$tmp/nodes.json" 2>/dev/null || echo ERR > "$tmp/nodes.json"
+k -n shop get svc gateway catalog order -o json > "$tmp/svc.json" 2>/dev/null || echo ERR > "$tmp/svc.json"
+k -n default get pod -o json > "$tmp/defpods.json" 2>/dev/null || echo ERR > "$tmp/defpods.json"
 cp "$HOME/drills/s31/answers.env" "$tmp/answers.env" 2>/dev/null || : > "$tmp/answers.env"
 
 # Một Pod Running, chưa bị xoá, Ready của nhãn đã cho (rỗng nếu không có).
@@ -27,7 +29,9 @@ tcp() {
   local out rc r
   if [ -z "$2" ]; then echo "$1 nopod" >> "$tmp/flows.txt"; return; fi
   # Tra tên riêng (tối đa 2 giây, mã 9) để DNS hỏng không bị đọc thành "gói bị chặn".
-  out="$(k -n shop exec "$2" -c "$3" -- bash -c "timeout 2 getent hosts $4 >/dev/null || exit 9; timeout 3 bash -c 'exec 3<>/dev/tcp/$4/$5'" 2>&1)"; rc=$?
+  local look="timeout 2 getent hosts $4 >/dev/null || exit 9; "
+  case "$4" in [0-9]*.[0-9]*.[0-9]*.[0-9]*) look="" ;; esac   # IP: không tra tên (getent với IP hỏi PTR)
+  out="$(k -n shop exec "$2" -c "$3" -- bash -c "${look}timeout 3 bash -c 'exec 3<>/dev/tcp/$4/$5'" 2>&1)"; rc=$?
   case "$rc" in
     0) r=open ;;
     124) r=timeout ;;
@@ -66,8 +70,9 @@ if [ -n "$dp" ]; then
   echo "dataplane-gateway-v1 $r" >> "$tmp/flows.txt"
 else echo "dataplane-gateway-v1 nopod" >> "$tmp/flows.txt"; fi
 
-# Từ ngoài shop: Pod busybox trong namespace tạm (không NetworkPolicy nào chọn nó) gọi catalog. DNS của Pod tạm phải chạy để
-# "bị chặn" là do NetworkPolicy chứ không do tên.
+# Từ ngoài shop: Pod busybox trong namespace tạm (không NetworkPolicy nào chọn nó) chạy httpd cổng 8080. Chiều vào shop (chỉ
+# ingress của đích chặn được): Pod tạm gọi catalog, order, postgres-rw. Chiều ra (chỉ egress của nguồn chặn được): catalog và
+# order gọi IP Pod tạm, trong khi node vẫn gọi được nó. DNS của Pod tạm phải chạy để "bị chặn" là do NetworkPolicy.
 if k create namespace "$ns" >/dev/null 2>&1 && k -n "$ns" apply -f - >/dev/null 2>&1 <<'YAML'
 apiVersion: v1
 kind: Pod
@@ -78,15 +83,33 @@ spec:
   containers:
   - name: c
     image: busybox:1.37
-    command: ["sleep", "3600"]
+    command: ["httpd", "-f", "-p", "8080", "-h", "/tmp"]
 YAML
 then
   if kubectl -n "$ns" wait --for=condition=Ready pod/probe --timeout=90s >/dev/null 2>&1; then
+    # in() <tên luồng> <host> <cổng>: nc của busybox, 3 giây. Thành công = mở; "timed out" hay hết giờ = bị chặn.
+    in_() {
+      local o r
+      o=$(k -n "$ns" exec probe -- sh -c "nslookup $2 >/dev/null 2>&1 || { echo NODNS; exit 0; }; timeout 4 nc -z -w 3 $2 $3 && echo OPEN || echo FAIL\$?" 2>&1)
+      case "$o" in *NODNS*) r=dns ;; *OPEN*) r=open ;; *FAIL*) r=timeout ;; *) r=err ;; esac
+      echo "$1 $r" >> "$tmp/flows.txt"
+    }
     out=$(k -n "$ns" exec probe -- sh -c 'nslookup catalog.shop.svc.cluster.local >/dev/null 2>&1 || echo NODNS; wget -q -T 3 -O /dev/null http://catalog.shop.svc.cluster.local:8080/actuator/health/readiness 2>&1 && echo OPEN' 2>&1)
     case "$out" in *NODNS*) r=dns ;; *OPEN*) r=open ;; *"timed out"*) r=timeout ;; *refused*) r=refused ;; *) r=err ;; esac
-  else r=nopod; fi
-else r=nopod; fi
-echo "outside-catalog $r" >> "$tmp/flows.txt"
+    echo "outside-catalog $r" >> "$tmp/flows.txt"
+    in_ outside-order order.shop.svc.cluster.local 8080
+    in_ outside-postgres postgres-rw.shop.svc.cluster.local 5432
+    pip=$(k -n "$ns" get pod probe -o jsonpath='{.status.podIP}')
+    if [ -n "$pip" ] && curl -s -m 3 -o /dev/null "http://$pip:8080/"; then echo "node-outside open" >> "$tmp/flows.txt"
+    else echo "node-outside fail" >> "$tmp/flows.txt"; fi
+    tcp catalog-outside "$cat" catalog "$pip" 8080
+    tcp order-outside "$ord" order "$pip" 8080
+  else
+    for f in outside-catalog outside-order outside-postgres node-outside catalog-outside order-outside; do echo "$f nopod" >> "$tmp/flows.txt"; done
+  fi
+else
+  for f in outside-catalog outside-order outside-postgres node-outside catalog-outside order-outside; do echo "$f nopod" >> "$tmp/flows.txt"; done
+fi
 
 python3 - "$tmp" "$HOME/shop" <<'PY'
 import glob, json, sys
@@ -97,7 +120,7 @@ def load(name):
         with open(f"{t}/{name}.json") as f: return json.load(f)
     except Exception: return None
 def items(j, kind=None): return [x for x in (j or {}).get("items", []) if kind is None or x.get("kind") == kind]
-np, shopj, pods, ing, ngf, nodes = (load(x) for x in ("np", "shop", "pods", "ing", "ngf", "nodes"))
+np, shopj, pods, ing, ngf, nodes, svcj, defpods = (load(x) for x in ("np", "shop", "pods", "ing", "ngf", "nodes", "svc", "defpods"))
 flows = dict(l.split(None, 1) for l in open(f"{t}/flows.txt").read().split("\n") if " " in l)
 flows = {k: v.strip() for k, v in flows.items()}
 ans = {}
@@ -155,6 +178,32 @@ for n, p in sorted(pols.items()):
     f = files.get(("NetworkPolicy", n))
     if not f: bad.append(f"~/shop/ chưa có YAML của {n}")
     elif norm_spec(f.get("spec")) != norm_spec(p["spec"]): bad.append(f"YAML của {n} trong ~/shop/ khác cluster")
+# Rule mở toang (không from/to, hay một phần tử rỗng {}) chỉ được phép ở chiều vào của hai cửa công khai: gateway (NodePort SNAT)
+# và data plane shop-gw. Ở chỗ khác nó xoá mất một nửa default-deny mà các luồng thử vẫn có thể xanh (đầu kia vẫn chặn).
+PUBLIC = {"gateway", "gateway-v1", "shop-gw"}
+def selects_only_public(p):
+    sel = p["spec"].get("podSelector") or {}
+    vals = set((sel.get("matchLabels") or {}).values())
+    for e in sel.get("matchExpressions") or []:
+        if e.get("key") == "app" and e.get("operator") == "In": vals |= set(e.get("values") or [])
+    return bool(vals) and vals <= PUBLIC
+for n, p in sorted(pols.items()):
+    for direction, key in (("ingress", "from"), ("egress", "to")):
+        for r in p["spec"].get(direction) or []:
+            peers = r.get(key)
+            if not peers or any(not x for x in peers):
+                if direction == "ingress" and selects_only_public(p): continue
+                bad.append(f"{n}: {direction} mở cho mọi {'nguồn' if direction == 'ingress' else 'đích'} (rule không có {key})")
+# Service gateway, catalog, order: ~/shop/ là nguồn sự thật như s27 (selector, cổng, targetPort khớp cluster).
+def svc_shape(sp):
+    sp = sp or {}
+    return (tuple(sorted((sp.get("selector") or {}).items())),
+            tuple(sorted((p.get("name"), p.get("port"), str(p.get("targetPort", p.get("port")))) for p in sp.get("ports") or [])))
+for sv in items(svcj):
+    n = sv["metadata"]["name"]; f = files.get(("Service", n))
+    if not f: bad.append(f"~/shop/ chưa có YAML của Service {n}")
+    elif svc_shape(f.get("spec")) != svc_shape(sv["spec"]): bad.append(f"YAML của Service {n} trong ~/shop/ khác cluster (selector/cổng)")
+if svcj is None: bad.append("không đọc được Service của shop")
 if ferr: bad.append("tệp YAML lỗi: " + ", ".join(ferr))
 print("DENY=" + ("; ".join(bad) or "đạt"))
 
@@ -179,20 +228,26 @@ elif not dns_pols:
 if flows.get("order-dns") != "open": bad.append(f"order không phân giải được catalog.shop.svc.cluster.local ({flows.get('order-dns', '?')})")
 print("DNS=" + ("; ".join(bad) or "đạt"))
 
-# 3. Từ ngoài shop: Pod tạm trong namespace tạm của verify tới catalog:8080 phải bị chặn (hết giờ), DNS của Pod tạm vẫn chạy.
-r = flows.get("outside-catalog", "?")
-print("OUTSIDE=" + {"timeout": "đạt", "open": "Pod ở namespace khác vẫn gọi được catalog:8080 (chưa chặn)",
-                    "dns": "Pod tạm không phân giải được catalog.shop (DNS của cluster?)",
-                    "nopod": "không tạo được Pod tạm busybox:1.37 trong namespace tạm",
-                    "refused": "catalog từ chối kết nối (Service không có endpoint?)"}.get(r, f"Pod tạm → catalog: {r}"))
+# 3. Từ ngoài shop (chỉ ingress của đích chặn được): Pod tạm trong namespace tạm của verify tới catalog:8080, order:8080,
+# postgres-rw:5432 phải bị chặn (hết giờ), DNS của Pod tạm vẫn chạy.
+bad = []
+for f, what in (("outside-catalog", "catalog:8080"), ("outside-order", "order:8080"), ("outside-postgres", "postgres-rw:5432")):
+    r = flows.get(f, "?")
+    if r == "timeout": continue
+    bad.append({"open": f"Pod ở namespace khác vẫn gọi được {what}", "dns": f"Pod tạm không phân giải được {what.split(':')[0]}.shop",
+                "nopod": "không tạo được Pod tạm busybox:1.37 trong namespace tạm",
+                "refused": f"{what} từ chối kết nối (Service không có endpoint?)"}.get(r, f"Pod tạm → {what}: {r}"))
+print("OUTSIDE=" + ("; ".join(dict.fromkeys(bad)) or "đạt"))
 
 # 4. Luồng trong shop, thử từ Pod thật: các luồng của ứng dụng mở, luồng không cần thiết bị chặn.
 WANT_OPEN = ["gateway-catalog", "gateway-order", "gateway-v1-catalog", "gateway-v1-order", "order-catalog", "order-postgres",
              "order-postgres-rw", "catalog-postgres", "dataplane-gateway-v1"]
-WANT_BLOCKED = ["catalog-order", "gateway-postgres"]
+# catalog-outside, order-outside: tới IP Pod tạm ngoài shop, không policy nào chọn đích: chỉ egress của nguồn chặn được.
+WANT_BLOCKED = ["catalog-order", "gateway-postgres", "catalog-outside", "order-outside"]
 def arrow(f):
     src = next(s for s in ("gateway-v1", "dataplane", "gateway", "catalog", "order") if f.startswith(s + "-"))
-    return src.replace("dataplane", "shop-gw-nginx") + "→" + f[len(src) + 1:]
+    dst = f[len(src) + 1:].replace("outside", "Pod ngoài shop")
+    return src.replace("dataplane", "shop-gw-nginx") + "→" + dst
 bad = []
 for f in WANT_OPEN:
     v = flows.get(f, "?")
@@ -200,6 +255,7 @@ for f in WANT_OPEN:
 for f in WANT_BLOCKED:
     v = flows.get(f, "?")
     if v != "timeout": bad.append(f"{arrow(f)}: {v} (cần bị chặn)")
+if flows.get("node-outside") != "open": bad.append("Pod tạm (httpd 8080) không trả lời cả từ node: chưa thử được chiều ra")
 print("FLOWS=" + ("; ".join(bad) or "đạt"))
 
 # 5–6. Dưới default-deny: IP cho curl từ Mac; HPA catalog còn số liệu CPU; các Deployment và postgres-0 sẵn sàng.
@@ -225,7 +281,9 @@ for n in ("gateway", "gateway-v1", "catalog", "order", "shop-gw-nginx"):
     if shopj is not None and not d: bad.append(f"không có Deployment {n}")
     elif d:
         r_ = d["spec"].get("replicas") or 0; a_ = (d.get("status") or {}).get("availableReplicas") or 0
-        if not r_ or a_ != r_: bad.append(f"{n} Available {a_}/{r_}")
+        # catalog do HPA điều khiển: HPA vừa tăng replica (CPU lúc khởi động) thì Pod mới chưa Ready; đủ minReplicas là đạt.
+        need = min(r_, (hpa or {}).get("spec", {}).get("minReplicas") or r_) if n == "catalog" else r_
+        if not r_ or a_ < need: bad.append(f"{n} Available {a_}/{r_}")
 sts = {x["metadata"]["name"]: x for x in items(shopj, "StatefulSet")}.get("postgres")
 if shopj is not None and (not sts or (sts.get("status") or {}).get("readyReplicas") != 1): bad.append("postgres chưa 1/1 Ready")
 for label, j in (("ingress-nginx", ing), ("nginx-gateway", ngf)):
@@ -236,7 +294,7 @@ for label, j in (("ingress-nginx", ing), ("nginx-gateway", ngf)):
         if a_ != r_: bad.append(f"{label}/{d['metadata']['name']} Available {a_}/{r_}")
 print("HEALTH=" + ("; ".join(bad) or "đạt"))
 
-# 7. Đáp án: DEFAULT_NS_TO_CATALOG=blocked, DRAFT_TWO_PEERS=open; NetworkPolicy nháp allow-probe đã xoá.
+# 7. Đáp án: DEFAULT_NS_TO_CATALOG=blocked, DRAFT_TWO_PEERS=open; NetworkPolicy nháp allow-probe và Pod probe ở default đã xoá.
 def word(v):
     v = (v or "").strip().lower()
     return {"blocked": "blocked", "block": "blocked", "timeout": "blocked", "chặn": "blocked", "bị chặn": "blocked",
@@ -245,5 +303,7 @@ bad = []
 if word(ans.get("DEFAULT_NS_TO_CATALOG")) != "blocked": bad.append(f"DEFAULT_NS_TO_CATALOG='{ans.get('DEFAULT_NS_TO_CATALOG', '')[:20]}'")
 if word(ans.get("DRAFT_TWO_PEERS")) != "open": bad.append(f"DRAFT_TWO_PEERS='{ans.get('DRAFT_TWO_PEERS', '')[:20]}'")
 if "allow-probe" in pols: bad.append("NetworkPolicy nháp allow-probe còn")
+if any(p["metadata"]["name"] == "probe" and not p["metadata"].get("deletionTimestamp") for p in items(defpods)):
+    bad.append("Pod probe ở default còn")
 print("ANSWERS=" + ("; ".join(bad) or "đạt"))
 PY
