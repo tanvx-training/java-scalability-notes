@@ -3,14 +3,25 @@
 # và Available, ~/shop/order.yaml khớp; PVC reports Bound với lớp có thật, Deployment reports Available, ~/shop/reports.yaml
 # khớp; answers.env PROTECTION_FINALIZER. Chỉ đọc. Nạp bởi `lab` trên máy Mac (bash 3.2).
 # Không chờ khi sự cố còn (PVC Pending, PV Released, chưa có StatefulSet postgres hay Deployment reports, DB_URL của order
-# sai; DB_URL qua Secret db-cred thì không đọc được ở đây, coi như đúng): người học chạy verify nhiều lần giữa buổi. Chỉ chờ khi mọi thứ đã có mà chưa sẵn sàng (như ngay sau khi VM khởi
-# động lại): vòng chờ 420 giây, cộng một vòng và facts.sh khi apiserver treo, in ra ~9 phút.
+# sai; DB_URL qua Secret db-cred thì không đọc được ở đây, coi như đúng): người học chạy verify nhiều lần giữa buổi. Chỉ chờ khi mọi thứ
+# đã có mà chưa sẵn sàng. Ngay sau khi VM khởi động lại, status trong API còn là của trước lúc tắt ("replicas = available" đúng
+# ngay): control plane vừa khởi động (< 15 phút) thì chờ bằng s26/files/wait.sh (Pod gateway, catalog, order, postgres Ready sau
+# lúc boot, 420 giây), không thì vòng cũ (420 giây). Cộng 180 giây chờ apiserver và facts.sh: in ra ~12 phút.
 cp="$LAB_CP"
-echo "  (chờ apiserver, postgres-0 và các Deployment, nếu đang khởi động: tối đa ~9 phút)"
-vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
-  end=\$((\$(date +%s) + 420))
+echo "  (chờ apiserver, postgres-0 và các Deployment, nếu đang khởi động: tối đa ~12 phút)"
+rc=0
+vm "$cp" "end=\$((\$(date +%s) + 180))
   until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ \$(date +%s) -ge \$end ]; do sleep 2; done
   k='kubectl --request-timeout=10s'
+  # Sự cố còn đó: đọc ngay, không chờ.
+  o=\$(\$k -n shop get pvc -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Pending && exit 0
+  o=\$(\$k get pv -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Released && exit 0
+  e=\$(\$k -n shop get sts/postgres deploy/reports -o name 2>&1) || case \"\$e\" in *NotFound*) exit 0 ;; esac
+  o=\$(\$k -n shop get deploy order -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name==\"DB_URL\")].value}' 2>/dev/null) \\
+    && case \"\$o\" in *:5432/shop|'') ;; *) exit 0 ;; esac
+  [ \$((\$(date +%s) - \$(date -d \"\$(uptime -s)\" +%s))) -lt 900 ] && exit 3
+  # Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-timeout nên vượt hạn tối đa ~10 giây.
+  end=\$((\$(date +%s) + 420))
   while [ \$(date +%s) -lt \$end ]; do
     # Sự cố còn đó: đọc ngay, không chờ.
     o=\$(\$k -n shop get pvc -o jsonpath='{range .items[*]}{.status.phase}{\"\\n\"}{end}' 2>/dev/null) && printf '%s\\n' \"\$o\" | grep -qx Pending && break
@@ -24,7 +35,8 @@ vm "$cp" "# Hạn theo đồng hồ (420 giây): mỗi lệnh có --request-time
       && o=\$(\$k -n shop get deploy gateway catalog order reports -o jsonpath='{range .items[*]}{.spec.replicas} {.status.availableReplicas}{\"\\n\"}{end}' 2>/dev/null) \\
       && [ \"\$(printf '%s\\n' \"\$o\" | grep -c .)\" = 4 ] && [ \"\$(printf '%s\\n' \"\$o\" | awk '\$1!=\$2' | grep -c .)\" = 0 ] && break
     sleep 3
-  done" >/dev/null 2>&1 || true
+  done" >/dev/null 2>&1 || rc=$?
+if [ "$rc" = 3 ]; then vm "$cp" "$(cat "$SESSION_DIR/../s26/files/wait.sh")" >/dev/null 2>&1 || true; fi
 
 facts="$(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }
