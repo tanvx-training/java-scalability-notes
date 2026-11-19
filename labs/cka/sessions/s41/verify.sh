@@ -17,7 +17,7 @@ rows() {
 }
 expect_eq "PDB gateway-pdb, catalog-pdb, order-pdb trong chart: minAvailable 1, selector app=<service>, ALLOWED DISRUPTIONS ≥ 1; không PDB thừa" \
   "đạt" rows PDB
-expect_eq "Release shop deployed (shop-0.2.0, javaOpts và order 2.0 như cũ); gateway, catalog, order ≥ 2 replica, trải theo hostname trong chart, Pod Ready trên cka-w1 và cka-w2" \
+expect_eq "Release shop deployed (shop-0.2.0, javaOpts và order 2.0 như cũ); gateway, catalog, order ≥ 2 replica, trải theo hostname trong chart, Pod Ready trên cka-w1 và cka-w2; catalog, order, postgres có priority không thấp hơn gateway" \
   "đạt" rows SHOPBASE SPREAD
 expect_eq "~/drills/s41/loop.log: drain cka-w1 (cordon → Pod về 0 → uncordon) với request đều, 0 lỗi; ba node Ready, cka-w1 và cka-w2 schedulable" \
   "đạt" rows LOG NODE

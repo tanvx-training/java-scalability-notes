@@ -6,8 +6,8 @@
 #   ~/drills/s41/loop.sh run   ~/drills/s41/loop.log    chạy tiền cảnh (Ctrl-C để dừng)
 #
 # Mỗi 0,5 giây một GET tới http://<IP cka-w1>:30180/api/products (NodePort gateway-nodeport của s27; đổi bằng LOOP_URL), tối
-# đa 2 giây một request. Mỗi request một dòng:
-#   <epoch có mili giây> <giờ> <mã HTTP, 000 = không nối được/hết giờ> <giây>
+# đa 5 giây một request (chậm hơn thế mới tính là mất). Mỗi request một dòng:
+#   <epoch có mili giây> <giờ> <mã HTTP, 000 = không nối được/hết giờ> <giây> <mã thoát curl: 0, 7 bị từ chối, 28 hết giờ, 52/56 đứt>
 # Song song, cứ 2 giây đọc node (cordon, phiên bản kubelet) và số Pod gateway/catalog/order đang Running trên từng node; khi
 # có gì đổi thì ghi một dòng bắt đầu bằng '#':
 #   # <epoch> <giờ> nodes cka-cp=v1.36.6/sched cka-w1=v1.36.6/cordon … pods cka-w1=0 cka-w2=6
@@ -40,7 +40,7 @@ watch_nodes() {
 }
 
 run_loop() {
-  local url="${LOOP_URL:-}" ip t0 r code dt
+  local url="${LOOP_URL:-}" ip t0 r rc code dt
   if [ -z "$url" ]; then
     ip=$(k get node cka-w1 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null)
     [ -n "$ip" ] || { echo "không đọc được IP của cka-w1" >&2; exit 1; }
@@ -53,10 +53,10 @@ run_loop() {
   trap 'kill $wpid 2>/dev/null; echo "# $(date +%s) $(hms) stop" >> "$log"; exit 0' INT TERM
   while :; do
     t0=$(date +%s%N)
-    r=$(curl -s -o /dev/null --max-time 2 -w '%{http_code} %{time_total}' "$url" 2>/dev/null) || true
+    rc=0; r=$(curl -s -o /dev/null --max-time 5 -w '%{http_code} %{time_total}' "$url" 2>/dev/null) || rc=$?
     code=${r%% *}; dt=${r#* }
-    [ -n "$code" ] || { code=000; dt=2; }
-    echo "$(now) $(hms) $code $dt" >> "$log"
+    [ -n "$code" ] || { code=000; dt=5; }
+    echo "$(now) $(hms) $code $dt $rc" >> "$log"
     # Giữ nhịp 2 request/giây: nghỉ phần còn lại của 0,5 giây.
     dt=$(( 500 - ($(date +%s%N) - t0) / 1000000 ))
     [ "$dt" -gt 0 ] && sleep "0.$(printf '%03d' "$dt")"

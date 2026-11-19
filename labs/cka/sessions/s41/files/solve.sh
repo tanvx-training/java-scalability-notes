@@ -14,6 +14,28 @@ grep -E '^(version|appVersion)' ~/charts/shop/Chart.yaml
 helm lint ~/charts/shop >/dev/null
 # Lần chạy trước bị ngắt giữa drain thì cka-w1 còn cordon: Pod Pending làm `--wait` hết giờ.
 k uncordon cka-w1 >/dev/null
+
+echo "== postgres-0 cùng PriorityClass với gateway (~/shop/postgres.yaml), để Pod thay của gateway không preempt nó lúc drain"
+python3 - <<'PY'
+import glob, os, re
+home = os.path.expanduser("~")
+for p in sorted(glob.glob(f"{home}/shop/*.yaml")):
+    text = open(p).read()
+    docs = re.split(r"(?m)^---\s*$", text)
+    for i, d in enumerate(docs):
+        if not re.search(r"(?m)^kind:\s*StatefulSet\s*$", d) or not re.search(r"(?m)^  name:\s*postgres\s*$", d): continue
+        if "priorityClassName:" in d: print(f"{os.path.basename(p)}: đã có priorityClassName"); raise SystemExit
+        # chèn ngay trên dòng nodeSelector của pod template (cùng thụt lề), giữ nguyên comment của tệp
+        m = re.search(r"(?m)^(\s+)nodeSelector:", d)
+        if not m: raise SystemExit(f"{p}: không thấy nodeSelector của postgres")
+        docs[i] = d[:m.start()] + f"{m.group(1)}priorityClassName: shop-critical\n" + d[m.start():]
+        open(p, "w").write("---".join(docs)); print(f"{os.path.basename(p)}: thêm priorityClassName: shop-critical"); raise SystemExit
+raise SystemExit("không tìm thấy StatefulSet postgres trong ~/shop/*.yaml")
+PY
+k apply -f ~/shop/postgres.yaml
+k -n shop rollout status sts/postgres --timeout=5m
+end=$(($(date +%s) + 300)); w1=$(k get node cka-w1 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://$w1:30180/api/products")" = 200 ] || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
 helm upgrade shop ~/charts/shop -n shop --reset-values --force-conflicts --wait --timeout 5m | sed -n '1,6p'
 k -n shop get pdb
 

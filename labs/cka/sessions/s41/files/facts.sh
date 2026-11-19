@@ -104,6 +104,32 @@ for n in SVCS:
     nodes = sorted({p["spec"].get("nodeName") for p in pods})
     if len(pods) < 2: bad.append(f"{n}: {len(pods)} Pod Ready")
     elif not all(w in nodes for w in WORKERS): bad.append(f"{n}: Pod Ready chỉ ở {', '.join(nodes)} (cần cả cka-w1 và cka-w2)")
+# Ưu tiên: lúc drain, Pod thay của gateway (PriorityClass shop-critical, s19) được preempt Pod ưu tiên thấp hơn trên worker còn
+# lại (đo: đá postgres-0 và catalog của shop-dev). catalog, order và postgres phải có priority ≥ gateway; ~/shop/ giữ điều đó
+# cho postgres.
+pcs = {p["metadata"]["name"]: p.get("value", 0) for p in (kj("get", "priorityclass") or {}).get("items", [])}
+def prio(kind, name):
+    o = kj("-n", "shop", "get", kind, name)
+    if o is None: return None, None
+    pc = o["spec"]["template"]["spec"].get("priorityClassName")
+    return pc, pcs.get(pc, 0) if pc else 0
+gpc, gv = prio("deploy", "gateway")
+for kind, name in (("deploy", "catalog"), ("deploy", "order"), ("sts", "postgres")):
+    pc, v = prio(kind, name)
+    if v is None: bad.append(f"chưa có {name}"); continue
+    if gv is not None and v < gv: bad.append(f"{name}: priority {v} ({pc or 'không có PriorityClass'}) thấp hơn gateway {gv} ({gpc}): bị preempt lúc drain")
+for n in ("catalog", "order"):
+    md = man.get(("Deployment", n))
+    if md is not None and not (((md.get("spec") or {}).get("template") or {}).get("spec") or {}).get("priorityClassName"):
+        bad.append(f"{n}: priorityClassName không nằm trong chart")
+pg = False
+for p in sorted(__import__("glob").glob(f"{home}/shop/*.yaml")):
+    try:
+        for d in yaml.safe_load_all(open(p)):
+            if isinstance(d, dict) and d.get("kind") == "StatefulSet" and (d.get("metadata") or {}).get("name") == "postgres":
+                pg = pg or bool(((d.get("spec") or {}).get("template") or {}).get("spec", {}).get("priorityClassName"))
+    except Exception: pass
+if not pg: bad.append("~/shop/: StatefulSet postgres chưa ghi priorityClassName")
 say("SPREAD", bad)
 
 # 4. NODE: ba node Ready, cka-w1 và cka-w2 schedulable (không unschedulable, không taint unschedulable).

@@ -1,12 +1,17 @@
 # Giá trị mặc định của chart shop. Mỗi service: image (repository, tag), replicas, resources.
 # Ghi đè khi cài: --set order.image.tag=2.0, hay -f values-<môi trường>.yaml.
-# 0.2.0 (s41): order 2 replica; gateway, catalog, order trải đều trên các worker (spread) và có PDB (pdb.minAvailable).
+# 0.2.0 (s41): order 2 replica; gateway, catalog, order trải đều trên các worker (spread), có PDB (pdb.minAvailable); catalog, order cùng PriorityClass với gateway.
 
 # topologySpreadConstraints cho gateway, catalog, order: lệch tối đa 1 Pod giữa các node (kubernetes.io/hostname), không
 # tính node có taint mà Pod không chịu (control plane, node đang cordon), đếm riêng từng ReplicaSet (pod-template-hash).
 spread:
   enabled: true
   maxSkew: 1
+
+# PriorityClass của catalog và order (gateway, gateway-v1 đã dùng shop-critical từ s19). Lúc drain, Pod thay của gateway
+# (shop-critical) chiếm chỗ trên worker còn lại bằng cách preempt Pod ưu tiên thấp hơn: catalog, order (và postgres-0) cùng
+# mức thì không bị đá.
+priorityClassName: shop-critical
 
 javaOpts: -XX:MaxRAMPercentage=50
 

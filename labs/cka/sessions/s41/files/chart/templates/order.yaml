@@ -16,6 +16,9 @@ spec:
     spec:
       serviceAccountName: {{ .Values.order.serviceAccount }}
       {{- include "shop.spread" (dict "app" "order" "Values" .Values) | nindent 6 }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       terminationGracePeriodSeconds: 45
       containers:
       - name: order

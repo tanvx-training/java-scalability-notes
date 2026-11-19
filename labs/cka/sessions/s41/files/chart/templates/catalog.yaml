@@ -27,6 +27,9 @@ spec:
                 matchLabels:
                   app: catalog
       {{- include "shop.spread" (dict "app" "catalog" "Values" .Values) | nindent 6 }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       terminationGracePeriodSeconds: 45
       containers:
       - name: catalog

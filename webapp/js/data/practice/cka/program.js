@@ -203,7 +203,7 @@ export const program = {
       id: "st8",
       title: "Vận hành cluster",
       goal: "Bảo trì node, nâng cluster một minor bằng kubeadm, backup/restore etcd, gia hạn chứng chỉ và hiểu control plane HA.",
-      projectMilestone: "Cluster nâng một phiên bản, app không gián đoạn; khôi phục được từ snapshot etcd",
+      projectMilestone: "Cluster nâng một phiên bản, app không gián đoạn trừ lúc nâng node giữ PostgreSQL; khôi phục được từ snapshot etcd",
       sessions: ["s41", "s42", "s43", "s44", "s45"],
     },
     {
