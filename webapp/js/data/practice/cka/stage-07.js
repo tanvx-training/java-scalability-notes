@@ -1189,7 +1189,7 @@ Verify đọc CRD \`shopfeatures.shop.example.com\`: group \`shop.example.com\`,
 
 **Quy trình chẩn đoán release (20 phút).** 1. \`helm list -A\` (cái gì hỏng, trạng thái gì). 2. \`helm status <tên>\` (DESCRIPTION nói lý do: \`resource Deployment/shop/catalog not ready … context deadline exceeded\`). 3. \`helm history <tên>\` (revision nào lỗi, revision tốt gần nhất là số mấy). 4. \`helm get values <tên> --revision <lỗi>\` so với \`--revision <tốt>\`: khác ở khoá nào. 5. Pod mới: \`k get pod\` (cái nào \`CrashLoopBackOff\`), \`k logs <pod> --previous\` (vì sao nó chết), \`k get events --sort-by=.lastTimestamp\`. 6. Sửa (rollback hay roll forward), rồi kiểm lại bằng \`helm history\`, \`k rollout status\`. Không nhảy thẳng tới bước 6: rollback mà không biết khoá nào hỏng thì lần upgrade sau lại hỏng y như vậy.
 
-**RollingUpdate giữ shop sống, nếu chart cho phép.** Gateway có \`maxUnavailable: 0\`, \`maxSurge: 1\`; catalog (2 replica) và order (1 replica) để mặc định 25%, làm tròn xuống thành 0 Pod được thiếu. Nên khi Pod mới không lên (\`MaxRAMPercentage=150\`: JVM từ chối khởi động), Deployment dừng ở một Pod mới hỏng cạnh các Pod cũ vẫn chạy: đo trong lần upgrade lỗi, gateway luôn 2/2 Ready và \`curl\` tới 30180 trả 200 ở cả 81 lần lấy mẫu. podinfo của \`demo\` thì \`maxUnavailable: 1\` với 1 replica: Pod cũ bị xoá ngay, \`demo\` không còn Pod Ready nào suốt lúc kẹt (đo). Đọc \`strategy\` của chart trước khi tin rằng "upgrade lỗi không sao".
+**RollingUpdate giữ shop sống, nếu chart cho phép.** Gateway có \`maxUnavailable: 0\`, \`maxSurge: 1\`; catalog (2 replica) và order (1 replica) để mặc định 25%, làm tròn xuống thành 0 Pod được thiếu. Nên khi Pod mới không lên (\`MaxRAMPercentage=150\`: JVM từ chối khởi động), Deployment dừng ở một Pod mới hỏng cạnh các Pod cũ vẫn chạy: đo trong lần upgrade lỗi, gateway luôn 2/2 Ready và \`curl\` tới 30180 trả 200 ở cả 81 mẫu lấy trong ~150 giây (mỗi mẫu một lệnh kubectl cộng một curl, ~1,8 giây), không mẫu nào khác 200. Đó là mẫu thưa, không phải phép đo từng request. podinfo của \`demo\` thì \`maxUnavailable: 1\` với 1 replica: Pod cũ bị xoá ngay, \`demo\` không còn Pod Ready nào suốt lúc kẹt (đo). Đọc \`strategy\` của chart trước khi tin rằng "upgrade lỗi không sao".
 
 **\`--wait\` và \`--rollback-on-failure\`.** \`helm upgrade --wait --timeout 60s\` chờ mọi tài nguyên Ready rồi mới ghi \`deployed\`; hết giờ thì ghi \`failed\` nhưng **không** trả cluster về (Pod lỗi vẫn đó). \`--rollback-on-failure\` (Helm 3: \`--atomic\`) tự rollback khi lỗi: tiện cho CI, nhưng xoá luôn bằng chứng bạn cần để chẩn đoán. Với release \`shop\` (nhận lại từ \`kubectl apply\` ở s37), mọi \`upgrade\`/\`rollback\` kèm \`--force-conflicts\`: ở sự cố này rollback thường cũng qua (đo, vì lần upgrade lỗi đã ép trường \`JAVA_OPTS\` sang Helm), nhưng giữ thói quen.
 
@@ -1204,7 +1204,7 @@ Verify đọc CRD \`shopfeatures.shop.example.com\`: group \`shop.example.com\`,
       { label: "helm.sh: Helm 4 Overview (--rollback-on-failure thay --atomic)", href: "https://helm.sh/docs/overview" },
       { label: "kubernetes.io: Deployment — rolling update, maxUnavailable, maxSurge", href: "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment" },
     ],
-    stateIn: "Đầu ra s39. Trên Mac chạy `./labs/lab begin cka s40`: kiểm đầu vào bằng check.sh riêng (CRD, cert-manager, Certificate của s39: sự cố không đụng chúng), xoá answers.env cũ rồi **gây sự cố** (~1,5 phút): \"một đồng nghiệp upgrade hai release rồi bỏ dở\". Bấm giờ 20 phút.",
+    stateIn: "Đầu ra s39. Trên Mac chạy `./labs/lab begin cka s40`: kiểm đầu vào bằng check.sh riêng (CRD, cert-manager, Certificate của s39: sự cố không đụng chúng), xoá answers.env cũ rồi **gây sự cố** (~1,5 phút; chạy lại `begin` giữa buổi thì trước hết đưa hai release về cấu hình cuối s37 bằng rollback, rồi gây lại): \"một đồng nghiệp upgrade hai release rồi bỏ dở\". Bấm giờ 20 phút.",
     stateOut: "Release shop deployed, values bằng revision tốt trước sự cố (như cuối s37: order 2.0, javaOpts mặc định), bốn Deployment Available, không Pod lỗi; release demo deployed với values và image như cuối s37; release demo-canary đã gỡ; repo podinfo đọc được; ~/drills/s40/answers.env (BAD_VALUE).",
     tasks: [
       {
@@ -1245,7 +1245,7 @@ Verify đọc CRD \`shopfeatures.shop.example.com\`: group \`shop.example.com\`,
       "`helm list -a` báo `unknown shorthand flag: 'a' in -a`: Helm 4 bỏ cờ này; `helm list` trần đã in `failed` và `pending-*` (đo). Trên đề (Helm 3) thì `helm list -a`.",
       "Rollback xong mà verify vẫn đỏ dòng values: bạn rollback về một revision khác revision tốt (ví dụ một revision `failed`), hay roll forward bằng values tự gõ lại không đúng như cũ. So `helm get values shop -n shop -a` với `--revision <tốt> -a`.",
     ],
-    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6, Helm v4.3.2); số revision, tên Pod, thời điểm của bạn sẽ khác (history của bạn có thể có thêm revision \`failed\` từ s37).
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6, Helm v4.3.2); số revision, tên Pod, thời điểm của bạn sẽ khác (máy soạn bài đã \`begin\` nhiều lần). **Đi thẳng từ s37 (theo lời giải s37, một lần \`begin\`):** shop revision 11 \`failed\`, revision tốt 10; demo revision 2 \`pending-upgrade\`, revision tốt 1. Dưới đây gọi theo vai ("revision lỗi", "revision deployed cuối cùng trước bản hỏng"), con số trong output chỉ là của lần chạy này.
 
 **1. Toàn cảnh**
 
@@ -1253,9 +1253,9 @@ Verify đọc CRD \`shopfeatures.shop.example.com\`: group \`shop.example.com\`,
 helm list -A
 # NAME        	NAMESPACE   	REVISION	UPDATED                	STATUS         	CHART               	APP VERSION
 # cert-manager	cert-manager	3       	2026-11-19 23:34:03 …  	deployed       	cert-manager-v1.21.3	v1.21.3
-# demo        	demo        	12      	2026-11-19 23:47:06 …  	pending-upgrade	podinfo-6.16.0      	6.16.0
-# demo-canary 	demo        	1       	2026-11-19 23:47:10 …  	pending-install	podinfo-6.16.0      	6.16.0
-# shop        	shop        	10      	2026-11-19 23:47:15 …  	failed         	shop-0.1.0          	1.0
+# demo        	demo        	23      	2026-11-20 00:51:07 …  	pending-upgrade	podinfo-6.16.0      	6.16.0
+# demo-canary 	demo        	1       	2026-11-20 00:51:12 …  	pending-install	podinfo-6.16.0      	6.16.0
+# shop        	shop        	26      	2026-11-20 00:51:16 …  	failed         	shop-0.1.0          	1.0
 helm list -A --failed       # chỉ shop
 helm list -A --pending      # demo, demo-canary
 \`\`\`
@@ -1267,50 +1267,50 @@ Ba release hỏng, ba trạng thái khác nhau, ba cách gỡ khác nhau.
 \`\`\`bash
 helm status shop -n shop | sed -n '1,7p'
 # NAME: shop
-# LAST DEPLOYED: Thu Nov 19 23:47:15 2026
+# LAST DEPLOYED: Fri Nov 20 00:51:16 2026
 # NAMESPACE: shop
 # STATUS: failed
-# REVISION: 10
+# REVISION: 26
 # DESCRIPTION: Upgrade "shop" failed: resource Deployment/shop/catalog not ready. status: InProgress, message: Updated: 1/2
 # resource Deployment/shop/gateway not ready. status: InProgress, message: Updated: 1/2
 helm history shop -n shop --max 4
-# REVISION	UPDATED                 	STATUS  	CHART     	APP VERSION	DESCRIPTION
-# 7       	Thu Nov 19 23:39:37 2026	deployed	shop-0.1.0	1.0        	Rollback to 5
-# 8       	Thu Nov 19 23:43:21 2026	failed  	shop-0.1.0	1.0        	Upgrade "shop" failed: resource Deployment/shop/catalog not ready. …
-# 9       	Thu Nov 19 23:45:30 2026	failed  	shop-0.1.0	1.0        	Upgrade "shop" failed: …
-# 10      	Thu Nov 19 23:47:15 2026	failed  	shop-0.1.0	1.0        	Upgrade "shop" failed: …
-helm get values shop -n shop --revision 10
+# REVISION	UPDATED                 	STATUS    	CHART     	APP VERSION	DESCRIPTION
+# 23      	Fri Nov 20 00:39:35 2026	superseded	shop-0.1.0	1.0        	Rollback to 18
+# 24      	Fri Nov 20 00:42:32 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: resource Deployment/shop/catalog not ready. …
+# 25      	Fri Nov 20 00:51:03 2026	deployed  	shop-0.1.0	1.0        	Rollback to 23
+# 26      	Fri Nov 20 00:51:16 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: resource Deployment/shop/catalog not ready. …
+helm get values shop -n shop --revision 26
 # USER-SUPPLIED VALUES:
 # javaOpts: -XX:MaxRAMPercentage=150
-helm get values shop -n shop --revision 7
+helm get values shop -n shop --revision 25
 # USER-SUPPLIED VALUES:
 # null
 \`\`\`
 
-Máy soạn bài đã \`begin\` ba lần nên có ba revision \`failed\` (8, 9, 10: \`begin\` chạy lại gây lại đúng lỗi đó). Revision tốt là revision không \`failed\` mới nhất trước chúng: 7, vẫn \`deployed\` (upgrade lỗi không chuyển nó thành \`superseded\`). Revision lỗi ghi đè đúng một khoá: \`javaOpts\`.
+Revision lỗi là revision \`failed\` mới nhất. Revision tốt là revision \`deployed\` cuối cùng trước bản hỏng: nó vẫn \`deployed\` (upgrade lỗi không chuyển nó thành \`superseded\`), và values của nó mang \`javaOpts\` của s37. Revision lỗi ghi đè đúng một khoá: \`javaOpts\`. (Các dòng \`Rollback to …\` và \`failed\` cũ hơn là dấu của những lần \`begin\` trước trên máy soạn bài: \`begin\` chạy lại đưa release về cấu hình cuối s37 bằng một rollback rồi mới gây lại sự cố.)
 
 **3. Pod mới và log**
 
 \`\`\`bash
 k get pod -l 'app in (gateway,gateway-v1,catalog,order)'
-# catalog-66f5cf64fb-qfndg     0/1   CrashLoopBackOff   5 (2m2s ago)   4m57s
-# catalog-7f7ff485b9-n25bc     1/1   Running            9 (22m ago)    23h
-# catalog-7f7ff485b9-nmxhc     1/1   Running            5 (22m ago)    23h
-# gateway-6bb658ccc4-42v7b     1/1   Running            5 (23m ago)    23h
-# gateway-6bb658ccc4-jth2f     1/1   Running            5 (23m ago)    23h
-# gateway-d4d8bc6bf-9g8sz      0/1   CrashLoopBackOff   5 (2m4s ago)   4m57s
-# gateway-v1-5f4bd8dc8-wgt78   0/1   CrashLoopBackOff   5 (109s ago)   4m57s
-# gateway-v1-d58549bff-sffff   1/1   Running            5 (22m ago)    23h
-# order-68975fd87c-xkwdj       0/1   CrashLoopBackOff   5 (105s ago)   4m56s
-# order-86498bc69d-b4spl       1/1   Running            2 (22m ago)    44m
-k logs gateway-d4d8bc6bf-9g8sz --previous
+# catalog-66f5cf64fb-298zg     0/1   CrashLoopBackOff   3 (18s ago)   62s
+# catalog-7f7ff485b9-csfs8     1/1   Running            0             12m
+# catalog-7f7ff485b9-vzn8r     1/1   Running            0             12m
+# gateway-6bb658ccc4-w4vnq     1/1   Running            0             12m
+# gateway-6bb658ccc4-z75rr     1/1   Running            0             12m
+# gateway-d4d8bc6bf-rhwsx      0/1   CrashLoopBackOff   3 (18s ago)   62s
+# gateway-v1-5f4bd8dc8-bzx4p   0/1   CrashLoopBackOff   3 (21s ago)   62s
+# gateway-v1-d58549bff-b25hz   1/1   Running            0             12m
+# order-68975fd87c-zgcfm       0/1   CrashLoopBackOff   3 (20s ago)   62s
+# order-86498bc69d-4z6p4       1/1   Running            0             12m
+k logs gateway-d4d8bc6bf-rhwsx --previous
 # double MaxRAMPercentage=150.000000 is outside the allowed range [ 0.000000 ... 100.000000 ]
 # Improperly specified VM option 'MaxRAMPercentage=150'
 # Error: Could not create the Java Virtual Machine.
 # Error: A fatal exception has occurred. Program will exit.
 k get events --sort-by=.lastTimestamp | grep BackOff | tail -2
-# 16s   Warning   BackOff   pod/gateway-v1-5f4bd8dc8-wgt78   Back-off restarting failed container gateway in pod …
-# 4s    Warning   BackOff   pod/order-68975fd87c-xkwdj       Back-off restarting failed container order in pod …
+# 11s   Warning   BackOff   pod/gateway-d4d8bc6bf-rhwsx      Back-off restarting failed container gateway in pod …
+# 11s   Warning   BackOff   pod/gateway-v1-5f4bd8dc8-bzx4p   Back-off restarting failed container gateway in pod …
 k get deploy gateway -o jsonpath='{.spec.strategy}'
 # {"rollingUpdate":{"maxSurge":1,"maxUnavailable":0},"type":"RollingUpdate"}
 echo BAD_VALUE=javaOpts > ~/drills/s40/answers.env
@@ -1318,33 +1318,33 @@ echo BAD_VALUE=javaOpts > ~/drills/s40/answers.env
 
 Bốn Deployment mỗi cái có đúng một Pod mới chết, Pod cũ ở lại: \`javaOpts\` đi vào \`JAVA_OPTS\` của cả bốn, nên cả bốn cùng rollout, và không cái nào được phép thiếu Pod.
 
-**4. Rollback shop**
+**4. Rollback shop về revision deployed cuối cùng trước bản hỏng**
 
 \`\`\`bash
-helm rollback shop 7 -n shop --force-conflicts --wait
+helm rollback shop 25 -n shop --force-conflicts --wait
 # Rollback was a success! Happy Helming!
 helm history shop -n shop --max 3
-# 9       	…	failed  	shop-0.1.0	1.0	Upgrade "shop" failed: …
-# 10      	…	failed  	shop-0.1.0	1.0	Upgrade "shop" failed: …
-# 11      	…	deployed	shop-0.1.0	1.0	Rollback to 7
+# 25      	…	superseded	shop-0.1.0	1.0	Rollback to 23
+# 26      	…	failed    	shop-0.1.0	1.0	Upgrade "shop" failed: …
+# 27      	…	deployed  	shop-0.1.0	1.0	Rollback to 25
 k get deploy gateway gateway-v1 catalog order
-# gateway      2/2   2   2   4d21h
-# gateway-v1   1/1   1   1   23h
-# catalog      2/2   2   2   4d21h
-# order        1/1   1   1   4d21h
+# gateway      2/2   2   2   4d22h
+# gateway-v1   1/1   1   1   24h
+# catalog      2/2   2   2   4d22h
+# order        1/1   1   1   4d22h
 \`\`\`
 
-Rollback áp lại manifest của revision 7: pod template về như cũ, Deployment trở về ReplicaSet cũ (không tạo Pod mới), ReplicaSet lỗi về 0.
+Rollback áp lại manifest của revision tốt: pod template về như cũ, Deployment trở về ReplicaSet cũ (không tạo Pod mới), ReplicaSet lỗi về 0.
 
 **5. demo: pending-upgrade và repo**
 
 \`\`\`bash
 helm history demo -n demo --max 3
-# 10      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
-# 11      	…	deployed       	podinfo-6.16.0	6.16.0	Rollback to 9
-# 12      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
+# 21      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
+# 22      	…	deployed       	podinfo-6.16.0	6.16.0	Rollback to 20
+# 23      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
 k -n demo get pod
-# demo-canary-podinfo-85f6c8d666-jvh7n   0/1   ImagePullBackOff   0   83s
+# demo-canary-podinfo-85f6c8d666-dzfh4   0/1   ImagePullBackOff   0   82s
 # demo-podinfo-c9f6c987f-…               0/1   ImagePullBackOff   0   …       (Pod cũ đã bị xoá: maxUnavailable 1)
 helm upgrade demo podinfo/podinfo --version 6.16.0 -n demo --reuse-values
 # Error: no cached repo found. (try 'helm repo update'): open /home/ubuntu/.cache/helm/repository/podinfo-index.yaml: no such file or directory
@@ -1352,17 +1352,17 @@ helm repo update podinfo
 # ...Successfully got an update from the "podinfo" chart repository
 helm upgrade demo podinfo/podinfo --version 6.16.0 -n demo --reuse-values
 # Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress
-helm rollback demo 11 -n demo --wait
+helm rollback demo 22 -n demo --wait
 # Rollback was a success! Happy Helming!
 helm history demo -n demo --max 3
-# 11      	…	superseded     	podinfo-6.16.0	6.16.0	Rollback to 9
-# 12      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
-# 13      	…	deployed       	podinfo-6.16.0	6.16.0	Rollback to 11
+# 22      	…	superseded     	podinfo-6.16.0	6.16.0	Rollback to 20
+# 23      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
+# 24      	…	deployed       	podinfo-6.16.0	6.16.0	Rollback to 22
 k -n demo get pod -l app.kubernetes.io/name=demo-podinfo
-# demo-podinfo-7f7d667448-4gd6m   1/1   Running   0   13s
+# demo-podinfo-7f7d667448-549mz   1/1   Running   0   12s
 \`\`\`
 
-Revision 12 vẫn ghi \`pending-upgrade\` trong history: Helm không sửa revision cũ, chỉ thêm revision mới. Revision 10 là dấu của một lần \`begin\` trước.
+Revision kẹt vẫn ghi \`pending-upgrade\` trong history: Helm không sửa revision cũ, chỉ thêm revision mới. Các revision \`pending-upgrade\` cũ hơn (nếu có) là dấu của những lần \`begin\` trước.
 
 Đường khác, đo trên cùng lab: xoá Secret \`sh.helm.release.v1.demo.v<N>\` của revision kẹt làm \`helm status\` báo revision trước \`deployed\` ngay, nhưng Deployment vẫn mang \`ghcr.io/stefanprodan/podinfo:6.99.0\` (\`helm get manifest\` nói 6.16.0, cluster nói 6.99.0) cho tới lần \`helm upgrade … --reuse-values\` kế tiếp. Rollback làm cả hai việc trong một lệnh.
 
@@ -1417,14 +1417,14 @@ Lời giải tự động: \`labs/cka/sessions/s40/apply.sh\` (gây sự cố nh
       "Lỗi `no cached repo found` hay `repo is corrupt or missing`: `helm repo update`, không phải `repo add` lại.",
     ],
     outcome: {
-      md: `Ba release hỏng ba kiểu đều về \`deployed\` với đúng cấu hình cũ, và shop không mất request nào trong lúc đó. Trên Mac:
+      md: `Ba release hỏng ba kiểu đều về \`deployed\` với đúng cấu hình cũ, và shop vẫn phục vụ suốt sự cố (đo lúc soạn: 81/81 mẫu trả 200, mỗi mẫu ~1,8 giây). Trên Mac:
 
 \`\`\`bash
 ./labs/lab verify cka s40
 \`\`\`
 
-Verify đọc \`helm history -o json\` của shop và demo: revision hiện tại \`deployed\`, sau revision hỏng mới nhất của sự cố (\`failed\` với shop, \`pending-upgrade\` với demo), và \`helm get values -a\` của nó **bằng** revision tốt, tức revision \`deployed\`/\`superseded\` mới nhất trước revision hỏng, tìm theo history chứ không ghi cứng số (roll forward bằng values khác, ví dụ \`MaxRAMPercentage=60\`: đỏ, đo; roll forward bằng \`--reset-values\` về đúng values của chart: xanh, đo). Cùng dòng shop, verify chạy lại phần release/nhận lại của s37 (chart \`shop-0.1.0\`, \`order.image.tag\` 2.0, Deployment khớp values, 15 object). Không Pod nào của gateway, gateway-v1, catalog, order (kể cả Pod đang khởi động lại) và không ReplicaSet nào còn replica có \`JAVA_OPTS\` khác \`javaOpts\` của revision tốt, mọi Pod Ready, bốn Deployment Available, \`curl\` từ Mac tới \`<IP cka-w1>:30180/api/products\` trả 200. demo: Deployment và Pod không còn image \`6.99.0\` (chỉ xoá Secret của revision kẹt: đỏ, đo), cộng dòng demo của s37 (\`podinfo-6.16.0\`, \`ui.message\`, Pod trên cka-cp). \`demo-canary\` không còn release, Secret hay Deployment; \`helm search repo podinfo/podinfo --version 6.16.0\` thấy chart. \`BAD_VALUE=javaOpts\`.`,
-      verifyOutput: "lab: kiểm s40\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~33 phút)\n  ✓ Release shop deployed sau revision failed của sự cố, values (-a) bằng revision tốt trước đó; chart shop-0.1.0, order 2.0, Deployment khớp values, 15 object của release\n  ✓ Không Pod/ReplicaSet nào của shop còn JAVA_OPTS xấu, mọi Pod Ready; bốn Deployment Available; từ Mac curl <IP cka-w1>:30180/api/products trả 200\n  ✓ Release demo deployed sau revision pending-upgrade, values bằng revision tốt, không còn image 6.99.0; podinfo-6.16.0, ui.message, Pod trên cka-cp\n  ✓ Release demo-canary (pending-install) đã gỡ hẳn; helm search repo thấy podinfo/podinfo 6.16.0\n  ✓ answers.env: BAD_VALUE là khoá values gây lỗi của release shop\n  → 5/5 đạt",
+Verify đọc \`helm history -o json\` của shop và demo: revision hiện tại \`deployed\`, sau revision hỏng mới nhất của sự cố (\`failed\` với shop, \`pending-upgrade\` với demo), và \`helm get values -a\` của nó **bằng** revision tốt, tức revision \`deployed\`/\`superseded\` mới nhất trước revision hỏng, tìm theo history chứ không ghi cứng số (roll forward bằng values khác, ví dụ \`MaxRAMPercentage=60\`: đỏ, đo; roll forward bằng \`--reset-values\` về đúng values của chart: xanh, đo). Vị trí trong history chưa đủ: verify còn so **nội dung** với cuối s37, \`javaOpts\` của shop phải là \`-XX:MaxRAMPercentage=50\` và \`image.tag\` của demo là mặc định \`6.16.0\` (roll forward 75%, \`begin\` lại, rồi rollback về chính revision 75% đó: đỏ, đo). History không còn revision nào trước sự cố (xoá Secret release, uninstall rồi cài lại) thì dòng đó đỏ kèm lệnh \`helm upgrade\` để tạo revision mới với cấu hình cuối s37. Cùng dòng shop, verify chạy lại phần release/nhận lại của s37 (chart \`shop-0.1.0\`, \`order.image.tag\` 2.0, Deployment khớp values, 15 object). Không Pod nào của gateway, gateway-v1, catalog, order (kể cả Pod đang khởi động lại) và không ReplicaSet nào còn replica có \`JAVA_OPTS\` khác \`javaOpts\` của revision tốt, mọi Pod Ready, bốn Deployment Available, \`curl\` từ Mac tới \`<IP cka-w1>:30180/api/products\` trả 200. demo: Deployment và Pod không còn image \`6.99.0\` (chỉ xoá Secret của revision kẹt: đỏ, đo), cộng dòng demo của s37 (\`podinfo-6.16.0\`, \`ui.message\`, Pod trên cka-cp). \`demo-canary\` không còn release, Secret hay Deployment; \`helm search repo podinfo/podinfo --version 6.16.0\` thấy chart. \`BAD_VALUE=javaOpts\`.`,
+      verifyOutput: "lab: kiểm s40\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~33 phút)\n  ✓ Release shop deployed sau revision failed của sự cố, values (-a) bằng revision tốt trước đó, javaOpts như cuối s37; chart shop-0.1.0, order 2.0, Deployment khớp values, 15 object của release\n  ✓ Không Pod/ReplicaSet nào của shop chạy JAVA_OPTS khác cuối s37, mọi Pod Ready; bốn Deployment Available; từ Mac curl <IP cka-w1>:30180/api/products trả 200\n  ✓ Release demo deployed sau revision pending-upgrade, values bằng revision tốt, image 6.16.0 như cuối s37; podinfo-6.16.0, ui.message, Pod trên cka-cp\n  ✓ Release demo-canary (pending-install) đã gỡ hẳn; helm search repo thấy podinfo/podinfo 6.16.0\n  ✓ answers.env: BAD_VALUE là khoá values gây lỗi của release shop\n  → 5/5 đạt",
       projectDelta: "Không có gì mới trong shop: đúng như cuối s37. Thứ mới là quy trình: đọc release từ list → status → history → values → log Pod mới trước khi sửa, và biết cách gỡ từng trạng thái kẹt mà không để cluster lệch release. Mốc st7-done chụp ở đây (trước khi nâng cấp cluster ở s42).",
     },
     review: [

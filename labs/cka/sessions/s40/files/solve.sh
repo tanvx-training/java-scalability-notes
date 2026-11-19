@@ -5,16 +5,26 @@
 set -e
 k() { kubectl --request-timeout=10s "$@"; }
 mkdir -p ~/drills/s40
-# rev <release> <ns> <status-hỏng>: "<revision hỏng mới nhất> <revision deployed/superseded mới nhất trước nó> <revision hiện tại> <status hiện tại>"
+# rev <release> <ns> <status-hỏng> <python-expr trên values v>: "<revision hỏng mới nhất> <revision tốt> <revision hiện tại>
+# <status hiện tại>". Revision tốt: deployed/superseded mới nhất mà values -a mang cấu hình cuối s37 (đọc từng revision,
+# theo nội dung, không theo vị trí).
 rev() {
   helm history "$1" -n "$2" --max 100 -o json | python3 -c '
-import json, sys
-h = sorted(json.load(sys.stdin), key=lambda x: x["revision"]); broken = sys.argv[1]
+import json, subprocess, sys
+rel, ns, broken, good = sys.argv[1:5]
+h = sorted(json.load(sys.stdin), key=lambda x: x["revision"])
 b = [x["revision"] for x in h if x["status"] == broken]
 b = b[-1] if b else 0
-g = [x["revision"] for x in h if x["status"] in ("deployed", "superseded") and x["revision"] < b]
-print(b, g[-1] if g else 0, h[-1]["revision"], h[-1]["status"])' "$3"
+g = 0
+for x in reversed(h):
+    if x["status"] not in ("deployed", "superseded"): continue
+    p = subprocess.run(["helm", "get", "values", rel, "-n", ns, "-a", "--revision", str(x["revision"]), "-o", "json"], capture_output=True)
+    v = (json.loads(p.stdout or b"{}") or {}) if p.returncode == 0 else {}
+    if eval(good): g = x["revision"]; break
+print(b, g, h[-1]["revision"], h[-1]["status"])' "$1" "$2" "$3" "$4"
 }
+SHOP_GOOD='str(v.get("javaOpts")) == "-XX:MaxRAMPercentage=50"'
+DEMO_GOOD='str((v.get("image") or {}).get("tag")) in ("6.16.0", "", "None")'
 
 echo "== 1. Nhìn toàn cảnh"
 helm list -A
@@ -24,7 +34,7 @@ echo "-- --pending"; helm list -A --pending
 echo "== 2. shop: status, history, values của revision lỗi so với revision tốt, log Pod mới"
 helm status shop -n shop | sed -n '1,7p'
 helm history shop -n shop --max 4
-set -- $(rev shop shop failed); B=$1 G=$2 C=$3 CS=$4
+set -- $(rev shop shop failed "$SHOP_GOOD"); B=$1 G=$2 C=$3 CS=$4
 echo "revision lỗi: $B, revision tốt: $G, hiện tại: $C ($CS)"
 echo "-- helm get values --revision $B"; helm get values shop -n shop --revision "$B"
 echo "-- helm get values --revision $G"; helm get values shop -n shop --revision "$G"
@@ -45,7 +55,7 @@ k -n shop get deploy gateway gateway-v1 catalog order
 
 echo "== 4. demo kẹt pending-upgrade: rollback (đo: Helm 4 cho rollback release pending-upgrade; upgrade thì bị từ chối)"
 helm history demo -n demo --max 3
-set -- $(rev demo demo pending-upgrade); B=$1 G=$2 C=$3 CS=$4
+set -- $(rev demo demo pending-upgrade "$DEMO_GOOD"); B=$1 G=$2 C=$3 CS=$4
 if [ "$CS" = deployed ] && [ "$C" -gt "$B" ]; then
   echo "demo đã deployed ở revision $C: bỏ qua"
 else

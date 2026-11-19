@@ -24,6 +24,13 @@ def hj(*a): return js(*run("helm", *a, "-o", "json")[:2])
 # check_release: release ra khỏi trạng thái hỏng `broken` (failed / pending-upgrade) của sự cố: hiện deployed, revision hiện
 # tại sau revision hỏng mới nhất, values -a bằng revision tốt = revision deployed/superseded mới nhất trước revision hỏng đó
 # (đo: upgrade lỗi hay kẹt giữ revision trước ở deployed; nó thành superseded khi có revision deployed mới).
+# Cấu hình của cuối s37 mà sự cố đụng tới, so theo nội dung (không chỉ theo vị trí trong history: một roll forward sai rồi
+# `begin` lại sẽ thành "revision trước bản hỏng"): javaOpts của shop là giá trị trong values.yaml của chart ở s37, image.tag
+# của demo không ghi đè (mặc định của podinfo 6.16.0).
+SHOP_JAVA_OPTS = "-XX:MaxRAMPercentage=50"
+DEMO_TAGS = ("6.16.0", "", "None")
+RECOVER = {"shop": "helm upgrade shop ~/charts/shop -n shop --reset-values --force-conflicts --wait",
+           "demo": "helm upgrade demo podinfo/podinfo --version 6.16.0 -n demo --reuse-values --wait"}
 def check_release(rel, ns, broken, label):
     bad = []
     hist = hj("history", rel, "-n", ns, "--max", "100")
@@ -37,7 +44,10 @@ def check_release(rel, ns, broken, label):
     good = [h for h in hist if h["status"] in ("deployed", "superseded") and h["revision"] < b]
     if cur["status"] != "deployed": bad.append(f"release {rel} đang {cur['status']} (revision {cur['revision']})")
     elif cur["revision"] < b: bad.append(f"release {rel}: revision {broken} {b} vẫn là mới nhất")
-    if not good: bad.append(f"{rel}: không thấy revision tốt trước {b}"); return bad, None
+    if not good:
+        bad.append(f"history của {rel} không còn revision trước sự cố (đã xoá Secret release hay uninstall rồi cài lại?): "
+                   f"{RECOVER[rel]} để có revision mới với cấu hình cuối s37")
+        return bad, None
     g = good[-1]["revision"]
     vg = hj("get", "values", rel, "-n", ns, "-a", "--revision", str(g))
     vc = hj("get", "values", rel, "-n", ns, "-a")
@@ -55,13 +65,15 @@ def env_of(tmpl, name):
 
 # 1. shop: deployed sau revision failed của sự cố, values bằng revision tốt.
 bad, vg = check_release("shop", "shop", "failed", "(trước sự cố)")
+vc = hj("get", "values", "shop", "-n", "shop", "-a") or {}
+if vc.get("javaOpts") != SHOP_JAVA_OPTS:
+    bad.append(f"javaOpts của shop là {vc.get('javaOpts')!r}, cần {SHOP_JAVA_OPTS} như cuối s37")
 print("SHOPREL=" + ("; ".join(bad)[:170] or "đạt"))
 
 # 2. Không Pod nào (đang chạy hay đang khởi động lại) và không ReplicaSet nào còn replicas > 0 của bốn workload dùng JAVA_OPTS
-# khác javaOpts tốt; mọi Pod của chúng Ready.
+# khác javaOpts của cuối s37; mọi Pod của chúng Ready.
 bad = []
-good_opts = (vg or {}).get("javaOpts")
-if good_opts is None: bad.append("không biết javaOpts của revision tốt")
+good_opts = SHOP_JAVA_OPTS
 pods = [p for p in (kj("-n", "shop", "get", "pod", "-l", "app in (gateway,gateway-v1,catalog,order)") or {}).get("items", [])
         if not p["metadata"].get("deletionTimestamp") and (p.get("status") or {}).get("phase") not in ("Succeeded", "Failed")]
 if not pods: bad.append("không có Pod nào của gateway/catalog/order")
@@ -77,14 +89,17 @@ print("SHOPPODS=" + ("; ".join(bad)[:170] or "đạt"))
 
 # 3. demo: deployed sau revision pending-upgrade của sự cố, values bằng revision tốt; Deployment và Pod không còn image 6.99.0.
 bad, dv = check_release("demo", "demo", "pending-upgrade", "(trước sự cố)")
+dc = hj("get", "values", "demo", "-n", "demo", "-a") or {}
+tag = str((dc.get("image") or {}).get("tag"))
+if tag not in DEMO_TAGS: bad.append(f"image.tag của demo là {tag}, cần mặc định của podinfo 6.16.0 như cuối s37")
 d = kj("-n", "demo", "get", "deploy", "demo-podinfo")
 if d is None: bad.append("chưa có Deployment demo-podinfo")
 else:
     img = d["spec"]["template"]["spec"]["containers"][0].get("image", "")
-    if img.endswith(":6.99.0"): bad.append(f"Deployment demo-podinfo vẫn mang {img}")
+    if not img.endswith(":6.16.0"): bad.append(f"Deployment demo-podinfo mang {img}, cần :6.16.0")
     pods = [p for p in (kj("-n", "demo", "get", "pod", "-l", "app.kubernetes.io/name=demo-podinfo") or {}).get("items", [])
             if not p["metadata"].get("deletionTimestamp")]
-    if any(p["spec"]["containers"][0].get("image", "").endswith(":6.99.0") for p in pods): bad.append("còn Pod demo chạy image 6.99.0")
+    if any(not p["spec"]["containers"][0].get("image", "").endswith(":6.16.0") for p in pods): bad.append("còn Pod demo chạy image khác 6.16.0")
     if not pods or not all(ready(p) for p in pods): bad.append("Pod demo chưa Ready")
 print("DEMOREL=" + ("; ".join(bad)[:170] or "đạt"))
 

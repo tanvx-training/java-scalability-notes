@@ -160,7 +160,8 @@ else:
     if any(a.startswith("cert-manager.io/") for a in (t["metadata"].get("annotations") or {})):
         bad.append("shop-tls bị cert-manager quản (Certificate ghi vào shop-tls?)")
 ing = kj("-n", "shop", "get", "ingress", "shop")
-if ing is not None and [x.get("secretName") for x in (ing["spec"].get("tls") or [])] != ["shop-tls"]:
+if ing is None: bad.append("mất Ingress shop (s29)")
+elif [x.get("secretName") for x in (ing["spec"].get("tls") or [])] != ["shop-tls"]:
     bad.append("Ingress shop không còn dùng shop-tls")
 print("CERT=" + ("; ".join(bad)[:170] or "đạt"))
 

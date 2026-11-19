@@ -1,5 +1,5 @@
 # s40 — kiểm (5 dòng): release shop deployed sau revision failed của sự cố, values (-a) bằng revision tốt trước đó (tìm theo
-# history, không ghi cứng số), cộng phần release/nhận lại của s37 (s37/files/facts.sh: chart shop-0.1.0, order 2.0, Deployment
+# history, không ghi cứng số) và javaOpts bằng giá trị của cuối s37 (so theo nội dung), cộng phần release/nhận lại của s37 (s37/files/facts.sh: chart shop-0.1.0, order 2.0, Deployment
 # khớp values, 15 object); không Pod/ReplicaSet nào của shop còn JAVA_OPTS xấu, bốn Deployment Available, curl TỪ MÁY MAC tới
 # cka-w1:30180 trả 200; release demo deployed sau revision pending-upgrade, values bằng revision tốt, không còn image 6.99.0
 # (cộng dòng demo của s37); demo-canary đã gỡ và repo podinfo đọc được; BAD_VALUE. Chỉ đọc. Nạp bởi `lab` trên Mac (bash 3.2).
@@ -40,11 +40,11 @@ pods_row() {
   [ "$c" = "đạt" ] || { [ "$r" = "đạt" ] && r="$c" || r="$r; $c"; }
   echo "$r"
 }
-expect_eq "Release shop deployed sau revision failed của sự cố, values (-a) bằng revision tốt trước đó; chart shop-0.1.0, order 2.0, Deployment khớp values, 15 object của release" \
+expect_eq "Release shop deployed sau revision failed của sự cố, values (-a) bằng revision tốt trước đó, javaOpts như cuối s37; chart shop-0.1.0, order 2.0, Deployment khớp values, 15 object của release" \
   "đạt" rows SHOPREL SHOP ADOPT
-expect_eq "Không Pod/ReplicaSet nào của shop còn JAVA_OPTS xấu, mọi Pod Ready; bốn Deployment Available; từ Mac curl <IP cka-w1>:30180/api/products trả 200" \
+expect_eq "Không Pod/ReplicaSet nào của shop chạy JAVA_OPTS khác cuối s37, mọi Pod Ready; bốn Deployment Available; từ Mac curl <IP cka-w1>:30180/api/products trả 200" \
   "đạt" pods_row
-expect_eq "Release demo deployed sau revision pending-upgrade, values bằng revision tốt, không còn image 6.99.0; podinfo-6.16.0, ui.message, Pod trên cka-cp" \
+expect_eq "Release demo deployed sau revision pending-upgrade, values bằng revision tốt, image 6.16.0 như cuối s37; podinfo-6.16.0, ui.message, Pod trên cka-cp" \
   "đạt" rows DEMOREL DEMO
 expect_eq "Release demo-canary (pending-install) đã gỡ hẳn; helm search repo thấy podinfo/podinfo 6.16.0" "đạt" echo "$(fact CANARY)"
 expect_eq "answers.env: BAD_VALUE là khoá values gây lỗi của release shop" "đạt" echo "$(fact ANS)"
