@@ -24,11 +24,11 @@ echo "s33: tình huống hỏng: CSR dev-draft sai signerName"
 vm "$cp" "set -e; cd ~/drills/s33
   sed -e 's/name: dev\$/name: dev-draft/' -e 's#signerName: kubernetes.io/kube-apiserver-client#signerName: example.com/shop-client#' \
     ~/users/dev-csr.yaml > dev-draft.yaml
-  kubectl delete csr dev-draft --ignore-not-found >/dev/null
-  kubectl apply -f dev-draft.yaml >/dev/null
-  kubectl certificate approve dev-draft >/dev/null
+  kubectl --request-timeout=10s delete csr dev-draft --ignore-not-found >/dev/null
+  kubectl --request-timeout=10s apply -f dev-draft.yaml >/dev/null
+  kubectl --request-timeout=10s certificate approve dev-draft >/dev/null
   sleep 5
-  kubectl get csr dev-draft
-  echo \"certificate: '\$(kubectl get csr dev-draft -o jsonpath='{.status.certificate}')'\"
-  kubectl delete csr dev-draft >/dev/null
+  kubectl --request-timeout=10s get csr dev-draft
+  echo \"certificate: '\$(kubectl --request-timeout=10s get csr dev-draft -o jsonpath='{.status.certificate}')'\"
+  kubectl --request-timeout=10s delete csr dev-draft >/dev/null
   cat ~/drills/s33/answers.env"

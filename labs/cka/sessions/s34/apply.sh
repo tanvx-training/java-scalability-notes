@@ -23,7 +23,7 @@ vm "$cp" "set -e; mkdir -p ~/drills/s34
     kubectl config use-context \$u@kubernetes --kubeconfig \$f >/dev/null
     chmod 600 \$f; mv \$f ~/\$u.kubeconfig
     kubectl --kubeconfig ~/\$u.kubeconfig config get-contexts
-    kubectl --kubeconfig ~/\$u.kubeconfig auth whoami
+    kubectl --kubeconfig ~/\$u.kubeconfig --request-timeout=10s auth whoami
     if kubectl --kubeconfig ~/\$u.kubeconfig --request-timeout=10s get pods 2>/tmp/lab-s34.err; then
       echo \"\$u: get pods chạy được, chưa đúng đầu ra s34\" >&2; exit 1
     fi

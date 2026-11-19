@@ -1,6 +1,6 @@
 # s34 — đọc ~/dev.kubeconfig, ~/ops.kubeconfig (PyYAML + openssl), gọi API bằng chính hai tệp đó (auth whoami, get pods),
 # đọc danh tính của ~/.kube/config và ~/drills/s34/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane bằng user ubuntu
-# (kubectl + openssl + python3). Chỉ đọc; mỗi lệnh kubectl có --request-timeout 10 giây.
+# (kubectl + openssl + python3; server so với /etc/kubernetes/admin.conf đọc bằng sudo). Chỉ đọc; mỗi lệnh kubectl có --request-timeout 10 giây.
 python3 - "$HOME" <<'PY'
 import base64, json, os, re, stat, subprocess, sys, tempfile
 import yaml
@@ -20,15 +20,13 @@ def pem_body(b):
     return re.sub(rb"\s", b"", m.group(1)) if m else None
 
 def admin_server():
-    # Server của cluster trong ~/.kube/config (của context hiện tại; context hỏng thì cluster đầu tiên): kubeadm chỉ ghi một.
-    try: cfg = yaml.safe_load(open(f"{home}/.kube/config"))
-    except Exception: return None
-    cl = cfg.get("clusters") or []
-    try:
-        ctx = next(c["context"] for c in cfg.get("contexts") or [] if c["name"] == cfg.get("current-context"))
-        return next(c["cluster"]["server"] for c in cl if c["name"] == ctx["cluster"]).rstrip("/")
-    except Exception:
-        return (cl[0].get("cluster") or {}).get("server", "").rstrip("/") or None if cl else None
+    # Server trong /etc/kubernetes/admin.conf (đọc bằng sudo): kubeadm ghi đúng một cluster, https://<advertise>:6443. Không đọc
+    # ~/.kube/config, để một tệp admin hỏng chỉ làm đỏ dòng AUTH chứ không làm đỏ cả hai dòng kubeconfig.
+    rc, out, _ = run("sudo", "-n", "cat", "/etc/kubernetes/admin.conf")
+    try: cl = (yaml.safe_load(out) or {}).get("clusters") or [] if rc == 0 else []
+    except Exception: cl = []
+    if not cl: return None
+    return ((cl[0].get("cluster") or {}).get("server") or "").rstrip("/") or None
 
 SERVER = admin_server()
 ca_body = pem_body(open(CA, "rb").read())
@@ -47,7 +45,8 @@ def check_file(u, g, ns):
     c, usr, ctx = cl[0].get("cluster") or {}, us[0].get("user") or {}, cx[0].get("context") or {}
     if cfg.get("current-context") != cx[0].get("name"): bad.append("current-context chưa trỏ context duy nhất")
     if ctx.get("cluster") != cl[0].get("name") or ctx.get("user") != us[0].get("name"): bad.append("context không trỏ cluster/user trong tệp")
-    if SERVER is None or (c.get("server") or "").rstrip("/") != SERVER: bad.append(f"server {c.get('server')}")
+    if SERVER is None: bad.append("không đọc được server trong /etc/kubernetes/admin.conf")
+    elif (c.get("server") or "").rstrip("/") != SERVER: bad.append(f"server {c.get('server')}")
     if c.get("insecure-skip-tls-verify"): bad.append("insecure-skip-tls-verify")
     if c.get("certificate-authority") or usr.get("client-certificate") or usr.get("client-key"): bad.append("còn đường dẫn tệp (chưa --embed-certs)")
     try: ca_ok = pem_body(base64.b64decode(c.get("certificate-authority-data") or "")) == ca_body

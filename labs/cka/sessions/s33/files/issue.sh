@@ -31,14 +31,14 @@ spec:
   usages:
   - client auth
 EOF
-kubectl delete csr "$u" --ignore-not-found >/dev/null
-kubectl apply -f "$u-csr.yaml"
-kubectl certificate approve "$u"
+kubectl --request-timeout=10s delete csr "$u" --ignore-not-found >/dev/null
+kubectl --request-timeout=10s apply -f "$u-csr.yaml"
+kubectl --request-timeout=10s certificate approve "$u"
 c=''; for i in $(seq 1 30); do
   c=$(kubectl --request-timeout=10s get csr "$u" -o jsonpath='{.status.certificate}' 2>/dev/null || true)
   [ -n "$c" ] && break; sleep 2
 done
 [ -n "$c" ] || { echo "CSR $u chưa có cert sau 60 giây" >&2; exit 1; }
 printf '%s' "$c" | base64 -d > "$u.crt"
-kubectl get csr "$u"
+kubectl --request-timeout=10s get csr "$u"
 openssl x509 -in "$u.crt" -noout -subject -issuer -startdate -enddate

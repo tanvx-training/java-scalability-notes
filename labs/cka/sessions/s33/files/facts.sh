@@ -29,7 +29,7 @@ def pubkey_of_cert(path):
     return out.strip() if rc == 0 else None
 
 def subject(path):
-    # RFC2253 in ngược thứ tự: "O=shop-dev,CN=dev". Trả về danh sách (khoá, giá trị).
+    # RFC2253 in ngược thứ tự DER: signer ghi O rồi CN, nên in "CN=dev,O=shop-dev"; nhiều O gộp thành "O=a+O=b". Trả về danh sách (khoá, giá trị).
     rc, out, _ = run("openssl", "x509", "-in", path, "-noout", "-subject", "-nameopt", "RFC2253")
     if rc != 0: return None
     s = out.strip()
