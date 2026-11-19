@@ -2,7 +2,7 @@
 # ~/drills/s41/loop.log. In dạng KHOÁ=giá-trị. Chạy trên cka-cp bằng user ubuntu (helm, kubectl, python3/PyYAML). Chỉ đọc;
 # mỗi lệnh có timeout.
 python3 - "$HOME" <<'PY'
-import json, subprocess, sys
+import calendar, hashlib, json, os, subprocess, sys, time
 import yaml
 home = sys.argv[1]
 SVCS = ("gateway", "catalog", "order")
@@ -157,13 +157,14 @@ def parse(path):
         if not f: continue
         if f[0] == "#":
             if len(f) >= 4 and f[3] == "nodes":
-                st = {"t": float(f[1]), "nodes": {}, "pods": {}}
+                st = {"t": float(f[1]), "nodes": {}, "pods": {}, "ev": {}}
                 mode = None
                 for x in f[4:]:
                     if x == "pods": mode = "pods"; continue
                     if "=" not in x: continue
                     a, b = x.split("=", 1)
-                    if mode == "pods": st["pods"][a] = int(b) if b.isdigit() else -1
+                    if a.startswith("ev:"): st["ev"][a[3:]] = int(b) if b.isdigit() else 0
+                    elif mode == "pods": st["pods"][a] = int(b) if b.isdigit() else -1
                     else:
                         v, _, s = b.partition("/"); st["nodes"][a] = (v, s)
                 states.append(st)
@@ -178,8 +179,10 @@ def windows(states, node):
     for st in states:
         s = (st["nodes"].get(node) or ("", ""))[1]
         p = st["pods"].get(node, -1)
-        if s == "cordon" and cur is None: cur = {"a": st["t"], "first": p, "min": p}
-        elif s == "cordon": cur["min"] = min(cur["min"], p) if p >= 0 else cur["min"]
+        e = st["ev"].get(node, 0)
+        if s == "cordon" and cur is None: cur = {"a": st["t"], "first": p, "min": p, "ev": e}
+        elif s == "cordon":
+            cur["min"] = min(cur["min"], p) if p >= 0 else cur["min"]; cur["ev"] = max(cur["ev"], e)
         elif s == "sched" and cur is not None:
             cur["b"] = st["t"]; res.append(cur); cur = None
     return res
@@ -207,4 +210,29 @@ else:
         msgs = [gap_ok(reqs, w["a"], w["b"]) for w in good]
         if not any(ok for ok, _ in msgs): bad.append(msgs[-1][1])
 say("LOG", bad)
+
+# 6. DRAIN (chỉ verify s41 dùng; check.sh của s42 chỉ dùng LOG, vì log cũ trước bản loop.sh này không có ev:): bằng chứng
+# đoạn drain là thật (review M5). (a) Trong đoạn đó loop.sh thấy ít nhất một Pod trên cka-w1 bị đuổi qua Eviction API
+# (ev:cka-w1, condition DisruptionTarget=EvictionByEvictionAPI): cordon rồi `kubectl delete pod` thì không có, đỏ. (b) Mọi Pod
+# gateway/catalog/order đang ở cka-w1 được tạo sau lúc cordon của đoạn đó: một log viết tay mang thời điểm sau khi Pod đã
+# chạy thì đỏ. (c) ~/drills/s41/loop.sh đúng bản cho sẵn (sha256 do verify.sh truyền vào), không bị sửa để luôn ghi 200.
+bad = []
+if reqs and states:
+    good = [w for w in windows(states, "cka-w1") if w["first"] > 0 and w["min"] == 0]
+    ev = [w for w in good if w["ev"] > 0]
+    if good and not ev: bad.append("đoạn cordon không có Pod nào bị evict (xoá Pod thay vì drain?)")
+    if ev:
+        a = ev[-1]["a"]
+        pods = [x for x in (kj("-n", "shop", "get", "pod", "-l", "app in (gateway,catalog,order)") or {}).get("items", [])
+                if x["spec"].get("nodeName") == "cka-w1" and not x["metadata"].get("deletionTimestamp")]
+        # loop.sh đọc node mỗi 2 giây: Pod thay tạo ngay lúc drain có thể sớm hơn dòng cordon vài giây (đo: 2 giây); chừa 10.
+        old = [x["metadata"]["name"] for x in pods if calendar.timegm(time.strptime(x["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ")) < a - 10]
+        if old: bad.append("Pod trên cka-w1 có trước lúc cordon trong log: " + ", ".join(old)[:60])
+elif reqs is None: bad.append("chưa có ~/drills/s41/loop.log")
+want = os.environ.get("S41_LOOP_SHA", "")
+if want:
+    try: got = hashlib.sha256(open(f"{home}/drills/s41/loop.sh", "rb").read()).hexdigest()
+    except Exception: got = ""
+    if got != want: bad.append("~/drills/s41/loop.sh khác bản cho sẵn (begin cka s41 đặt lại)")
+say("DRAIN", bad)
 PY

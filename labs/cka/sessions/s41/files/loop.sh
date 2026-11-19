@@ -10,7 +10,8 @@
 #   <epoch có mili giây> <giờ> <mã HTTP, 000 = không nối được/hết giờ> <giây> <mã thoát curl: 0, 7 bị từ chối, 28 hết giờ, 52/56 đứt>
 # Song song, cứ 2 giây đọc node (cordon, phiên bản kubelet) và số Pod gateway/catalog/order đang Running trên từng node; khi
 # có gì đổi thì ghi một dòng bắt đầu bằng '#':
-#   # <epoch> <giờ> nodes cka-cp=v1.36.6/sched cka-w1=v1.36.6/cordon … pods cka-w1=0 cka-w2=6
+#   # <epoch> <giờ> nodes cka-cp=v1.36.6/sched cka-w1=v1.36.6/cordon … pods cka-w1=0 cka-w2=6 [ev:cka-w1=2]
+# (ev:<node>=N: số Pod trên node đang bị đuổi qua Eviction API, condition DisruptionTarget=EvictionByEvictionAPI)
 # apiserver không trả lời (lúc nâng control plane) thì bỏ qua lượt đó, không ghi gì. Mỗi lần `start`/`run` ghi đè log cũ.
 set -u
 cmd="${1:-}"; log="${2:-}"
@@ -24,15 +25,19 @@ watch_nodes() {
   local last="" n p s
   while :; do
     n=$(k get nodes -o jsonpath='{range .items[*]}{.metadata.name}={.status.nodeInfo.kubeletVersion}/{.spec.unschedulable}{" "}{end}' 2>/dev/null) || n=""
-    p=$(k -n shop get pod -l 'app in (gateway,catalog,order)' --field-selector=status.phase=Running \
-          -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' 2>/dev/null) || p="ERR"
+    # Một lệnh cho cả hai: node của mỗi Pod gateway/catalog/order, phase, và lý do của condition DisruptionTarget
+    # (EvictionByEvictionAPI khi Pod bị đuổi qua Eviction API, như drain làm; `kubectl delete pod` không đặt nó).
+    p=$(k -n shop get pod -l 'app in (gateway,catalog,order)' \
+          -o jsonpath='{range .items[*]}{.spec.nodeName} {.status.phase} {.status.conditions[?(@.type=="DisruptionTarget")].reason}{"\n"}{end}' 2>/dev/null) || p="ERR"
     if [ -n "$n" ] && [ "$p" != "ERR" ]; then
       n=$(printf '%s' "$n" | sed -e 's#/true#/cordon#g' -e 's#/false#/sched#g' -e 's#/ #/sched #g' -e 's#/$#/sched#' -e 's/ *$//')
-      local pc=""
+      local pc="" ev="" c
       for x in $(printf '%s' "$n" | tr ' ' '\n' | sed 's/=.*//'); do
-        pc="$pc $x=$(printf '%s\n' "$p" | grep -cx "$x")"
+        pc="$pc $x=$(printf '%s\n' "$p" | awk -v n="$x" '$1==n && $2=="Running"' | grep -c .)"
+        c=$(printf '%s\n' "$p" | awk -v n="$x" '$1==n && $3=="EvictionByEvictionAPI"' | grep -c .)
+        [ "$c" -gt 0 ] && ev="$ev ev:$x=$c"
       done
-      s="nodes $n pods${pc}"
+      s="nodes $n pods${pc}${ev}"
       if [ "$s" != "$last" ]; then echo "# $(date +%s) $(hms) $s"; last="$s"; fi
     fi
     sleep 2

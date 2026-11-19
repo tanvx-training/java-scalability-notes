@@ -28,16 +28,16 @@ def available(d):
 def say(key, bad): print(f"{key}=" + ("; ".join(bad)[:170] or "đạt"))
 def tag(img): return img.rsplit(":", 1)[-1] if ":" in img else ""
 
-# 1. CLUSTER: ba node kubelet v1.37.x cùng một bản, Ready, không cordon; kube-apiserver/controller-manager/scheduler mang image
-# v1.37.x cùng bản đó; etcd, CoreDNS, kube-proxy đúng image kubeadm của bản đó liệt kê; ClusterConfiguration kubernetesVersion.
+# 1. NODES: ba node kubelet v1.37.x cùng một bản, Ready, không cordon; ClusterConfiguration kubernetesVersion 1.37. Thông báo
+# lỗi ngắn: lab chỉ in 80 ký tự đầu của mỗi dòng đỏ, nên mỗi dòng gom ít tiêu chí và mỗi lý do vài chữ.
 bad = []
 nodes = (kj("get", "node") or {}).get("items")
 ver = None
 if nodes is None: bad.append("không đọc được node")
 else:
     vs = {n["metadata"]["name"]: n["status"]["nodeInfo"]["kubeletVersion"] for n in nodes}
-    old = [f"{a} {b}" for a, b in sorted(vs.items()) if not b.startswith(MINOR)]
-    if old: bad.append("node chưa lên 1.37: " + ", ".join(old))
+    old = [f"{a.replace('cka-', '')} {b}" for a, b in sorted(vs.items()) if not b.startswith(MINOR)]
+    if old: bad.append("node cũ: " + ", ".join(old))
     elif len(set(vs.values())) != 1: bad.append("ba node khác bản: " + ", ".join(f"{a} {b}" for a, b in sorted(vs.items())))
     else: ver = next(iter(vs.values()))
     for n in nodes:
@@ -45,7 +45,16 @@ else:
         if not ready(n): bad.append(f"{nm} chưa Ready")
         if n["spec"].get("unschedulable"): bad.append(f"{nm} đang cordon")
     if sorted(vs) != sorted(NODES): bad.append("node: " + ", ".join(sorted(vs)))
+cm = kj("-n", "kube-system", "get", "cm", "kubeadm-config")
+try: kv = yaml.safe_load(cm["data"]["ClusterConfiguration"]).get("kubernetesVersion")
+except Exception: kv = None
+if not str(kv).startswith(MINOR): bad.append(f"kubeadm-config {kv}")
+say("NODES", bad)
+
+# 2. IMAGES: static pod control plane v1.37.x cùng bản node; etcd, CoreDNS, kube-proxy đúng image kubeadm của bản đó liệt kê.
+bad = []
 want = {}
+if not ver: bad.append("node chưa cùng bản 1.37")
 if ver:
     rc, out, _ = run("kubeadm", "config", "images", "list", "--kubernetes-version", ver)
     for l in out.split():
@@ -56,53 +65,52 @@ for comp in ("kube-apiserver", "kube-controller-manager", "kube-scheduler", "etc
     p = next((x for x in pods if x["metadata"]["name"] == f"{comp}-cka-cp"), None)
     if p is None: bad.append(f"chưa có Pod {comp}-cka-cp"); continue
     img = p["spec"]["containers"][0]["image"]
-    if comp != "etcd" and not tag(img).startswith(MINOR): bad.append(f"{comp}: {img}")
-    elif want.get(comp) and img != want[comp]: bad.append(f"{comp}: {img}, kubeadm {ver} cần {want[comp]}")
-    if not ready(p): bad.append(f"{comp}-cka-cp chưa Ready")
+    short = comp.replace("kube-", "")
+    if comp != "etcd" and not tag(img).startswith(MINOR): bad.append(f"{short} {tag(img)}")
+    elif want.get(comp) and img != want[comp]: bad.append(f"{short} {tag(img)}≠{tag(want[comp])}")
+    if not ready(p): bad.append(f"{short} chưa Ready")
 for kind, name, cname in (("ds", "kube-proxy", "kube-proxy"), ("deploy", "coredns", "coredns")):
     o = kj("-n", "kube-system", "get", kind, name)
     img = o["spec"]["template"]["spec"]["containers"][0]["image"] if o else "?"
-    if want.get(cname) and img != want[cname]: bad.append(f"{name}: {img}, cần {want[cname]}")
+    if want.get(cname) and img != want[cname]: bad.append(f"{name} {tag(img)}")
     if o and kind == "deploy" and not available(o): bad.append("coredns chưa Available")
     if o and kind == "ds" and (o.get("status") or {}).get("numberReady") != (o.get("status") or {}).get("desiredNumberScheduled"): bad.append("kube-proxy chưa Ready đủ")
-# CoreDNS có PDB (kubeadm không tạo): không có thì drain node đang chạy cả hai Pod CoreDNS đuổi cả hai cùng lúc (đo: 25 giây
-# shop trả 503 "không kết nối được catalog" khi drain cka-cp).
-pdbs = (kj("-n", "kube-system", "get", "pdb") or {}).get("items") or []
-def dns_pdb(p):
-    sp = p.get("spec") or {}
-    ml = (sp.get("selector") or {}).get("matchLabels") or {}
-    ok = sp.get("minAvailable") not in (None, 0, "0", "0%") or sp.get("maxUnavailable") not in (None,)
-    return ml.get("k8s-app") == "kube-dns" and ok
-if not any(dns_pdb(p) for p in pdbs): bad.append("CoreDNS chưa có PDB (k8s-app=kube-dns)")
-cm = kj("-n", "kube-system", "get", "cm", "kubeadm-config")
-try: kv = yaml.safe_load(cm["data"]["ClusterConfiguration"]).get("kubernetesVersion")
-except Exception: kv = None
-if not str(kv).startswith(MINOR): bad.append(f"kubeadm-config: kubernetesVersion {kv}")
-say("CLUSTER", bad)
+say("IMAGES", bad)
 print("VER=" + (ver or ""))
 
+# CoreDNS có PDB thật sự giữ được Pod (kubeadm không tạo PDB nào): minAvailable ≥ 1 hay maxUnavailable 1, và lúc này còn ít
+# nhất một Pod không được đuổi (ALLOWED DISRUPTIONS < số Pod khoẻ). maxUnavailable 100% hay 2 với 2 replica: đỏ.
+pdbs = (kj("-n", "kube-system", "get", "pdb") or {}).get("items") or []
+def dns_pdb(p):
+    sp, st = p.get("spec") or {}, p.get("status") or {}
+    if ((sp.get("selector") or {}).get("matchLabels") or {}).get("k8s-app") != "kube-dns": return False
+    mn, mx = sp.get("minAvailable"), sp.get("maxUnavailable")
+    ok = (isinstance(mn, int) and mn >= 1) or mx in (1, "1")
+    return ok and (st.get("disruptionsAllowed") or 0) < (st.get("currentHealthy") or 0)
+dns_ok = any(dns_pdb(p) for p in pdbs)
 # 2. APPS: release shop deployed; gateway, catalog, order (≥ 2 replica) và postgres Available; cert-manager ba Deployment
 # Available, Certificate shop-local Ready, webhook trả lời (tạo thử một Certificate bằng --dry-run=server).
 bad = []
+if not dns_ok: bad.append("CoreDNS không có PDB giữ Pod")
 r = next((x for x in hj("list", "-n", "shop") or [] if x.get("name") == "shop"), None)
 if r is None or r.get("status") != "deployed": bad.append(f"release shop {'chưa có' if r is None else r.get('status')}")
 for n in ("gateway", "catalog", "order"):
     d = kj("-n", "shop", "get", "deploy", n)
-    if d is None or not available(d) or d["spec"].get("replicas", 1) < 2: bad.append(f"{n} chưa Available đủ ≥ 2 replica")
+    if d is None or not available(d) or d["spec"].get("replicas", 1) < 2: bad.append(f"{n} <2 Pod sẵn sàng")
 s = kj("-n", "shop", "get", "sts", "postgres")
 if s is None or (s.get("status") or {}).get("readyReplicas") != 1: bad.append("postgres-0 chưa Ready")
 for n in ("cert-manager", "cert-manager-webhook", "cert-manager-cainjector"):
     d = kj("-n", "cert-manager", "get", "deploy", n)
-    if d is None or not available(d): bad.append(f"{n} chưa Available")
+    if d is None or not available(d): bad.append(f"{n.replace('cert-manager-', 'cm-')} chưa sẵn sàng")
 c = kj("-n", "shop", "get", "certificate", "shop-local")
-if c is None or not ready(c): bad.append("Certificate shop-local chưa Ready")
+if c is None or not ready(c): bad.append("shop-local chưa Ready")
 probe = """apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata: {name: s42-probe, namespace: shop}
 spec: {secretName: s42-probe-tls, dnsNames: [probe.shop.local], issuerRef: {name: selfsigned, kind: Issuer}}
 """
 rc, out, err = run("kubectl", "--request-timeout=15s", "create", "--dry-run=server", "-f", "-", inp=probe.encode())
-if rc != 0: bad.append("webhook cert-manager không nhận: " + (err.strip().splitlines() or [""])[-1][:70])
+if rc != 0: bad.append("webhook cert-manager từ chối")
 say("APPS", bad)
 ips = {n["metadata"]["name"]: next((a["address"] for a in n["status"]["addresses"] if a["type"] == "InternalIP"), "") for n in nodes or []}
 dp = [p for p in (kj("-n", "shop", "get", "pod", "-l", "gateway.networking.k8s.io/gateway-name=shop-gw") or {}).get("items", [])
@@ -141,14 +149,18 @@ def windows(states, node):
         elif s2 == "sched" and cur is not None:
             cur[1] = st["t"]; res.append(tuple(cur)); cur = None
     return res
-def drain_upgrade(states, node):
-    """Lỗi (chuỗi) nếu log không có đoạn: cordon → Pod trên node về 0 (drain xong) → kubelet lên 1.37 → uncordon."""
+def drain_upgrade(states, node, need_empty=True):
+    """Lỗi (chuỗi) nếu log không có đoạn: cordon → Pod trên node về 0 (drain xong) → kubelet lên 1.37 → uncordon.
+    need_empty=False cho cka-cp: loop.sh chỉ đếm Pod gateway/catalog/order, trên control plane luôn là 0, nên log không phân
+    biệt được drain với cordon trần của cka-cp. Giới hạn đã biết: với cka-cp chỉ chấm "cordon → lên 1.37 trong đoạn đó →
+    uncordon"; drain thật của cka-cp được kiểm gián tiếp (Ingress/Gateway/cert-manager trên cka-cp phải chạy lại sau đó)."""
     ws = windows(states, node)
-    if not ws: return f"log không có đoạn {node} bị cordon rồi uncordon"
-    if not any(w[2] == 0 for w in ws): return f"trong đoạn cordon, Pod gateway/catalog/order trên {node} chưa về 0 (chưa drain xong)"
+    s = node.replace("cka-", "")
+    if not ws: return f"không có đoạn cordon→uncordon {s}"
+    if need_empty and not any(w[2] == 0 for w in ws): return f"{s}: Pod shop chưa về 0 khi cordon"
     u = upgraded(states, node)
-    if u is None: return f"log không thấy {node} đổi v1.36 → v1.37"
-    if not any(w[2] == 0 and w[0] <= u <= w[1] for w in ws): return f"{node} lên 1.37 ngoài đoạn drain (kubelet nâng khi chưa drain, hay đã uncordon trước)"
+    if u is None: return f"không thấy {s} v1.36→1.37"
+    if not any((w[2] == 0 or not need_empty) and w[0] <= u <= w[1] for w in ws): return f"{s} lên 1.37 ngoài đoạn drain"
     return None
 def upgraded(states, node):
     """Lúc node đổi từ v1.36.x sang v1.37.x trong log (None nếu không thấy)."""
@@ -173,16 +185,18 @@ if reqs is None: bad.append("chưa có ~/drills/s42/loop-cp-w1.log")
 elif not reqs: bad.append("loop-cp-w1.log chưa có request")
 else:
     errs = [c for _, c in reqs if c != "200"]
-    if errs: bad.append(f"{len(errs)}/{len(reqs)} request lỗi (mã {', '.join(sorted(set(errs)))})")
+    if errs: bad.append(f"{len(errs)}/{len(reqs)} lỗi ({', '.join(sorted(set(errs)))})")
     for n in ("cka-cp", "cka-w1"):
-        e = drain_upgrade(states, n)
+        e = drain_upgrade(states, n, need_empty=(n != "cka-cp"))
         if e: bad.append(e)
+    # Thứ tự nâng (version skew): cka-cp trước cka-w1, và cka-w2 phải còn 1.36 suốt log này.
     ucp, uw1 = upgraded(states, "cka-cp"), upgraded(states, "cka-w1")
-    if ucp and uw1 and uw1 < ucp: bad.append("cka-w1 lên 1.37 trước control plane")
+    if ucp and uw1 and uw1 < ucp: bad.append("w1 lên 1.37 trước cp")
+    if states and not (states[0]["nodes"].get("cka-w2") or ("",))[0].startswith("v1.36."): bad.append("w2 đã 1.37 trước cp")
     if states and reqs:
         g = max_gap(reqs, states[0]["t"], states[-1]["t"])
-        if g > 8: bad.append(f"vòng request hở {g:.0f} giây")
-    if upgraded(states, "cka-w2"): bad.append("cka-w2 cũng lên 1.37 trong log này (nâng cka-w2 khi chạy loop-w2.log)")
+        if g > 8: bad.append(f"hở {g:.0f} giây")
+    if upgraded(states, "cka-w2"): bad.append("w2 lên 1.37 trong log này")
 say("LOG1", bad)
 
 # 4. LOG2: loop-w2.log — cka-w2 drain, lên 1.37, uncordon trong lúc vòng chạy; khoảng lỗi (request lỗi đầu tới request lỗi
@@ -200,15 +214,20 @@ elif not reqs: bad.append("loop-w2.log chưa có request")
 else:
     e = drain_upgrade(states, "cka-w2")
     if e: bad.append(e)
+    # Thứ tự nâng: lúc loop-w2.log bắt đầu, cka-cp và cka-w1 đã 1.37, và log này bắt đầu sau khi loop-cp-w1.log kết thúc.
+    first = states[0]["nodes"] if states else {}
+    if not all((first.get(n) or ("",))[0].startswith(MINOR) for n in ("cka-cp", "cka-w1")): bad.append("cp/w1 chưa 1.37 khi bắt đầu")
+    r1, s1 = load("loop-cp-w1.log")
+    if s1 and states and states[0]["t"] < s1[-1]["t"]: bad.append("bắt đầu trước khi loop-cp-w1 xong")
     errs = [t for t, c in reqs if c != "200"]
     outage = round(errs[-1] - errs[0]) if errs else 0
-    if reqs[-1][1] != "200": bad.append("request cuối của log chưa 200 (dừng vòng trước khi shop hồi?)")
+    if reqs[-1][1] != "200": bad.append("request cuối chưa 200")
     if ans is None: bad.append("chưa có ~/drills/s42/answers.env")
     else:
         v = ans.get("W2_OUTAGE_SECONDS")
         if v is None: bad.append("answers.env chưa có W2_OUTAGE_SECONDS")
         elif not re.fullmatch(r"\d+", v): bad.append(f"W2_OUTAGE_SECONDS={v} không phải số giây")
-        elif abs(int(v) - outage) > 10: bad.append(f"W2_OUTAGE_SECONDS={v} lệch khoảng lỗi trong log quá 10 giây")
+        elif abs(int(v) - outage) > 10: bad.append(f"W2_OUTAGE_SECONDS={v}, log đo {outage}")
 say("LOG2", bad)
 
 # 5. SKEW: SKEW_RULE = số minor tối đa kubelet được cũ hơn kube-apiserver (version skew policy).

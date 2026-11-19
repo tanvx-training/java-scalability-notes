@@ -59,6 +59,11 @@ if done_node cka-cp && done_node cka-w1 && done_node cka-w2; then
   echo "s42: ba node đã ở v$V, gói $PKG và hold: bỏ qua phần nâng cấp, giữ log của lần nâng."
 else
   if ! done_node cka-cp || ! done_node cka-w1; then
+    # Một log phải chứa cả lúc cka-cp lẫn cka-w1 lên 1.37 (review M4). cka-cp đã nâng mà cka-w1 chưa (lần trước bị ngắt) thì
+    # `loop.sh start` ghi đè log và mất đoạn cka-cp: verify dòng loop-cp-w1 sẽ đỏ. Vẫn nâng tiếp cho cluster đúng, nhưng báo cách gỡ.
+    if done_node cka-cp; then
+      echo "s42: cka-cp đã 1.37 từ lần chạy trước; loop-cp-w1.log mới sẽ không có đoạn cka-cp. Muốn verify xanh: ./labs/lab restore cka s41 rồi làm lại s42." >&2
+    fi
     vm "$cp" "$loop stop ~/drills/s42/loop-cp-w1.log >/dev/null; $loop start ~/drills/s42/loop-cp-w1.log; sleep 5"
     if ! done_node cka-cp; then
       echo "== cka-cp"

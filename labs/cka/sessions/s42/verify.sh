@@ -1,4 +1,4 @@
-# s42 — kiểm (5 dòng): ba node kubelet v1.37.x cùng bản, Ready, schedulable; kube-apiserver/controller-manager/scheduler image
+# s42 — kiểm (7 dòng; ba dòng đầu tách từ một dòng cũ để lý do đỏ không bị cắt mất, review M1): ba node kubelet v1.37.x cùng bản, Ready, schedulable; kube-apiserver/controller-manager/scheduler image
 # v1.37.x, etcd/CoreDNS/kube-proxy đúng image `kubeadm config images list` của bản đó, kubeadm-config 1.37; shop (release, ba
 # service ≥ 2 replica, postgres) và cert-manager (Certificate shop-local, webhook nhận dry-run) chạy; curl TỪ MÁY MAC tới
 # 30180, Ingress :30080, Gateway :30280 trả 200 (một dòng). Trên từng node (files/node-facts.sh): kubeadm, kubelet, kubectl
@@ -21,12 +21,12 @@ pkg_row() {
     out="$(vm "$v" "$(cat "$SESSION_DIR/files/node-facts.sh")" 2>/dev/null)"
     nf() { printf '%s\n' "$out" | sed -n "s/^$1=//p" | head -n1; }
     for p in kubeadm kubelet kubectl; do
-      case " $(nf PKGS)" in *" $p=1.37."*) ;; *) r="$r; $v: $p $(printf '%s' "$(nf PKGS)" | tr ' ' '\n' | sed -n "s/^$p=//p")" ;; esac
+      case " $(nf PKGS)" in *" $p=1.37."*) ;; *) r="$r; ${v#cka-}: $p $(printf '%s' "$(nf PKGS)" | tr ' ' '\n' | sed -n "s/^$p=//p")" ;; esac
     done
-    [ "$(nf HOLD)" = "kubeadm kubectl kubelet " ] || r="$r; $v: hold [$(nf HOLD)]"
-    [ "$(nf REPO)" = "core:/stable:/v1.37 " ] || r="$r; $v: repo [$(nf REPO)]"
-    case "$(nf KUBELET)" in "Kubernetes v1.37."*) ;; *) r="$r; $v: kubelet $(nf KUBELET)" ;; esac
-    [ "$(nf ACTIVE)" = active ] || r="$r; $v: kubelet $(nf ACTIVE)"
+    [ "$(nf HOLD)" = "kubeadm kubectl kubelet " ] || r="$r; ${v#cka-}: hold [$(nf HOLD)]"
+    [ "$(nf REPO)" = "core:/stable:/v1.37 " ] || r="$r; ${v#cka-}: repo [$(nf REPO)]"
+    case "$(nf KUBELET)" in "Kubernetes v1.37."*) ;; *) r="$r; ${v#cka-}: kubelet $(nf KUBELET)" ;; esac
+    [ "$(nf ACTIVE)" = active ] || r="$r; ${v#cka-}: kubelet $(nf ACTIVE)"
   done
   [ -n "$r" ] && echo "${r#; }" || echo "đạt"
 }
@@ -48,20 +48,24 @@ mac_get() { # <IP> <cổng> <host hay ->
   done
   echo ":$port/api/products trả mã ${code:-000}"
 }
-cluster_row() {
-  local r="" x c
-  for x in CLUSTER APPS; do [ "$(fact $x)" = "đạt" ] || r="$r; $(fact $x)"; done
+# Dòng ứng dụng: CoreDNS có PDB, shop/cert-manager chạy, ba đường vào từ Mac. Đỏ trên đầu vào (cuối s41 chưa có PDB CoreDNS).
+apps_row() {
+  local r="" c
+  [ "$(fact APPS)" = "đạt" ] || r="$(fact APPS)"
   for c in "$(mac_get "$(fact W1_IP)" 30180 -)" "$(mac_get "$(fact W1_IP)" 30080 shop.local)" "$(mac_get "$(fact DP_IP)" 30280 shop.local)"; do
     [ "$c" = "đạt" ] || r="$r; $c"
   done
   [ -n "$r" ] && echo "${r#; }" || echo "đạt"
 }
-expect_eq "Ba node v1.37.x cùng bản, Ready, schedulable; control plane, etcd, CoreDNS (có PDB), kube-proxy theo kubeadm 1.37; shop, cert-manager (Certificate, webhook) chạy; từ Mac :30180, Ingress :30080, Gateway :30280 trả 200" \
-  "đạt" cluster_row
+# Lab chỉ in 80 ký tự đầu của lý do: mỗi dòng gom ít tiêu chí, lý do viết ngắn để thấy được nhiều lỗi cùng lúc.
+expect_eq "Ba node kubelet v1.37.x cùng bản, Ready, schedulable; kubeadm-config 1.37" "đạt" echo "$(fact NODES)"
+expect_eq "Static pod control plane v1.37.x; etcd, CoreDNS, kube-proxy đúng image của kubeadm 1.37" "đạt" echo "$(fact IMAGES)"
+expect_eq "CoreDNS có PDB; shop, postgres, cert-manager (Certificate, webhook) chạy; từ Mac :30180, Ingress :30080, Gateway :30280 trả 200" \
+  "đạt" apps_row
 expect_eq "Ba node: kubeadm, kubelet, kubectl 1.37.x và hold; repo pkgs.k8s.io trỏ v1.37; kubelet active bản 1.37" "đạt" pkg_row
-expect_eq "~/drills/s42/loop-cp-w1.log: cka-cp rồi cka-w1 được drain, lên 1.37 trong lúc drain, uncordon; request đều, 0 lỗi" \
+expect_eq "~/drills/s42/loop-cp-w1.log: cka-cp (cordon) rồi cka-w1 (drain) lên 1.37 trong đoạn đó, uncordon; cka-w2 còn 1.36; request đều, 0 lỗi" \
   "đạt" echo "$(fact LOG1)"
-expect_eq "~/drills/s42/loop-w2.log: cka-w2 được drain, lên 1.37, uncordon; W2_OUTAGE_SECONDS khớp khoảng lỗi trong log (±10 giây)" \
+expect_eq "~/drills/s42/loop-w2.log (sau loop-cp-w1, cp/w1 đã 1.37): cka-w2 được drain, lên 1.37, uncordon; W2_OUTAGE_SECONDS khớp khoảng lỗi (±10 giây)" \
   "đạt" echo "$(fact LOG2)"
 expect_eq "answers.env: SKEW_RULE là số minor kubelet được cũ hơn kube-apiserver" "đạt" echo "$(fact SKEW)"
 assert_summary
