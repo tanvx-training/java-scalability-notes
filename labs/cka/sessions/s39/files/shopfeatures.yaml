@@ -1,0 +1,20 @@
+# Hai ShopFeature của shop (lời giải s39).
+apiVersion: shop.example.com/v1
+kind: ShopFeature
+metadata:
+  name: new-checkout
+  namespace: shop
+spec:
+  enabled: true
+  rolloutPercent: 20
+  owner: order
+---
+apiVersion: shop.example.com/v1
+kind: ShopFeature
+metadata:
+  name: dark-mode
+  namespace: shop
+spec:
+  enabled: false
+  rolloutPercent: 0
+  owner: gateway

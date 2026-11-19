@@ -114,7 +114,7 @@ const EXPECTED = {
     // Module Thực hành — chương trình CKA: 53 buổi (11 chặng). Số buổi đã phát
     // hành TĂNG DẦN theo từng đợt nội dung; sửa ở đây TRƯỚC khi phát hành buổi.
     "practice-sessions:cka": 53,
-    "practice-published:cka": 38,
+    "practice-published:cka": 40,
     // Chương trình ssia: 17 chặng (chương 2–18 của sách), 53 buổi. Số buổi đã phát hành TĂNG DẦN
     // theo từng đợt nội dung (đợt 1 = st02–st04, s01–s08); sửa ở đây TRƯỚC khi phát hành buổi.
     "practice-sessions:ssia": 53,

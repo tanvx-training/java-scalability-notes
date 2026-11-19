@@ -1,5 +1,5 @@
 // Chặng 7 — Đóng gói và mở rộng: Helm, Kustomize, CRD.
-// s37–s38 đã phát hành (đợt 4); s39–s40 là buổi khung: đủ trường cấu trúc (check-data PR7), nội dung đầy đủ ở task sau.
+// s37–s40 đã phát hành (đợt 4).
 
 export const sessions = [
 // ───────────────────────────── s37 ─────────────────────────────
@@ -289,6 +289,8 @@ helm upgrade shop ~/charts/shop -n shop --wait
 k get deploy order --show-managed-fields -o jsonpath='{.metadata.managedFields[*].manager}'
 # helm kubectl-label kubectl-annotate kube-controller-manager
 helm upgrade shop ~/charts/shop -n shop --wait                        # REVISION: 9, deployed, requests.cpu 110m
+vim ~/charts/shop/values.yaml          # order.resources.requests.cpu: 100m (trả về như cũ)
+helm upgrade shop ~/charts/shop -n shop --wait                        # REVISION: 10, deployed: upgrade thường qua
 helm history shop -n shop
 # REVISION	UPDATED                 	STATUS    	CHART     	APP VERSION	DESCRIPTION
 # 1       	Thu Nov 19 14:28:36 2026	superseded	shop-0.1.0	1.0        	Install complete
@@ -300,7 +302,7 @@ helm history shop -n shop
 # 7       	Thu Nov 19 14:29:16 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
 # 8       	Thu Nov 19 14:29:18 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: conflict occurred while applying object shop/order …
 # 9       	Thu Nov 19 14:29:21 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
-# 10      	Thu Nov 19 14:29:58 2026	deployed  	shop-0.1.0	1.0        	Upgrade complete      (requests.cpu về 100m)
+# 10      	Thu Nov 19 14:29:58 2026	deployed  	shop-0.1.0	1.0        	Upgrade complete
 k get secret -l owner=helm
 # NAME                          TYPE                 DATA   AGE
 # sh.helm.release.v1.shop.v1    helm.sh/release.v1   1      2m22s
@@ -672,17 +674,17 @@ Verify **tự build** hai overlay bằng \`kubectl kustomize\` trên cka-cp (kh�
   {
     id: "s39",
     stage: "st7",
-    title: "CRD và operator",
-    durationMin: 75,
+    title: "CRD và operator: ShopFeature tự viết, cert-manager cài bằng Helm",
+    durationMin: 90,
     domain: "architecture",
     competencies: ["ar-crd"],
     requires: ["s38"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Viết một CRD nhỏ, tạo custom resource của nó và tra trường bằng kubectl explain.",
-      "Cài một operator thật và tạo custom resource để nó dựng tài nguyên thay mình.",
-      "Liệt kê CRD và custom resource có trong cluster, biết cái nào namespaced.",
+      "Viết một CRD nhỏ có schema (ShopFeature), tạo custom resource của nó, tra trường bằng kubectl explain và thấy schema chặn resource sai.",
+      "Cài operator cert-manager bằng Helm (chart ghim, CRD kèm theo, chạy trên control plane) rồi tạo Issuer và Certificate để nó dựng Secret TLS thay mình.",
+      "Liệt kê CRD và custom resource có trong cluster, biết cái nào namespaced, và giải thích vòng reconcile của một operator.",
     ],
     skills: [
       { skill: "k-crd-yaml", level: "Viết được có tra" },
@@ -692,9 +694,453 @@ Verify **tự build** hai overlay bằng \`kubectl kustomize\` trên cka-cp (kh�
       { skill: "k-install-operator", level: "Làm được có tra" },
     ],
     uses: ["k-api-resources", "k-helm-install", "k-explain", "k-deploy-rs-pod"],
-    stateIn: "Đầu ra s38.",
-    stateOut: "CRD shopfeatures.shop.example.com có hai resource; operator đã cài và quản lý một custom resource đang Ready.",
+    foundation: null,
+    mindset: `**CRD thêm một loại object vào API, không thêm hành vi.** Sau \`k apply -f ~/shop/shopfeature-crd.yaml\`, apiserver phục vụ đường \`/apis/shop.example.com/v1/namespaces/shop/shopfeatures\`, lưu ShopFeature vào etcd như mọi object khác, và mọi công cụ quen thuộc dùng được ngay: \`k get sf\`, \`k describe\`, \`k explain\`, RBAC theo \`resources: [shopfeatures]\`, \`-o yaml\`. Nhưng không ai đọc chúng: một ShopFeature \`enabled: true\` chẳng bật gì cho tới khi có code đọc nó. CRD gồm năm phần cần nhớ:
+
+| Trường | Ý nghĩa | Ở lab |
+|---|---|---|
+| \`metadata.name\` | bắt buộc đúng \`<plural>.<group>\` | \`shopfeatures.shop.example.com\` |
+| \`spec.group\` | API group (phần trước \`/v1\` trong \`apiVersion\`) | \`shop.example.com\` |
+| \`spec.names\` | \`plural\` (đường URL, tên dùng trong RBAC), \`singular\`, \`kind\` (trong YAML), \`shortNames\` | \`shopfeatures\`, \`shopfeature\`, \`ShopFeature\`, \`sf\` |
+| \`spec.scope\` | \`Namespaced\` (như Deployment) hay \`Cluster\` (như Node, ClusterIssuer) | \`Namespaced\` |
+| \`spec.versions[]\` | mỗi bản \`served\`, đúng một bản \`storage: true\`, kèm \`schema.openAPIV3Schema\` | \`v1\` |
+
+**Schema là hợp đồng, apiserver giữ nó.** \`apiextensions.k8s.io/v1\` bắt buộc schema có cấu trúc. Nó làm ba việc: **kiểm** (\`type: boolean\`, \`minimum: 0\`/\`maximum: 100\`, \`required: [enabled]\`; đo: \`enabled: "yes"\` và \`rolloutPercent: 150\` bị từ chối cùng lúc với hai dòng lý do, thiếu \`enabled\` báo \`spec.enabled: Required value\`), **điền mặc định** (\`default: 0\`; đo: tạo không ghi \`rolloutPercent\` thì đọc lại ra \`{"enabled":true,"rolloutPercent":0}\`), và **gọt** trường lạ (trường không khai trong schema bị bỏ khi lưu; \`kubectl apply\` mặc định \`--validate=strict\` nên báo lỗi luôn: \`strict decoding error: unknown field "spec.colour"\`, đo). \`description\` trong schema chính là thứ \`k explain shopfeature.spec\` in ra. CRD không schema (hay \`x-kubernetes-preserve-unknown-fields: true\` ở \`spec\`) nhận mọi thứ: verify của buổi tạo thử resource sai bằng \`--dry-run=server\` để bắt đúng trường hợp đó (đo: thay schema như vậy thì dòng CRD đỏ).
+
+**Namespaced hay cluster-scoped.** \`k api-resources --namespaced=true\` và \`--namespaced=false\` chia API thành hai nửa (đo trên lab: 61 và 55 loại trước buổi, 67 và 56 sau buổi). Cluster-scoped là thứ không thuộc namespace nào: Node, PersistentVolume, StorageClass, Namespace, ClusterRole, IngressClass, chính CRD, và \`ClusterIssuer\` của cert-manager; \`Issuer\` thì namespaced (chỉ ký cho Certificate cùng namespace). Câu hỏi "cần Role hay ClusterRole để đọc X" bắt đầu từ cột \`NAMESPACED\`.
+
+**Operator = CRD + controller chạy vòng reconcile.** Controller theo dõi (watch) các object của nó, so **mong muốn** (\`spec\`) với **thực tế**, làm cho thực tế khớp, rồi ghi kết quả vào \`status\`. Bạn đã thấy vòng này từ s07: Deployment controller tạo ReplicaSet, ReplicaSet controller tạo Pod (k-deploy-rs-pod). cert-manager làm y hệt với kiểu riêng: \`Certificate\` → \`CertificateRequest\` (mang \`ownerReferences\` trỏ về Certificate) → Issuer ký → \`Secret\` \`shop-local-cm-tls\`, rồi \`status.conditions\` của Certificate thành \`Ready=True\` với \`Certificate is up to date and has not expired\`. Đo vòng reconcile: xoá Secret \`shop-local-cm-tls\` thì 0,4 giây sau nó có lại, chứng chỉ mới (serial khác), Event \`Issuing certificate as Secret does not exist\`. Không ai gõ lệnh nào: controller thấy thực tế lệch mong muốn và sửa.
+
+**Trong Java, bạn đã viết vòng này.**
+
+| Spring Boot | Operator |
+|---|---|
+| \`@Scheduled(fixedDelay = 30000) void reconcile()\`: đọc trạng thái mong muốn trong DB, đọc trạng thái thật, sửa phần lệch | vòng reconcile của controller |
+| hàm phải chạy lại nhiều lần mà không hỏng (idempotent), vì lần trước có thể chết giữa chừng | reconcile "theo mức" (level-triggered): mỗi lần nhìn toàn bộ trạng thái, không dựa vào việc nhớ sự kiện nào đã xử lý |
+| poll theo giờ, trễ tới một chu kỳ | watch qua informer: có thay đổi là chạy ngay (0,4 giây ở trên), cộng resync định kỳ phòng lỡ sự kiện |
+| \`RestTemplate\` gọi API ngoài | Kubernetes Java client: \`SharedInformerFactory\` (cache + watch), \`ControllerBuilder\`, interface \`Reconciler\` với \`Result reconcile(Request)\` (trả \`new Result(true)\` để chạy lại); hay Java Operator SDK: \`Reconciler<P>\` với \`UpdateControl<P> reconcile(P resource, Context<P> ctx)\` |
+
+Muốn \`ShopFeature\` thật sự bật tính năng, bạn viết đúng một controller như vậy (hay đơn giản hơn: gateway đọc ShopFeature qua API với một ServiceAccount có quyền \`get\`/\`list\`/\`watch\` \`shopfeatures\`). Buổi này dừng ở CRD; cert-manager cho thấy phần controller.
+
+**Cài operator bằng Helm: CRD, quyền và nơi chạy.** Chart \`jetstack/cert-manager\` v1.21.3 (bản mới nhất trên \`charts.jetstack.io\` lúc soạn; trang "Supported Releases" của cert-manager ghi 1.21 hỗ trợ Kubernetes 1.33–1.36, bản cho 1.37 chưa phát hành) cài ba Deployment: \`cert-manager\` (controller), \`cert-manager-webhook\` (admission webhook kiểm và điền mặc định cho Certificate/Issuer), \`cert-manager-cainjector\` (chép CA vào webhook configuration). \`crds.enabled=true\` để chart cài luôn 6 CRD \`*.cert-manager.io\` (thiếu nó thì Issuer/Certificate báo \`no matches for kind\`); CRD mang annotation của release và \`helm.sh/resource-policy: keep\`, nên \`helm uninstall\` không xoá chúng (xoá CRD là xoá mọi Certificate trong cluster). Mỗi thành phần có \`nodeSelector\`/\`tolerations\`/\`resources\` riêng trong values (\`webhook.*\`, \`cainjector.*\`, \`startupapicheck.*\`): đặt cả bốn lên cka-cp, không đụng RAM của worker. Đo: \`free -m\` available của cka-cp 1598 → 1366 MB sau khi cài (ba Pod dùng 22Mi, 22Mi, 8Mi; phần còn lại là image và cache), requests memory của cka-cp 426Mi → 546Mi; cka-w1, cka-w2 không đổi.
+
+**Secret riêng, không thay \`shop-tls\`.** Ingress của s29 dùng \`shop-tls\` (chứng chỉ bạn tự ký bằng openssl). Certificate ghi vào \`shop-local-cm-tls\`. Trỏ \`secretName: shop-tls\` thì cert-manager sẽ ghi đè Secret đang chạy Ingress và từ đó quản nó: verify đòi \`shop-tls\` vẫn đúng tệp \`~/drills/s29/tls.crt\`.`,
+    refs: [
+      { label: "Bài lộ trình CKA: CRD & Operator — cài CRD, tạo custom resource", href: "#/roadmap/cka/cka-w7-6" },
+      { label: "Lộ trình CKA Study Guide: Service Account, kiểm soát tiếp nhận, Operator và CRD", href: "#/roadmap/ckabook/cb-w2-3" },
+      { label: "CKA Study Guide, chương 7 — Operator và CRD", href: "#/docs/ckabook-07" },
+      { label: "Kubernetes: Up and Running, chương 17 — mở rộng Kubernetes (CRD, controller)", href: "#/docs/kuar-17" },
+      { label: "Kubernetes: Up and Running, chương 18 — truy cập Kubernetes từ ngôn ngữ lập trình (client Java, informer)", href: "#/docs/kuar-18" },
+      { label: "kubernetes.io: Extend the Kubernetes API with CustomResourceDefinitions", href: "https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/" },
+      { label: "kubernetes.io: Operator pattern", href: "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/" },
+      { label: "cert-manager.io: Helm installation (crds.enabled)", href: "https://cert-manager.io/docs/installation/helm/" },
+      { label: "cert-manager.io: Supported Releases (bản nào cho Kubernetes nào)", href: "https://cert-manager.io/docs/releases/" },
+      { label: "cert-manager.io: SelfSigned issuer", href: "https://cert-manager.io/docs/configuration/selfsigned/" },
+    ],
+    stateIn: "Đầu ra s38: helm v4.3.2, release shop và demo; Ingress shop dùng Secret shop-tls (s29). `./labs/lab begin cka s39` kiểm đầu vào bằng verify của s38, tạo ~/drills/s39, xoá answers.env cũ.",
+    stateOut: "CRD shopfeatures.shop.example.com (Namespaced, v1, schema) và hai ShopFeature new-checkout, dark-mode ở shop, manifest trong ~/shop/; release cert-manager (v1.21.3, namespace cert-manager, CRD kèm theo, ba Deployment trên cka-cp); Issuer selfsigned và Certificate shop-local Ready ở shop, Secret shop-local-cm-tls (SAN shop.local); shop-tls của s29 không đổi; ~/drills/s39/answers.env (CERT_MANAGER_CRDS).",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s39`. Bản đồ API trước khi thêm gì: `k api-resources --namespaced=true --no-headers | wc -l`, `k api-resources --namespaced=false --no-headers | wc -l`, `k get crd | wc -l`. Trong `nodes`, `persistentvolumes`, `persistentvolumeclaims`, `storageclasses`, `ingressclasses`, `ingresses`, `clusterroles`, `roles`, cái nào cluster-scoped? Kiểm bằng `k api-resources --namespaced=false | grep -E '^(nodes|persistentvolumes|storageclasses|ingressclasses|clusterroles) '`.",
+      },
+      {
+        id: "t2",
+        text: "Viết `~/shop/shopfeature-crd.yaml`: `apiextensions.k8s.io/v1`, tên `shopfeatures.shop.example.com`, group `shop.example.com`, `scope: Namespaced`, names `shopfeatures`/`shopfeature`/`ShopFeature`, shortName `sf`; một bản `v1` `served` + `storage`, schema: `spec` bắt buộc, trong đó `enabled` (boolean, bắt buộc), `rolloutPercent` (integer 0–100, mặc định 0), `owner` (string), mỗi trường có `description`; thêm `additionalPrinterColumns` cho `enabled` và `rolloutPercent`. `k apply -f ~/shop/shopfeature-crd.yaml`, `k wait --for=condition=Established crd/shopfeatures.shop.example.com`, `k api-resources --api-group=shop.example.com`.",
+      },
+      {
+        id: "t3",
+        text: "`~/shop/shopfeatures.yaml` có hai ShopFeature ở namespace shop: `new-checkout` (`enabled: true`, `rolloutPercent: 20`, `owner: order`) và `dark-mode` (`enabled: false`, `rolloutPercent: 0`, `owner: gateway`). `k apply -f ~/shop/shopfeatures.yaml`, `k get sf` (cột nào hiện ra, từ đâu?), `k get shopfeatures -A`, `k explain shopfeature.spec`, `k explain shopfeature.spec.rolloutPercent`.",
+      },
+      {
+        id: "t4",
+        text: "Tình huống hỏng: `~/drills/s39/bad-feature.yaml` là ShopFeature `bad-feature` với `enabled: \"yes\"` và `rolloutPercent: 150`. `k apply -f ~/drills/s39/bad-feature.yaml`: bao nhiêu lỗi, mỗi lỗi chỉ trường nào? Thử thêm hai biến thể bằng `--dry-run=server`: bỏ hẳn `enabled`; giữ `enabled: true` và thêm `colour: red`. Ai từ chối từng cái: schema trong apiserver hay kubectl? Rồi `k get sf -n shop` vẫn chỉ hai resource.",
+      },
+      {
+        id: "t5",
+        text: "Cài operator: `helm repo add jetstack https://charts.jetstack.io`, `helm repo update`, `helm search repo jetstack/cert-manager --versions | head -5`. Dùng bản `v1.21.3`: `helm show values jetstack/cert-manager --version v1.21.3 | grep -nE '^(crds|nodeSelector|tolerations|resources|webhook|cainjector|startupapicheck):'`. Viết `~/drills/s39/cert-manager-values.yaml`: `crds.enabled: true`; controller, `webhook`, `cainjector`, `startupapicheck` cùng nodeSelector + toleration control-plane như demo ở s37; requests nhỏ (controller và cainjector 10m/48Mi, limit 128Mi; webhook 10m/24Mi, limit 64Mi). Ghi `free -m` của cka-cp, rồi `helm install cert-manager jetstack/cert-manager --version v1.21.3 -n cert-manager --create-namespace -f ~/drills/s39/cert-manager-values.yaml --wait`. `k -n cert-manager get deploy,pod -o wide` (node nào?), `free -m` lần nữa, `k top pod -n cert-manager`.",
+      },
+      {
+        id: "t6",
+        text: "Đếm CRD operator vừa thêm: `k get crd | grep cert-manager.io`, `k api-resources --api-group=cert-manager.io` (cái nào không namespaced?). Ghi `CERT_MANAGER_CRDS=<số CRD có tên kết thúc bằng .cert-manager.io>` vào `~/drills/s39/answers.env`. `k get crd certificates.cert-manager.io -o jsonpath='{.metadata.annotations}'`: CRD thuộc release nào, có bị xoá khi `helm uninstall` không?",
+      },
+      {
+        id: "t7",
+        text: "`~/shop/shop-local-cert.yaml`: Issuer `selfsigned` (`spec.selfSigned: {}`) và Certificate `shop-local` ở shop: `secretName: shop-local-cm-tls`, `commonName` và `dnsNames` `shop.local`, `issuerRef` Issuer `selfsigned`, khoá ECDSA 256. `k apply -f ~/shop/shop-local-cert.yaml`, `k -n shop get issuer,certificate,certificaterequest`, `k -n shop get certificate shop-local -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.message}{\"\\n\"}{end}'`, `k -n shop get certificaterequest -o jsonpath='{.items[0].metadata.ownerReferences[0].kind}'`. Giải chứng chỉ: `k -n shop get secret shop-local-cm-tls -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -subject -issuer -ext subjectAltName -enddate`. So fingerprint của `shop-tls` với `~/drills/s29/tls.crt`: vẫn là một?",
+      },
+      {
+        id: "t8",
+        text: "Thấy vòng reconcile: ghi serial hiện tại, `k -n shop delete secret shop-local-cm-tls`, rồi ngay lập tức `k -n shop get secret shop-local-cm-tls` vài lần và `k -n shop describe certificate shop-local | sed -n '/Events/,$p'`. Secret có lại sau bao lâu, serial có đổi không, Event nói gì? Trên Mac: `./labs/lab verify cka s39` phải 5/5.",
+      },
+    ],
+    hints: [
+      "`The ShopFeature \"bad-feature\" is invalid: * spec.rolloutPercent: Invalid value: 150: spec.rolloutPercent in body should be less than or equal to 100 * spec.enabled: Invalid value: \"string\": spec.enabled in body must be of type boolean: \"string\"` (đo): apiserver kiểm theo schema và báo mọi trường sai một lượt. Kiểu trong schema là kiểu JSON: `\"yes\"`, `\"true\"` có dấu nháy là string, không phải boolean.",
+      "`error: resource mapping not found for name: \"x\" namespace: \"shop\" from \"STDIN\": no matches for kind \"ShopFeatur\" in version \"shop.example.com/v1\"` kèm `ensure CRDs are installed first` (đo, gõ sai kind): kubectl không tìm thấy kind trong discovery. Cùng thông báo khi bạn apply resource trước khi CRD `Established`, hay apply một thư mục chứa cả CRD lẫn resource lần đầu (kubectl đọc discovery một lần cho cả lệnh): apply lại là qua.",
+      "`Error from server (BadRequest): … strict decoding error: unknown field \"spec.colour\"` (đo): trường không có trong schema. `kubectl apply` mặc định `--validate=strict`; với `--validate=false` apiserver nhận và lặng lẽ gọt trường đó khi lưu.",
+      "`The ShopFeature \"x\" is invalid: spec.enabled: Required value` (đo): `required` nằm ở object cha (`spec.required: [enabled]`), không phải trên trường.",
+      "Pod cert-manager `Pending` với Event `didn't match Pod's node affinity/selector` hay `untolerated taint`: thiếu nodeSelector hay toleration ở **một** thành phần. Mỗi thành phần có khoá riêng (`webhook.tolerations`, `cainjector.tolerations`, `startupapicheck.tolerations`); khoá ở gốc chỉ áp cho controller.",
+      "`no matches for kind \"Certificate\" in version \"cert-manager.io/v1\"`: chart cài thiếu CRD (quên `crds.enabled=true`). `helm upgrade cert-manager jetstack/cert-manager --version v1.21.3 -n cert-manager --reuse-values --set crds.enabled=true`.",
+      "Certificate `Ready=False` lâu: `k -n shop describe certificate shop-local` (Events), `k -n shop get certificaterequest` (cột READY, ISSUER), `k -n cert-manager logs deploy/cert-manager | grep shop-local`. Hay gặp nhất: `issuerRef` trỏ tên Issuer không có, hay `kind: ClusterIssuer` trong khi bạn tạo Issuer.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6, Helm v4.3.2, cert-manager v1.21.3); serial, tên Pod, thời điểm sẽ khác. Context đã ở namespace shop.
+
+**1. Bản đồ API**
+
+\`\`\`bash
+k api-resources --namespaced=true --no-headers | wc -l     # 61
+k api-resources --namespaced=false --no-headers | wc -l    # 55
+\`\`\`
+
+**2. CRD**
+
+\`~/shop/shopfeature-crd.yaml\`:
+
+\`\`\`yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: shopfeatures.shop.example.com      # bắt buộc đúng <plural>.<group>
+spec:
+  group: shop.example.com
+  scope: Namespaced
+  names:
+    plural: shopfeatures
+    singular: shopfeature
+    kind: ShopFeature
+    shortNames:
+    - sf
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        description: Cờ tính năng của shop.
+        properties:
+          spec:
+            type: object
+            description: Cấu hình của cờ.
+            required:
+            - enabled
+            properties:
+              enabled:
+                type: boolean
+                description: Bật tính năng hay không.
+              rolloutPercent:
+                type: integer
+                minimum: 0
+                maximum: 100
+                default: 0
+                description: Phần trăm người dùng thấy tính năng (0–100).
+              owner:
+                type: string
+                description: Nhóm phụ trách.
+        required:
+        - spec
+    additionalPrinterColumns:
+    - name: Enabled
+      type: boolean
+      jsonPath: .spec.enabled
+    - name: Rollout
+      type: integer
+      jsonPath: .spec.rolloutPercent
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/shopfeature-crd.yaml
+# customresourcedefinition.apiextensions.k8s.io/shopfeatures.shop.example.com created
+k wait --for=condition=Established crd/shopfeatures.shop.example.com --timeout=60s
+# customresourcedefinition.apiextensions.k8s.io/shopfeatures.shop.example.com condition met
+k api-resources --api-group=shop.example.com
+# NAME           SHORTNAMES   APIVERSION            NAMESPACED   KIND
+# shopfeatures   sf           shop.example.com/v1   true         ShopFeature
+\`\`\`
+
+**3. Hai ShopFeature, explain**
+
+\`~/shop/shopfeatures.yaml\`:
+
+\`\`\`yaml
+apiVersion: shop.example.com/v1
+kind: ShopFeature
+metadata:
+  name: new-checkout
+  namespace: shop
+spec:
+  enabled: true
+  rolloutPercent: 20
+  owner: order
+---
+apiVersion: shop.example.com/v1
+kind: ShopFeature
+metadata:
+  name: dark-mode
+  namespace: shop
+spec:
+  enabled: false
+  rolloutPercent: 0
+  owner: gateway
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/shopfeatures.yaml
+k get sf
+# NAME           ENABLED   ROLLOUT   AGE
+# dark-mode      false     0         0s
+# new-checkout   true      20        0s
+k explain shopfeature.spec
+# GROUP:      shop.example.com
+# KIND:       ShopFeature
+# VERSION:    v1
+#
+# FIELD: spec <Object>
+#
+# DESCRIPTION:
+#     Cấu hình của cờ.
+#
+# FIELDS:
+#   enabled	<boolean> -required-
+#     Bật tính năng hay không.
+#
+#   owner	<string>
+#     Nhóm phụ trách.
+#
+#   rolloutPercent	<integer>
+#     Phần trăm người dùng thấy tính năng (0–100).
+\`\`\`
+
+Các cột \`ENABLED\`, \`ROLLOUT\` đến từ \`additionalPrinterColumns\`.
+
+**4. Tình huống hỏng: schema chặn**
+
+\`\`\`bash
+k apply -f ~/drills/s39/bad-feature.yaml
+# The ShopFeature "bad-feature" is invalid:
+# * spec.rolloutPercent: Invalid value: 150: spec.rolloutPercent in body should be less than or equal to 100
+# * spec.enabled: Invalid value: "string": spec.enabled in body must be of type boolean: "string"
+# (bỏ enabled)
+# The ShopFeature "x" is invalid: spec.enabled: Required value
+# (thêm colour: red)
+# Error from server (BadRequest): error when creating "STDIN": ShopFeature in version "v1" cannot be handled as a ShopFeature: strict decoding error: unknown field "spec.colour"
+# (chỉ enabled: true, --dry-run=server -o jsonpath='{.spec}')
+# {"enabled":true,"rolloutPercent":0}
+\`\`\`
+
+Cả ba lần từ chối đều do apiserver (\`Error from server\`, \`is invalid\`), không phải kubectl: kubectl chỉ gửi kèm yêu cầu kiểm chặt trường lạ. Lần cuối cho thấy \`default: 0\` được điền.
+
+**5. cert-manager bằng Helm**
+
+\`\`\`bash
+helm repo add jetstack https://charts.jetstack.io
+helm search repo jetstack/cert-manager --versions | head -5
+# NAME                 	CHART VERSION	APP VERSION	DESCRIPTION
+# jetstack/cert-manager	v1.21.3      	v1.21.3    	A Helm chart for cert-manager
+# jetstack/cert-manager	v1.21.2      	v1.21.2    	A Helm chart for cert-manager
+# jetstack/cert-manager	v1.21.1      	v1.21.1    	A Helm chart for cert-manager
+# jetstack/cert-manager	v1.21.0      	v1.21.0    	A Helm chart for cert-manager
+\`\`\`
+
+\`~/drills/s39/cert-manager-values.yaml\`:
+
+\`\`\`yaml
+crds:
+  enabled: true
+nodeSelector:
+  node-role.kubernetes.io/control-plane: ""
+tolerations:
+- key: node-role.kubernetes.io/control-plane
+  operator: Exists
+  effect: NoSchedule
+resources:
+  requests: {cpu: 10m, memory: 48Mi}
+  limits: {memory: 128Mi}
+webhook:
+  nodeSelector: {node-role.kubernetes.io/control-plane: ""}
+  tolerations: [{key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}]
+  resources:
+    requests: {cpu: 10m, memory: 24Mi}
+    limits: {memory: 64Mi}
+cainjector:
+  nodeSelector: {node-role.kubernetes.io/control-plane: ""}
+  tolerations: [{key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}]
+  resources:
+    requests: {cpu: 10m, memory: 48Mi}
+    limits: {memory: 128Mi}
+startupapicheck:
+  nodeSelector: {node-role.kubernetes.io/control-plane: ""}
+  tolerations: [{key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule}]
+\`\`\`
+
+\`\`\`bash
+free -m | sed -n 2p          # Mem: 2956 1357 78 4 1609 1598
+helm install cert-manager jetstack/cert-manager --version v1.21.3 -n cert-manager --create-namespace \\
+  -f ~/drills/s39/cert-manager-values.yaml --wait
+# NAME: cert-manager … NAMESPACE: cert-manager  STATUS: deployed  REVISION: 1
+k -n cert-manager get pod -o wide
+# cert-manager-75548d487f-9zrrv             1/1   Running   0   80s   10.244.160.9    cka-cp
+# cert-manager-cainjector-8b587f56d-7lqlp   1/1   Running   0   80s   10.244.160.10   cka-cp
+# cert-manager-webhook-5bf5c8f6c-59nmt      1/1   Running   0   80s   10.244.160.14   cka-cp
+free -m | sed -n 2p          # Mem: 2956 1589 71 5 1389 1366
+k top pod -n cert-manager
+# cert-manager-75548d487f-9zrrv             10m   22Mi
+# cert-manager-cainjector-8b587f56d-7lqlp   3m    22Mi
+# cert-manager-webhook-5bf5c8f6c-59nmt      0m    8Mi
+\`\`\`
+
+**6. CRD của operator**
+
+\`\`\`bash
+k get crd -o name | grep 'cert-manager.io$'
+# customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io
+# customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io
+# customresourcedefinition.apiextensions.k8s.io/challenges.acme.cert-manager.io
+# customresourcedefinition.apiextensions.k8s.io/clusterissuers.cert-manager.io
+# customresourcedefinition.apiextensions.k8s.io/issuers.cert-manager.io
+# customresourcedefinition.apiextensions.k8s.io/orders.acme.cert-manager.io
+k api-resources --api-group=cert-manager.io
+# NAME                  SHORTNAMES   APIVERSION           NAMESPACED   KIND
+# certificaterequests   cr,crs       cert-manager.io/v1   true         CertificateRequest
+# certificates          cert,certs   cert-manager.io/v1   true         Certificate
+# clusterissuers        ciss         cert-manager.io/v1   false        ClusterIssuer
+# issuers               iss          cert-manager.io/v1   true         Issuer
+echo CERT_MANAGER_CRDS=6 > ~/drills/s39/answers.env
+\`\`\`
+
+\`challenges\` và \`orders\` nằm ở group \`acme.cert-manager.io\` (vẫn kết thúc bằng \`.cert-manager.io\`), nên \`--api-group=cert-manager.io\` chỉ thấy bốn.
+
+\`\`\`bash
+k get crd certificates.cert-manager.io -o jsonpath='{.metadata.annotations}'
+# {"helm.sh/resource-policy":"keep","meta.helm.sh/release-name":"cert-manager","meta.helm.sh/release-namespace":"cert-manager"}
+\`\`\`
+
+CRD thuộc release \`cert-manager\` và mang \`helm.sh/resource-policy: keep\`: \`helm uninstall cert-manager\` để CRD (và mọi Certificate) lại. Sau buổi, \`k api-resources --namespaced=true\` ra 67 loại (61 + ShopFeature + 5 của cert-manager), \`--namespaced=false\` ra 56 (thêm ClusterIssuer).
+
+**7. Issuer, Certificate, Secret**
+
+\`~/shop/shop-local-cert.yaml\`:
+
+\`\`\`yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+  namespace: shop
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shop-local
+  namespace: shop
+spec:
+  secretName: shop-local-cm-tls
+  commonName: shop.local
+  dnsNames:
+  - shop.local
+  duration: 2160h       # 90 ngày
+  renewBefore: 360h     # gia hạn trước 15 ngày
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+    kind: Issuer
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/shop-local-cert.yaml
+k get issuer,certificate,certificaterequest
+# NAME                                READY   AGE
+# issuer.cert-manager.io/selfsigned   True    0s
+#
+# NAME                                     READY   SECRET              AGE
+# certificate.cert-manager.io/shop-local   True    shop-local-cm-tls   0s
+#
+# NAME                                              APPROVED   DENIED   READY   ISSUER       REQUESTER                                         AGE
+# certificaterequest.cert-manager.io/shop-local-1   True                True    selfsigned   system:serviceaccount:cert-manager:cert-manager   0s
+k get certificate shop-local -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.message}{"\\n"}{end}'
+# Ready=True Certificate is up to date and has not expired
+k get secret shop-local-cm-tls -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -subject -issuer -ext subjectAltName -enddate
+# subject=CN = shop.local
+# issuer=CN = shop.local
+# X509v3 Subject Alternative Name:
+#     DNS:shop.local
+# notAfter=Feb 17 16:32:57 2027 GMT
+k get secret shop-tls -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -fingerprint -sha256
+openssl x509 -in ~/drills/s29/tls.crt -noout -fingerprint -sha256
+# sha256 Fingerprint=F6:4E:43:62:…:29:BF:D2:50      (cả hai dòng giống nhau: shop-tls không đổi)
+\`\`\`
+
+\`issuer\` bằng \`subject\`: chứng chỉ tự ký. CertificateRequest mang \`ownerReferences\` trỏ về Certificate \`shop-local\` (\`controller: true\`), như ReplicaSet trỏ về Deployment; Secret thì không có \`ownerReferences\` (mặc định của cert-manager), nên xoá Certificate không kéo Secret theo.
+
+**8. Vòng reconcile**
+
+\`\`\`bash
+k get secret shop-local-cm-tls -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -serial
+# serial=1F151B2DD4F1A9EBE58E3714FB10CF344871D059
+k delete secret shop-local-cm-tls
+# secret "shop-local-cm-tls" deleted from shop namespace
+# (vòng until … get secret … ; đo: có lại sau 0,41 giây)
+k get secret shop-local-cm-tls -o jsonpath='{.data.tls\\.crt}' | base64 -d | openssl x509 -noout -serial
+# serial=1484C9A94B5FF11EB23A4D9C79B95923FDE68F99
+k describe certificate shop-local | sed -n '/Events/,$p' | grep -E 'Issuing|Requested' | tail -2
+#   Normal  Requested  …  cert-manager-certificates-request-manager  Created new CertificateRequest resource "shop-local-5"
+#   Normal  Issuing    …  cert-manager-certificates-issuing          The certificate has been successfully issued
+\`\`\`
+
+Lời giải tự động: \`labs/cka/sessions/s39/apply.sh\` (tệp chuẩn ở \`files/\`; \`files/solve.sh\` chạy lại được: \`kubectl apply\`, \`helm upgrade --install\`).`,
+    exam: {
+      patterns: [
+        "\"Tạo CRD từ tệp/URL cho trước rồi tạo một custom resource\" — `k apply -f <crd>`, `k get crd | grep <group>`, `k explain <kind>.spec` để biết trường, rồi viết resource đúng `apiVersion: <group>/<version>`.",
+        "\"Liệt kê mọi resource không thuộc namespace / mọi CRD của operator X\" — `k api-resources --namespaced=false`, `k get crd | grep <group>`, `k api-resources --api-group=<group>`.",
+        "\"Cài operator bằng Helm/manifest rồi tạo resource để nó dựng thứ Y\" — đọc values trước (`helm show values`), nhớ CRD (`crds.enabled`/`installCRDs`), đợi Deployment Available rồi mới tạo resource.",
+        "\"Custom resource không Ready, tìm lý do\" — `k describe <kind> <tên>` (Events, `status.conditions`), object con (CertificateRequest), log controller.",
+      ],
+      timeTargetMin: 6,
+      drills: [
+        {
+          text: "Trong 4 phút: tạo CRD `backups.ops.example.com` (cluster-scoped, kind `Backup`, v1, schema chỉ cần `spec.schedule` kiểu string, bắt buộc), tạo một Backup `nightly` với `schedule: \"0 2 * * *\"`, chứng minh nó cluster-scoped bằng một lệnh; rồi xoá CRD.",
+          timeLimitMin: 4,
+          solution: "```yaml\napiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\nmetadata:\n  name: backups.ops.example.com\nspec:\n  group: ops.example.com\n  scope: Cluster\n  names: {plural: backups, singular: backup, kind: Backup}\n  versions:\n  - name: v1\n    served: true\n    storage: true\n    schema:\n      openAPIV3Schema:\n        type: object\n        properties:\n          spec:\n            type: object\n            required: [schedule]\n            properties:\n              schedule: {type: string}\n```\n```bash\nk apply -f backup-crd.yaml && k wait --for=condition=Established crd/backups.ops.example.com\nprintf 'apiVersion: ops.example.com/v1\\nkind: Backup\\nmetadata: {name: nightly}\\nspec: {schedule: \"0 2 * * *\"}\\n' | k apply -f -\nk api-resources --api-group=ops.example.com      # NAMESPACED false\nk delete crd backups.ops.example.com             # xoá luôn mọi Backup\n```",
+        },
+        {
+          text: "Trong 2 phút: Certificate `web` ở namespace `drill` báo `READY False`. Ba lệnh đầu tiên bạn gõ là gì, theo thứ tự?",
+          timeLimitMin: 2,
+          solution: "```bash\nk -n drill describe certificate web | sed -n '/Status/,$p'   # conditions + Events\nk -n drill get certificaterequest                            # object con: READY, ISSUER\nk -n drill get issuer; k get clusterissuer                   # issuerRef trỏ đúng tên, đúng kind?\n```\nRồi mới tới `k -n cert-manager logs deploy/cert-manager | grep web`.",
+        },
+      ],
+    },
+    tips: [
+      "`k explain <kind>.spec --recursive | head -40` in cả cây trường của một custom resource: nhanh hơn tìm tài liệu của operator trên đề.",
+      "Tên CRD luôn là `<plural>.<group>`; `apiVersion` của resource là `<group>/<version>`; `kind` viết hoa. Ba chỗ này nhầm là lỗi hay gặp nhất khi viết CRD tay.",
+      "Xoá CRD là xoá mọi custom resource của nó trong cả cluster. Trước khi `k delete crd`, `k get <plural> -A`.",
+      "Operator cài bằng Helm: đọc `helm show values` tìm `crds`/`installCRDs`, `nodeSelector`, `tolerations` của **từng** thành phần.",
+    ],
+    outcome: {
+      md: `shop có một loại object riêng (ShopFeature) mà apiserver tự kiểm theo schema, và một operator thật dựng chứng chỉ TLS cho \`shop.local\` thay bạn, đặt trên control plane. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s39
+\`\`\`
+
+Verify đọc CRD \`shopfeatures.shop.example.com\`: group \`shop.example.com\`, names \`ShopFeature\`/\`shopfeatures\`/\`shopfeature\`, \`Namespaced\`, bản \`v1\` served + storage có schema cho \`spec\`, \`Established\`; rồi **tạo thử** bằng \`k create --dry-run=server\` (không lưu gì) ba resource sai (\`rolloutPercent: 150\`, \`enabled: "yes"\`, thiếu \`enabled\`) phải bị từ chối và một resource đúng phải được nhận (schema bỏ ràng buộc: đỏ, đo); \`k explain shopfeature.spec\` có \`enabled\`, \`rolloutPercent\`, \`api-resources --namespaced=true\` có \`shopfeatures\`. Đúng hai ShopFeature ở shop (\`new-checkout\` bật 20%, \`dark-mode\` tắt 0%), CRD và hai resource có trong \`~/shop/*.yaml\`. Release \`cert-manager\` ở namespace \`cert-manager\`, \`cert-manager-v1.21.3\`, \`deployed\`, CRD \`certificates.cert-manager.io\` do chính release cài, ba Deployment Available, mọi Pod trên cka-cp. Issuer \`selfsigned\` loại \`selfSigned\` Ready; Certificate \`shop-local\` \`Ready=True\`, \`secretName: shop-local-cm-tls\` (tên khác: đỏ, đo), \`dnsNames\` có \`shop.local\`, \`issuerRef\` Issuer/selfsigned; Secret \`shop-local-cm-tls\` loại \`kubernetes.io/tls\`, mang annotation \`cert-manager.io/certificate-name: shop-local\`, SAN \`DNS:shop.local\`, khoá khớp chứng chỉ; \`shop-tls\` vẫn đúng \`~/drills/s29/tls.crt\`, không mang annotation cert-manager, Ingress shop vẫn dùng nó. \`CERT_MANAGER_CRDS\` bằng số CRD \`*.cert-manager.io\` đếm lúc verify.`,
+      verifyOutput: "lab: kiểm s39\n  (chờ apiserver, shop và cert-manager, nếu đang khởi động: tối đa ~17 phút)\n  ✓ CRD shopfeatures.shop.example.com: Namespaced, v1 served/storage có schema, Established; schema từ chối rolloutPercent 150, enabled \"yes\", thiếu enabled; explain và api-resources thấy nó\n  ✓ Đúng hai ShopFeature ở shop: new-checkout (enabled, 20%), dark-mode (tắt, 0%); CRD và hai resource có trong ~/shop/\n  ✓ Release cert-manager (namespace cert-manager, cert-manager-v1.21.3, deployed, CRD do release cài); ba Deployment Available, Pod trên cka-cp\n  ✓ Issuer selfsigned Ready; Certificate shop-local Ready=True → Secret shop-local-cm-tls (kubernetes.io/tls, SAN DNS:shop.local, khoá khớp); shop-tls của s29 không đổi, Ingress vẫn dùng nó\n  ✓ answers.env: CERT_MANAGER_CRDS bằng số CRD *.cert-manager.io trong cluster\n  → 5/5 đạt",
+      projectDelta: "shop có CRD ShopFeature (cờ tính năng, hai resource) và cert-manager chạy trên control plane, cấp chứng chỉ tự ký shop-local-cm-tls cho shop.local. Ingress vẫn dùng shop-tls của s29; đổi sang chứng chỉ do cert-manager quản là một dòng secretName khi cần.",
+    },
+    review: [
+      { q: "CRD và operator khác nhau ở đâu? Sau khi tạo CRD ShopFeature, ai làm gì với một ShopFeature `enabled: true`?", a: "CRD chỉ thêm một loại object vào API: apiserver lưu, kiểm theo schema, phục vụ get/list/watch, RBAC áp được. Không có hành vi nào. Operator là CRD cộng controller chạy vòng reconcile đọc object đó và làm cho thế giới khớp. Với ShopFeature hiện chưa ai đọc, nên `enabled: true` không bật gì; cert-manager thì có controller, nên Certificate biến thành Secret." },
+      { q: "Vòng reconcile giống và khác một method `@Scheduled` trong Spring ở đâu?", a: "Giống: đọc trạng thái mong muốn, đọc trạng thái thật, sửa phần lệch, chạy lại nhiều lần không hỏng (idempotent). Khác: controller được kích bởi watch qua informer (đo: Secret bị xoá có lại sau 0,4 giây), cộng resync định kỳ; `@Scheduled` poll theo chu kỳ. Trong Java viết bằng Kubernetes Java client (`SharedInformerFactory`, `Reconciler.reconcile(Request)` trả `Result`) hay Java Operator SDK (`Reconciler<P>.reconcile` trả `UpdateControl`)." },
+      { q: "Schema của CRD làm những gì? Cho ví dụ đo được trên lab.", a: "Kiểm kiểu và giới hạn (`rolloutPercent: 150` → `should be less than or equal to 100`, `enabled: \"yes\"` → `must be of type boolean`), bắt trường bắt buộc (`spec.enabled: Required value`), điền mặc định (`rolloutPercent: 0`), gọt trường lạ (`kubectl apply` strict báo `unknown field \"spec.colour\"`). Nó cũng là nguồn của `k explain`." },
+      { q: "Vì sao cài cert-manager phải bật `crds.enabled=true`, và `helm uninstall cert-manager` có xoá CRD không?", a: "Không có CRD thì Issuer/Certificate là kind lạ (`no matches for kind`). Với `crds.enabled=true` chart cài 6 CRD `*.cert-manager.io` trong release, kèm `helm.sh/resource-policy: keep`, nên uninstall giữ CRD lại: xoá CRD là xoá mọi Certificate trong cluster." },
+      { q: "Issuer và ClusterIssuer khác nhau thế nào, và vì sao lab không cho Certificate ghi vào `shop-tls`?", a: "Issuer namespaced, chỉ ký cho Certificate cùng namespace; ClusterIssuer cluster-scoped, dùng từ mọi namespace (`k api-resources --api-group=cert-manager.io`: NAMESPACED false). `secretName: shop-tls` sẽ ghi đè chứng chỉ Ingress đang dùng và từ đó cert-manager quản nó; lab giữ hai Secret riêng để đổi có chủ đích." },
+    ],
   },
+// ───────────────────────────── s40 ─────────────────────────────
   {
     id: "s40",
     stage: "st7",
@@ -703,12 +1149,12 @@ Verify **tự build** hai overlay bằng \`kubectl kustomize\` trên cka-cp (kh�
     domain: "troubleshooting",
     competencies: ["ts-logs"],
     requires: ["s39"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
       "Đưa release shop từ failed về deployed trong 20 phút bằng history, values và log của Pod mới.",
       "Rollback release về revision chạy được gần nhất và chỉ ra values nào gây lỗi.",
-      "Gỡ một release kẹt pending-upgrade một cách an toàn.",
+      "Gỡ release kẹt pending-upgrade và pending-install một cách an toàn, theo đúng hành vi Helm đo được.",
     ],
     skills: [
       { skill: "k-helm-rollback", level: "Gõ được không tra" },
@@ -719,7 +1165,274 @@ Verify **tự build** hai overlay bằng \`kubectl kustomize\` trên cka-cp (kh�
       { skill: "k-helm-status", level: "Gõ được không tra" },
     ],
     uses: ["k-helm-list", "k-logs-previous", "k-events-sorted", "k-rollout-history"],
-    stateIn: "Đầu ra s39 cộng `./labs/lab break`: một lần helm upgrade lỗi để lại release shop failed.",
-    stateOut: "Release shop deployed, đúng revision và cấu hình như cuối s37.",
+    foundation: null,
+    mindset: `**Release là một chuỗi Secret, mỗi Secret một trạng thái.** Mỗi lần \`install\`/\`upgrade\`/\`rollback\` Helm ghi một Secret \`sh.helm.release.v1.<tên>.v<revision>\` (type \`helm.sh/release.v1\`) trong namespace của release. Trạng thái của revision kể chuyện đã xảy ra:
+
+| Trạng thái | Nghĩa | Đo trên lab (Helm v4.3.2) |
+|---|---|---|
+| \`deployed\` | revision đang có hiệu lực | upgrade lỗi hay bị ngắt thì revision trước **vẫn \`deployed\`**; nó thành \`superseded\` khi có revision \`deployed\` mới |
+| \`superseded\` | từng deployed, đã bị thay | |
+| \`failed\` | upgrade chạy xong mà lỗi (\`--wait\` hết giờ, conflict, manifest sai) | upgrade tiếp được ngay; cluster đã nhận manifest mới |
+| \`pending-upgrade\` / \`pending-install\` / \`pending-rollback\` | Helm đã ghi "đang làm" rồi chết giữa chừng (kill, mất mạng, Ctrl-C lúc \`--wait\`) | mọi \`upgrade\` bị từ chối: \`another operation (install/upgrade/rollback) is in progress\` |
+
+\`helm list\` chỉ in revision **mới nhất** của mỗi release, nên release \`failed\` hiện \`failed\` dù revision trước vẫn \`deployed\`. Trên Helm 4 \`helm list\` trần đã gồm \`failed\` và \`pending-*\` (\`--failed\`, \`--pending\` để lọc); đề thi dùng Helm 3, nơi \`helm list\` trần không in \`pending-*\` và \`helm list -a\` mới in mọi trạng thái (Helm 4 bỏ \`-a\`: \`unknown shorthand flag: 'a' in -a\`, đo).
+
+**Ba cách gỡ, đo cái giá của từng cách.**
+
+| Tình trạng | Cách | Đo |
+|---|---|---|
+| \`failed\` | \`helm rollback <tên> <revision tốt>\` | tạo revision mới \`Rollback to N\`, values và manifest của N; Pod lỗi biến mất (rollback shop 6 giây với \`--wait\`) |
+| \`failed\` | sửa values rồi \`helm upgrade\` (roll forward) | cũng đúng, nếu values sau khi sửa bằng revision tốt; verify chấm trạng thái, không chấm cách |
+| \`pending-upgrade\` | \`helm rollback <tên> <revision tốt>\` | **được** trên Helm 4.3.2 (13 giây, chờ Pod mới Ready); revision kẹt ở lại history với chữ \`pending-upgrade\` mãi, vô hại |
+| \`pending-upgrade\` | xoá Secret của revision kẹt (\`k delete secret sh.helm.release.v1.demo.v<N>\`) | release về revision trước, \`deployed\`, **nhưng cluster vẫn mang manifest xấu** (đo: Deployment vẫn image \`6.99.0\`, Pod \`ErrImagePull\`) tới lần \`helm upgrade\` sau; đường tắt nguy hiểm |
+| \`pending-install\` | \`helm uninstall <tên>\` | không có gì để quay về (\`helm rollback\` báo \`release has no 0 version\`, \`helm install\` lại báo \`cannot reuse a name that is still in use\`); uninstall gỡ cả Deployment lẫn Secret release |
+
+**Quy trình chẩn đoán release (20 phút).** 1. \`helm list -A\` (cái gì hỏng, trạng thái gì). 2. \`helm status <tên>\` (DESCRIPTION nói lý do: \`resource Deployment/shop/catalog not ready … context deadline exceeded\`). 3. \`helm history <tên>\` (revision nào lỗi, revision tốt gần nhất là số mấy). 4. \`helm get values <tên> --revision <lỗi>\` so với \`--revision <tốt>\`: khác ở khoá nào. 5. Pod mới: \`k get pod\` (cái nào \`CrashLoopBackOff\`), \`k logs <pod> --previous\` (vì sao nó chết), \`k get events --sort-by=.lastTimestamp\`. 6. Sửa (rollback hay roll forward), rồi kiểm lại bằng \`helm history\`, \`k rollout status\`. Không nhảy thẳng tới bước 6: rollback mà không biết khoá nào hỏng thì lần upgrade sau lại hỏng y như vậy.
+
+**RollingUpdate giữ shop sống, nếu chart cho phép.** Gateway có \`maxUnavailable: 0\`, \`maxSurge: 1\`; catalog (2 replica) và order (1 replica) để mặc định 25%, làm tròn xuống thành 0 Pod được thiếu. Nên khi Pod mới không lên (\`MaxRAMPercentage=150\`: JVM từ chối khởi động), Deployment dừng ở một Pod mới hỏng cạnh các Pod cũ vẫn chạy: đo trong lần upgrade lỗi, gateway luôn 2/2 Ready và \`curl\` tới 30180 trả 200 ở cả 81 lần lấy mẫu. podinfo của \`demo\` thì \`maxUnavailable: 1\` với 1 replica: Pod cũ bị xoá ngay, \`demo\` không còn Pod Ready nào suốt lúc kẹt (đo). Đọc \`strategy\` của chart trước khi tin rằng "upgrade lỗi không sao".
+
+**\`--wait\` và \`--rollback-on-failure\`.** \`helm upgrade --wait --timeout 60s\` chờ mọi tài nguyên Ready rồi mới ghi \`deployed\`; hết giờ thì ghi \`failed\` nhưng **không** trả cluster về (Pod lỗi vẫn đó). \`--rollback-on-failure\` (Helm 3: \`--atomic\`) tự rollback khi lỗi: tiện cho CI, nhưng xoá luôn bằng chứng bạn cần để chẩn đoán. Với release \`shop\` (nhận lại từ \`kubectl apply\` ở s37), mọi \`upgrade\`/\`rollback\` kèm \`--force-conflicts\`: ở sự cố này rollback thường cũng qua (đo, vì lần upgrade lỗi đã ép trường \`JAVA_OPTS\` sang Helm), nhưng giữ thói quen.
+
+**Repo là cache trên máy bạn.** \`helm repo add\` chỉ ghi URL; \`helm repo update\` tải \`index.yaml\` về \`~/.cache/helm/repository/<repo>-index.yaml\`. Mất tệp đó thì \`helm search repo\` cảnh báo \`repo is corrupt or missing\` và không thấy gì, \`helm upgrade … podinfo/podinfo\` và \`helm show values\` báo \`no cached repo found. (try 'helm repo update')\` (đo). \`helm rollback\` không cần repo: chart của revision cũ nằm sẵn trong Secret.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Helm & Kustomize trong curriculum CKA", href: "#/roadmap/cka/cka-w7-5" },
+      { label: "Lộ trình CKA Study Guide: Helm và Kustomize — khác nhau ở đâu và gõ lệnh nào", href: "#/roadmap/ckabook/cb-w2-4" },
+      { label: "CKA Study Guide, chương 8 — Helm và Kustomize", href: "#/docs/ckabook-08" },
+      { label: "helm.sh: helm rollback", href: "https://helm.sh/docs/helm/helm_rollback/" },
+      { label: "helm.sh: helm history", href: "https://helm.sh/docs/helm/helm_history/" },
+      { label: "helm.sh: helm list (--failed, --pending)", href: "https://helm.sh/docs/helm/helm_list/" },
+      { label: "helm.sh: Helm 4 Overview (--rollback-on-failure thay --atomic)", href: "https://helm.sh/docs/overview" },
+      { label: "kubernetes.io: Deployment — rolling update, maxUnavailable, maxSurge", href: "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment" },
+    ],
+    stateIn: "Đầu ra s39. Trên Mac chạy `./labs/lab begin cka s40`: kiểm đầu vào bằng check.sh riêng (CRD, cert-manager, Certificate của s39: sự cố không đụng chúng), xoá answers.env cũ rồi **gây sự cố** (~1,5 phút): \"một đồng nghiệp upgrade hai release rồi bỏ dở\". Bấm giờ 20 phút.",
+    stateOut: "Release shop deployed, values bằng revision tốt trước sự cố (như cuối s37: order 2.0, javaOpts mặc định), bốn Deployment Available, không Pod lỗi; release demo deployed với values và image như cuối s37; release demo-canary đã gỡ; repo podinfo đọc được; ~/drills/s40/answers.env (BAD_VALUE).",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s40` (mất ~1,5 phút). Bấm giờ 20 phút. Trên cka-cp: `helm list -A`, `helm list -A --failed`, `helm list -A --pending`. Có mấy release không `deployed`, mỗi cái trạng thái gì? (Đề dùng Helm 3: ở đó lệnh gom mọi trạng thái là `helm list -A -a`.)",
+      },
+      {
+        id: "t2",
+        text: "shop: `helm status shop -n shop` (đọc DESCRIPTION), `helm history shop -n shop`. Revision nào `failed`, revision tốt gần nhất trước nó là số mấy (đang `deployed` hay `superseded`)? `helm get values shop -n shop --revision <lỗi>` và `--revision <tốt>`: khác ở khoá nào? Thêm `-a` để thấy giá trị cuối cùng.",
+      },
+      {
+        id: "t3",
+        text: "Pod mới: `k -n shop get pod -l 'app in (gateway,gateway-v1,catalog,order)'` (Pod nào mới, trạng thái gì, Pod cũ còn không?), `k -n shop logs <pod mới của gateway> --previous`, `k -n shop get events --sort-by=.lastTimestamp | tail`, `k -n shop rollout history deploy/gateway`. Vì sao shop vẫn trả lời (`curl -s -o /dev/null -w '%{http_code}' http://<IP cka-w1>:30180/api/products`)? Đọc `k -n shop get deploy gateway -o jsonpath='{.spec.strategy}'`. Ghi `BAD_VALUE=<khoá values gây lỗi>` vào `~/drills/s40/answers.env`.",
+      },
+      {
+        id: "t4",
+        text: "Sửa shop: `helm rollback shop <revision tốt> -n shop --force-conflicts --wait`. `helm history shop -n shop --max 3`, `k -n shop get deploy`, `k -n shop get pod`: Pod lỗi còn không, ReplicaSet nào đang chạy?",
+      },
+      {
+        id: "t5",
+        text: "demo: `helm status demo -n demo`, `helm history demo -n demo`, `k -n demo get deploy,pod`. Thử `helm upgrade demo podinfo/podinfo --version 6.16.0 -n demo --reuse-values`: lỗi gì (có hai lỗi chồng nhau, đọc cái đầu)? `ls ~/.cache/helm/repository/`, `helm search repo podinfo`: thiếu gì? `helm repo update`. Gỡ `pending-upgrade`: `helm rollback demo <revision tốt> -n demo --wait`. `helm history demo -n demo --max 3`: revision kẹt còn đó với trạng thái gì?",
+      },
+      {
+        id: "t6",
+        text: "`demo-canary` kẹt `pending-install`: thử `helm rollback demo-canary -n demo` và `helm install demo-canary podinfo/podinfo -n demo` (đọc hai lỗi), rồi `helm uninstall demo-canary -n demo`. `k -n demo get deploy,pod,secret`: còn gì của nó không?",
+      },
+      {
+        id: "t7",
+        text: "Kiểm lại toàn cảnh: `helm list -A` (mọi release `deployed`), `helm get values shop -n shop` (USER-SUPPLIED VALUES như revision tốt), `k -n shop get pod`, `k -n demo get pod`. Trên Mac: `./labs/lab verify cka s40` phải 5/5. Ghi thời gian bạn đã dùng.",
+      },
+    ],
+    hints: [
+      "`Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress` (đo, demo `pending-upgrade`): một lần helm trước chết giữa chừng. Đừng thử lại upgrade; `helm history` tìm revision `deployed`/`superseded` mới nhất trước revision kẹt, `helm rollback` về đó.",
+      "`Error: no cached repo found. (try 'helm repo update'): open /home/ubuntu/.cache/helm/repository/podinfo-index.yaml: no such file or directory` (đo): index của repo trên máy đã mất. `helm repo update` (hay `helm repo update podinfo`). Rollback không cần repo.",
+      "`helm status shop` báo `Upgrade \"shop\" failed: resource Deployment/shop/catalog not ready. status: InProgress, message: Updated: 1/2 …` và `context deadline exceeded` (đo): `--wait` hết giờ vì Pod mới không Ready, không phải lỗi của Helm. Lý do nằm trong log của Pod mới.",
+      "`double MaxRAMPercentage=150.000000 is outside the allowed range [ 0.000000 ... 100.000000 ]`, `Improperly specified VM option 'MaxRAMPercentage=150'`, `Error: Could not create the Java Virtual Machine.` (đo, `k logs --previous` của Pod gateway mới): JVM không khởi động. Giá trị đến từ biến `JAVA_OPTS`; tìm khoá values sinh ra nó trong `helm get values shop --revision <lỗi>`.",
+      "`Error: release has no 0 version` (đo, `helm rollback demo-canary`): release chỉ có revision 1 `pending-install`, không có gì để quay về. `cannot reuse a name that is still in use` khi install lại. Gỡ bằng `helm uninstall`.",
+      "`helm list -a` báo `unknown shorthand flag: 'a' in -a`: Helm 4 bỏ cờ này; `helm list` trần đã in `failed` và `pending-*` (đo). Trên đề (Helm 3) thì `helm list -a`.",
+      "Rollback xong mà verify vẫn đỏ dòng values: bạn rollback về một revision khác revision tốt (ví dụ một revision `failed`), hay roll forward bằng values tự gõ lại không đúng như cũ. So `helm get values shop -n shop -a` với `--revision <tốt> -a`.",
+    ],
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6, Helm v4.3.2); số revision, tên Pod, thời điểm của bạn sẽ khác (history của bạn có thể có thêm revision \`failed\` từ s37).
+
+**1. Toàn cảnh**
+
+\`\`\`bash
+helm list -A
+# NAME        	NAMESPACE   	REVISION	UPDATED                	STATUS         	CHART               	APP VERSION
+# cert-manager	cert-manager	3       	2026-11-19 23:34:03 …  	deployed       	cert-manager-v1.21.3	v1.21.3
+# demo        	demo        	12      	2026-11-19 23:47:06 …  	pending-upgrade	podinfo-6.16.0      	6.16.0
+# demo-canary 	demo        	1       	2026-11-19 23:47:10 …  	pending-install	podinfo-6.16.0      	6.16.0
+# shop        	shop        	10      	2026-11-19 23:47:15 …  	failed         	shop-0.1.0          	1.0
+helm list -A --failed       # chỉ shop
+helm list -A --pending      # demo, demo-canary
+\`\`\`
+
+Ba release hỏng, ba trạng thái khác nhau, ba cách gỡ khác nhau.
+
+**2. shop: status, history, values**
+
+\`\`\`bash
+helm status shop -n shop | sed -n '1,7p'
+# NAME: shop
+# LAST DEPLOYED: Thu Nov 19 23:47:15 2026
+# NAMESPACE: shop
+# STATUS: failed
+# REVISION: 10
+# DESCRIPTION: Upgrade "shop" failed: resource Deployment/shop/catalog not ready. status: InProgress, message: Updated: 1/2
+# resource Deployment/shop/gateway not ready. status: InProgress, message: Updated: 1/2
+helm history shop -n shop --max 4
+# REVISION	UPDATED                 	STATUS  	CHART     	APP VERSION	DESCRIPTION
+# 7       	Thu Nov 19 23:39:37 2026	deployed	shop-0.1.0	1.0        	Rollback to 5
+# 8       	Thu Nov 19 23:43:21 2026	failed  	shop-0.1.0	1.0        	Upgrade "shop" failed: resource Deployment/shop/catalog not ready. …
+# 9       	Thu Nov 19 23:45:30 2026	failed  	shop-0.1.0	1.0        	Upgrade "shop" failed: …
+# 10      	Thu Nov 19 23:47:15 2026	failed  	shop-0.1.0	1.0        	Upgrade "shop" failed: …
+helm get values shop -n shop --revision 10
+# USER-SUPPLIED VALUES:
+# javaOpts: -XX:MaxRAMPercentage=150
+helm get values shop -n shop --revision 7
+# USER-SUPPLIED VALUES:
+# null
+\`\`\`
+
+Máy soạn bài đã \`begin\` ba lần nên có ba revision \`failed\` (8, 9, 10: \`begin\` chạy lại gây lại đúng lỗi đó). Revision tốt là revision không \`failed\` mới nhất trước chúng: 7, vẫn \`deployed\` (upgrade lỗi không chuyển nó thành \`superseded\`). Revision lỗi ghi đè đúng một khoá: \`javaOpts\`.
+
+**3. Pod mới và log**
+
+\`\`\`bash
+k get pod -l 'app in (gateway,gateway-v1,catalog,order)'
+# catalog-66f5cf64fb-qfndg     0/1   CrashLoopBackOff   5 (2m2s ago)   4m57s
+# catalog-7f7ff485b9-n25bc     1/1   Running            9 (22m ago)    23h
+# catalog-7f7ff485b9-nmxhc     1/1   Running            5 (22m ago)    23h
+# gateway-6bb658ccc4-42v7b     1/1   Running            5 (23m ago)    23h
+# gateway-6bb658ccc4-jth2f     1/1   Running            5 (23m ago)    23h
+# gateway-d4d8bc6bf-9g8sz      0/1   CrashLoopBackOff   5 (2m4s ago)   4m57s
+# gateway-v1-5f4bd8dc8-wgt78   0/1   CrashLoopBackOff   5 (109s ago)   4m57s
+# gateway-v1-d58549bff-sffff   1/1   Running            5 (22m ago)    23h
+# order-68975fd87c-xkwdj       0/1   CrashLoopBackOff   5 (105s ago)   4m56s
+# order-86498bc69d-b4spl       1/1   Running            2 (22m ago)    44m
+k logs gateway-d4d8bc6bf-9g8sz --previous
+# double MaxRAMPercentage=150.000000 is outside the allowed range [ 0.000000 ... 100.000000 ]
+# Improperly specified VM option 'MaxRAMPercentage=150'
+# Error: Could not create the Java Virtual Machine.
+# Error: A fatal exception has occurred. Program will exit.
+k get events --sort-by=.lastTimestamp | grep BackOff | tail -2
+# 16s   Warning   BackOff   pod/gateway-v1-5f4bd8dc8-wgt78   Back-off restarting failed container gateway in pod …
+# 4s    Warning   BackOff   pod/order-68975fd87c-xkwdj       Back-off restarting failed container order in pod …
+k get deploy gateway -o jsonpath='{.spec.strategy}'
+# {"rollingUpdate":{"maxSurge":1,"maxUnavailable":0},"type":"RollingUpdate"}
+echo BAD_VALUE=javaOpts > ~/drills/s40/answers.env
+\`\`\`
+
+Bốn Deployment mỗi cái có đúng một Pod mới chết, Pod cũ ở lại: \`javaOpts\` đi vào \`JAVA_OPTS\` của cả bốn, nên cả bốn cùng rollout, và không cái nào được phép thiếu Pod.
+
+**4. Rollback shop**
+
+\`\`\`bash
+helm rollback shop 7 -n shop --force-conflicts --wait
+# Rollback was a success! Happy Helming!
+helm history shop -n shop --max 3
+# 9       	…	failed  	shop-0.1.0	1.0	Upgrade "shop" failed: …
+# 10      	…	failed  	shop-0.1.0	1.0	Upgrade "shop" failed: …
+# 11      	…	deployed	shop-0.1.0	1.0	Rollback to 7
+k get deploy gateway gateway-v1 catalog order
+# gateway      2/2   2   2   4d21h
+# gateway-v1   1/1   1   1   23h
+# catalog      2/2   2   2   4d21h
+# order        1/1   1   1   4d21h
+\`\`\`
+
+Rollback áp lại manifest của revision 7: pod template về như cũ, Deployment trở về ReplicaSet cũ (không tạo Pod mới), ReplicaSet lỗi về 0.
+
+**5. demo: pending-upgrade và repo**
+
+\`\`\`bash
+helm history demo -n demo --max 3
+# 10      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
+# 11      	…	deployed       	podinfo-6.16.0	6.16.0	Rollback to 9
+# 12      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
+k -n demo get pod
+# demo-canary-podinfo-85f6c8d666-jvh7n   0/1   ImagePullBackOff   0   83s
+# demo-podinfo-c9f6c987f-…               0/1   ImagePullBackOff   0   …       (Pod cũ đã bị xoá: maxUnavailable 1)
+helm upgrade demo podinfo/podinfo --version 6.16.0 -n demo --reuse-values
+# Error: no cached repo found. (try 'helm repo update'): open /home/ubuntu/.cache/helm/repository/podinfo-index.yaml: no such file or directory
+helm repo update podinfo
+# ...Successfully got an update from the "podinfo" chart repository
+helm upgrade demo podinfo/podinfo --version 6.16.0 -n demo --reuse-values
+# Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in progress
+helm rollback demo 11 -n demo --wait
+# Rollback was a success! Happy Helming!
+helm history demo -n demo --max 3
+# 11      	…	superseded     	podinfo-6.16.0	6.16.0	Rollback to 9
+# 12      	…	pending-upgrade	podinfo-6.16.0	6.16.0	Preparing upgrade
+# 13      	…	deployed       	podinfo-6.16.0	6.16.0	Rollback to 11
+k -n demo get pod -l app.kubernetes.io/name=demo-podinfo
+# demo-podinfo-7f7d667448-4gd6m   1/1   Running   0   13s
+\`\`\`
+
+Revision 12 vẫn ghi \`pending-upgrade\` trong history: Helm không sửa revision cũ, chỉ thêm revision mới. Revision 10 là dấu của một lần \`begin\` trước.
+
+Đường khác, đo trên cùng lab: xoá Secret \`sh.helm.release.v1.demo.v<N>\` của revision kẹt làm \`helm status\` báo revision trước \`deployed\` ngay, nhưng Deployment vẫn mang \`ghcr.io/stefanprodan/podinfo:6.99.0\` (\`helm get manifest\` nói 6.16.0, cluster nói 6.99.0) cho tới lần \`helm upgrade … --reuse-values\` kế tiếp. Rollback làm cả hai việc trong một lệnh.
+
+**6. demo-canary: pending-install**
+
+\`\`\`bash
+helm rollback demo-canary -n demo
+# Error: release has no 0 version
+helm install demo-canary podinfo/podinfo --version 6.16.0 -n demo
+# Error: INSTALLATION FAILED: release name check failed: cannot reuse a name that is still in use
+helm uninstall demo-canary -n demo
+# release "demo-canary" uninstalled
+helm list -n demo
+# NAME	NAMESPACE	REVISION	UPDATED	STATUS  	CHART         	APP VERSION
+# demo	demo     	13      	…      	deployed	podinfo-6.16.0	6.16.0
+\`\`\`
+
+**7. Kiểm**
+
+\`\`\`bash
+helm list -A                # cert-manager, demo, shop: cả ba deployed
+helm search repo podinfo/podinfo --version 6.16.0
+# podinfo/podinfo	6.16.0       	6.16.0     	Podinfo Helm chart for Kubernetes
+\`\`\`
+
+Lời giải tự động: \`labs/cka/sessions/s40/apply.sh\` (gây sự cố như \`begin\` rồi \`files/solve.sh\`: tìm revision lỗi và revision tốt trong \`helm history -o json\` theo trạng thái, rollback shop kèm \`--force-conflicts\`, rollback demo, uninstall demo-canary, \`helm repo update\`; chạy lại được). Sự cố ở \`labs/cka/breaks/st7-helm/\`.`,
+    exam: {
+      patterns: [
+        "\"Release X đang lỗi, đưa về bản chạy được trước đó\" — `helm history X -n N`, `helm rollback X <revision> -n N`; kiểm `helm list -n N`.",
+        "\"Tìm release đang failed / pending ở mọi namespace\" — Helm 3: `helm list -A -a` hay `helm list -A --failed` / `--pending`.",
+        "\"Release cài bằng values nào / revision 3 khác revision 2 ở đâu\" — `helm get values X --revision 3` (thêm `-a` để có cả mặc định), `helm get manifest X --revision 3`.",
+        "\"Gỡ release X nhưng giữ history\" — `helm uninstall X -n N --keep-history` (rồi `helm history X` vẫn đọc được).",
+      ],
+      timeTargetMin: 5,
+      drills: [
+        {
+          text: "Trong 3 phút: cài podinfo 6.15.0 tên `drill` vào namespace `drill`, upgrade lên 6.16.0, rồi đưa về 6.15.0 mà không gõ số phiên bản chart. Chứng minh bằng một lệnh.",
+          timeLimitMin: 3,
+          solution: "```bash\nhelm install drill podinfo/podinfo --version 6.15.0 -n drill --create-namespace\nhelm upgrade drill podinfo/podinfo --version 6.16.0 -n drill\nhelm rollback drill 1 -n drill          # hay `helm rollback drill -n drill`: về revision trước\nhelm history drill -n drill             # 3 deployed, Rollback to 1, CHART podinfo-6.15.0\nhelm uninstall drill -n drill && k delete ns drill\n```",
+        },
+        {
+          text: "Trong 2 phút: `helm upgrade web …` báo `another operation (install/upgrade/rollback) is in progress`. Bạn gõ gì, theo thứ tự, và vì sao không xoá Secret?",
+          timeLimitMin: 2,
+          solution: "```bash\nhelm history web -n web          # revision mới nhất pending-upgrade, revision tốt trước nó\nhelm rollback web <tốt> -n web   # áp lại manifest tốt và ghi revision deployed mới\n```\nXoá Secret của revision kẹt chỉ sửa sổ sách của Helm: manifest dở dang vẫn nằm trong cluster tới lần upgrade sau (đo trên lab). Release `pending-install` (chưa từng deployed) thì `helm uninstall`.",
+        },
+      ],
+    },
+    tips: [
+      "Trước khi rollback, `helm get values <tên> --revision <lỗi>` so với `--revision <tốt>`: biết khoá hỏng thì lần upgrade sau không lặp lại lỗi.",
+      "`helm rollback <tên>` không ghi revision là về revision ngay trước. Khi revision trước là một lần `failed` hay `pending`, ghi số rõ ràng.",
+      "`helm status` (DESCRIPTION) nói Helm thấy gì; `k logs --previous` của Pod mới nói ứng dụng thấy gì. Lỗi `--wait` hết giờ luôn cần cả hai.",
+      "Lỗi `no cached repo found` hay `repo is corrupt or missing`: `helm repo update`, không phải `repo add` lại.",
+    ],
+    outcome: {
+      md: `Ba release hỏng ba kiểu đều về \`deployed\` với đúng cấu hình cũ, và shop không mất request nào trong lúc đó. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s40
+\`\`\`
+
+Verify đọc \`helm history -o json\` của shop và demo: revision hiện tại \`deployed\`, sau revision hỏng mới nhất của sự cố (\`failed\` với shop, \`pending-upgrade\` với demo), và \`helm get values -a\` của nó **bằng** revision tốt, tức revision \`deployed\`/\`superseded\` mới nhất trước revision hỏng, tìm theo history chứ không ghi cứng số (roll forward bằng values khác, ví dụ \`MaxRAMPercentage=60\`: đỏ, đo; roll forward bằng \`--reset-values\` về đúng values của chart: xanh, đo). Cùng dòng shop, verify chạy lại phần release/nhận lại của s37 (chart \`shop-0.1.0\`, \`order.image.tag\` 2.0, Deployment khớp values, 15 object). Không Pod nào của gateway, gateway-v1, catalog, order (kể cả Pod đang khởi động lại) và không ReplicaSet nào còn replica có \`JAVA_OPTS\` khác \`javaOpts\` của revision tốt, mọi Pod Ready, bốn Deployment Available, \`curl\` từ Mac tới \`<IP cka-w1>:30180/api/products\` trả 200. demo: Deployment và Pod không còn image \`6.99.0\` (chỉ xoá Secret của revision kẹt: đỏ, đo), cộng dòng demo của s37 (\`podinfo-6.16.0\`, \`ui.message\`, Pod trên cka-cp). \`demo-canary\` không còn release, Secret hay Deployment; \`helm search repo podinfo/podinfo --version 6.16.0\` thấy chart. \`BAD_VALUE=javaOpts\`.`,
+      verifyOutput: "lab: kiểm s40\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~33 phút)\n  ✓ Release shop deployed sau revision failed của sự cố, values (-a) bằng revision tốt trước đó; chart shop-0.1.0, order 2.0, Deployment khớp values, 15 object của release\n  ✓ Không Pod/ReplicaSet nào của shop còn JAVA_OPTS xấu, mọi Pod Ready; bốn Deployment Available; từ Mac curl <IP cka-w1>:30180/api/products trả 200\n  ✓ Release demo deployed sau revision pending-upgrade, values bằng revision tốt, không còn image 6.99.0; podinfo-6.16.0, ui.message, Pod trên cka-cp\n  ✓ Release demo-canary (pending-install) đã gỡ hẳn; helm search repo thấy podinfo/podinfo 6.16.0\n  ✓ answers.env: BAD_VALUE là khoá values gây lỗi của release shop\n  → 5/5 đạt",
+      projectDelta: "Không có gì mới trong shop: đúng như cuối s37. Thứ mới là quy trình: đọc release từ list → status → history → values → log Pod mới trước khi sửa, và biết cách gỡ từng trạng thái kẹt mà không để cluster lệch release. Mốc st7-done chụp ở đây (trước khi nâng cấp cluster ở s42).",
+    },
+    review: [
+      { q: "Upgrade `--wait` của shop hết giờ và release thành `failed`. Revision trước ở trạng thái gì, và cluster đang chạy manifest của revision nào?", a: "Revision trước vẫn `deployed` (đo trên Helm 4.3.2): Helm chỉ chuyển nó thành `superseded` khi có revision `deployed` mới. Cluster thì đã nhận manifest của revision `failed`: Deployment mang pod template mới, Pod mới CrashLoopBackOff, Pod cũ còn chạy nhờ `maxUnavailable: 0`. `--wait` hết giờ không tự trả cluster về; `--rollback-on-failure` (Helm 3: `--atomic`) mới làm." },
+      { q: "Ba release kẹt `failed`, `pending-upgrade`, `pending-install`. Gỡ mỗi cái thế nào và vì sao khác nhau?", a: "`failed`: upgrade tiếp hay rollback đều được; lab rollback về revision tốt. `pending-upgrade`: upgrade bị từ chối (`another operation … in progress`), rollback được và áp lại manifest tốt (đo). `pending-install`: không có revision nào để quay về (`release has no 0 version`), install lại bị từ chối (`cannot reuse a name`), nên `helm uninstall`." },
+      { q: "Xoá Secret `sh.helm.release.v1.demo.v<N>` của revision kẹt có gỡ được `pending-upgrade` không? Cái giá là gì?", a: "Được về mặt Helm: release về revision trước, `deployed`, upgrade tiếp được. Nhưng manifest dở dang vẫn trong cluster (đo: Deployment vẫn image 6.99.0 trong khi `helm get manifest` nói 6.16.0) tới lần upgrade sau. Rollback vừa gỡ trạng thái vừa áp lại manifest tốt." },
+      { q: "Làm sao biết khoá values nào gây lỗi, và vì sao nên biết trước khi rollback?", a: "`helm get values shop --revision <failed>` so với `--revision <tốt>` (USER-SUPPLIED VALUES chỉ có `javaOpts: -XX:MaxRAMPercentage=150`), rồi `k logs --previous` của Pod mới xác nhận (JVM báo `MaxRAMPercentage=150.000000 is outside the allowed range`). Rollback mà không biết thì người upgrade sau dùng lại đúng values đó (`--reuse-values`) và hỏng lại." },
+      { q: "Trên Helm 3 của đề, lệnh nào của buổi viết khác?", a: "`helm list -a` (Helm 4 bỏ; `helm list` trần của Helm 3 không in `pending-*`), `--atomic` thay `--rollback-on-failure`. `status`, `history`, `get values --revision`, `rollback`, `uninstall`, `repo update` giống hệt. Helm 3 không cần `--force-conflicts` (không dùng server-side apply)." },
+    ],
   },
 ];

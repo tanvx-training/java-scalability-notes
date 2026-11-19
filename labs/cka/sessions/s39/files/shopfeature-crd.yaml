@@ -1,0 +1,53 @@
+# CRD ShopFeature (lời giải s39): cờ tính năng của shop, namespaced, một bản v1 có schema.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: shopfeatures.shop.example.com      # bắt buộc đúng <plural>.<group>
+spec:
+  group: shop.example.com
+  scope: Namespaced
+  names:
+    plural: shopfeatures
+    singular: shopfeature
+    kind: ShopFeature
+    shortNames:
+    - sf
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        description: Cờ tính năng của shop.
+        properties:
+          spec:
+            type: object
+            description: Cấu hình của cờ.
+            required:
+            - enabled
+            properties:
+              enabled:
+                type: boolean
+                description: Bật tính năng hay không.
+              rolloutPercent:
+                type: integer
+                minimum: 0
+                maximum: 100
+                default: 0
+                description: Phần trăm người dùng thấy tính năng (0–100).
+              owner:
+                type: string
+                description: Nhóm phụ trách.
+        required:
+        - spec
+    additionalPrinterColumns:
+    - name: Enabled
+      type: boolean
+      jsonPath: .spec.enabled
+    - name: Rollout
+      type: integer
+      jsonPath: .spec.rolloutPercent
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp

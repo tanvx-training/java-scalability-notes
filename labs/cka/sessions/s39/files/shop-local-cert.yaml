@@ -1,0 +1,28 @@
+# Issuer tự ký và Certificate shop-local (lời giải s39). cert-manager ghi khoá + chứng chỉ vào Secret shop-local-cm-tls;
+# Secret shop-tls của s29 (Ingress đang dùng) không bị đụng.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+  namespace: shop
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: shop-local
+  namespace: shop
+spec:
+  secretName: shop-local-cm-tls
+  commonName: shop.local
+  dnsNames:
+  - shop.local
+  duration: 2160h       # 90 ngày
+  renewBefore: 360h     # gia hạn trước 15 ngày
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+    kind: Issuer
