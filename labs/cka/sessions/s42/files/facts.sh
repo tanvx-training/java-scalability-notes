@@ -78,14 +78,23 @@ for kind, name, cname in (("ds", "kube-proxy", "kube-proxy"), ("deploy", "coredn
 say("IMAGES", bad)
 print("VER=" + (ver or ""))
 
-# CoreDNS có PDB thật sự giữ được Pod (kubeadm không tạo PDB nào): minAvailable ≥ 1 hay maxUnavailable 1, và lúc này còn ít
-# nhất một Pod không được đuổi (ALLOWED DISRUPTIONS < số Pod khoẻ). maxUnavailable 100% hay 2 với 2 replica: đỏ.
+# CoreDNS có PDB thật sự giữ được Pod (kubeadm không tạo PDB nào): giữ ít nhất một Pod (minAvailable ≥ 1 hay ≥ 1%) hay không
+# cho đuổi hết (maxUnavailable là số, hay phần trăm < 100%), và lúc này còn ít nhất một Pod không được đuổi (ALLOWED
+# DISRUPTIONS < số Pod khoẻ). Nhận cả dạng phần trăm (minAvailable: 50%, review N1). maxUnavailable 100%, minAvailable 0
+# hay 0%, hay maxUnavailable 2 với 2 replica (ALLOWED DISRUPTIONS = số Pod khoẻ): đỏ.
 pdbs = (kj("-n", "kube-system", "get", "pdb") or {}).get("items") or []
+def intstr(v):
+    """(số, có phải phần trăm) của một IntOrString của PDB; None nếu không đọc được."""
+    if isinstance(v, int): return v, False
+    m = re.fullmatch(r"\s*(\d+)\s*(%?)\s*", str(v)) if v is not None else None
+    return (int(m.group(1)), m.group(2) == "%") if m else None
 def dns_pdb(p):
     sp, st = p.get("spec") or {}, p.get("status") or {}
     if ((sp.get("selector") or {}).get("matchLabels") or {}).get("k8s-app") != "kube-dns": return False
-    mn, mx = sp.get("minAvailable"), sp.get("maxUnavailable")
-    ok = (isinstance(mn, int) and mn >= 1) or mx in (1, "1")
+    mn, mx = intstr(sp.get("minAvailable")), intstr(sp.get("maxUnavailable"))
+    if mn is not None: ok = mn[0] >= 1
+    elif mx is not None: ok = not mx[1] or mx[0] < 100
+    else: ok = False
     return ok and (st.get("disruptionsAllowed") or 0) < (st.get("currentHealthy") or 0)
 dns_ok = any(dns_pdb(p) for p in pdbs)
 # 2. APPS: release shop deployed; gateway, catalog, order (≥ 2 replica) và postgres Available; cert-manager ba Deployment
