@@ -98,8 +98,12 @@ vm "$cp" "set -e
   kubectl -n shop wait pod/dns-default --for=condition=Ready --timeout=120s >/dev/null
   kubectl -n shop exec dns-default -- cat /etc/resolv.conf
   if kubectl -n shop exec dns-default -- nslookup catalog.shop.svc.cluster.local >/tmp/lab-s28-nx.txt 2>&1; then r=0; else r=1; fi
+  # Thường là NXDOMAIN; DNS của vài mạng (đo: điểm phát Wi-Fi của điện thoại) đổi NXDOMAIN thành một IP quảng cáo. Điều bài
+  # muốn thấy là dnsPolicy Default không ra ClusterIP của Service.
+  cip=\$(kubectl -n shop get svc catalog -o jsonpath='{.spec.clusterIP}')
+  if [ \"\$r\" = 0 ] && grep -qF \"\$cip\" /tmp/lab-s28-nx.txt; then r=2; fi
   cat /tmp/lab-s28-nx.txt; rm -f /tmp/lab-s28-nx.txt
   kubectl -n shop delete pod dns-default --now >/dev/null
-  [ \"\$r\" = 1 ]
+  [ \"\$r\" != 2 ]
   printf 'NDOTS=%s\nKUBE_DNS_IP=%s\n' \"\$(cat ~/drills/s28/.ndots)\" '$dns' > ~/drills/s28/answers.env
   rm -f ~/drills/s28/.ndots; cat ~/drills/s28/answers.env"

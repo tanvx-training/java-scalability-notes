@@ -911,7 +911,7 @@ k exec dns-default -- nslookup catalog.shop.svc.cluster.local
 k delete pod dns-default --now
 \`\`\`
 
-Không có \`search\`, nameserver là DNS của mạng Multipass (\`192.168.252.1\`, lấy từ \`/run/systemd/resolve/resolv.conf\` của node): máy đó không biết \`cluster.local\`, trả NXDOMAIN. Sửa: bỏ \`dnsPolicy\` (về \`ClusterFirst\`). Trước khi xoá Pod nháp, chạy lại verify sẽ đỏ dòng Pod nháp: verify đòi cả hai đã xoá.
+Không có \`search\`, nameserver là DNS của mạng Multipass (\`192.168.252.1\`, lấy từ \`/run/systemd/resolve/resolv.conf\` của node): máy đó không biết \`cluster.local\`, trả NXDOMAIN. Có mạng mà DNS phía trên đổi NXDOMAIN thành một IP quảng cáo (đo trên điểm phát Wi-Fi của điện thoại: mọi tên không tồn tại ra \`125.235.4.59\`): khi đó nslookup "thành công" nhưng IP không phải ClusterIP của catalog, cùng một lỗi. Sửa: bỏ \`dnsPolicy\` (về \`ClusterFirst\`). Trước khi xoá Pod nháp, chạy lại verify sẽ đỏ dòng Pod nháp: verify đòi cả hai đã xoá.
 
 Lời giải tự động: \`labs/cka/sessions/s28/apply.sh\` (sửa Corefile bằng Python trên JSON của ConfigMap thay cho \`k edit\`, rồi làm các bước còn lại; chạy lại được: khối \`hosts\` cũ có \`db.shop.internal\` được thay, không nhân đôi).`,
     exam: {
