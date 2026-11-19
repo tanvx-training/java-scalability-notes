@@ -1,0 +1,6 @@
+apiVersion: v2
+name: shop
+description: gateway, gateway-v1, catalog, order của shop (lab CKA); PostgreSQL, Secret, NetworkPolicy, cửa vào nằm ngoài chart
+type: application
+version: 0.1.0
+appVersion: "1.0"

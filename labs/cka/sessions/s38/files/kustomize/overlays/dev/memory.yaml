@@ -1,0 +1,16 @@
+# Patch strategic merge: chỉ ghi trường cần đổi; container khớp theo name.
+# 208Mi là mức nhỏ nhất đo được mà catalog (H2, MaxRAMPercentage=50) chạy ổn: 192Mi bị OOMKilled 1/2 lần, 176Mi luôn OOMKilled.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+spec:
+  template:
+    spec:
+      containers:
+      - name: catalog
+        resources:
+          requests:
+            memory: 208Mi
+          limits:
+            memory: 208Mi

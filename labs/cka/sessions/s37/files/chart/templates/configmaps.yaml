@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shop-config
+data:
+  {{- toYaml .Values.config | nindent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-files
+data:
+  # Tệp nằm trong chart (files/), trước s37 là ~/shop/config/application.yaml
+  application.yaml: |
+    {{- .Files.Get "files/application.yaml" | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-config
+data:
+  {{- toYaml .Values.order.config | nindent 2 }}

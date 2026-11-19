@@ -1,0 +1,28 @@
+{{- /* Danh tính của order (s35): SA, Role chỉ đọc đúng ConfigMap order-config, RoleBinding. */}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.order.serviceAccount }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: order-config-reader
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["order-config"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: order-config-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: order-config-reader
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.order.serviceAccount }}
+  namespace: {{ .Release.Namespace }}

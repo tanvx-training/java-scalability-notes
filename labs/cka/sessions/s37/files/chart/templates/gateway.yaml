@@ -1,0 +1,63 @@
+{{- /* gateway (bản chính) và gateway-v1 (canary của s30): cùng khuôn, khác tên, tag và replicas. */}}
+{{- range $name, $key := dict "gateway" "gateway" "gateway-v1" "gatewayV1" }}
+{{- $v := index $.Values $key }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: {{ $v.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $name }}          # bất biến: phải đúng như Deployment đang chạy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      priorityClassName: shop-critical
+      terminationGracePeriodSeconds: 45
+      initContainers:
+      - name: wait-catalog
+        image: busybox:1.37
+        command:
+        - sh
+        - -c
+        - until wget -q -T 2 -O /dev/null http://catalog:8080/actuator/health/readiness; do echo chờ catalog; sleep 2; done
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 32Mi
+      containers:
+      - name: gateway
+        image: "{{ $v.image.repository }}:{{ $v.image.tag }}"
+        env:
+        - name: JAVA_OPTS
+          value: {{ $.Values.javaOpts }}
+        envFrom:
+        - configMapRef:
+            name: shop-config
+        volumeMounts:
+        - name: app-config
+          mountPath: /config
+          readOnly: true
+        {{- include "shop.springContainer" $ | nindent 8 }}
+        resources:
+          {{- toYaml $v.resources | nindent 10 }}
+      volumes:
+      - name: app-config
+        configMap:
+          name: gateway-files
+---
+{{ include "shop.service" $name }}
+{{- end }}
