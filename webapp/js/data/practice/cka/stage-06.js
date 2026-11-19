@@ -1,5 +1,5 @@
 // Chặng 6 — Bảo mật truy cập: PKI, kubeconfig, RBAC.
-// s33–s34 đã phát hành (đợt 4); s35–s36 là buổi khung: đủ trường cấu trúc (check-data PR7), nội dung đầy đủ ở task sau.
+// s33–s36 đã phát hành (đợt 4).
 
 export const sessions = [
   {
@@ -601,12 +601,12 @@ Verify đọc \`~/dev.kubeconfig\`, \`~/ops.kubeconfig\` bằng PyYAML: đúng m
     domain: "architecture",
     competencies: ["ar-rbac"],
     requires: ["s34"],
-    status: "skeleton",
+    status: "published",
     pieces: ["rbac"],
     goals: [
-      "Cho group shop-dev quyền triển khai trong namespace shop, group shop-ops quyền đọc node và mọi namespace.",
+      "Cho group shop-dev quyền triển khai trong namespace shop, group shop-ops quyền chỉ đọc node và mọi namespace.",
       "Chạy order bằng ServiceAccount riêng chỉ đọc được ConfigMap của nó.",
-      "Kiểm từng quyền bằng auth can-i --as trước khi giao cho người dùng.",
+      "Kiểm từng quyền bằng auth can-i --as trước khi giao, rồi bằng kubeconfig thật của người dùng.",
     ],
     skills: [
       { skill: "k-create-role", level: "Gõ được không tra" },
@@ -619,9 +619,397 @@ Verify đọc \`~/dev.kubeconfig\`, \`~/ops.kubeconfig\` bằng PyYAML: đúng m
       { skill: "k-create-token", level: "Gõ được không tra" },
     ],
     uses: ["k-kubeconfig-flag", "k-use-context", "k-exam-vars", "k-rollout-restart"],
-    stateIn: "Đầu ra s34: dev và ops có kubeconfig nhưng chưa có quyền.",
-    stateOut: "Vai dev triển khai được trong shop nhưng không đọc được node; vai ops đọc được mọi thứ nhưng không sửa được; order chạy bằng SA order.",
+    foundation: null,
+    mindset: `**RBAC chỉ cộng, không trừ.** Một request được phép khi **có ít nhất một** binding cho chủ thể của nó mang rule khớp. Không có rule "cấm", không có thứ tự ưu tiên. Mặc định là cấm (đầu s35 dev và ops đều \`Forbidden\`, s34). Vì thế: muốn biết ai làm được gì, phải nhìn **mọi** binding trỏ tới user, **mọi** group của user (kể cả \`system:authenticated\`, group mọi người đã xác thực đều có) và ServiceAccount. Muốn rút quyền, phải gỡ đúng binding đang cấp nó: thêm một Role "hẹp hơn" không làm gì cả.
+
+**Bốn object, hai câu hỏi: "quyền gì" và "cho ai, ở đâu".**
+
+| | Định nghĩa quyền (rules) | Gắn quyền cho chủ thể |
+|---|---|---|
+| Trong một namespace | **Role** (namespaced) | **RoleBinding**: hiệu lực chỉ trong namespace của nó; trỏ được tới Role cùng namespace **hay một ClusterRole** (dùng lại bộ rule chung, như \`view\`, \`edit\`) |
+| Cả cluster | **ClusterRole** | **ClusterRoleBinding**: hiệu lực ở mọi namespace và với resource không thuộc namespace nào (\`nodes\`, \`namespaces\`, \`persistentvolumes\`, \`clusterroles\`) |
+
+Đọc node chỉ cấp được bằng ClusterRole + **ClusterRoleBinding**: một RoleBinding trỏ ClusterRole có \`nodes\` vẫn không cho đọc node, vì node không nằm trong namespace nào. \`roleRef\` của binding **không sửa được** sau khi tạo (muốn đổi thì xoá rồi tạo lại); \`subjects\` thì sửa được.
+
+**Một rule = apiGroups × resources × verbs** (thêm \`resourceNames\` nếu cần). API group lấy ở cột APIVERSION của \`k api-resources\`: \`v1\` là group lõi \`""\`, \`apps/v1\` là \`apps\`, \`autoscaling/v2\` là \`autoscaling\`. Verb: \`get\`, \`list\`, \`watch\` (đọc), \`create\`, \`update\`, \`patch\`, \`delete\`, \`deletecollection\`. **Subresource là resource riêng:** \`pods/log\` (\`k logs\`), \`pods/exec\` (\`k exec\`, verb \`create\`), \`deployments/scale\` (\`k scale\`). Quyền trên \`pods\` không kéo theo \`pods/exec\`. \`resourceNames\` chỉ giới hạn được thao tác có tên trên URL: \`get configmap/order-config\` thì được, \`list configmaps\` thì không (đo: SA order bị \`Forbidden\` khi \`list\` dù rule có \`list\`).
+
+**Chủ thể có ba loại, và loại là một phần của tên.** \`kind: User\`, \`kind: Group\` (cả hai \`apiGroup: rbac.authorization.k8s.io\`) và \`kind: ServiceAccount\` (có \`namespace\`). Cert của dev mang \`CN=dev, O=shop-dev\`: username \`dev\`, group \`shop-dev\`. Binding cho **User** \`shop-dev\` là cho một người tên "shop-dev" không tồn tại, và dev không được gì (tình huống hỏng của buổi, đo bằng \`--as\`). Gắn quyền theo **group** để người mới vào đội chỉ cần cert có đúng \`O\`.
+
+**ServiceAccount là danh tính của Pod.** Mỗi namespace có SA \`default\`; Pod không khai \`serviceAccountName\` chạy bằng nó. SA \`order\` xác thực là \`system:serviceaccount:shop:order\`, thuộc group \`system:serviceaccounts\`, \`system:serviceaccounts:shop\` (đo bằng \`auth whoami\` với token của nó). Token được kubelet chiếu vào Pod tại \`/var/run/secrets/kubernetes.io/serviceaccount/token\` (\`automountServiceAccountToken\` mặc định bật; token có hạn, kubelet tự xoay). \`k create token order\` xin một token mới qua TokenRequest: không tạo Secret nào, chỉ in token ra. SA của Pod **không đổi được** trên Pod đang chạy: đổi \`serviceAccountName\` của Deployment thì ReplicaSet mới tạo Pod mới. Ngược lại, sửa Role hay binding có hiệu lực **ngay ở request kế tiếp**, không cần khởi động lại gì.
+
+**Ai đọc ConfigMap.** \`envFrom: configMapRef\` do **kubelet** đọc, bằng danh tính của node, nên app không cần quyền RBAC nào để có biến môi trường. Role \`order-config-reader\` có nghĩa khi **chính app** gọi API: Spring Cloud Kubernetes Config (\`spring.cloud.kubernetes.config.sources\`) đọc ConfigMap qua API bằng token của SA để nạp lại cấu hình khi ConfigMap đổi. Lab không cài thư viện đó; buổi này kiểm quyền bằng chính token của SA (\`create token\`, rồi \`curl\` từ một Pod tạm), như app sẽ làm.
+
+**Cùng ý với Spring Security.**
+
+| Spring Security | RBAC |
+|---|---|
+| \`GrantedAuthority\` / role \`ROLE_DEV\` gắn cho user | Role \`shop-deployer\` gắn cho group \`shop-dev\` bằng RoleBinding |
+| \`requestMatchers("/api/orders/**").hasRole("DEV")\` | rule \`apiGroups: [apps], resources: [deployments], verbs: [patch]\` |
+| \`authorizeHttpRequests(...).anyRequest().denyAll()\`: không khớp quy tắc nào thì cấm | RBAC mặc định cấm; nhưng RBAC **không có** \`denyAll()\` cho một đường cụ thể: chỉ có quyền cộng thêm |
+| \`@PreAuthorize\` trên method, kiểm từng hành động | verb trên từng resource và subresource (\`pods/exec\` khác \`pods\`) |
+| Test bằng \`@WithMockUser(roles = "DEV")\` | \`k auth can-i … --as dev --as-group shop-dev\` |
+
+**Vừa đủ quyền cho \`shop-deployer\`.** Việc của đội dev trong shop: apply/rollout/set image Deployment (\`create/update/patch/delete\` trên \`deployments\`; \`rollout restart\` là một \`patch\`), Service, ConfigMap, HPA của catalog; xem Pod, log, Event, ReplicaSet (\`rollout status/history\` đọc ReplicaSet); \`exec\` vào Pod; xoá Pod để nó được tạo lại. Không có: Secret (mật khẩu PostgreSQL), NetworkPolicy, StatefulSet \`postgres\`, ResourceQuota/LimitRange (việc của ops), RBAC (tự cấp quyền) và \`deployments/scale\` (catalog do HPA co giãn; s36 dùng đúng lỗ hổng này làm bài đọc Forbidden).`,
+    refs: [
+      { label: "Bài lộ trình CKA: RBAC chuyên sâu — Role/ClusterRole, aggregated ClusterRoles", href: "#/roadmap/cka/cka-w7-1" },
+      { label: "Bài lộ trình CKA: ServiceAccounts và token", href: "#/roadmap/cka/cka-w7-3" },
+      { label: "Bài lộ trình CKA: kubectl auth can-i mọi biến thể", href: "#/roadmap/cka/cka-w7-4" },
+      { label: "CKA Study Guide, chương 6 — xác thực, uỷ quyền và kiểm soát tiếp nhận", href: "#/docs/ckabook-06" },
+      { label: "Spring Security in Action, chương 7 — authorization ở mức endpoint (authority và role)", href: "#/docs/springsec-07" },
+      { label: "kubernetes.io: Using RBAC Authorization", href: "https://kubernetes.io/docs/reference/access-authn-authz/rbac/" },
+      { label: "kubernetes.io: Configure Service Accounts for Pods", href: "https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/" },
+      { label: "kubernetes.io: Managing Service Accounts (TokenRequest, bound token)", href: "https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/" },
+    ],
+    stateIn: "Đầu ra s34: ~/dev.kubeconfig và ~/ops.kubeconfig xác thực được nhưng Forbidden mọi thứ; order chạy bằng SA default và không dùng ConfigMap nào. `./labs/lab begin cka s35` kiểm đầu vào bằng check.sh riêng (phần bền của s34: kubeconfig, whoami, đáp án; không đòi Forbidden, để chạy lại được giữa buổi) và tạo ~/drills/s35.",
+    stateOut: "~/shop/rbac.yaml (SA order; Role shop-deployer + RoleBinding shop-dev cho Group shop-dev ở shop; ClusterRole shop-ops-view chỉ get/list/watch, có nodes, không Secret + ClusterRoleBinding shop-ops cho Group shop-ops; Role order-config-reader theo resourceNames [order-config] + RoleBinding cùng tên cho SA shop/order) khớp cluster; ConfigMap order-config (~/shop/order-config.yaml); Deployment order chạy bằng SA order, envFrom order-config. dev triển khai được trong shop, không đọc node hay kube-system; ops đọc được node và mọi namespace (trừ Secret), không sửa được gì.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s35`. Đọc RBAC có sẵn: `k get clusterrole | grep -v '^system:'` (ngoài role của Calico, ingress-nginx…, có bốn ClusterRole mặc định cho người dùng: `cluster-admin`, `admin`, `edit`, `view`), `k describe clusterrole view | head -20`, `k get clusterrolebinding -o wide | grep -E 'NAME|cluster-admin'` (ai đang là cluster-admin, qua group nào?). `k auth can-i get nodes --as dev` và `… --as dev --as-group shop-dev`: vì sao `--as` một mình chưa giống dev thật?",
+      },
+      {
+        id: "t2",
+        text: "Role `shop-deployer` ở shop: sinh khung `k -n shop create role shop-deployer --verb=get,list,watch,create,update,patch,delete --resource=deployments.apps,services,configmaps,horizontalpodautoscalers.autoscaling $do > ~/shop/rbac.yaml`, rồi sửa tệp thêm rule: `replicasets` (apps) và `events` chỉ đọc; `pods` đọc và `delete`; `pods/log` `get`; `pods/exec` `create`. RoleBinding `shop-dev`: `k -n shop create rolebinding shop-dev --role=shop-deployer --group=shop-dev $do`, nối vào tệp sau một dòng `---`. `k apply -f ~/shop/rbac.yaml`. Vì sao không cho Secret và `deployments/scale`?",
+      },
+      {
+        id: "t3",
+        text: "Kiểm trước khi giao: `k auth can-i create deployments -n shop --as dev --as-group shop-dev`, `… get nodes …`, `… list pods -n kube-system …`, `… create clusterroles …`, rồi `k auth can-i --list -n shop --as dev --as-group shop-dev`. Rồi bằng danh tính thật: `k --kubeconfig ~/dev.kubeconfig auth can-i --list`, `k --kubeconfig ~/dev.kubeconfig get pods`, `k --kubeconfig ~/dev.kubeconfig -n shop create deploy probe --image=shop/catalog:1.0 --dry-run=server` (server kiểm quyền mà không tạo gì), `… get nodes`.",
+      },
+      {
+        id: "t4",
+        text: "Bấm giờ, dưới 4 phút: ClusterRole `shop-ops-view` chỉ `get,list,watch` trên `nodes,namespaces,pods,pods/log,services,endpoints,events,configmaps,persistentvolumes,persistentvolumeclaims,deployments.apps,replicasets.apps,statefulsets.apps,daemonsets.apps,horizontalpodautoscalers.autoscaling,jobs.batch,cronjobs.batch,networkpolicies.networking.k8s.io,ingresses.networking.k8s.io,endpointslices.discovery.k8s.io,nodes.metrics.k8s.io,pods.metrics.k8s.io` (không Secret), ClusterRoleBinding `shop-ops` cho `--group=shop-ops`; thêm cả hai vào `~/shop/rbac.yaml` và apply. Bằng `~/ops.kubeconfig`: `get nodes`, `get pods -A`, `top node` được; `-n shop delete pod <một Pod>`, `cordon cka-w1`, `-n shop get secret db-cred` phải `Forbidden`.",
+      },
+      {
+        id: "t5",
+        text: "ServiceAccount của order. `k -n shop create configmap order-config --from-literal=CATALOG_URL=http://catalog:8080 $do > ~/shop/order-config.yaml`, apply. Vào `~/shop/rbac.yaml` (mỗi object sau một `---`): `k -n shop create sa order $do`, `k -n shop create role order-config-reader --verb=get,list,watch --resource=configmaps --resource-name=order-config $do`, `k -n shop create rolebinding order-config-reader --role=order-config-reader --serviceaccount=shop:order $do`. Sửa `~/shop/order.yaml`: `serviceAccountName: order` trong `spec.template.spec`, `envFrom: [{configMapRef: {name: order-config}}]` trong container. Apply cả ba tệp, `k rollout restart deploy order`, `k rollout status deploy order`, rồi `k get pod -l app=order -o custom-columns=POD:.metadata.name,SA:.spec.serviceAccountName`. Pod cũ có đổi SA tại chỗ không?",
+      },
+      {
+        id: "t6",
+        text: "Gọi API bằng token của SA. `t=$(k -n shop create token order --duration=10m)`; giải mã phần giữa: `echo $t | cut -d. -f2 | base64 -d` (sub, aud, exp?). Pod tạm ở **default** (shop đã default-deny, Pod mới ở đó không ra được apiserver): `k -n default run sa-probe --image=nicolaka/netshoot:v0.16@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 --command -- sleep 600`, rồi `k -n default exec sa-probe -- curl -s -o /dev/null -w '%{http_code}\\n' --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H \"Authorization: Bearer $t\" https://kubernetes.default.svc/api/v1/namespaces/shop/configmaps/order-config`; thử `configmaps/shop-config` và `secrets/db-cred`. `k auth can-i --list -n shop --as=system:serviceaccount:shop:order`. Xoá `sa-probe`.",
+      },
+      {
+        id: "t7",
+        text: "Tình huống hỏng: `k -n default create rolebinding dev-draft --clusterrole=view --group=shop-dev $do > ~/drills/s35/dev-draft.yaml`, đổi `kind: Group` thành `kind: User`, apply. `k auth can-i list pods -n default --as dev --as-group shop-dev` và `… --as shop-dev`: kết quả nói gì? `k -n default get rolebinding dev-draft -o wide` (cột USERS hay GROUPS?). Xoá `dev-draft`. Trên Mac: `./labs/lab verify cka s35` phải đạt 4/4.",
+      },
+    ],
+    hints: [
+      "`--as dev` không kèm `--as-group` là hỏi cho một user `dev` **không có group nào** (ngoài `system:authenticated`): binding theo group shop-dev không áp vào, kết quả `no` dù dev thật làm được. Luôn ghép `--as dev --as-group shop-dev`, hay hỏi thẳng bằng `--kubeconfig ~/dev.kubeconfig`.",
+      "`auth can-i get nodes` với dev.kubeconfig in thêm `Warning: resource 'nodes' is not namespace scoped` (đo): context của dev có `namespace: shop`, can-i báo cờ namespace thừa; kết quả vẫn đúng.",
+      "`error: failed to create rolebinding: … cannot change roleRef` khi apply lại binding với Role khác: `roleRef` bất biến; `k delete rolebinding <tên>` rồi apply.",
+      "`k logs` bị `Forbidden … cannot get resource \"pods/log\"` hay `k exec` bị `cannot create resource \"pods/exec\"`: subresource cần rule riêng; quyền `pods` không bao gồm chúng.",
+      "SA order `list configmaps` bị `Forbidden` dù Role có verb `list`: `resourceNames` không lọc được `list` không tên (đo). Dùng `get configmap order-config`.",
+      "Pod order vẫn SA `default` sau khi sửa tệp: bạn chưa apply `~/shop/order.yaml`, hay sửa nhầm `spec.serviceAccountName` của Deployment thay vì `spec.template.spec`. `k get deploy order -o jsonpath='{.spec.template.spec.serviceAccountName}'`.",
+      "`curl` từ Pod tạm treo rồi `000`: Pod đang ở namespace có default-deny (shop). Dùng `default`.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6); tên Pod, UID, token sẽ khác. Context đã ở namespace shop, \`do='--dry-run=client -o yaml'\` (k-exam-vars).
+
+**1. RBAC có sẵn**
+
+\`\`\`bash
+k auth can-i get pods --as dev
+# no
+k auth can-i get pods --as dev --as-group shop-dev
+# no                 (chưa có binding nào; sau t2 lệnh này ra yes, lệnh trên vẫn no)
+\`\`\`
+
+**2. Role shop-deployer và RoleBinding shop-dev**
+
+\`~/shop/rbac.yaml\` sau t2, t4, t5 (bảy object, mỗi object sau một \`---\`; ClusterRole cắt bớt):
+
+\`\`\`yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: order
+  namespace: shop
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: shop-deployer
+  namespace: shop
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: shop-dev
+  namespace: shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: shop-deployer
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: shop-dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: shop-ops-view
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - namespaces
+  - pods
+  - pods/log
+  # … services, endpoints, events, configmaps, persistentvolumes, persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  # … deployments, replicasets, statefulsets, daemonsets; rồi autoscaling, batch, discovery.k8s.io, metrics.k8s.io, networking.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: shop-ops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: shop-ops-view
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: shop-ops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: order-config-reader
+  namespace: shop
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - order-config
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: order-config-reader
+  namespace: shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: order-config-reader
+subjects:
+- kind: ServiceAccount
+  name: order
+  namespace: shop
+\`\`\`
+
+\`create role\` chỉ nhận một bộ verb cho mọi \`--resource\` trong một lệnh, nên Role nhiều bộ verb là "sinh khung rồi sửa". \`--dry-run=client\` in thêm \`creationTimestamp: null\`: để nguyên hay xoá đều được.
+
+\`\`\`bash
+k apply -f ~/shop/rbac.yaml
+# serviceaccount/order created
+# role.rbac.authorization.k8s.io/shop-deployer created
+# rolebinding.rbac.authorization.k8s.io/shop-dev created
+# clusterrole.rbac.authorization.k8s.io/shop-ops-view created
+# clusterrolebinding.rbac.authorization.k8s.io/shop-ops created
+# role.rbac.authorization.k8s.io/order-config-reader created
+# rolebinding.rbac.authorization.k8s.io/order-config-reader created
+k describe rolebinding shop-dev
+# Name:         shop-dev
+# Role:
+#   Kind:  Role
+#   Name:  shop-deployer
+# Subjects:
+#   Kind   Name      Namespace
+#   ----   ----      ---------
+#   Group  shop-dev
+\`\`\`
+
+**3. Kiểm quyền của dev**
+
+\`\`\`bash
+for q in 'create deployments -n shop' 'patch deployments -n shop' 'get pods -n shop' 'get nodes' 'list pods -n kube-system' 'create clusterroles'; do
+  printf '%-28s --as: %-4s dev.kubeconfig: %s\\n' "$q" "$(k auth can-i $q --as dev --as-group shop-dev)" "$(k --kubeconfig ~/dev.kubeconfig auth can-i $q 2>/dev/null)"
+done
+# create deployments -n shop   --as: yes  dev.kubeconfig: yes
+# patch deployments -n shop    --as: yes  dev.kubeconfig: yes
+# get pods -n shop             --as: yes  dev.kubeconfig: yes
+# get nodes                    --as: no   dev.kubeconfig: no
+# list pods -n kube-system     --as: no   dev.kubeconfig: no
+# create clusterroles          --as: no   dev.kubeconfig: no
+k --kubeconfig ~/dev.kubeconfig auth can-i --list | grep -v '\\[/'
+# Resources                                       Non-Resource URLs   Resource Names   Verbs
+# pods/exec                                       []                  []               [create]
+# selfsubjectreviews.authentication.k8s.io        []                  []               [create]
+# selfsubjectaccessreviews.authorization.k8s.io   []                  []               [create]
+# selfsubjectrulesreviews.authorization.k8s.io    []                  []               [create]
+# configmaps                                      []                  []               [get list watch create update patch delete]
+# services                                        []                  []               [get list watch create update patch delete]
+# deployments.apps                                []                  []               [get list watch create update patch delete]
+# horizontalpodautoscalers.autoscaling            []                  []               [get list watch create update patch delete]
+# pods                                            []                  []               [get list watch delete]
+# events                                          []                  []               [get list watch]
+# replicasets.apps                                []                  []               [get list watch]
+# pods/log                                        []                  []               [get]
+\`\`\`
+
+Bốn dòng \`self…reviews\` có sẵn cho mọi user đã xác thực (\`auth whoami\`, \`auth can-i\` chạy được nhờ chúng). \`--dry-run=server\` của dev đi qua RBAC thật mà không tạo object.
+
+**4. ops**
+
+\`\`\`bash
+k --kubeconfig ~/ops.kubeconfig get nodes
+# NAME     STATUS   ROLES           AGE     VERSION
+# cka-cp   Ready    control-plane   5d10h   v1.36.6
+# cka-w1   Ready    <none>          5d10h   v1.36.6
+# cka-w2   Ready    <none>          5d10h   v1.36.6
+for q in 'get nodes' 'list pods -A' 'delete pods -n shop' 'patch nodes' 'get secrets -n shop'; do
+  printf '%-28s ops.kubeconfig: %s\\n' "$q" "$(k --kubeconfig ~/ops.kubeconfig auth can-i $q 2>/dev/null)"
+done
+# get nodes                    ops.kubeconfig: yes
+# list pods -A                 ops.kubeconfig: yes
+# delete pods -n shop          ops.kubeconfig: no
+# patch nodes                  ops.kubeconfig: no
+# get secrets -n shop          ops.kubeconfig: no
+k --kubeconfig ~/ops.kubeconfig -n shop scale deploy order --replicas=1
+# Error from server (Forbidden): deployments.apps "order" is forbidden: User "ops" cannot patch resource "deployments/scale" in API group "apps" in the namespace "shop"
+\`\`\`
+
+Vì sao không Secret: ai \`get secret\` được là đọc được mật khẩu PostgreSQL và token cũ, tức "chỉ đọc" thành "đóng vai được người khác". ClusterRole \`view\` có sẵn cũng bỏ Secret vì lý do đó. \`cordon\` là \`patch nodes\`: \`no\`.
+
+**5. ServiceAccount của order**
+
+\`\`\`bash
+k apply -f ~/shop/rbac.yaml -f ~/shop/order-config.yaml -f ~/shop/order.yaml
+# configmap/order-config created
+# deployment.apps/order configured
+k rollout restart deploy order && k rollout status deploy order
+# deployment "order" successfully rolled out
+k get pod -l app=order -o custom-columns=POD:.metadata.name,SA:.spec.serviceAccountName
+# POD                      SA
+# order-5cc94c55ff-jrdfp   order
+\`\`\`
+
+Ngay sau \`apply\`, trong lúc rollout, có hai dòng: Pod cũ \`order-5b887cccd9-bpzxk  default\` và Pod mới \`order\`. \`serviceAccountName\` của Pod không đổi tại chỗ: Pod mới thay Pod cũ.
+
+**6. Token của SA**
+
+\`\`\`bash
+t=$(k -n shop create token order --duration=10m)
+echo $t | cut -d. -f2 | base64 -d; echo
+# {"aud":["https://kubernetes.default.svc.cluster.local"],"exp":1795063833,"iat":1795063233,"iss":"https://kubernetes.default.svc.cluster.local","jti":"6e4bc5dd-…","kubernetes.io":{"namespace":"shop","serviceaccount":{"name":"order","uid":"dbc95306-…"}},"nbf":1795063233,"sub":"system:serviceaccount:shop:order"}
+k -n default run sa-probe --image=nicolaka/netshoot:v0.16@sha256:b09d9b21381f47a79b3cbcb30da25266dc17186ea00ae65e99fdc51396f48e70 --command -- sleep 600
+k -n default wait --for=condition=Ready pod/sa-probe
+for p in configmaps/order-config configmaps/shop-config secrets/db-cred; do
+  echo "$p → $(k -n default exec sa-probe -- curl -s -o /dev/null -w '%{http_code}' --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $t" https://kubernetes.default.svc/api/v1/namespaces/shop/$p)"
+done
+# configmaps/order-config → 200
+# configmaps/shop-config → 403
+# secrets/db-cred → 403
+k auth can-i --list -n shop --as=system:serviceaccount:shop:order | grep -v '\\[/'
+# Resources                                       Non-Resource URLs   Resource Names   Verbs
+# selfsubjectreviews.authentication.k8s.io        []                  []               [create]
+# selfsubjectaccessreviews.authorization.k8s.io   []                  []               [create]
+# selfsubjectrulesreviews.authorization.k8s.io    []                  []               [create]
+# configmaps                                      []                  [order-config]   [get list watch]
+k -n default delete pod sa-probe
+\`\`\`
+
+\`ca.crt\` mượn từ SA \`default\` của chính Pod tạm (mọi SA được chiếu cùng CA); token dùng là của \`order\`. Cùng token đó qua kubectl: \`k --kubeconfig /dev/null --server https://192.168.252.35:6443 --certificate-authority /etc/kubernetes/pki/ca.crt --token $t -n shop get secret db-cred\` → \`Error from server (Forbidden): secrets "db-cred" is forbidden: User "system:serviceaccount:shop:order" cannot get resource "secrets" in API group "" in the namespace "shop"\`. (\`--kubeconfig /dev/null\` để cert admin của \`~/.kube/config\` không được gửi kèm: đo, \`k --token $t auth whoami\` với \`~/.kube/config\` vẫn ra \`kubernetes-admin\`.)
+
+**7. Tình huống hỏng**
+
+\`\`\`bash
+k -n default create rolebinding dev-draft --clusterrole=view --group=shop-dev $do | sed 's/kind: Group/kind: User/' > ~/drills/s35/dev-draft.yaml
+k apply -f ~/drills/s35/dev-draft.yaml
+k auth can-i list pods -n default --as dev --as-group shop-dev
+# no
+k auth can-i list pods -n default --as shop-dev
+# yes
+k -n default delete rolebinding dev-draft
+\`\`\`
+
+Binding cho \`User shop-dev\` có hiệu lực, nhưng cho một user tên "shop-dev" mà không cert nào mang CN đó. \`-o wide\` in \`shop-dev\` ở cột USERS thay vì GROUPS: chỗ nhìn nhanh nhất.
+
+Lời giải tự động: \`labs/cka/sessions/s35/apply.sh\` (\`files/solve.sh\`: sinh \`~/shop/rbac.yaml\` bằng \`create … --dry-run=client\`, sửa \`order.yaml\` bằng PyYAML, apply; chạy lại được).`,
+    exam: {
+      patterns: [
+        "\"Tạo Role/ClusterRole X cho phép <verb> trên <resource>, gắn cho user/group/SA Y trong namespace Z\" — `k create role|clusterrole … --verb … --resource …`, `k create rolebinding|clusterrolebinding … --role|--clusterrole … --user|--group|--serviceaccount ns:sa`; kiểm bằng `k auth can-i … --as`.",
+        "\"Tạo ServiceAccount và cho Deployment dùng nó\" — `k create sa`, `k set serviceaccount deploy/<tên> <sa>` (hay sửa `spec.template.spec.serviceAccountName`), Pod mới tự thay Pod cũ.",
+        "\"SA X có được làm Y không? Ghi kết quả vào /opt/…\" — `k auth can-i <verb> <resource> -n <ns> --as=system:serviceaccount:<ns>:<sa>`.",
+        "\"Lấy token của SA\" — `k create token <sa> -n <ns>` (từ 1.24 SA không tự có Secret token).",
+      ],
+      timeTargetMin: 8,
+      drills: [
+        {
+          text: "Trong 3 phút: SA `reporter` ở shop, chỉ `list` và `get` Pod ở shop, không gì khác. Chứng minh bằng hai lệnh `auth can-i` (một yes, một no). Rồi xoá cả ba object.",
+          timeLimitMin: 3,
+          solution: "```bash\nk -n shop create sa reporter\nk -n shop create role pod-lister --verb=get,list --resource=pods\nk -n shop create rolebinding reporter --role=pod-lister --serviceaccount=shop:reporter\nk auth can-i list pods -n shop --as=system:serviceaccount:shop:reporter      # yes\nk auth can-i delete pods -n shop --as=system:serviceaccount:shop:reporter    # no\nk -n shop delete rolebinding reporter && k -n shop delete role pod-lister && k -n shop delete sa reporter\n```\nTên trong `--serviceaccount` là `<namespace>:<sa>`; trong `--as` là `system:serviceaccount:<namespace>:<sa>`.",
+        },
+        {
+          text: "Trong 2 phút: cho group `shop-dev` quyền `view` (ClusterRole có sẵn) chỉ trong namespace `default`, không tạo Role mới. Kiểm dev đọc được Pod ở default nhưng vẫn không đọc được node. Rồi gỡ.",
+          timeLimitMin: 2,
+          solution: "```bash\nk -n default create rolebinding dev-view --clusterrole=view --group=shop-dev\nk auth can-i list pods -n default --as dev --as-group shop-dev   # yes\nk auth can-i list nodes --as dev --as-group shop-dev             # no\nk -n default delete rolebinding dev-view\n```\nRoleBinding trỏ ClusterRole: dùng lại bộ rule chung, hiệu lực chỉ trong namespace của binding.",
+        },
+      ],
+    },
+    tips: [
+      "Sau mọi câu RBAC: `k auth can-i <verb> <resource> -n <ns> --as <user> [--as-group <group>]` cho một trường hợp \"được\" và một trường hợp \"không được\". Hai giây, bắt được lỗi `User`/`Group`.",
+      "`k create clusterrole … --resource=` nhận `deployments.apps`, `horizontalpodautoscalers.autoscaling`: viết `<resource>.<group>` thì khỏi tra `apiGroups`.",
+      "Trên đề, `--dry-run=client -o yaml > tệp` rồi sửa nhanh hơn viết YAML RBAC từ đầu, nhất là `roleRef`/`subjects`.",
+      "`k get rolebinding,clusterrolebinding -A -o wide | grep <tên>` tìm mọi binding nhắc tới một user/group/SA (cột USERS, GROUPS, SERVICEACCOUNTS).",
+    ],
+    outcome: {
+      md: `dev triển khai được trong shop, ops nhìn được cả cluster mà không sửa được gì, order chạy bằng danh tính riêng. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s35
+\`\`\`
+
+Verify hỏi quyền **bằng chính hai kubeconfig** của s34 (không \`--as\`), nên cert, kubeconfig và binding cùng được chấm. dev: \`create\`/\`patch\` Deployment và \`get pods\` ở shop phải \`yes\` (và một \`get pods\` thật chạy được); \`get nodes\`, \`list pods\`/\`get secrets\`/\`create deployments\`/\`delete configmaps\`/\`patch daemonsets\` ở kube-system và \`create clusterroles\` phải \`no\` (dev là cluster-admin, hay RoleBinding cho \`system:authenticated\`: đỏ). ops: \`get nodes\`, \`list pods -A\` \`yes\`; \`create\`/\`patch\`/\`delete\` trên Deployment, Pod, node, namespace, ClusterRoleBinding và đọc Secret \`no\` (ops có \`*\`: đỏ). SA order: Deployment và mọi Pod order chạy bằng SA \`order\`, Deployment dùng ConfigMap \`order-config\`, Available; token thật của SA (\`create token\`) đọc được \`order-config\`, không đọc \`shop-config\`, không \`list\` ConfigMap, không đọc \`db-cred\`. Cuối cùng \`~/shop/rbac.yaml\` có đủ bảy object và khớp cluster (rules, subjects, roleRef), binding gắn đúng **Group**, \`shop-ops-view\` chỉ \`get\`/\`list\`/\`watch\` và có \`nodes\`, \`order-config-reader\` chỉ theo \`resourceNames\`; \`~/shop/\` có Deployment order với \`serviceAccountName: order\` và ConfigMap \`order-config\`.`,
+      verifyOutput: "lab: kiểm s35\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~9 phút)\n  ✓ dev (dev.kubeconfig): create/patch deploy, get pods ở shop được; get nodes, kube-system, create clusterrole không\n  ✓ ops (ops.kubeconfig): get nodes, list pods -A được; create/patch/delete ở mọi nơi và đọc Secret không\n  ✓ Pod order chạy bằng SA order, Available; token SA order đọc được ConfigMap của order, không ConfigMap khác, không Secret db-cred\n  ✓ ~/shop/rbac.yaml có đủ 7 object RBAC/SA và khớp cluster; ~/shop/ giữ serviceAccountName: order\n  → 4/4 đạt",
+      projectDelta: "shop có phân quyền theo vai: đội dev (group shop-dev) triển khai trong namespace shop, đội vận hành (shop-ops) chỉ đọc cả cluster, và order chạy bằng ServiceAccount riêng chỉ đọc được ConfigMap order-config. Mọi quyền nằm trong ~/shop/rbac.yaml; chart Helm ở s37 nhận lại SA/Role/RoleBinding của order.",
+    },
+    review: [
+      { q: "RBAC có rule \"cấm\" không? Muốn chắc dev không đọc được Secret thì phải kiểm gì?", a: "Không: RBAC chỉ cộng, mặc định là cấm. Một request được phép khi bất kỳ binding nào cho user, cho một group của user (kể cả `system:authenticated`) hay cho SA có rule khớp. Kiểm bằng `k auth can-i get secrets -n shop --as dev --as-group shop-dev` và tìm mọi binding nhắc tới dev/shop-dev/system:authenticated (`k get rolebinding,clusterrolebinding -A -o wide`)." },
+      { q: "ops cần đọc node. Vì sao một RoleBinding trỏ ClusterRole `shop-ops-view` không đủ?", a: "RoleBinding chỉ có hiệu lực trong namespace của nó; node không thuộc namespace nào, nên chỉ ClusterRoleBinding cấp được quyền trên `nodes` (cùng `namespaces`, `persistentvolumes`). RoleBinding trỏ ClusterRole dùng để tái sử dụng bộ rule trong một namespace." },
+      { q: "RoleBinding với `subjects: [{kind: User, name: shop-dev}]` có lỗi gì, và nhìn ra ở đâu nhanh nhất?", a: "Gắn quyền cho một user tên shop-dev, trong khi dev là user `dev` thuộc group `shop-dev`: dev không được gì (`can-i … --as dev --as-group shop-dev` ra no). `k get rolebinding -o wide`: tên nằm ở cột USERS thay vì GROUPS; `k describe rolebinding`: `Kind User`." },
+      { q: "Pod order dùng `envFrom` ConfigMap `order-config`. Nó có cần Role `order-config-reader` để nhận biến môi trường không?", a: "Không: kubelet đọc ConfigMap bằng danh tính của node khi dựng container. Role cho SA chỉ cần khi chính app gọi API bằng token của nó (ví dụ Spring Cloud Kubernetes Config đọc và theo dõi ConfigMap). Buổi này kiểm quyền đó bằng token thật của SA." },
+      { q: "So với Spring Security, `hasRole(\"DEV\")` trên một đường dẫn tương ứng với gì trong RBAC, và RBAC thiếu gì so với Spring?", a: "Role (tập rule verb × resource) gắn cho group shop-dev qua RoleBinding; `@WithMockUser` tương ứng `auth can-i --as`. RBAC không có quy tắc cấm cho một đường cụ thể như `denyAll()` hay thứ tự matcher: chỉ có cộng quyền, nên quyền rộng ở một binding không thể bị một binding khác thu hẹp." },
+    ],
   },
+// ───────────────────────────── s36 ─────────────────────────────
   {
     id: "s36",
     stage: "st6",
@@ -630,10 +1018,10 @@ Verify đọc \`~/dev.kubeconfig\`, \`~/ops.kubeconfig\` bằng PyYAML: đúng m
     domain: "troubleshooting",
     competencies: ["ts-components"],
     requires: ["s35"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Sửa trong 20 phút một kubeconfig trỏ sai server và sai cert, cùng một RoleBinding gắn nhầm chủ thể.",
+      "Sửa trong 20 phút một kubeconfig trỏ sai server và sai cert, cùng một ClusterRoleBinding gắn nhầm chủ thể.",
       "Đọc một thông báo Forbidden và nói ngay thiếu quyền gì, ở API group nào, namespace nào.",
       "Tìm đúng API group của một resource để viết Role cho nó.",
     ],
@@ -645,7 +1033,220 @@ Verify đọc \`~/dev.kubeconfig\`, \`~/ops.kubeconfig\` bằng PyYAML: đúng m
       { skill: "k-api-resources", level: "Gõ được không tra" },
     ],
     uses: ["k-auth-can-i", "k-config-view-minify", "lx-openssl-x509", "k-create-rolebinding"],
-    stateIn: "Đầu ra s35 cộng `./labs/lab break`: kubeconfig của dev và quyền của ops bị làm hỏng.",
-    stateOut: "dev và ops có đúng quyền như cuối s35, kubeconfig của cả hai dùng được.",
+    foundation: null,
+    mindset: `**Một lệnh kubectl đi qua ba cửa, và mỗi cửa hỏng theo một kiểu.** Đọc dòng lỗi là biết request dừng ở cửa nào, và cần nhìn phần nào của kubeconfig hay RBAC:
+
+| Thông báo (đo trên lab) | Request dừng ở | Nhìn vào |
+|---|---|---|
+| \`Unable to connect to the server: dial tcp …: connect: connection refused\` / \`i/o timeout\` | chưa tới được ai | \`server\` (IP, cổng) của cluster trong kubeconfig |
+| \`Unable to connect to the server: tls: failed to verify certificate: x509: …\` | TLS: client không tin server | \`server\` trỏ nhầm dịch vụ khác, hay \`certificate-authority-data\` sai CA |
+| \`error: You must be logged in to the server (Unauthorized)\` (401) | xác thực: apiserver không nhận ra bạn | cert không do CA cluster ký, hết hạn, token sai hay hết hạn |
+| \`Error from server (Forbidden): … User "x" cannot <verb> resource "<r>" in API group "<g>" …\` (403) | uỷ quyền: biết bạn là ai, RBAC không cho | danh tính trong câu (đúng người chưa?), rồi binding và rule |
+
+Biến thể TLS của sự cố hôm nay: \`server\` trỏ cổng 10250 của cka-cp, nơi **kubelet** nghe. Cert serving của kubelet tự ký (\`issuer=CN = cka-cp-ca@…\`) và chỉ có \`DNS:cka-cp\` trong SAN, nên kubectl báo \`x509: cannot validate certificate for 192.168.252.35 because it doesn't contain any IP SANs\` (đo). Câu đó **không** nói apiserver sai cert: nó nói bạn không nói chuyện với apiserver. \`curl -sk https://<ip>:<cổng>/healthz\` cho biết ai đang nghe (kubelet trả \`Unauthorized\`, apiserver trả \`ok\`).
+
+**Forbidden đọc theo năm phần.** \`deployments.apps "order" is forbidden: User "dev" cannot patch resource "deployments/scale" in API group "apps" in the namespace "shop"\`: **ai** (\`User "dev"\`: có đúng người bạn nghĩ không?), **verb** (\`patch\`), **resource** (\`deployments/scale\`: subresource, cần rule riêng), **API group** (\`apps\`; \`""\` là group lõi), **phạm vi** (\`in the namespace "shop"\` hay \`at the cluster scope\`: cần Role hay ClusterRole). Đủ năm thứ đó để viết đúng một rule, không hơn.
+
+**Tên trong kubeconfig là nhãn, danh tính là cert.** Một kubeconfig tên \`dev.kubeconfig\`, user tên \`dev\`, mà cert nhúng là của ops thì mọi request là của ops. \`k auth whoami\` hỏi chính apiserver (đo: \`Username ops\`, \`Groups [shop-ops system:authenticated]\`); đọc cert nhúng bằng \`k config view --raw -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject\`. Lỗi Forbidden có \`User "ops"\` khi bạn đang dùng tệp của dev là dấu hiệu rõ nhất.
+
+**Binding sai chủ thể trông như "thiếu quyền".** ops nhận \`Forbidden\` cho mọi thứ, nhưng ClusterRole \`shop-ops-view\` vẫn đủ rule: lỗi nằm ở binding. Thứ tự đọc: \`k auth can-i --list\` bằng tệp của ops (chỉ còn bốn dòng \`self…reviews\`: không binding nào áp vào ops) → \`k get clusterrolebinding -o wide | grep shop-ops\` (\`shop-ops\` nằm ở cột USERS, không phải GROUPS) → \`k describe clusterrolebinding shop-ops\` (\`Kind User\`). Sửa \`subjects\` trong tệp rồi apply (\`subjects\` sửa được; \`roleRef\` thì không).
+
+**API group khi viết Role.** \`k api-resources\` có cột APIVERSION: group là phần trước \`/\`, \`v1\` là \`""\`. Cùng một tên resource có thể nằm ở hai group: trên lab \`networkpolicies\` có cả \`networking.k8s.io/v1\` (của Kubernetes, s31 dùng) và \`crd.projectcalico.org/v1\` (CRD của Calico, đo). Role với \`apiGroups: [""]\` cho \`networkpolicies\` không cho gì cả. \`k api-resources --api-group=apps\`, \`k explain <resource>\` (dòng GROUP) xác nhận nhanh.
+
+**Sửa ở tệp, không chỉ ở cluster.** Sự cố sửa cả \`~/shop/rbac.yaml\` (PyYAML, comment mất) rồi apply. \`kubectl patch\` lên cluster làm ops chạy lại, nhưng lần \`k apply -f ~/shop/\` tiếp theo đưa lỗi trở lại: verify chấm cả tệp lẫn cluster.`,
+    refs: [
+      { label: "Bài lộ trình CKA: kubectl auth can-i mọi biến thể", href: "#/roadmap/cka/cka-w7-4" },
+      { label: "Bài lộ trình CKA: RBAC chuyên sâu — Role/ClusterRole", href: "#/roadmap/cka/cka-w7-1" },
+      { label: "CKA Study Guide, chương 6 — xác thực, uỷ quyền và kiểm soát tiếp nhận", href: "#/docs/ckabook-06" },
+      { label: "kubernetes.io: Using RBAC Authorization — Referring to resources, subjects", href: "https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-resources" },
+      { label: "kubernetes.io: Authenticating — anonymous, 401 và danh tính", href: "https://kubernetes.io/docs/reference/access-authn-authz/authentication/" },
+      { label: "kubernetes.io: kubectl auth whoami", href: "https://kubernetes.io/docs/reference/kubectl/generated/kubectl_auth/kubectl_auth_whoami/" },
+      { label: "Bài thực hành s35 — RBAC và ServiceAccount", href: "#/practice/cka/s35" },
+    ],
+    stateIn: "Đầu ra s35. Trên Mac chạy `./labs/lab begin cka s36`: lệnh kiểm đầu vào bằng check.sh riêng (phần s35 sự cố không phá: SA order, ops.kubeconfig, RBAC của dev trong cluster), đặt ~/drills/s36/forbidden.txt rồi **gây sự cố**: \"một đồng nghiệp sửa lại quyền truy cập\". dev và ops đều không làm được việc của mình. Bấm giờ 20 phút.",
+    stateOut: "Mọi dòng verify của s35 xanh lại: ~/dev.kubeconfig trỏ apiserver (server như admin.conf) với cert/key của dev, ClusterRoleBinding shop-ops gắn Group shop-ops trong cluster và trong ~/shop/rbac.yaml; ~/drills/s36/answers.env (FORBIDDEN_MISSING).",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s36`, bấm giờ 20 phút. Trên cka-cp, chưa sửa gì: `k --kubeconfig ~/dev.kubeconfig get pods`, `k --kubeconfig ~/ops.kubeconfig get nodes`. Mỗi lỗi dừng ở cửa nào (kết nối, TLS, xác thực, uỷ quyền)? Ghi ra trước khi đọc tiếp.",
+      },
+      {
+        id: "t2",
+        text: "dev, cửa thứ nhất: `k config view --minify --kubeconfig ~/dev.kubeconfig | grep server`, so với `sudo grep server /etc/kubernetes/admin.conf`. Ai đang nghe cổng đó: `curl -sk https://192.168.252.35:<cổng>/healthz`, `openssl s_client -connect 192.168.252.35:<cổng> </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -ext subjectAltName`. Sửa server bằng `k config set-cluster kubernetes --server=… --kubeconfig ~/dev.kubeconfig`.",
+      },
+      {
+        id: "t3",
+        text: "dev, cửa thứ hai: `k --kubeconfig ~/dev.kubeconfig get pods` lần nữa. Thông báo nói `User` nào? `k --kubeconfig ~/dev.kubeconfig auth whoami`; đọc cert nhúng: `k config view --raw --kubeconfig ~/dev.kubeconfig -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject`. Nhúng lại cert và key của dev (s34: `set-credentials … --embed-certs`). `auth whoami` phải ra `dev`, `[shop-dev system:authenticated]`.",
+      },
+      {
+        id: "t4",
+        text: "ops: `k --kubeconfig ~/ops.kubeconfig auth whoami` (danh tính đúng chưa?), `k --kubeconfig ~/ops.kubeconfig auth can-i --list`. Rồi bằng admin: `k get clusterrolebinding -o wide | grep -E 'NAME|shop-ops'`, `k describe clusterrolebinding shop-ops`, `k describe clusterrole shop-ops-view | head`. Lỗi ở Role hay ở binding? Sửa trong `~/shop/rbac.yaml`, `k apply -f ~/shop/rbac.yaml`, `k --kubeconfig ~/ops.kubeconfig get nodes`.",
+      },
+      {
+        id: "t5",
+        text: "Đọc Forbidden cho sẵn: `cat ~/drills/s36/forbidden.txt`. Ghi `FORBIDDEN_MISSING=<verb>,<resource>,<API group>` (ba phần cách nhau bằng dấu phẩy, đúng như trong thông báo) vào `~/drills/s36/answers.env`. Rule nào sẽ cho dev làm việc đó? (Viết ra, **đừng** thêm vào `shop-deployer`.)",
+      },
+      {
+        id: "t6",
+        text: "API group: `k api-resources | grep -E '^(NAME|deployments|networkpolicies|poddisruptionbudgets|cronjobs) '`. Vì sao `networkpolicies` có hai dòng, và Role cho NetworkPolicy của s31 phải ghi `apiGroups` nào? `k explain networkpolicy | head -3`. Trên Mac: `./labs/lab verify cka s36` phải đạt 6/6.",
+      },
+    ],
+    hints: [
+      "`x509: cannot validate certificate for 192.168.252.35 because it doesn't contain any IP SANs`: cert server không có IP trong SAN. apiserver có (s33); kubelet thì không. Lỗi TLS kiểu này gần như luôn là sai cổng hay sai máy, không phải CA hỏng.",
+      "Đừng \"sửa\" lỗi TLS bằng `k config set-cluster kubernetes --insecure-skip-tls-verify=true`: lệnh đó **xoá** `certificate-authority-data` khỏi tệp (đo), đặt lại `false` không đưa CA về, và verify đỏ dòng kubeconfig. Nếu lỡ, `set-cluster … --certificate-authority=/etc/kubernetes/pki/ca.crt --embed-certs`.",
+      "`Forbidden … User \"ops\"` khi bạn đang dùng `~/dev.kubeconfig`: tệp mang cert của ops. Tên user trong kubeconfig không quyết định gì; cert quyết định.",
+      "`k --kubeconfig ~/ops.kubeconfig auth can-i --list` chỉ còn bốn dòng `self…reviews`: không binding nào áp vào ops; đừng thêm rule vào ClusterRole, hãy đọc binding.",
+      "Thêm một ClusterRoleBinding mới cho Group shop-ops thay vì sửa `shop-ops`: ops chạy lại, nhưng `shop-ops` vẫn gắn nhầm và `~/shop/rbac.yaml` vẫn sai; verify đỏ dòng tệp. Sửa đúng binding hỏng.",
+      "`kubectl patch clusterrolebinding shop-ops …` mà không sửa `~/shop/rbac.yaml`: verify đỏ dòng \"rbac.yaml khớp cluster\" (đo).",
+    ],
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6); fingerprint, tuổi object sẽ khác.
+
+**1. Hai triệu chứng**
+
+\`\`\`bash
+k --kubeconfig ~/dev.kubeconfig get pods
+# E1119 11:42:06.261366   37229 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \\"https://192.168.252.35:10250/api?timeout=32s\\": tls: failed to verify certificate: x509: cannot validate certificate for 192.168.252.35 because it doesn't contain any IP SANs"
+# … (lặp 5 lần)
+# Unable to connect to the server: tls: failed to verify certificate: x509: cannot validate certificate for 192.168.252.35 because it doesn't contain any IP SANs
+k --kubeconfig ~/ops.kubeconfig get nodes
+# Error from server (Forbidden): nodes is forbidden: User "ops" cannot list resource "nodes" in API group "" at the cluster scope
+\`\`\`
+
+dev dừng ở TLS (chưa tới apiserver); ops tới được, được nhận ra là \`ops\`, bị RBAC chặn.
+
+**2. dev: server**
+
+\`\`\`bash
+k config view --minify --kubeconfig ~/dev.kubeconfig | grep server
+#     server: https://192.168.252.35:10250
+sudo grep server /etc/kubernetes/admin.conf
+#     server: https://192.168.252.35:6443
+curl -sk https://192.168.252.35:10250/healthz; echo
+# Unauthorized
+openssl s_client -connect 192.168.252.35:10250 </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -ext subjectAltName
+# subject=CN = cka-cp@1794591561
+# issuer=CN = cka-cp-ca@1794591561
+# X509v3 Subject Alternative Name:
+#     DNS:cka-cp
+k config set-cluster kubernetes --server=https://192.168.252.35:6443 --kubeconfig ~/dev.kubeconfig
+\`\`\`
+
+10250 là kubelet (cert tự ký, CA \`cka-cp-ca@…\` riêng của kubelet); apiserver nghe 6443.
+
+**3. dev: cert của ai**
+
+\`\`\`bash
+k --kubeconfig ~/dev.kubeconfig get pods
+# Error from server (Forbidden): pods is forbidden: User "ops" cannot list resource "pods" in API group "" in the namespace "shop"
+k --kubeconfig ~/dev.kubeconfig auth whoami
+# ATTRIBUTE                                           VALUE
+# Username                                            ops
+# Groups                                              [shop-ops system:authenticated]
+k config view --raw --kubeconfig ~/dev.kubeconfig -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject
+# subject=O = shop-ops, CN = ops
+k config set-credentials dev --client-certificate=$HOME/users/dev.crt --client-key=$HOME/users/dev.key --embed-certs --kubeconfig ~/dev.kubeconfig
+k --kubeconfig ~/dev.kubeconfig auth whoami | sed -n 2,3p
+# Username                                            dev
+# Groups                                              [shop-dev system:authenticated]
+\`\`\`
+
+\`set-credentials\` với cả \`--client-certificate\` và \`--client-key\` ghi đè cả hai: nhúng lại đủ cặp của dev, đừng chỉ thay cert.
+
+**4. ops: binding**
+
+\`\`\`bash
+k --kubeconfig ~/ops.kubeconfig auth can-i --list | grep -v '\\[/'
+# Resources                                       Non-Resource URLs   Resource Names   Verbs
+# selfsubjectreviews.authentication.k8s.io        []                  []               [create]
+# selfsubjectaccessreviews.authorization.k8s.io   []                  []               [create]
+# selfsubjectrulesreviews.authorization.k8s.io    []                  []               [create]
+k get clusterrolebinding -o wide | grep -E 'NAME|shop-ops'
+# NAME       ROLE                        AGE   USERS      GROUPS   SERVICEACCOUNTS
+# shop-ops   ClusterRole/shop-ops-view   17m   shop-ops
+k describe clusterrolebinding shop-ops | sed -n '/^Subjects/,$p'
+# Subjects:
+#   Kind  Name      Namespace
+#   ----  ----      ---------
+#   User  shop-ops
+\`\`\`
+
+Trong \`~/shop/rbac.yaml\`, object \`ClusterRoleBinding shop-ops\`, \`subjects\` trở lại:
+
+\`\`\`yaml
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: shop-ops
+\`\`\`
+
+\`\`\`bash
+k apply -f ~/shop/rbac.yaml
+# clusterrolebinding.rbac.authorization.k8s.io/shop-ops configured   (các dòng khác: unchanged)
+k --kubeconfig ~/ops.kubeconfig get nodes
+# NAME     STATUS   ROLES           AGE     VERSION
+# cka-cp   Ready    control-plane   5d10h   v1.36.6
+# …
+\`\`\`
+
+**5–6. Đọc Forbidden, API group**
+
+\`\`\`bash
+cat ~/drills/s36/forbidden.txt
+# $ kubectl --kubeconfig ~/dev.kubeconfig -n shop scale deploy order --replicas=2
+# Error from server (Forbidden): deployments.apps "order" is forbidden: User "dev" cannot patch resource "deployments/scale" in API group "apps" in the namespace "shop"
+echo 'FORBIDDEN_MISSING=patch,deployments/scale,apps' >> ~/drills/s36/answers.env
+k api-resources | awk 'NR==1 || $1 ~ /^(deployments|networkpolicies)$/'
+# NAME              SHORTNAMES   APIVERSION                 NAMESPACED   KIND
+# deployments       deploy       apps/v1                    true         Deployment
+# networkpolicies                crd.projectcalico.org/v1   true         NetworkPolicy
+# networkpolicies   netpol       networking.k8s.io/v1       true         NetworkPolicy
+\`\`\`
+
+Rule cho \`k scale\`: \`{apiGroups: [apps], resources: [deployments/scale], verbs: [patch]}\` (thêm \`get\` nếu muốn \`k get --subresource=scale\`). Không thêm vào \`shop-deployer\`: catalog do HPA co giãn (s35). \`networkpolicies\` thứ hai là CRD của Calico (\`crd.projectcalico.org\`); NetworkPolicy của s31 ở \`networking.k8s.io\`.
+
+Lời giải tự động: \`labs/cka/sessions/s36/apply.sh\` (gây sự cố như \`begin\`, rồi \`files/solve.sh\`; chạy lại được).`,
+    exam: {
+      patterns: [
+        "\"User X báo lỗi khi làm Y, sửa để X làm được Y (và chỉ Y)\" — đọc Forbidden (verb, resource, group, phạm vi), `k auth can-i … --as X`, tìm binding bằng `-o wide`, sửa rule hay binding nhỏ nhất.",
+        "\"Kubeconfig ở /opt/… không dùng được, sửa nó\" — `k config view --minify --kubeconfig …` (server, cert), `auth whoami`, `set-cluster`/`set-credentials --embed-certs`.",
+        "\"Resource X thuộc API group nào / có namespaced không\" — `k api-resources | grep X`, `k explain X`.",
+      ],
+      timeTargetMin: 6,
+      drills: [
+        {
+          text: "Trong 1 phút, chỉ đọc: `Error from server (Forbidden): cronjobs.batch is forbidden: User \"system:serviceaccount:shop:order\" cannot list resource \"cronjobs\" in API group \"batch\" in the namespace \"shop\"`. Ai, verb, resource, group, Role hay ClusterRole, và lệnh `create role` vừa đủ?",
+          timeLimitMin: 1,
+          solution: "SA `order` ở shop; `list`; `cronjobs`; `batch`; trong namespace shop nên Role là đủ.\n```bash\nk -n shop create role cronjob-lister --verb=list --resource=cronjobs.batch\nk -n shop create rolebinding order-cronjobs --role=cronjob-lister --serviceaccount=shop:order\n```",
+        },
+        {
+          text: "Trong 2 phút: ai đang được gắn ClusterRole `cluster-admin`? In mọi binding và chủ thể của chúng, chỉ bằng kubectl.",
+          timeLimitMin: 2,
+          solution: "```bash\nk get clusterrolebinding -o wide | awk 'NR==1 || $2==\"ClusterRole/cluster-admin\"'\n```\nTrên lab: `cluster-admin` (group `system:masters`) và `kubeadm:cluster-admins` (group cùng tên, của `admin.conf`). Thêm `k get rolebinding -A -o wide | grep cluster-admin` cho binding trong namespace.",
+        },
+      ],
+    },
+    tips: [
+      "Ba lệnh đầu tiên cho mọi lỗi truy cập: `k config view --minify` (đang gọi đâu, bằng gì), `k auth whoami` (apiserver thấy bạn là ai), `k auth can-i --list` (bạn được gì).",
+      "\"at the cluster scope\" trong Forbidden: cần ClusterRole + ClusterRoleBinding; \"in the namespace\": Role + RoleBinding là đủ.",
+      "Lỗi TLS: đọc SAN và issuer của cert server (`openssl s_client … | openssl x509 -noout -subject -issuer -ext subjectAltName`) trước khi nghi CA của kubeconfig.",
+    ],
+    outcome: {
+      md: `dev và ops làm lại được việc của mình với đúng danh tính và đúng quyền. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s36
+\`\`\`
+
+Verify chạy lại bốn dòng của s35 (quyền của dev và ops hỏi bằng chính hai kubeconfig, SA order, \`~/shop/rbac.yaml\` khớp cluster với binding gắn đúng **Group**), cộng dòng kubeconfig của dev như cuối s34 (server như \`admin.conf\`, CA cluster, cert + key nhúng đúng \`CN=dev, O=shop-dev\`, không \`insecure-skip-tls-verify\`, namespace shop, quyền 600) và đáp án \`FORBIDDEN_MISSING\` (so khoan dung hoa thường, dấu cách). Thêm ClusterRoleBinding mới thay vì sửa \`shop-ops\`, hay sửa cluster mà không sửa tệp, đều đỏ dòng \`rbac.yaml\`.`,
+      verifyOutput: "lab: kiểm s36\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~10 phút)\n  ✓ dev (dev.kubeconfig): create/patch deploy, get pods ở shop được; get nodes, kube-system, create clusterrole không\n  ✓ ops (ops.kubeconfig): get nodes, list pods -A được; create/patch/delete ở mọi nơi và đọc Secret không\n  ✓ Pod order chạy bằng SA order, Available; token SA order đọc được ConfigMap của order, không ConfigMap khác, không Secret db-cred\n  ✓ ~/shop/rbac.yaml có đủ 7 object RBAC/SA và khớp cluster; ~/shop/ giữ serviceAccountName: order\n  ✓ ~/dev.kubeconfig như cuối s34: server như admin.conf, cert + key nhúng là của dev (CN=dev, O=shop-dev), namespace shop, quyền 600\n  ✓ answers.env: FORBIDDEN_MISSING (verb, resource, API group) của thông báo trong forbidden.txt\n  → 6/6 đạt",
+      projectDelta: "Chặng 6 xong: shop có danh tính riêng cho dev, ops và order, quyền theo vai nằm trong ~/shop/rbac.yaml, và bạn đọc được mọi lỗi truy cập theo ba cửa kết nối/TLS, xác thực, uỷ quyền. Mốc snapshot st6-done.",
+    },
+    review: [
+      { q: "`Unable to connect to the server: tls: failed to verify certificate: x509: … doesn't contain any IP SANs` với kubeconfig vừa chạy hôm qua. Bạn kiểm gì đầu tiên?", a: "`server` trong kubeconfig (`k config view --minify`): request chưa tới apiserver, client không tin cert của bên kia. So IP/cổng với `admin.conf`; `openssl s_client` xem cert của ai (ở đây kubelet cổng 10250, cert tự ký chỉ có `DNS:cka-cp`). Không dùng `--insecure-skip-tls-verify`." },
+      { q: "401 và 403 khác nhau thế nào về chỗ cần sửa?", a: "401 `Unauthorized`: apiserver không xác thực được (cert không do CA cluster ký, hết hạn, token sai): sửa credential trong kubeconfig. 403 `Forbidden`: đã biết bạn là ai (tên có trong thông báo), RBAC không cho: sửa binding hay rule, hoặc bạn đang dùng nhầm danh tính." },
+      { q: "`Forbidden … User \"ops\"` khi bạn chạy với `~/dev.kubeconfig`. Giải thích và cách xác nhận.", a: "Cert nhúng trong tệp là của ops; tên user trong kubeconfig chỉ là nhãn. Xác nhận bằng `k --kubeconfig ~/dev.kubeconfig auth whoami` và `openssl x509 -noout -subject` trên `client-certificate-data`. Sửa bằng `set-credentials dev --client-certificate … --client-key … --embed-certs`." },
+      { q: "ops bị Forbidden mọi thứ, ClusterRole `shop-ops-view` vẫn đủ rule. Ba lệnh nào chỉ ra lỗi ở binding?", a: "`k --kubeconfig ~/ops.kubeconfig auth can-i --list` (không còn rule nào ngoài self…reviews), `k get clusterrolebinding -o wide | grep shop-ops` (tên ở cột USERS chứ không phải GROUPS), `k describe clusterrolebinding shop-ops` (`Kind User`). Sửa `subjects` trong tệp rồi apply." },
+      { q: "Đọc `User \"dev\" cannot patch resource \"deployments/scale\" in API group \"apps\" in the namespace \"shop\"` thành một rule.", a: "Role ở shop: `apiGroups: [apps]`, `resources: [deployments/scale]`, `verbs: [patch]`, gắn cho group shop-dev bằng RoleBinding. Subresource là resource riêng: quyền `patch deployments` không bao gồm `deployments/scale`." },
+    ],
   },
 ];

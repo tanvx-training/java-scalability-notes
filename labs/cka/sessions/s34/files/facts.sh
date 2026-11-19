@@ -1,12 +1,14 @@
 # s34 — đọc ~/dev.kubeconfig, ~/ops.kubeconfig (PyYAML + openssl), gọi API bằng chính hai tệp đó (auth whoami, get pods),
 # đọc danh tính của ~/.kube/config và ~/drills/s34/answers.env. In dạng KHOÁ=giá-trị. Chạy trên control plane bằng user ubuntu
 # (kubectl + openssl + python3; server so với /etc/kubernetes/admin.conf đọc bằng sudo). Chỉ đọc; mỗi lệnh kubectl có --request-timeout 10 giây.
+# Biến S34_DURABLE=1 (đặt bởi check.sh của s35 và s36): dòng AUTH bỏ phép thử `get pods` Forbidden, vì s35 cấp quyền.
 python3 - "$HOME" <<'PY'
 import base64, json, os, re, stat, subprocess, sys, tempfile
 import yaml
 home = sys.argv[1]
 CA = "/etc/kubernetes/pki/ca.crt"
 ROLES = (("dev", "shop-dev", "shop"), ("ops", "shop-ops", "default"))
+DURABLE = os.environ.get("S34_DURABLE") == "1"
 
 def run(*args, data=None, timeout=20):
     try:
@@ -89,6 +91,8 @@ for u, g, ns in ROLES:
     except Exception:
         bad.append(f"{u}: " + ("Unauthorized" if "Unauthorized" in err else (err.strip().splitlines() or ["whoami lỗi"])[-1][:50]))
         continue
+    # S34_DURABLE=1 (check.sh của s35, s36): chỉ chấm phần còn đúng sau khi s35 cấp quyền, bỏ phép thử Forbidden.
+    if DURABLE: continue
     rc, out, err = run("kubectl", "--kubeconfig", p, "--request-timeout=10s", "get", "pods")
     if rc == 0: bad.append(f"{u}: get pods chạy được (đã có quyền?)")
     elif not ("Forbidden" in err and f'User "{u}"' in err and f'namespace "{ns}"' in err):
