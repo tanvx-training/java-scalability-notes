@@ -1,5 +1,5 @@
 # s42 — lời giải chuẩn: nâng cluster 1.36 → 1.37.2 theo trang "Upgrading kubeadm clusters". setup.sh (loop.sh, xoá
-# answers.env); vòng request loop-cp-w1.log; cka-cp: repo apt v1.37, kubeadm 1.37.2 (unhold/hold), kéo trước image, `kubeadm
+# answers.env); PDB coredns-pdb (kube-system, minAvailable 1, ~/drills/s42/coredns-pdb.yaml); vòng request loop-cp-w1.log; cka-cp: repo apt v1.37, kubeadm 1.37.2 (unhold/hold), kéo trước image, `kubeadm
 # upgrade plan`, `kubeadm upgrade apply v1.37.2 --yes`, drain, kubelet + kubectl 1.37.2, daemon-reload, restart kubelet,
 # uncordon; cka-w1: repo, kubeadm, `kubeadm upgrade node`, drain, kubelet, uncordon, rollout restart service nào dồn về một
 # worker; dừng vòng; vòng loop-w2.log và cka-w2 như cka-w1 (postgres-0 ngừng tới khi uncordon), chờ shop trả 200 lại, dừng
@@ -37,6 +37,22 @@ upgrade_worker() { # <node>: repo, kubeadm, kubeadm upgrade node, drain, kubelet
   vm "$cp" "sleep 10; kubectl get node $1; kubectl uncordon $1"
 }
 
+# CoreDNS chưa có PDB (kubeadm không tạo): drain một node có Pod CoreDNS có thể đuổi Pod Ready cuối cùng (đo: drain cka-cp ngay
+# sau `upgrade apply`, lúc CoreDNS còn rollout, 12 request lỗi trong 25 giây). PDB minAvailable 1 buộc drain chờ Pod mới Ready.
+vm "$cp" 'cat > ~/drills/s42/coredns-pdb.yaml <<EOF
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: coredns-pdb
+  namespace: kube-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+EOF
+kubectl apply -f ~/drills/s42/coredns-pdb.yaml'
+
 if done_node cka-cp && done_node cka-w1 && done_node cka-w2; then
   echo "s42: ba node đã ở v$V, gói $PKG và hold: bỏ qua phần nâng cấp, giữ log của lần nâng."
 else
@@ -51,6 +67,9 @@ else
       if [ "$(vm "$cp" "kubectl --request-timeout=10s -n kube-system get cm kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' | sed -n 's/^kubernetesVersion: //p'")" != "v$V" ]; then
         vm "$cp" "sudo kubeadm upgrade apply v$V --yes" | tail -4
       fi
+      # `upgrade apply` trả về khi CoreDNS và kube-proxy còn đang rollout: drain ngay lúc đó đuổi Pod CoreDNS cũ còn lại khi Pod
+      # mới chưa Ready (đo: 25 giây shop trả 503). Chờ rollout xong rồi mới drain.
+      vm "$cp" "kubectl -n kube-system rollout status deploy/coredns --timeout=5m && kubectl -n kube-system rollout status ds/kube-proxy --timeout=5m"
       vm "$cp" "kubectl drain cka-cp --ignore-daemonsets --delete-emptydir-data --timeout=5m"
       node_step "$cp" kubelet
       vm "$cp" "sleep 10; kubectl get node cka-cp; kubectl uncordon cka-cp"

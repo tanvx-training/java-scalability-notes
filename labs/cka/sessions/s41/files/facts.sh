@@ -147,7 +147,8 @@ else:
 say("NODE", bad)
 
 # 5. LOG: ~/drills/s41/loop.log do loop.sh ghi có một đoạn cka-w1 bị cordon, trong đoạn đó Pod gateway/catalog/order trên
-# cka-w1 về 0 (drain xong), rồi cka-w1 được uncordon; request đều (không hở quá 5 giây) suốt đoạn đó, ≥ 20 request; cả log
+# cka-w1 về 0 (drain xong), rồi cka-w1 được uncordon; request đều (không hở quá 8 giây: mỗi request tối đa 5 giây) suốt đoạn
+# đó, ≥ 20 request; cả log
 # 0 lỗi (mã khác 200).
 def parse(path):
     reqs, states = [], []
@@ -182,7 +183,7 @@ def windows(states, node):
         elif s == "sched" and cur is not None:
             cur["b"] = st["t"]; res.append(cur); cur = None
     return res
-def gap_ok(reqs, a, b, maxgap=5.0):
+def gap_ok(reqs, a, b, maxgap=8.0):
     ts = [t for t, _ in reqs if a - maxgap <= t <= b + maxgap]
     inside = [t for t in ts if a <= t <= b]
     if len(inside) < 20: return False, f"chỉ {len(inside)} request trong đoạn drain"

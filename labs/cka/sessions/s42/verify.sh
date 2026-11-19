@@ -56,7 +56,7 @@ cluster_row() {
   done
   [ -n "$r" ] && echo "${r#; }" || echo "đạt"
 }
-expect_eq "Ba node v1.37.x cùng bản, Ready, schedulable; control plane, etcd, CoreDNS, kube-proxy theo kubeadm 1.37; shop, cert-manager (Certificate, webhook) chạy; từ Mac :30180, Ingress :30080, Gateway :30280 trả 200" \
+expect_eq "Ba node v1.37.x cùng bản, Ready, schedulable; control plane, etcd, CoreDNS (có PDB), kube-proxy theo kubeadm 1.37; shop, cert-manager (Certificate, webhook) chạy; từ Mac :30180, Ingress :30080, Gateway :30280 trả 200" \
   "đạt" cluster_row
 expect_eq "Ba node: kubeadm, kubelet, kubectl 1.37.x và hold; repo pkgs.k8s.io trỏ v1.37; kubelet active bản 1.37" "đạt" pkg_row
 expect_eq "~/drills/s42/loop-cp-w1.log: cka-cp rồi cka-w1 được drain, lên 1.37 trong lúc drain, uncordon; request đều, 0 lỗi" \

@@ -65,6 +65,15 @@ for kind, name, cname in (("ds", "kube-proxy", "kube-proxy"), ("deploy", "coredn
     if want.get(cname) and img != want[cname]: bad.append(f"{name}: {img}, cần {want[cname]}")
     if o and kind == "deploy" and not available(o): bad.append("coredns chưa Available")
     if o and kind == "ds" and (o.get("status") or {}).get("numberReady") != (o.get("status") or {}).get("desiredNumberScheduled"): bad.append("kube-proxy chưa Ready đủ")
+# CoreDNS có PDB (kubeadm không tạo): không có thì drain node đang chạy cả hai Pod CoreDNS đuổi cả hai cùng lúc (đo: 25 giây
+# shop trả 503 "không kết nối được catalog" khi drain cka-cp).
+pdbs = (kj("-n", "kube-system", "get", "pdb") or {}).get("items") or []
+def dns_pdb(p):
+    sp = p.get("spec") or {}
+    ml = (sp.get("selector") or {}).get("matchLabels") or {}
+    ok = sp.get("minAvailable") not in (None, 0, "0", "0%") or sp.get("maxUnavailable") not in (None,)
+    return ml.get("k8s-app") == "kube-dns" and ok
+if not any(dns_pdb(p) for p in pdbs): bad.append("CoreDNS chưa có PDB (k8s-app=kube-dns)")
 cm = kj("-n", "kube-system", "get", "cm", "kubeadm-config")
 try: kv = yaml.safe_load(cm["data"]["ClusterConfiguration"]).get("kubernetesVersion")
 except Exception: kv = None
@@ -157,7 +166,7 @@ def load(name):
     except Exception: return None, None
 
 # 3. LOG1: loop-cp-w1.log — cka-cp rồi cka-w1 lên 1.37 trong lúc vòng chạy (control plane trước), mỗi node được drain rồi
-# uncordon, request đều (không hở quá 5 giây), 0 lỗi.
+# uncordon, request đều (không hở quá 8 giây; mỗi request tối đa 5 giây), 0 lỗi.
 bad = []
 reqs, states = load("loop-cp-w1.log")
 if reqs is None: bad.append("chưa có ~/drills/s42/loop-cp-w1.log")
@@ -172,7 +181,7 @@ else:
     if ucp and uw1 and uw1 < ucp: bad.append("cka-w1 lên 1.37 trước control plane")
     if states and reqs:
         g = max_gap(reqs, states[0]["t"], states[-1]["t"])
-        if g > 5: bad.append(f"vòng request hở {g:.0f} giây")
+        if g > 8: bad.append(f"vòng request hở {g:.0f} giây")
     if upgraded(states, "cka-w2"): bad.append("cka-w2 cũng lên 1.37 trong log này (nâng cka-w2 khi chạy loop-w2.log)")
 say("LOG1", bad)
 
