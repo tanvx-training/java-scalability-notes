@@ -1,0 +1,19 @@
+{{- /* s41: PodDisruptionBudget cho ba service trên đường gọi 30180. drain/evict phải giữ ít nhất minAvailable Pod Ready.
+     minAvailable bằng số replica thì ALLOWED DISRUPTIONS = 0 và drain chờ mãi. */}}
+{{- range $name := list "gateway" "catalog" "order" }}
+{{- $v := index $.Values $name }}
+{{- if $v.pdb }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}-pdb
+  labels:
+    app: {{ $name }}
+spec:
+  minAvailable: {{ $v.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+{{- end }}
+{{- end }}

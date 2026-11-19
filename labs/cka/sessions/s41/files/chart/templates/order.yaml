@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order
+  labels:
+    app: order
+spec:
+  replicas: {{ .Values.order.replicas }}
+  selector:
+    matchLabels:
+      app: order
+  template:
+    metadata:
+      labels:
+        app: order
+    spec:
+      serviceAccountName: {{ .Values.order.serviceAccount }}
+      {{- include "shop.spread" (dict "app" "order" "Values" .Values) | nindent 6 }}
+      terminationGracePeriodSeconds: 45
+      containers:
+      - name: order
+        image: "{{ .Values.order.image.repository }}:{{ .Values.order.image.tag }}"
+        env:
+        - name: JAVA_OPTS
+          value: {{ .Values.javaOpts }}
+        {{- include "shop.dbEnv" . | nindent 8 }}
+        envFrom:
+        - configMapRef:
+            name: order-config
+        {{- include "shop.springContainer" . | nindent 8 }}
+        resources:
+          {{- toYaml .Values.order.resources | nindent 10 }}
+---
+{{ include "shop.service" "order" }}

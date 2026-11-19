@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  labels:
+    app: catalog
+spec:
+  {{- if not .Values.catalog.autoscaling.enabled }}
+  replicas: {{ .Values.catalog.replicas }}
+  {{- end }}
+  {{- /* Có HPA thì không ghi replicas: mỗi lần upgrade sẽ kéo số replica về giá trị trong chart, giành với HPA. */}}
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: catalog
+      {{- include "shop.spread" (dict "app" "catalog" "Values" .Values) | nindent 6 }}
+      terminationGracePeriodSeconds: 45
+      containers:
+      - name: catalog
+        image: "{{ .Values.catalog.image.repository }}:{{ .Values.catalog.image.tag }}"
+        env:
+        - name: JAVA_OPTS
+          value: {{ .Values.javaOpts }}
+        {{- include "shop.dbEnv" . | nindent 8 }}
+        {{- include "shop.springContainer" . | nindent 8 }}
+        resources:
+          {{- toYaml .Values.catalog.resources | nindent 10 }}
+---
+{{ include "shop.service" "catalog" }}
+{{- if .Values.catalog.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: catalog
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: catalog
+  minReplicas: {{ .Values.catalog.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.catalog.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.catalog.autoscaling.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+{{- end }}
