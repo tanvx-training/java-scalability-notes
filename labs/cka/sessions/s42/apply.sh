@@ -53,6 +53,8 @@ spec:
 EOF
 kubectl apply -f ~/drills/s42/coredns-pdb.yaml'
 
+# Node đã ở 1.37.2 mà còn cordon (lần chạy trước bị ngắt giữa chừng) thì uncordon.
+for n in $LAB_VMS; do if done_node "$n"; then vm "$cp" "kubectl uncordon $n" >/dev/null; fi; done
 if done_node cka-cp && done_node cka-w1 && done_node cka-w2; then
   echo "s42: ba node đã ở v$V, gói $PKG và hold: bỏ qua phần nâng cấp, giữ log của lần nâng."
 else
@@ -77,7 +79,9 @@ else
       vm "$cp" "kubectl -n kube-system rollout status deploy/coredns --timeout=5m && kubectl -n kube-system rollout status ds/kube-proxy --timeout=5m"
       vm "$cp" "kubectl drain cka-cp --ignore-daemonsets --delete-emptydir-data --timeout=5m"
       node_step "$cp" kubelet
-      vm "$cp" "sleep 10; kubectl get node cka-cp; kubectl uncordon cka-cp"
+      # restart kubelet trên control plane khởi động lại cả static pod: apiserver từ chối kết nối thêm vài chục giây (đo).
+      vm "$cp" 'sleep 5; end=$(($(date +%s) + 180)); until kubectl --request-timeout=5s get --raw /readyz >/dev/null 2>&1 || [ $(date +%s) -ge $end ]; do sleep 2; done
+        kubectl get node cka-cp; kubectl uncordon cka-cp'
     fi
     if ! done_node cka-w1; then
       echo "== cka-w1"
