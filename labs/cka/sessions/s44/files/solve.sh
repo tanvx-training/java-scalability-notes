@@ -29,6 +29,11 @@ done
 log "   bốn container đã dừng sau $((120 - end + $(date +%s))) giây"
 for c in $COMPS; do sudo mv $OFF/$c.yaml $MAN/; done
 wait_readyz 300 || die "apiserver chưa sẵn sàng sau 5 phút"
+# kubelet tạo lại bốn Pod không cùng lúc (đo: verify chạy ngay sau đó thấy kube-controller-manager chưa có container): chờ đủ bốn.
+end=$(($(date +%s) + 120))
+until [ "$(sudo crictl ps -q --state running --name '^(etcd|kube-apiserver|kube-controller-manager|kube-scheduler)$' | wc -l)" -ge 4 ]; do
+  [ $(date +%s) -lt $end ] || die "chưa đủ bốn container control plane sau 2 phút"; sleep 2
+done
 sudo crictl ps --name '^(etcd|kube-apiserver|kube-controller-manager|kube-scheduler)$'
 log "4. chép admin.conf mới vào ~/.kube/config"
 sudo cp /etc/kubernetes/admin.conf ~/.kube/config

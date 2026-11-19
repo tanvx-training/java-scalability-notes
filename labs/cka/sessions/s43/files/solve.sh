@@ -15,8 +15,8 @@ MAN=/etc/kubernetes/manifests
 OFF=/etc/kubernetes/s43-off        # nơi tạm cất manifest control plane (ngoài thư mục kubelet đọc)
 SNAP=/opt/backup/etcd.db
 PKI=/etc/kubernetes/pki/etcd
-IP=$(sed -n 's/^ *- --advertise-client-urls=https:\/\/\([0-9.]*\):2379$/\1/p' $MAN/etcd.yaml 2>/dev/null || true)
-[ -n "$IP" ] || IP=$(sed -n 's/^ *- --advertise-client-urls=https:\/\/\([0-9.]*\):2379$/\1/p' $OFF/etcd.yaml 2>/dev/null || true)
+IP=$(sudo sed -n 's/^ *- --advertise-client-urls=https:\/\/\([0-9.]*\):2379$/\1/p' $MAN/etcd.yaml 2>/dev/null || true)
+[ -n "$IP" ] || IP=$(sudo sed -n 's/^ *- --advertise-client-urls=https:\/\/\([0-9.]*\):2379$/\1/p' $OFF/etcd.yaml 2>/dev/null || true)
 k() { kubectl --request-timeout=10s "$@"; }
 etcdctl_() { sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$PKI/ca.crt --cert=$PKI/server.crt --key=$PKI/server.key "$@"; }
 log() { echo "s43: $*"; }
@@ -145,6 +145,10 @@ case "$st" in
     ;;
   *) die "manifest etcd lạ ($st). Làm lại: ./labs/lab restore cka s42" ;;
 esac
+# Pod của order có trong snapshot nhưng container đã bị xoá: kubelet không dọn được sandbox của chúng lúc apiserver tắt (Calico
+# CNI gọi apiserver), nên chúng nằm lại ở phase Failed (STATUS Error) bên cạnh hai Pod mới (đo). ReplicaSet không đếm Pod Failed;
+# dọn cho `k get pod` sạch. Chỉ Pod Failed của Deployment order, không đụng Pod nào khác.
+k -n shop delete pod -l app=order --field-selector=status.phase=Failed --ignore-not-found
 echo "LOST_OBJECT=configmap/after-snapshot" > ~/drills/s43/answers.env
 cat ~/drills/s43/answers.env
 k -n shop get deploy order; k -n shop get cm | grep snapshot || true

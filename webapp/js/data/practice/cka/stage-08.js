@@ -1,5 +1,5 @@
 // Chặng 8 — Vận hành cluster: bảo trì node, nâng cấp, etcd, chứng chỉ, HA.
-// s41–s42 đã phát hành (đợt 4); s43–s45 là buổi khung: đủ trường cấu trúc (check-data PR7), nội dung ở đợt sau.
+// s41–s44 đã phát hành (đợt 4); s45 là buổi khung: đủ trường cấu trúc (check-data PR7), nội dung ở đợt sau.
 
 export const sessions = [
 // ───────────────────────────── s41 ─────────────────────────────

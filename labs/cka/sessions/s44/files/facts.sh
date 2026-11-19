@@ -99,8 +99,10 @@ for comp, files in (("kube-apiserver", [f"{K}/pki/apiserver.crt", f"{K}/pki/apis
     if not cid: bad.append(f"{short} không chạy"); continue
     rc, out, _ = run("sudo", "crictl", "inspect", cid)
     try:
-        s = json.loads(out)["status"]["startedAt"]
-        t = calendar.timegm(time.strptime(s[:19], "%Y-%m-%dT%H:%M:%S"))
+        # startedAt có múi giờ của node (đo: 2026-11-20T05:52:42.823873335+07:00) hay Z: bỏ phần lẻ của giây, giữ offset.
+        import datetime
+        s = re.sub(r"\.\d+", "", json.loads(out)["status"]["startedAt"]).replace("Z", "+00:00")
+        t = int(datetime.datetime.fromisoformat(s).timestamp())
     except Exception: bad.append(f"không đọc được giờ chạy {short}"); continue
     need = max([m for m in map(mtime, files) if m] + [started or 0])
     if t < need: bad.append(f"{short} chưa khởi động lại")
