@@ -1,5 +1,5 @@
 # s38 — lời giải chuẩn: cây files/kustomize chép vào ~/kustomize/shop (base: catalog H2 + Service + configMapGenerator;
-# overlays/dev: namespace shop-dev, 1 replica, tag 1.0, patch limit 208Mi, literal LOGGING_LEVEL_SHOP=DEBUG; overlays/prod:
+# overlays/dev: namespace shop-dev, 1 replica, tag 1.0, patch limit 224Mi, literal LOGGING_LEVEL_SHOP=DEBUG; overlays/prod:
 # shop-prod, 2 replica, tag 2.0, chỉ build); tạo namespace shop-dev; lần đầu apply -k bản dev chưa có literal rồi thêm literal
 # và apply lại (rollout theo hậu tố hash); ghi HASHED_CM_NAME; dựng tình huống hỏng (patch sai tên) trong ~/drills/s38/broken.
 # Chạy lại nhiều lần được (files/solve.sh). Nạp bởi `lab` trên Mac (bash 3.2, set -e).

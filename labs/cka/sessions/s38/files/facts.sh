@@ -9,7 +9,7 @@ home = sys.argv[1]
 K = f"{home}/kustomize/shop"
 NS = "shop-dev"
 HASHED = re.compile(r"^catalog-config-[a-z0-9]{10}$")
-MAXLIM = 256 * 1024 * 1024          # base 384Mi; overlay dev hạ xuống (đo: 208Mi là mức nhỏ nhất chạy ổn)
+MAXLIM = 256 * 1024 * 1024          # base 384Mi; overlay dev hạ xuống (đo: 208Mi là mức nhỏ nhất qua 3/3; lab dùng 224Mi)
 
 def run(*args, timeout=30):
     try:
@@ -93,7 +93,9 @@ else:
         if not pods: bad.append("không có Pod catalog")
         elif any(cmref(p["spec"]) != [cmname] for p in pods): bad.append("có Pod chưa dùng ConfigMap hiện hành (rollout chưa xong)")
         rss = (kj("-n", NS, "get", "rs", "-l", sel) or {}).get("items", [])
-        seen = {tuple(cmref(r["spec"]["template"]["spec"])) for r in rss}
+        # Hai ReplicaSet, mỗi cái trỏ đúng một ConfigMap catalog-config-<hash>, hai tên khác nhau (ReplicaSet không trỏ
+        # ConfigMap có hash, ví dụ bản đầu dùng ConfigMap thường, không tính).
+        seen = {tuple(x) for x in (cmref(r["spec"]["template"]["spec"]) for r in rss) if len(x) == 1 and HASHED.match(x[0])}
         if len(seen) < 2: bad.append("mới một ReplicaSet/ConfigMap: chưa đổi literal rồi apply lại (rollout)")
 print("DEV=" + ("; ".join(bad)[:170] or "đạt"))
 print("CM_NAME=" + (cmname or ""))

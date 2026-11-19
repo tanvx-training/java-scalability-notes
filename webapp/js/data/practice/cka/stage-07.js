@@ -28,7 +28,7 @@ export const sessions = [
       { skill: "k-helm-template", level: "Gõ được không tra" },
       { skill: "k-helm-create", level: "Làm được có tra" },
     ],
-    uses: ["k-resources-yaml", "k-set-image", "k-get-pod-yaml", "vim-macro"],
+    uses: ["k-resources-yaml", "k-get-pod-yaml", "vim-macro"],
     foundation: null,
     mindset: `**Chart là template, release là một lần cài, revision là một lần đổi.** Chart gồm \`Chart.yaml\` (tên, \`version\` của chart, \`appVersion\` của ứng dụng), \`values.yaml\` (giá trị mặc định) và \`templates/\` (manifest viết bằng Go template). \`helm install shop ~/charts/shop -n shop\` render template với values thành YAML thường, gửi lên apiserver, rồi ghi **release** \`shop\` vào chính namespace đó dưới dạng Secret \`sh.helm.release.v1.shop.v<revision>\` (type \`helm.sh/release.v1\`, chứa chart, values và manifest đã render, nén). Mỗi \`upgrade\` hay \`rollback\` thêm một revision; \`helm history\` đọc các Secret đó. Không có controller nào của Helm chạy trong cluster: Helm 4 cũng chỉ là một client như \`kubectl\`.
 
@@ -44,15 +44,15 @@ export const sessions = [
 
 Khác biệt quan trọng: Spring đọc lại cấu hình mỗi lần khởi động, còn Helm **nhớ** values bạn đưa lúc cài. \`helm upgrade\` không kèm \`-f\`/\`--set\` nào thì dùng lại values của revision trước (đo: cài bằng \`--set order.image.tag=1.0\`, sửa \`values.yaml\` thành \`2.0\` rồi \`helm upgrade shop ~/charts/shop -n shop\`: order vẫn 1.0). \`--reset-values\` bỏ values cũ, \`--reuse-values\` gộp values cũ với cái mới. Muốn chart là nguồn sự thật thì sửa \`values.yaml\` và đừng cài bằng \`--set\`.
 
-**Nhận lại (adoption) thay vì xoá rồi cài.** shop đang chạy từ manifest rời. Helm từ chối "cướp" object không phải của nó: \`helm install\` khi object đã có báo \`exists and cannot be imported into the current release: invalid ownership metadata\` và không tạo gì. Helm coi một object là của release \`shop\` ở namespace \`shop\` khi object có **nhãn** \`app.kubernetes.io/managed-by=Helm\` và **hai annotation** \`meta.helm.sh/release-name=shop\`, \`meta.helm.sh/release-namespace=shop\`. Gắn đủ ba thứ đó cho 15 object rồi \`helm install\`: Helm thấy object đã là của mình và chỉ cập nhật chỗ khác. Đo trên lab: không ReplicaSet mới, không Pod nào khởi động lại, \`/api/products\` qua 30180 trả 200 suốt lúc cài. (Helm 3.17+ và 4 còn có \`--take-ownership\`, bỏ qua kiểm tra và tự gắn annotation.)
+**Nhận lại (adoption) thay vì xoá rồi cài.** shop đang chạy từ manifest rời. Helm từ chối "cướp" object không phải của nó: \`helm install\` khi object đã có báo \`exists and cannot be imported into the current release: invalid ownership metadata\` và không tạo gì. Helm coi một object là của release \`shop\` ở namespace \`shop\` khi object có **nhãn** \`app.kubernetes.io/managed-by=Helm\` và **hai annotation** \`meta.helm.sh/release-name=shop\`, \`meta.helm.sh/release-namespace=shop\`. Gắn đủ ba thứ đó cho 15 object rồi \`helm install\`: Helm thấy object đã là của mình và chỉ cập nhật chỗ khác. Đo trên lab: không ReplicaSet mới, không Pod nào khởi động lại, và một vòng \`curl\` 5 request/giây tới 30180 trong 20 giây bao quanh lần cài (cài mất 2,4 giây) được 70/70 mã 200. (Helm 3.17+ và 4 còn có \`--take-ownership\`, bỏ qua kiểm tra và tự gắn annotation.)
 
 Đường còn lại là **xoá rồi cài**: \`k delete -f ~/shop/…\`, rồi \`helm install\`. Đơn giản, nhưng cái giá là thật: mọi Pod bị xoá cùng lúc (gateway, catalog, order cùng mất, request trả lỗi tới khi Pod mới Ready: JVM khởi động, initContainer của gateway chờ catalog), Service tạo lại có thể nhận ClusterIP khác, HPA mất lịch sử co giãn. Với StatefulSet, xoá kéo theo Pod và (tuỳ chính sách) PVC: đó là lý do PostgreSQL, Secret \`db-cred\`, NetworkPolicy, Ingress, Gateway/HTTPRoute, quota/LimitRange nằm ngoài chart. Nhóm thật nhận lại dần từng phần như vậy, phần hạ tầng sống lâu để riêng.
 
-**Chart phải render ra đúng thứ đang chạy, nhất là selector.** \`spec.selector\` của Deployment **bất biến**: chart đổi nhãn selector (ví dụ thêm \`app.kubernetes.io/name\` như template của \`helm create\`) thì \`helm install\` bị apiserver từ chối \`field is immutable\`; đổi nhãn trong \`template.metadata.labels\` thì mọi Pod rollout. Vì vậy template giữ đúng \`app: <tên>\`. Kiểm trước bằng \`helm template shop ~/charts/shop -n shop | k diff -n shop -f -\`: trên lab khác biệt duy nhất là \`replicas: 2 → 1\` của catalog, vì chart cố ý **không ghi \`replicas\`** khi có HPA (mỗi lần upgrade sẽ kéo số replica về giá trị trong chart, giành với HPA). \`k diff\` dùng client-side apply nên thấy trường biến mất là "xoá về mặc định 1"; Helm 4 dùng server-side apply không đụng trường nó không quản, nên sau \`helm install\` catalog vẫn 2 replica do HPA giữ (đo).
+**Chart phải render ra đúng thứ đang chạy, nhất là selector.** \`spec.selector\` của Deployment **bất biến**: chart đổi nhãn selector (ví dụ thêm \`app.kubernetes.io/name\` như template của \`helm create\`) thì Helm 4 báo trước một conflict trên \`.spec.selector\` (trường đó thuộc \`kubectl-client-side-apply\`, đo), và ép bằng \`--force-conflicts\` thì apiserver từ chối \`spec.selector: … field is immutable\` (đo); đổi nhãn trong \`template.metadata.labels\` thì mọi Pod rollout. Vì vậy template giữ đúng \`app: <tên>\`. Kiểm trước bằng \`helm template shop ~/charts/shop -n shop | k diff -n shop -f -\`: trên lab khác biệt duy nhất là \`replicas: 2 → 1\` của catalog, vì chart cố ý **không ghi \`replicas\`** khi có HPA (mỗi lần upgrade sẽ kéo số replica về giá trị trong chart, giành với HPA). \`k diff\` dùng client-side apply nên thấy trường biến mất là "xoá về mặc định 1"; Helm 4 dùng server-side apply không đụng trường nó không quản, nên sau \`helm install\` catalog vẫn 2 replica do HPA giữ (đo).
 
-**Helm 4 và server-side apply: chủ sở hữu từng trường.** Helm 4 (bản ghim của lab là v4.3.2) cài release mới bằng **server-side apply** (SSA): apiserver nhớ trường nào thuộc "field manager" nào (\`k get deploy order --show-managed-fields\`). Các object của shop được tạo bằng \`kubectl apply\` thường, nên mọi trường thuộc \`kubectl-client-side-apply\`. Lần \`helm upgrade\` đầu tiên đổi một trường như thế (image của order) bị từ chối: \`conflict with "kubectl-client-side-apply" … .spec.template.spec.containers[name="order"].image\`, release ghi revision \`failed\`, cluster không đổi (đo). \`--force-conflicts\` bảo apiserver chuyển quyền sở hữu trường đó sang Helm; từ đó về sau \`helm upgrade\` thường là đủ. Helm 3 dùng client-side 3-way merge nên không gặp lỗi này. Một hệ quả nữa: sau khi Helm nhận, đừng sửa bằng \`k set image\` hay \`k edit\`: release và cluster lệch nhau, upgrade sau đó hoặc ghi đè thay đổi của bạn hoặc báo conflict. Đổi image là đổi \`values.yaml\` rồi \`helm upgrade\`.
+**Helm 4 và server-side apply: chủ sở hữu từng trường.** Helm 4 (bản ghim của lab là v4.3.2) cài release mới bằng **server-side apply** (SSA): apiserver nhớ trường nào thuộc "field manager" nào (\`k get deploy order --show-managed-fields\`). Các object của shop được tạo bằng \`kubectl apply\` thường, nên mọi trường thuộc \`kubectl-client-side-apply\`. Lần \`helm upgrade\` đầu tiên đổi một trường như thế (image của order) bị từ chối: \`conflict with "kubectl-client-side-apply" … .spec.template.spec.containers[name="order"].image\`, release ghi revision \`failed\`, cluster không đổi (đo). \`--force-conflicts\` bảo apiserver chuyển quyền sở hữu **đúng trường đang xung đột** sang Helm, không phải cả object. Đo ngay sau đó: \`helm upgrade\` thường đổi \`APP_GREETING\` của \`shop-config\` lại conflict (\`.data.APP_GREETING\`), đổi \`maxReplicas\` của HPA conflict, đổi \`requests.cpu\` của chính order cũng conflict; chỉ trường đã ép một lần (đưa \`APP_GREETING\` về giá trị cũ) mới upgrade thường được. Nghĩa là: với release nhận lại từ \`kubectl apply\`, **mọi** \`helm upgrade\`/\`helm rollback\` đổi một trường chưa từng bị ép sẽ conflict. Hai cách bền: luôn thêm \`--force-conflicts\` khi upgrade/rollback release này (lab làm vậy), hoặc gỡ một lần mục \`kubectl-client-side-apply\` khỏi \`metadata.managedFields\` của từng object để Helm là chủ duy nhất (đo trên Deployment order: gỡ xong, upgrade thường đổi \`requests.cpu\` chạy được). Helm 3 dùng client-side 3-way merge, không có field manager, nên không gặp lỗi này. Một hệ quả nữa: sau khi Helm nhận, đừng sửa bằng \`k set image\` hay \`k edit\`: release và cluster lệch nhau, upgrade sau đó hoặc ghi đè thay đổi của bạn hoặc báo conflict. Đổi image là đổi \`values.yaml\` rồi \`helm upgrade\`.
 
-**Helm 3 và Helm 4 trên đề thi.** Lệnh của đề (\`repo add\`, \`search repo\`, \`install … --version --set -f -n --create-namespace\`, \`list\`, \`upgrade\`, \`history\`, \`rollback\`, \`uninstall\`, \`template\`, \`show values\`) giống nhau ở cả hai bản. Khác cần nhớ (trang "Helm 4 Overview" của helm.sh, đo trên v4.3.2): \`--atomic\` đổi tên thành \`--rollback-on-failure\`, \`--force\` thành \`--force-replace\` (tên cũ vẫn chạy kèm cảnh báo); release mới mặc định server-side apply (\`--server-side=false\` để dùng kiểu cũ); \`helm list -a\` không còn (\`unknown shorthand flag: 'a' in -a\`), \`helm list\` liệt kê mọi trạng thái, lọc bằng \`--failed\`, \`--pending\`, \`--deployed\`; \`--wait\` không ghi thì chỉ chờ hook (\`hookOnly\`), ghi \`--wait\` là chờ tài nguyên Ready.
+**Helm 3 và Helm 4 trên đề thi.** Lệnh của đề (\`repo add\`, \`search repo\`, \`install … --version --set -f -n --create-namespace\`, \`list\`, \`upgrade\`, \`history\`, \`rollback\`, \`uninstall\`, \`template\`, \`show values\`) giống nhau ở cả hai bản. Khác cần nhớ (trang "Helm 4 Overview" của helm.sh, đo trên v4.3.2): \`--atomic\` đổi tên thành \`--rollback-on-failure\`, \`--force\` thành \`--force-replace\` (tên cũ vẫn chạy kèm cảnh báo); release mới mặc định server-side apply (\`--server-side=false\` để dùng kiểu cũ); \`helm list -a\` không còn (\`unknown shorthand flag: 'a' in -a\`); đo trên v4.3.2: \`helm list\` trần đã in release \`failed\` lẫn \`pending-upgrade\`, \`--failed\` chỉ in release \`failed\`, \`--pending\` in \`pending-upgrade\`, \`--deployed\` bỏ chúng (help của Helm 3 ghi \`helm list\` trần chỉ in release \`deployed\` và \`failed\`, \`-a\` mới gồm mọi trạng thái); \`--wait\` không ghi thì chỉ chờ hook (\`hookOnly\`), ghi \`--wait\` là chờ tài nguyên Ready.
 
 **Component công khai: đọc values trước khi cài.** \`helm show values podinfo/podinfo --version 6.16.0\` là "tài liệu cấu hình" của chart: tên khoá (\`ui.message\`, \`nodeSelector\`, \`tolerations\`, \`resources\`) khác nhau giữa các chart, đừng đoán. Lab cài podinfo (chart của Stefan Prodan, image \`ghcr.io/stefanprodan/podinfo\` có arm64, ~13Mi RAM lúc chạy) lên cka-cp bằng toleration + nodeSelector của control plane để không lấy RAM của worker (cka-w1 còn ~800 MB).`,
     refs: [
@@ -95,7 +95,7 @@ Khác biệt quan trọng: Spring đọc lại cấu hình mỗi lần khởi đ
       },
       {
         id: "t7",
-        text: "Upgrade đổi một value: sửa `order.image.tag` trong `~/charts/shop/values.yaml` thành `\"2.0\"` (đừng `k set image`: cluster sẽ lệch release), `helm upgrade shop ~/charts/shop -n shop --wait`. Đọc lỗi conflict: trường nào, của field manager nào? `k get deploy order --show-managed-fields -o jsonpath='{.metadata.managedFields[*].manager}'`. Chạy lại với `--force-conflicts`, `k rollout status deploy/order`, `helm history shop -n shop` (revision nào `failed`, nào `deployed`?), `helm get values shop -n shop --all | sed -n '/^order:/,$p'`.",
+        text: "Upgrade đổi một value: sửa `order.image.tag` trong `~/charts/shop/values.yaml` thành `\"2.0\"` (đừng `k set image`: cluster sẽ lệch release), `helm upgrade shop ~/charts/shop -n shop --wait`. Đọc lỗi conflict: trường nào, của field manager nào? `k get deploy order --show-managed-fields -o jsonpath='{.metadata.managedFields[*].manager}'`. Chạy lại với `--force-conflicts`, `k rollout status deploy/order`, `helm history shop -n shop` (revision nào `failed`, nào `deployed`?), `helm get values shop -n shop --all | sed -n '/^order:/,$p'`. Rồi đổi `config.APP_GREETING` và `helm upgrade` thường lần nữa: có conflict không, trên trường nào? Từ đây mọi upgrade/rollback của release này kèm `--force-conflicts` (hay gỡ mục `kubectl-client-side-apply` khỏi `managedFields`); trả `APP_GREETING` về `Xin chào từ ConfigMap`.",
       },
       {
         id: "t8",
@@ -107,7 +107,7 @@ Khác biệt quan trọng: Spring đọc lại cấu hình mỗi lần khởi đ
       "`Error: UPGRADE FAILED: conflict occurred while applying object shop/order apps/v1, Kind=Deployment: Apply failed with 1 conflict: conflict with \"kubectl-client-side-apply\" using apps/v1: .spec.template.spec.containers[name=\"order\"].image` (đo, Helm 4): trường do `kubectl apply` tạo, Helm 4 apply bằng SSA. `helm upgrade … --force-conflicts`. Revision lỗi vẫn nằm trong `helm history` với trạng thái `failed`; revision mới sẽ `deployed`.",
       "Upgrade xong mà order vẫn 1.0: bạn đã cài bằng `--set order.image.tag=…` nên Helm dùng lại values đó (đo). Xem `helm get values shop -n shop` (USER-SUPPLIED VALUES); dùng `--reset-values` hay bỏ `--set` khỏi lần cài.",
       "Chart đổi selector (thường do giữ `{{- include \"shop.selectorLabels\" . }}` của `helm create`): Helm 4 báo trước `conflict with \"kubectl-client-side-apply\" using apps/v1: .spec.selector` (đo); ép bằng `--force-conflicts` thì apiserver từ chối `spec.selector: Invalid value: {\"matchLabels\":{\"app\":\"order\",\"app.kubernetes.io/name\":\"order\"}}: field is immutable` (đo bằng `kubectl apply --server-side --dry-run=server`). Selector phải đúng `app: <tên>`; release ghi một revision `failed`, upgrade lại bằng chart đúng là xong.",
-      "`helm list -a` báo `unknown shorthand flag: 'a' in -a`: Helm 4 bỏ cờ này; `helm list` đã liệt kê mọi trạng thái, lọc bằng `--failed`/`--pending`.",
+      "`helm list -a` báo `unknown shorthand flag: 'a' in -a`: Helm 4 bỏ cờ này. Đo: `helm list` trần đã in release `failed` và `pending-upgrade`; lọc bằng `--failed` (chỉ `failed`) hay `--pending` (`pending-install`/`pending-upgrade`/`pending-rollback`).",
       "`k diff` báo thêm khác ở `env`/`probe`/`strategy`: template thiếu hay thừa một trường so với tệp gốc. So hai bản bằng `diff <(k get deploy order -o yaml) <(helm template shop ~/charts/shop -n shop -s templates/order.yaml)` để tìm đúng chỗ.",
       "Pod demo `Pending`, Event `0/3 nodes are available: 1 node(s) had untolerated taint(s), 2 node(s) didn't match Pod's node affinity/selector` (đo, chỉ `--set nodeSelector…` mà không toleration): thêm `tolerations` (khoá ở gốc values của podinfo) cho taint `node-role.kubernetes.io/control-plane`.",
     ],
@@ -264,28 +264,52 @@ vim ~/charts/shop/values.yaml          # order.image.tag: "2.0"
 helm upgrade shop ~/charts/shop -n shop --wait
 # Error: UPGRADE FAILED: conflict occurred while applying object shop/order apps/v1, Kind=Deployment: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using apps/v1: .spec.template.spec.containers[name="order"].image
 helm upgrade shop ~/charts/shop -n shop --force-conflicts --wait
-# Release "shop" has been upgraded. Happy Helming!
-helm history shop -n shop
-# REVISION	UPDATED                 	STATUS    	CHART     	APP VERSION	DESCRIPTION
-# 1       	Thu Nov 19 13:16:23 2026	superseded	shop-0.1.0	1.0        	Install complete
-# 2       	Thu Nov 19 13:16:44 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
-# 3       	Thu Nov 19 13:16:45 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: conflict occurred while applying object shop/order …
-# 4       	Thu Nov 19 13:17:00 2026	deployed  	shop-0.1.0	1.0        	Upgrade complete
+# STATUS: deployed  REVISION: 3
 k get deploy order -o wide
 # order   1/1   1   1   4d11h   order   shop/order:2.0   app=order
 \`\`\`
 
-Output trên là của lần soạn bài đầu tiên, khi release được cài bằng \`--set order.image.tag=1.0\`: revision 2 là \`helm upgrade\` không kèm values, Helm dùng lại \`--set\` cũ nên order vẫn 1.0 (hint thứ ba); revision 3 là lần upgrade có \`--reset-values\` gặp conflict. Cài thẳng từ \`values.yaml\` như t6 thì bạn chỉ thấy \`1 superseded\`, \`2 failed\`, \`3 deployed\`. Mỗi revision là một Secret:
+Ép một lần **không** làm Helm thành chủ cả object. Cùng lần chạy, đổi tiếp vài value khác bằng upgrade thường:
 
 \`\`\`bash
+vim ~/charts/shop/values.yaml          # config.APP_GREETING: Xin chào từ Helm
+helm upgrade shop ~/charts/shop -n shop --wait
+# Error: UPGRADE FAILED: conflict occurred while applying object shop/shop-config /v1, Kind=ConfigMap: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply" using v1: .data.APP_GREETING
+vim ~/charts/shop/values.yaml          # catalog.autoscaling.maxReplicas: 4
+helm upgrade shop ~/charts/shop -n shop --wait
+# Error: UPGRADE FAILED: … .data.APP_GREETING && conflict occurred while applying object shop/catalog autoscaling/v2, Kind=HorizontalPodAutoscaler: …
+helm upgrade shop ~/charts/shop -n shop --force-conflicts --wait      # REVISION: 6, deployed
+vim ~/charts/shop/values.yaml          # trả APP_GREETING và maxReplicas về như cũ
+helm upgrade shop ~/charts/shop -n shop --wait                        # REVISION: 7, deployed: hai trường này đã là của helm
+vim ~/charts/shop/values.yaml          # order.resources.requests.cpu: 110m
+helm upgrade shop ~/charts/shop -n shop --wait
+# Error: UPGRADE FAILED: … conflict with "kubectl-client-side-apply" using apps/v1: .spec.template.spec.containers[name="order"].resources.requests.cpu
+# Gỡ mục kubectl-client-side-apply khỏi managedFields của Deployment order (JSON patch thay /metadata/managedFields bằng
+# danh sách đã lọc), rồi upgrade thường lại:
+k get deploy order --show-managed-fields -o jsonpath='{.metadata.managedFields[*].manager}'
+# helm kubectl-label kubectl-annotate kube-controller-manager
+helm upgrade shop ~/charts/shop -n shop --wait                        # REVISION: 9, deployed, requests.cpu 110m
+helm history shop -n shop
+# REVISION	UPDATED                 	STATUS    	CHART     	APP VERSION	DESCRIPTION
+# 1       	Thu Nov 19 14:28:36 2026	superseded	shop-0.1.0	1.0        	Install complete
+# 2       	Thu Nov 19 14:28:52 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: conflict occurred while applying object shop/order …
+# 3       	Thu Nov 19 14:28:53 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
+# 4       	Thu Nov 19 14:29:12 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: conflict occurred while applying object shop/shop-config …
+# 5       	Thu Nov 19 14:29:13 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: conflict occurred while applying object shop/shop-config …
+# 6       	Thu Nov 19 14:29:14 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
+# 7       	Thu Nov 19 14:29:16 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
+# 8       	Thu Nov 19 14:29:18 2026	failed    	shop-0.1.0	1.0        	Upgrade "shop" failed: conflict occurred while applying object shop/order …
+# 9       	Thu Nov 19 14:29:21 2026	superseded	shop-0.1.0	1.0        	Upgrade complete
+# 10      	Thu Nov 19 14:29:58 2026	deployed  	shop-0.1.0	1.0        	Upgrade complete      (requests.cpu về 100m)
 k get secret -l owner=helm
-# NAME                         TYPE                 DATA   AGE
-# sh.helm.release.v1.shop.v1   helm.sh/release.v1   1      10m
-# sh.helm.release.v1.shop.v2   helm.sh/release.v1   1      10m
-# sh.helm.release.v1.shop.v3   helm.sh/release.v1   1      9m52s
+# NAME                          TYPE                 DATA   AGE
+# sh.helm.release.v1.shop.v1    helm.sh/release.v1   1      2m22s
+# sh.helm.release.v1.shop.v10   helm.sh/release.v1   1      60s
+# sh.helm.release.v1.shop.v2    helm.sh/release.v1   1      2m6s
+# …                             (v3 … v9, mỗi revision một Secret, cả revision failed)
 \`\`\`
 
-Rollout của order mất 12 giây (\`--wait\` chờ Pod mới Ready). Sau lần \`--force-conflicts\` đó, trường image thuộc field manager \`helm\`; upgrade kế tiếp không cần cờ này.
+Kết luận đo được: với release nhận lại, chỉ \`helm upgrade\` (và \`helm rollback\`, cũng có cờ \`--force-conflicts\`) **kèm \`--force-conflicts\`** là đi chắc; lời giải tự động luôn ghi cờ này. Cài từ \`values.yaml\` rồi upgrade không \`--set\` thì không vướng chuyện values được nhớ (hint thứ ba). Rollout của order lúc đổi image mất 12 giây (\`--wait\` chờ Pod mới Ready).
 
 **5. ~/shop/ sau buổi**
 
@@ -340,9 +364,9 @@ Verify đọc bằng \`helm … -o json\` và kubectl: helm đúng v4.3.2; relea
     review: [
       { q: "Vì sao chart shop nhận lại object đang chạy thay vì `k delete` rồi `helm install`? Cái giá của cách thứ hai trên lab là gì?", a: "Nhận lại chỉ gắn nhãn `app.kubernetes.io/managed-by=Helm` và annotation `meta.helm.sh/release-name`/`release-namespace` rồi `helm install`: pod template không đổi nên không rollout (đo: không ReplicaSet mới, 30180 trả 200 suốt). Xoá rồi cài làm mọi Pod mất cùng lúc (shop lỗi tới khi JVM và initContainer xong), Service có thể đổi ClusterIP, HPA mất trạng thái; với StatefulSet còn đụng PVC, nên PostgreSQL để ngoài chart." },
       { q: "`values.yaml`, `-f values-prod.yaml`, `--set` tương ứng gì trong Spring Boot, và cái nào thắng?", a: "`application.yml` mặc định, profile `application-prod.yml`, tham số dòng lệnh. Thứ tự ưu tiên: values của chart < các `-f` (tệp sau đè tệp trước) < `--set`. `helm get values --all` giống `/actuator/configprops`. Khác Spring: Helm nhớ values đã đưa lúc cài, upgrade không kèm values thì dùng lại chúng." },
-      { q: "`helm upgrade` đầu tiên sau khi nhận lại báo `conflict with \"kubectl-client-side-apply\" … image`. Vì sao, và vì sao lần sau không gặp nữa?", a: "Helm 4 apply bằng server-side apply; trường image do `kubectl apply` tạo nên thuộc field manager `kubectl-client-side-apply`, đổi nó là conflict. `--force-conflicts` chuyển quyền sở hữu trường sang `helm`; từ đó upgrade thường chạy được. Helm 3 (client-side 3-way merge) không gặp lỗi này." },
+      { q: "`helm upgrade` đầu tiên sau khi nhận lại báo `conflict with \"kubectl-client-side-apply\" … image`. Vì sao, và sau một lần `--force-conflicts` thì upgrade thường có đủ không?", a: "Helm 4 apply bằng server-side apply; mọi trường do `kubectl apply` tạo thuộc field manager `kubectl-client-side-apply`, đổi chúng là conflict. `--force-conflicts` chỉ chuyển **trường đang xung đột** sang `helm`. Đo: sau khi ép image của order, upgrade thường đổi `APP_GREETING`, `maxReplicas` của HPA hay `requests.cpu` của order đều conflict lại. Nên với release nhận lại: luôn `--force-conflicts` khi upgrade/rollback, hoặc gỡ một lần mục `kubectl-client-side-apply` khỏi `managedFields` của từng object. Helm 3 (client-side 3-way merge) không gặp lỗi này." },
       { q: "Chart catalog không ghi `replicas`. `k diff` báo `replicas: 2 → 1`, vậy sau `helm install` catalog còn mấy replica và vì sao?", a: "2: HPA giữ số replica, và Helm 4 (SSA) không đụng trường nó không quản. `k diff` mô phỏng client-side apply, nơi trường có trong last-applied mà mất khỏi manifest bị xoá về mặc định 1. Ghi `replicas` trong chart thì mỗi upgrade kéo số replica về giá trị chart, giành với HPA." },
-      { q: "Trên đề có Helm 3. Lệnh nào của buổi này viết khác?", a: "Hầu như không: `repo add`, `search repo --versions`, `install --version --set -f -n --create-namespace`, `upgrade`, `history`, `template`, `get values` giống nhau. Khác: Helm 3 có `helm list -a` (Helm 4 bỏ, dùng `--failed`/`--pending`), `--atomic`/`--force` (Helm 4 đổi thành `--rollback-on-failure`/`--force-replace`), và Helm 3 không báo conflict SSA khi upgrade object đã nhận lại." },
+      { q: "Trên đề có Helm 3. Lệnh nào của buổi này viết khác?", a: "Hầu như không: `repo add`, `search repo --versions`, `install --version --set -f -n --create-namespace`, `upgrade`, `history`, `template`, `get values` giống nhau. Khác: Helm 3 có `helm list -a` (Helm 4 bỏ; đo: `helm list` trần của Helm 4 đã in cả `failed` và `pending-upgrade`, lọc bằng `--failed`/`--pending`), `--atomic`/`--force` (Helm 4 đổi thành `--rollback-on-failure`/`--force-replace`), và Helm 3 không báo conflict SSA khi upgrade object đã nhận lại." },
     ],
   },
 // ───────────────────────────── s38 ─────────────────────────────
@@ -369,7 +393,7 @@ Verify đọc bằng \`helm … -o json\` và kubectl: helm đúng v4.3.2; relea
       { skill: "k-kustomize-images", level: "Viết được không tra" },
       { skill: "k-kustomize-generators", level: "Viết được có tra" },
     ],
-    uses: ["k-cm-file", "k-create-ns", "k-helm-template", "vim-macro"],
+    uses: ["k-create-ns", "k-helm-template", "vim-macro"],
     foundation: null,
     mindset: `**Kustomize không có template.** Helm (s37) sinh YAML từ khuôn \`{{ .Values… }}\`. Kustomize đi đường ngược: **base** là YAML thật, chạy được, không biến nào; **overlay** khai những thay đổi trên base (namespace, số replica, tag image, patch, ConfigMap sinh ra) và Kustomize áp chúng lên base để in ra YAML cuối. Nó nằm sẵn trong kubectl (kubectl 1.36.6 của lab nhúng Kustomize v5.8.1, \`k version --client\`): \`k kustomize <thư mục>\` chỉ in, \`k apply -k <thư mục>\` in rồi apply. Không có release, không có history, không có gì lưu trong cluster ngoài chính các object.
 
@@ -399,7 +423,7 @@ Hai thứ có thể đi cùng nhau: overlay dev của lab đặt \`LOGGING_LEVEL
 
 **Helm hay Kustomize.** Helm khi cần đóng gói để người khác cài với vài tham số (chart công khai như podinfo, ingress-nginx), cần release/history/rollback. Kustomize khi bạn sở hữu YAML và chỉ cần vài khác biệt giữa môi trường, muốn diff YAML thật trong Git. Hai thứ hay đi cùng: \`helm template … > base/all.yaml\` (k-helm-template) rồi Kustomize vá phần chart không cho chỉnh. Đề CKA hỏi cả hai ở mức lệnh: \`k kustomize\`, \`k apply -k\`, \`k delete -k\`, viết \`kustomization.yaml\` có \`namespace\`, \`images\`, \`replicas\`, \`patches\`, \`configMapGenerator\`.
 
-**Vừa RAM.** Base chỉ có catalog ở chế độ H2 (không \`DB_URL\`: không cần PostgreSQL, và Pod ở shop-dev không bị NetworkPolicy default-deny của shop chặn vì NetworkPolicy theo namespace). Limit nhỏ nhất đo được: \`-XX:MaxRAMPercentage=50\`, gọi 50 lần \`/products\` rồi chờ 20 giây; 128Mi, 160Mi, 176Mi luôn \`OOMKilled\`; 192Mi qua một lần, lần sau \`OOMKilled\` (\`memory.peak\` 188–192Mi); 208Mi qua ba lần (\`memory.peak\` 171–195Mi), 224Mi, 256Mi qua. Overlay dev đặt requests = limits = **208Mi**; Pod dùng 171Mi lúc rảnh (\`k top\`).`,
+**Vừa RAM.** Base chỉ có catalog ở chế độ H2 (không \`DB_URL\`: không cần PostgreSQL, và Pod ở shop-dev không bị NetworkPolicy default-deny của shop chặn vì NetworkPolicy theo namespace). Limit nhỏ nhất đo được: \`-XX:MaxRAMPercentage=50\`, gọi 50 lần \`/products\` rồi chờ 20 giây; 128Mi, 160Mi, 176Mi luôn \`OOMKilled\`; 192Mi qua một lần (\`memory.peak\` 188Mi), lần sau \`OOMKilled\`; 208Mi qua ba lần (\`memory.peak\` 171–195Mi), 224Mi, 256Mi qua. 208Mi là mức nhỏ nhất qua 3/3, nhưng đỉnh 195Mi chỉ cách giới hạn ~6%, và mỗi lần VM bật lại JVM khởi động giữa cửa sổ tải cao: overlay dev đặt requests = limits = **224Mi** cho có khoảng dư; Pod dùng 171Mi lúc rảnh (\`k top\`).`,
     refs: [
       { label: "Bài lộ trình CKA: Helm & Kustomize trong curriculum CKA", href: "#/roadmap/cka/cka-w7-5" },
       { label: "Lộ trình CKA Study Guide: Helm và Kustomize — khác nhau ở đâu và gõ lệnh nào", href: "#/roadmap/ckabook/cb-w2-4" },
@@ -410,7 +434,7 @@ Hai thứ có thể đi cùng nhau: overlay dev của lab đặt \`LOGGING_LEVEL
       { label: "Spring Boot: Externalized Configuration và Profiles", href: "https://docs.spring.io/spring-boot/reference/features/profiles.html" },
     ],
     stateIn: "Đầu ra s37: shop chạy từ release Helm shop; ~/shop/pre-helm/catalog.yaml là manifest catalog cũ. `./labs/lab begin cka s38` kiểm đầu vào bằng verify của s37, tạo ~/drills/s38 và ~/kustomize/shop, xoá answers.env cũ.",
-    stateOut: "~/kustomize/shop/{base,overlays/dev,overlays/prod}; namespace shop-dev chạy catalog (H2) 1 replica tag 1.0, limit 208Mi, từ overlay dev, bằng ConfigMap catalog-config-<hash> sau một lần đổi literal (hai ReplicaSet, hai ConfigMap); overlay prod (shop-prod, 2 replica, tag 2.0) chỉ build; ~/drills/s38/answers.env (HASHED_CM_NAME); shop không đổi.",
+    stateOut: "~/kustomize/shop/{base,overlays/dev,overlays/prod}; namespace shop-dev chạy catalog (H2) 1 replica tag 1.0, limit 224Mi, từ overlay dev, bằng ConfigMap catalog-config-<hash> sau một lần đổi literal (hai ReplicaSet, hai ConfigMap); overlay prod (shop-prod, 2 replica, tag 2.0) chỉ build; ~/drills/s38/answers.env (HASHED_CM_NAME); shop không đổi.",
     tasks: [
       {
         id: "t1",
@@ -418,11 +442,11 @@ Hai thứ có thể đi cùng nhau: overlay dev của lab đặt \`LOGGING_LEVEL
       },
       {
         id: "t2",
-        text: "Overlay dev: `overlays/dev/kustomization.yaml` có `namespace: shop-dev`, `resources: [../../base]`, `replicas: [{name: catalog, count: 1}]`, `images: [{name: shop/catalog, newTag: \"1.0\"}]`, `patches: [{path: memory.yaml}]`; `memory.yaml` là patch strategic merge đặt requests/limits memory 208Mi cho container `catalog`. `k kustomize overlays/dev | grep -nE '^kind:|namespace:|image:|replicas:|memory:'`. `k create ns shop-dev`, `k apply -k overlays/dev`, `k -n shop-dev rollout status deploy/catalog`, `k -n shop-dev get cm,rs`.",
+        text: "Overlay dev: `overlays/dev/kustomization.yaml` có `namespace: shop-dev`, `resources: [../../base]`, `replicas: [{name: catalog, count: 1}]`, `images: [{name: shop/catalog, newTag: \"1.0\"}]`, `patches: [{path: memory.yaml}]`; `memory.yaml` là patch strategic merge đặt requests/limits memory 224Mi cho container `catalog`. `k kustomize overlays/dev | grep -nE '^kind:|namespace:|image:|replicas:|memory:'`. `k create ns shop-dev`, `k apply -k overlays/dev`, `k -n shop-dev rollout status deploy/catalog`, `k -n shop-dev get cm,rs`.",
       },
       {
         id: "t3",
-        text: "Đổi literal, thấy rollout. Thêm vào overlay dev `configMapGenerator: [{name: catalog-config, behavior: merge, literals: [LOGGING_LEVEL_SHOP=DEBUG]}]`. `k diff -k overlays/dev` (chỗ nào đổi trong Deployment?), `k apply -k overlays/dev`, `k -n shop-dev rollout status deploy/catalog`, `k -n shop-dev get cm,rs`: ConfigMap cũ còn không, ReplicaSet nào 0? Ghi tên ConfigMap Pod đang dùng: `k -n shop-dev get deploy catalog -o jsonpath='{.spec.template.spec.containers[0].envFrom[0].configMapRef.name}'` vào `~/drills/s38/answers.env` dạng `HASHED_CM_NAME=<tên>`. So với s12 (k-cm-file): sửa ConfigMap không hash thì Pod có tự đổi không?",
+        text: "Đổi literal, thấy rollout. Thêm vào overlay dev `configMapGenerator: [{name: catalog-config, behavior: merge, literals: [LOGGING_LEVEL_SHOP=DEBUG]}]`. `k diff -k overlays/dev` (chỗ nào đổi trong Deployment?), `k apply -k overlays/dev`, `k -n shop-dev rollout status deploy/catalog`, `k -n shop-dev get cm,rs`: ConfigMap cũ còn không, ReplicaSet nào 0? Ghi tên ConfigMap Pod đang dùng: `k -n shop-dev get deploy catalog -o jsonpath='{.spec.template.spec.containers[0].envFrom[0].configMapRef.name}'` vào `~/drills/s38/answers.env` dạng `HASHED_CM_NAME=<tên>`. So với s12: sửa ConfigMap không hash thì Pod có tự đổi không?",
       },
       {
         id: "t4",
@@ -430,7 +454,7 @@ Hai thứ có thể đi cùng nhau: overlay dev của lab đặt \`LOGGING_LEVEL
       },
       {
         id: "t5",
-        text: "Tình huống hỏng: `cp -r overlays/dev ~/drills/s38/broken-dev`, sửa `resources` thành `../../../../kustomize/shop/base` và `metadata.name` trong `memory.yaml` thành `catalog-api`. `k kustomize ~/drills/s38/broken-dev`: lỗi nói gì? Thử thêm hai lỗi im lặng: `images: [{name: shop/catalogue, …}]` (build có lỗi không, image ra sao?) và patch đúng tên Deployment nhưng container tên `catalogue` (`k kustomize … | k apply --dry-run=server -f -`).",
+        text: "Tình huống hỏng: `mkdir -p ~/drills/s38/broken && cp -r overlays/dev ~/drills/s38/broken/dev`, sửa `resources` thành `../../../../kustomize/shop/base` (bốn `..` từ `~/drills/s38/broken/dev` về `~`) và `metadata.name` trong `memory.yaml` thành `catalog-api`. `k kustomize ~/drills/s38/broken/dev`: lỗi nói gì? Thử thêm hai lỗi im lặng: `images: [{name: shop/catalogue, …}]` (build có lỗi không, image ra sao?) và patch đúng tên Deployment nhưng container tên `catalogue` (`k kustomize … | k apply --dry-run=server -f -`).",
       },
       {
         id: "t6",
@@ -442,9 +466,9 @@ Hai thứ có thể đi cùng nhau: overlay dev của lab đặt \`LOGGING_LEVEL
       "`new root '/home/ubuntu/kustomize/shop/base' cannot be absolute` (đo): `resources:` chỉ nhận đường dẫn tương đối (hay URL Git). Đếm `../` từ thư mục chứa kustomization.yaml.",
       "`apply -k` xong mà Pod không đổi: bạn sửa literal ở base nhưng overlay dùng `behavior: replace`, hay sửa ConfigMap trong cluster bằng `k edit` (Kustomize không biết). Xem `k diff -k overlays/dev` trước khi apply.",
       "`Error from server (NotFound): error when creating \"STDIN\": namespaces \"…\" not found` (đo) khi apply: `namespace:` trong kustomization không tạo namespace; `k create ns shop-dev`.",
-      "Apply nhầm overlay dev vào shop (đổi `namespace: shop`) phá catalog của shop, đo: `kubectl apply` xoá `DB_URL`, `DB_USER`, `DB_PASSWORD` khỏi Deployment do Helm quản (catalog chạy H2 với dữ liệu mẫu), hạ limit xuống 208Mi, thêm `envFrom` tới `catalog-config-…`. `helm upgrade shop ~/charts/shop -n shop --force-conflicts` đưa env và resources về, nhưng **không gỡ `envFrom`** (trường đó thuộc field manager `kubectl-client-side-apply`, Helm không quản), và xoá ConfigMap kia thì Pod mới `CreateContainerConfigError`. Gỡ bằng `k -n shop patch deploy catalog --type=json -p '[{\"op\":\"remove\",\"path\":\"/spec/template/spec/containers/0/envFrom\"}]'`.",
+      "Apply nhầm overlay dev vào shop (đổi `namespace: shop`) phá catalog của shop, đo: `kubectl apply` xoá `DB_URL`, `DB_USER`, `DB_PASSWORD` khỏi Deployment do Helm quản (catalog chạy H2 với dữ liệu mẫu), hạ limit xuống mức của overlay, thêm `envFrom` tới `catalog-config-…`. `helm upgrade shop ~/charts/shop -n shop --force-conflicts` đưa env và resources về, nhưng **không gỡ `envFrom`** (trường đó thuộc field manager `kubectl-client-side-apply`, Helm không quản), và xoá ConfigMap kia thì Pod mới `CreateContainerConfigError`. Gỡ bằng `k -n shop patch deploy catalog --type=json -p '[{\"op\":\"remove\",\"path\":\"/spec/template/spec/containers/0/envFrom\"}]'`.",
       "Patch đúng Deployment nhưng sai tên container (`catalogue`): build **không** lỗi, strategic merge thêm một container thứ hai chỉ có `resources`; apply mới lỗi `The Deployment \"catalog\" is invalid: spec.template.spec.containers[0].image: Required value` (đo). `images` sai tên image thì không lỗi ở đâu cả, image giữ nguyên (đo).",
-      "Pod catalog ở shop-dev `OOMKilled` liên tục: limit dưới mức đo (192Mi trở xuống, với `MaxRAMPercentage=50`). `k -n shop-dev describe pod` → `Last State: Terminated, Reason: OOMKilled`; nâng lên 208Mi trở lên.",
+      "Pod catalog ở shop-dev `OOMKilled` liên tục: limit dưới mức đo (dưới ~208Mi với `MaxRAMPercentage=50`; 192Mi đã OOMKilled 1/2 lần). `k -n shop-dev describe pod` → `Last State: Terminated, Reason: OOMKilled`; lab dùng 224Mi.",
     ],
     solution: `Output là của máy soạn bài (2026-11-19, Kubernetes 1.36.6); hậu tố hash giống bên bạn nếu nội dung literal giống hệt (hash tính từ nội dung).
 
@@ -506,9 +530,9 @@ spec:
       - name: catalog
         resources:
           requests:
-            memory: 208Mi
+            memory: 224Mi
           limits:
-            memory: 208Mi
+            memory: 224Mi
 \`\`\`
 
 Lần đầu (chưa có \`configMapGenerator\` trong overlay):
@@ -526,8 +550,8 @@ k kustomize overlays/dev | grep -nE '^kind:|^  name:|namespace:|image:|replicas:
 # 31:  namespace: shop-dev
 # 33:  replicas: 1
 # 46:        image: shop/catalog:1.0
-# 65:            memory: 208Mi
-# 68:            memory: 208Mi
+# 65:            memory: 224Mi
+# 68:            memory: 224Mi
 k create ns shop-dev
 k apply -k overlays/dev
 # configmap/catalog-config-7fhk8bc7tc created
@@ -577,7 +601,7 @@ Tên ConfigMap của prod trùng bản đầu của dev: cùng literal của bas
 **5. Tình huống hỏng**
 
 \`\`\`bash
-k kustomize ~/drills/s38/broken-dev
+k kustomize ~/drills/s38/broken/dev
 # Error: no resource matches strategic merge patch "Deployment.v1.apps/catalog-api.[noNs]": no matches for Id Deployment.v1.apps/catalog-api.[noNs]; failed to find unique target for patch Deployment.v1.apps/catalog-api.[noNs]
 \`\`\`
 

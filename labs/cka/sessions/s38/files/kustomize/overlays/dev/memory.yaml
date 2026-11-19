@@ -1,5 +1,6 @@
 # Patch strategic merge: chỉ ghi trường cần đổi; container khớp theo name.
-# 208Mi là mức nhỏ nhất đo được mà catalog (H2, MaxRAMPercentage=50) chạy ổn: 192Mi bị OOMKilled 1/2 lần, 176Mi luôn OOMKilled.
+# Đo (catalog H2, MaxRAMPercentage=50): 176Mi trở xuống luôn OOMKilled, 192Mi OOMKilled 1/2 lần (memory.peak 188Mi lần qua),
+# 208Mi qua 3/3 (memory.peak 171–195Mi). Lab dùng 224Mi để có khoảng dư khi JVM khởi động trong cửa sổ tải cao sau boot.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,6 +12,6 @@ spec:
       - name: catalog
         resources:
           requests:
-            memory: 208Mi
+            memory: 224Mi
           limits:
-            memory: 208Mi
+            memory: 224Mi

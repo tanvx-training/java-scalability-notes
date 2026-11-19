@@ -118,7 +118,12 @@ rc, out, err = run("helm", "get", "manifest", "shop", "-n", "shop")
 man = set()
 if rc == 0:
     for d in yaml.safe_load_all(out):
-        if isinstance(d, dict) and d.get("kind"): man.add((d["kind"], (d.get("metadata") or {}).get("name")))
+        if isinstance(d, dict) and d.get("kind"):
+            man.add((d["kind"], (d.get("metadata") or {}).get("name")))
+            # Namespace trong manifest phải để trống (Helm điền -n) hoặc là shop: chart ghi cứng namespace khác thì release
+            # quản bản sao ở chỗ khác, không phải object của shop.
+            ns = (d.get("metadata") or {}).get("namespace")
+            if ns not in (None, "", "shop"): bad.append(f"manifest: {d['kind']}/{d['metadata'].get('name')} ở namespace {ns}")
 else: bad.append("không đọc được manifest của release shop")
 if rc == 0 and man != CHART:
     extra, miss = sorted(man - CHART), sorted(CHART - man)
@@ -127,7 +132,7 @@ if rc == 0 and man != CHART:
 hist = hj("history", "shop", "-n", "shop") or []
 first = ts(hist[0]["updated"]) if hist else None
 RES = "deploy,sts,ds,svc,cm,secret,sa,role,rolebinding,hpa,cronjob,job,pvc,netpol,ingress,resourcequota,limitrange,pdb"
-items = (kj("-n", "shop", "get", RES) or {}).get("items")
+items = (kj("-n", "shop", "get", RES, "--show-managed-fields") or {}).get("items")
 if items is None: bad.append("không đọc được object của shop")
 else:
     seen = {}
@@ -142,6 +147,9 @@ else:
         md = o["metadata"]; an, lb = md.get("annotations") or {}, md.get("labels") or {}
         if (an.get(RN[0]), an.get(RN[1]), lb.get("app.kubernetes.io/managed-by")) != ("shop", "shop", "Helm"):
             bad.append(f"{kn[0]}/{kn[1]}: nhãn/annotation không phải của release shop/shop"); continue
+        # Helm đã apply chính object này (field manager "helm"), không chỉ có nhãn/annotation gắn tay.
+        if "helm" not in {m.get("manager") for m in md.get("managedFields") or []}:
+            bad.append(f"{kn[0]}/{kn[1]}: Helm chưa apply object này (không có field manager helm)"); continue
         if first and kn[0] in ("Deployment", "Service") and ts(md["creationTimestamp"]) >= first:
             bad.append(f"{kn[0]}/{kn[1]} tạo lại khi cài (không phải nhận lại)")
 print("ADOPT=" + ("; ".join(bad)[:170] or "đạt"))
@@ -160,6 +168,13 @@ for n in DEPLOYS:
 pods = [p for p in (kj("-n", "shop", "get", "pod", "-l", "app=order") or {}).get("items", [])
         if not p["metadata"].get("deletionTimestamp") and (p.get("status") or {}).get("phase") not in ("Succeeded", "Failed")]
 if any(p["spec"].get("serviceAccountName") != "order" for p in pods): bad.append("có Pod order không chạy bằng SA order")
+# Role của order nay do chart tạo: chỉ configmaps, chỉ get/list/watch, chỉ theo resourceNames [order-config].
+role = kj("-n", "shop", "get", "role", "order-config-reader")
+rs = (role or {}).get("rules") or []
+if role is None: bad.append("chưa có Role order-config-reader")
+elif not rs or any(sorted(r.get("resourceNames") or []) != ["order-config"] or set(r.get("resources") or []) != {"configmaps"}
+                   or (r.get("apiGroups") or []) != [""] or set(r.get("verbs") or []) - {"get", "list", "watch"} for r in rs):
+    bad.append("Role order-config-reader phải chỉ get/list/watch configmaps theo resourceNames [order-config]")
 print("APPS=" + ("; ".join(bad)[:170] or "đạt"))
 rc, out, _ = k("get", "node", "cka-w1", "-o", "jsonpath={.status.addresses[?(@.type==\"InternalIP\")].address}")
 print("W1_IP=" + (out.strip() if rc == 0 else ""))
