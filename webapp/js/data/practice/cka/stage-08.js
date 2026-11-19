@@ -716,7 +716,7 @@ Bảy dòng, mỗi dòng gom ít tiêu chí và lý do đỏ viết ngắn (lab 
       { q: "Cert-manager 1.21 chỉ ghi hỗ trợ tới Kubernetes 1.36. Lab làm gì sau khi nâng lên 1.37?", a: "Kiểm thật: Pod Ready, Certificate shop-local Ready, webhook nhận dry-run, xoá Secret thì được cấp lại (0,39 giây, serial mới). Chạy được nên giữ v1.21.3, ghi rõ \"chạy được, chưa được hỗ trợ\"; khi cert-manager 1.22 ra (hỗ trợ 1.37) thì nâng chart. Trước khi nâng cluster ở công ty, đọc bảng hỗ trợ của mọi operator đang chạy." },
     ],
   },
-// ───────────────────────────── s43 (khung) ─────────────────────────────
+// ───────────────────────────── s43 ─────────────────────────────
   {
     id: "s43",
     stage: "st8",
@@ -725,12 +725,12 @@ Bảy dòng, mỗi dòng gom ít tiêu chí và lý do đỏ viết ngắn (lab 
     domain: "architecture",
     competencies: ["ar-lifecycle"],
     requires: ["s42"],
-    status: "skeleton",
+    status: "published",
     pieces: ["etcd-restore"],
     goals: [
-      "Chụp snapshot etcd với đủ endpoint và ba chứng chỉ, kiểm snapshot bằng status.",
-      "Xoá một Deployment của shop, khôi phục etcd từ snapshot vào data-dir mới và trỏ static pod etcd sang đó.",
-      "Thấy đối tượng đã xoá quay lại và giải thích vì sao đối tượng tạo sau snapshot thì mất.",
+      "Chụp snapshot etcd với đủ endpoint và ba chứng chỉ đọc từ manifest, kiểm snapshot bằng `etcdutl snapshot status`.",
+      "Xoá một Deployment của shop, khôi phục etcd từ snapshot vào data-dir mới và trỏ static pod etcd sang đó ở đủ ba chỗ (`--data-dir`, volumeMount, hostPath).",
+      "Thấy đối tượng đã xoá quay lại, giải thích vì sao đối tượng tạo sau snapshot thì mất, và nhận ra etcd đang chạy trên một thư mục rỗng.",
     ],
     skills: [
       { skill: "k-etcd-snapshot-save", level: "Gõ được có tra" },
@@ -743,9 +743,261 @@ Bảy dòng, mỗi dòng gom ít tiêu chí và lý do đỏ viết ngắn (lab 
       { skill: "k-docs-etcd", level: "Tìm được trong 30 giây" },
     ],
     uses: ["k-static-pod-dir", "k-pki-dir", "k-crictl-ps", "vim-move-jump"],
-    stateIn: "Đầu ra s42 (mốc trước etcd): cluster đã nâng cấp.",
-    stateOut: "Có /opt/backup/etcd.db hợp lệ; etcd chạy từ /var/lib/etcd-restore và shop trở về đúng trạng thái lúc chụp.",
+    foundation: null,
+    mindset: `**etcd là toàn bộ trạng thái của cluster, và chỉ trạng thái đó.** Mọi đối tượng bạn tạo bằng \`k\` (Deployment, ConfigMap, Secret của Helm, RoleBinding, Certificate của cert-manager) là một key trong etcd, dạng \`/registry/<loại>/<namespace>/<tên>\`. Snapshot etcd là ảnh chụp toàn bộ key đó tại một revision. Restore đưa cả cluster về đúng lúc chụp: thứ bị xoá sau đó quay lại, **thứ tạo sau đó biến mất**. Buổi này đo cả hai: \`before-snapshot\` có lại, \`after-snapshot\` mất, Deployment \`order\` đã xoá có lại với đúng tên Pod cũ và tuổi \`5d3h\` (đối tượng cũ, không phải tạo mới). Cùng lúc, mọi thay đổi khác sau lúc chụp cũng lùi về: ReplicaSet, Pod, Lease, Event, revision Helm nào tạo sau snapshot. Chụp xong mà còn \`helm upgrade\` thì restore trả release về revision trước; buổi này không có upgrade nào giữa hai mốc, nên release \`shop\` vẫn \`deployed\` revision 20 (Secret \`sh.helm.release.v1.shop.v20\` có trong snapshot, đo).
+
+**etcd không phải backup của ứng dụng.** Dữ liệu của PostgreSQL nằm trong PV \`local-path\` trên đĩa cka-w2 (s24), không nằm trong etcd. Snapshot etcd giữ *đối tượng* PVC/PV (tên, kích thước, node), không giữ một dòng nào trong bảng \`products\`. Cluster mất etcd thì restore etcd; database hỏng thì cần \`pg_dump\`/WAL archive như mọi database, giống bạn backup MySQL của một ứng dụng Spring chứ không backup \`application.yml\`. Ngược lại, restore etcd về một tuần trước không đưa database về một tuần trước: Pod \`postgres-0\` cũ chạy lại trên dữ liệu hiện tại.
+
+**Bốn thứ đọc từ manifest, không học thuộc.** \`etcdctl\` nói chuyện với etcd qua TLS hai chiều; mọi giá trị nằm trong \`/etc/kubernetes/manifests/etcd.yaml\`, tên cờ khác tên cờ của etcd:
+
+| etcdctl | đọc từ cờ etcd | giá trị trên cka-cp |
+|---|---|---|
+| \`--endpoints\` | \`--listen-client-urls\` (lấy địa chỉ loopback) | \`https://127.0.0.1:2379\` |
+| \`--cacert\` | \`--trusted-ca-file\` | \`/etc/kubernetes/pki/etcd/ca.crt\` |
+| \`--cert\` | \`--cert-file\` | \`/etc/kubernetes/pki/etcd/server.crt\` |
+| \`--key\` | \`--key-file\` | \`/etc/kubernetes/pki/etcd/server.key\` |
+
+(Đề thi đôi khi dùng \`healthcheck-client.crt/.key\` hay \`apiserver-etcd-client.crt/.key\`; cặp nào do CA của etcd ký đều được.) Từ etcd 3.6, **\`etcdctl\` chỉ còn \`snapshot save\`**: \`status\` và \`restore\` chuyển sang \`etcdutl\`, công cụ làm việc thẳng với tệp, không cần endpoint hay cert (đo trên 3.7.0: \`etcdctl snapshot --help\` chỉ liệt kê \`save\`). Lab cài \`etcdctl\` và \`etcdutl\` **v3.7.0** (đúng bản server của image \`registry.k8s.io/etcd:3.7.0-0\` mà kubeadm 1.37.2 chạy) từ release chính thức trên GitHub, kiểm sha256 trong \`SHA256SUMS\`, vào \`/usr/local/bin\` như máy thi có sẵn. Không có binary trên host thì vẫn chụp được bằng \`sudo crictl exec <id etcd> etcdctl …\` (image có \`etcdctl\`), nhưng tệp snapshot khi đó nằm trong container: học lệnh host, đề thi chấm tệp trên node.
+
+**Restore là chép ra một cuốn sổ mới, không ghi đè cuốn đang dùng.** \`etcdutl snapshot restore /opt/backup/etcd.db --data-dir /var/lib/etcd-restore\` tạo một data-dir mới (99 MB, so với 221 MB của \`/var/lib/etcd\` đang chạy vì snapshot đã bỏ lịch sử cũ, đo). Rồi bảo kubelet chạy etcd trên thư mục đó bằng manifest static pod. Có **ba** chỗ trỏ tới data-dir, và chúng phải khớp nhau:
+
+| Dòng trong etcd.yaml | Nghĩa |
+|---|---|
+| \`- --data-dir=/var/lib/etcd\` | etcd đọc/ghi ở đường dẫn này **bên trong container** |
+| \`volumeMounts: - mountPath: /var/lib/etcd\` (\`name: etcd-data\`) | gắn volume \`etcd-data\` vào đường dẫn đó trong container |
+| \`volumes: - hostPath: path: /var/lib/etcd\` (\`name: etcd-data\`) | volume \`etcd-data\` là thư mục nào **trên node** |
+
+Trang kubernetes.io cho cách ngắn nhất: chỉ đổi \`hostPath\` (container vẫn thấy \`/var/lib/etcd\`, nhưng đó là thư mục mới trên node). Lab đòi đổi cả ba sang \`/var/lib/etcd-restore\`, để \`ps\` hay \`crictl inspect\` nói thật thư mục nào đang chạy. Đổi \`--data-dir\` mà quên hai chỗ kia là tình huống hỏng của buổi, và nó **không báo lỗi**: \`/var/lib/etcd-restore\` bên trong container không được mount nên là một thư mục rỗng trong lớp ghi của container; etcd 3.7.0 log \`"data-dir":"/var/lib/etcd-restore","dir-type":"empty"\`, \`bootstrapping cluster\`, và sau 14 giây là \`ready to serve client requests\` với **0 key**, DB 20 kB (đo). Member ID (\`9c6d935895988819\`) và cluster ID giống hệt bản thật, vì etcd tính chúng từ \`--name\`, \`--initial-cluster\` và token: \`etcdctl member list\`, \`endpoint health\` đều xanh. Ngược lại cũng vậy: hostPath mang \`type: DirectoryOrCreate\`, trỏ hostPath sang một thư mục chưa restore thì kubelet tạo thư mục rỗng và etcd khởi động trên đó. Dấu hiệu duy nhất là dữ liệu mất.
+
+**Cluster trên etcd rỗng trông như bị xoá sạch.** Đo trên lab (apiserver bật lại trên etcd rỗng ~50 giây): apiserver lên, tự tạo bốn namespace mặc định (\`default\`, \`kube-node-lease\`, \`kube-public\`, \`kube-system\`, tuổi 46 giây) và ClusterRole mặc định; \`k get node\` với \`~/.kube/config\` trả \`Forbidden: User "kubernetes-admin" cannot list resource "nodes"\`, vì từ 1.29 \`kubernetes-admin\` nằm trong nhóm \`kubeadm:cluster-admins\` mà ClusterRoleBinding của nhóm đó do \`kubeadm init\` tạo, không phải apiserver: etcd rỗng thì không có. Chỉ \`/etc/kubernetes/super-admin.conf\` (nhóm \`system:masters\`) đọc được: \`No resources found\` cho node, Pod, Deployment. kubelet trên worker log \`nodes "cka-w1" not found\` và \`Forbidden\` cho mọi Pod của nó (Node authorizer không thấy node), nên trong ~50 giây đó **container trên worker vẫn chạy** (cka-w1: 10 container trước và sau) và shop vẫn trả lời. Đừng dựa vào điều đó: lab không đo để lâu hơn. Gỡ: sửa nốt \`mountPath\` và \`hostPath\` (hay đưa \`--data-dir\` về đúng), kubelet thay container etcd, mọi thứ có lại (đo: \`order\` 2/2 tuổi \`5d3h\`); đối tượng apiserver ghi vào etcd rỗng nằm trong lớp ghi của container cũ và mất theo nó. Bài học: sau mỗi restore, \`k get deploy -A\` hay đếm key bằng \`etcdctl get / --prefix --keys-only | wc -l\` (đo: 4490 key lúc chụp), đừng chỉ nhìn \`endpoint health\`.
+
+**Dừng apiserver trước khi restore.** kubernetes.io: đang có apiserver chạy thì không restore etcd; dừng mọi apiserver, restore, bật lại, và khởi động lại kube-controller-manager, kube-scheduler để chúng không giữ dữ liệu cũ. Với kubeadm, "dừng" là dời manifest khỏi \`/etc/kubernetes/manifests\` (kubelet dừng static pod khi tệp biến mất; đo: ba container dừng sau 30 giây) và đặt lại sau. Lab dời \`kube-apiserver.yaml\`, \`kube-controller-manager.yaml\`, \`kube-scheduler.yaml\` sang \`/etc/kubernetes/s43-off/\`, **không** để bản sao nào trong thư mục manifests (kubelet chạy mọi tệp ở đó). Restore thêm \`--bump-revision 1000000000 --mark-compacted\` theo trang Disaster recovery của etcd: revision sau restore nhảy vượt mọi revision client đã thấy (đo: 53019 → 1000053019) và được đánh dấu compacted, nên watch cũ của controller (và của cert-manager, NGINX Gateway Fabric) buộc phải list lại thay vì tin cache. Đề thi thường chỉ cần dạng ngắn \`etcdutl snapshot restore <tệp> --data-dir <thư mục>\`; lab ghi thêm \`--name cka-cp --initial-cluster cka-cp=https://192.168.252.35:2380 --initial-advertise-peer-urls https://192.168.252.35:2380\` để member sau restore giữ đúng peer URL của node (mặc định là \`default=http://localhost:2380\`).
+
+**Sau s43 trên đĩa cka-cp** (s45 cần biết): etcd chạy từ \`/var/lib/etcd-restore\`; \`/var/lib/etcd\` cũ còn nguyên, không dùng; bản gốc manifest ở \`~/drills/s43/etcd.yaml.orig\`; snapshot ở \`/opt/backup/etcd.db\`.`,
+    refs: [
+      { label: "Bài lộ trình CKA: etcd backup — etcdctl snapshot save với đủ cert flags", href: "#/roadmap/cka/cka-w3-1" },
+      { label: "Bài lộ trình CKA: etcd restore — snapshot restore rồi trỏ static pod sang data-dir mới", href: "#/roadmap/cka/cka-w3-2" },
+      { label: "Bài lộ trình CKA: tìm endpoint và cert của etcd trong etcd.yaml", href: "#/roadmap/cka/cka-w3-3" },
+      { label: "CKA Study Guide, chương 5 — Sao lưu và khôi phục etcd", href: "#/docs/ckabook-05" },
+      { label: "kubernetes.io: Operating etcd clusters for Kubernetes (Backing up / Restoring an etcd cluster)", href: "https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/" },
+      { label: "etcd.io: Disaster recovery (snapshot save, etcdutl snapshot restore, --bump-revision)", href: "https://etcd.io/docs/v3.6/op-guide/recovery/" },
+      { label: "etcd release v3.7.0 (etcdctl, etcdutl linux-arm64, SHA256SUMS)", href: "https://github.com/etcd-io/etcd/releases/tag/v3.7.0" },
+    ],
+    stateIn: "Đầu ra s42 (mốc st8-upgraded): cluster 1.37.2, etcd 3.7.0-0 chạy từ /var/lib/etcd, shop chart 0.2.0 (order 2 replica), cert-manager, Ingress, Gateway. `./labs/lab begin cka s43` kiểm đầu vào bằng verify s42, cài etcdctl/etcdutl v3.7.0 (bản ghim, có sha256) vào /usr/local/bin trên cka-cp, tạo ~/drills/s43 và /opt/backup.",
+    stateOut: "/opt/backup/etcd.db là snapshot chụp sau ConfigMap before-snapshot, trước after-snapshot và trước khi xoá order; etcd chạy từ /var/lib/etcd-restore (--data-dir, volumeMount, hostPath trong /etc/kubernetes/manifests/etcd.yaml); /var/lib/etcd cũ còn trên đĩa, không dùng; bản gốc manifest ở ~/drills/s43/etcd.yaml.orig; shop như lúc chụp: Deployment order có lại (2 Pod), before-snapshot có, after-snapshot không, release shop deployed; ~/drills/s43/answers.env có LOST_OBJECT.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s43`, rồi `ssh cka-cp`. Mở trang \"Operating etcd clusters for Kubernetes\" (kubernetes.io, ô tìm: `etcd backup`): tìm được trong 30 giây không? `etcdctl version`, `etcdutl version`. Đọc `sudo grep -E 'listen-client|cert-file|key-file|trusted-ca|data-dir' /etc/kubernetes/manifests/etcd.yaml` và ghi ra bốn giá trị `--endpoints`, `--cacert`, `--cert`, `--key` cho etcdctl (cờ etcd nào ứng với cờ etcdctl nào?). `sudo etcdctl … member list -w table`, `endpoint status -w table`.",
+      },
+      {
+        id: "t2",
+        text: "Đánh dấu trạng thái trước khi chụp: `k -n shop create configmap before-snapshot --from-literal=note=truoc`. Chụp: `sudo etcdctl --endpoints=… --cacert=… --cert=… --key=… snapshot save /opt/backup/etcd.db` (bấm giờ: dưới 4 phút từ lúc mở manifest). Kiểm: `sudo etcdutl snapshot status /opt/backup/etcd.db -w table` (REVISION, TOTAL KEYS). Thử `etcdctl snapshot status`: có chạy không?",
+      },
+      {
+        id: "t3",
+        text: "Sau snapshot: `k -n shop create configmap after-snapshot --from-literal=note=sau`, rồi `k -n shop delete deploy order` (`k -n shop get pod -l app=order`: Pod đâu?). Đoán trước: sau restore, `before-snapshot`, `after-snapshot`, `order` cái nào còn? Ghi tên đối tượng sẽ mất (dạng `configmap/<tên>`) vào `~/drills/s43/answers.env`: `LOST_OBJECT=…`.",
+      },
+      {
+        id: "t4",
+        text: "Dừng control plane: `sudo mkdir -p /etc/kubernetes/s43-off && sudo mv /etc/kubernetes/manifests/{kube-apiserver,kube-controller-manager,kube-scheduler}.yaml /etc/kubernetes/s43-off/`. Theo dõi bằng `watch -n2 'sudo crictl ps | grep -E \"etcd|kube-\"'` tới khi ba container biến mất (`k get node` lúc này nói gì?). Restore: `sudo etcdutl snapshot restore /opt/backup/etcd.db --data-dir /var/lib/etcd-restore --name cka-cp --initial-cluster cka-cp=https://<IP cka-cp>:2380 --initial-advertise-peer-urls https://<IP cka-cp>:2380 --bump-revision 1000000000 --mark-compacted`; `sudo du -sh /var/lib/etcd /var/lib/etcd-restore`.",
+      },
+      {
+        id: "t5",
+        text: "Tình huống hỏng (cố ý): chép manifest ra ngoài (`sudo cp /etc/kubernetes/manifests/etcd.yaml ~/drills/s43/etcd.yaml.orig`; **không** để bản sao trong thư mục manifests), rồi chỉ sửa `--data-dir=/var/lib/etcd-restore` (`sudo vim /etc/kubernetes/manifests/etcd.yaml`, `/data-dir`). Chờ `sudo crictl ps --name etcd` có container mới; `sudo crictl logs <id> 2>&1 | grep -E 'dir-type|ready to serve'`; `sudo etcdctl … endpoint health`; `sudo etcdctl … get / --prefix --keys-only | wc -l`. etcd có khoẻ không? Dữ liệu đâu? `sudo crictl inspect <id> | grep -A2 containerPath` cho thấy gì? (Đừng đưa apiserver lại lúc này.)",
+      },
+      {
+        id: "t6",
+        text: "Sửa cho đúng: trong cùng tệp, `mountPath` của volume `etcd-data` và `path` của hostPath `etcd-data` cũng thành `/var/lib/etcd-restore`. Chờ container etcd mới, kiểm lại số key (phải xấp xỉ TOTAL KEYS của snapshot). Đưa ba manifest về: `sudo mv /etc/kubernetes/s43-off/*.yaml /etc/kubernetes/manifests/`; chờ `k get --raw /readyz` trả `ok`. Kiểm: `k -n shop get deploy order` (AGE là bao nhiêu, vì sao?), `k -n shop get cm | grep snapshot`, `helm -n shop list`, `k get node`, `curl http://<IP cka-w1>:30180/api/products`.",
+      },
+      {
+        id: "t7",
+        text: "Trên Mac: `./labs/lab verify cka s43` phải 4/4. Ghi lại: thư mục etcd nào đang chạy, thư mục nào còn trên đĩa mà không dùng (`sudo ls /var/lib | grep etcd`). Nghĩ: database của PostgreSQL có được snapshot này bảo vệ không?",
+      },
+    ],
+    hints: [
+      "`etcdctl snapshot save` treo không in gì, hay `endpoint health` báo `failed to commit proposal: context deadline exceeded` / `Error: unhealthy cluster`: sai `--cacert` (đo với `/etc/kubernetes/pki/ca.crt`: `snapshot save` treo hơn 3 phút tới khi bị kill). `--cacert` là CA của **etcd** (`/etc/kubernetes/pki/etcd/ca.crt`), không phải CA của cluster. Thử bốn cờ bằng `endpoint health` trước khi `snapshot save`.",
+      "`Error: open /etc/kubernetes/pki/etcd/server.key: permission denied` (đo): chạy `etcdctl` bằng `sudo`, key chỉ root đọc được. Tạo `/opt/backup` trước (`sudo mkdir -p`).",
+      "`etcdctl snapshot status …` chỉ in lại trợ giúp `Manages etcd node snapshots` với một lệnh con `save` (đo trên 3.7.0): etcd 3.6+ chuyển `status` và `restore` sang `etcdutl`. `sudo etcdutl snapshot status /opt/backup/etcd.db -w table`.",
+      "`Error: data-dir \"/var/lib/etcd-restore\" not empty or could not be read` (đo): `etcdutl` không ghi đè thư mục có sẵn. Thư mục đó không phải data-dir đang chạy thì đổi tên (`sudo mv /var/lib/etcd-restore /var/lib/etcd-restore.old`), **không** `rm -rf` khi chưa chắc etcd không chạy trên nó.",
+      "etcd healthy, `member list` đúng tên, mà `k get node` trả `Forbidden` cho `kubernetes-admin` và `get / --prefix --keys-only` gần như rỗng: etcd đang chạy trên thư mục rỗng. Ba chỗ `--data-dir`, `mountPath`, `hostPath` chưa khớp nhau (thường là quên hostPath). `sudo crictl inspect <id etcd>` xem mount thật.",
+      "Đừng để bản sao manifest (`etcd.yaml.bak`, `etcd.yaml.orig`) trong `/etc/kubernetes/manifests`: kubelet chạy mọi tệp ở đó như một static pod (lab không thử để lại bản sao; verify đỏ nếu thư mục có hơn một manifest etcd).",
+      "`k get --raw /readyz` mãi không `ok` sau khi đưa manifest về: chờ thêm (apiserver cần ~30–60 giây), xem `sudo crictl ps -a --name kube-apiserver` và `sudo crictl logs <id>`; lỗi `connection refused … 2379` là etcd chưa lên.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-20, Kubernetes 1.37.2, etcd 3.7.0); revision, thời điểm, tên Pod sẽ khác. Bước 1–6 là **lần làm tay**; số đo của lời giải tự động ghi ở cuối. Mọi lệnh chạy trên cka-cp; \`E\` là viết tắt cho bốn cờ:
+
+\`\`\`bash
+E="--endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key"
+\`\`\`
+
+**1. Đọc manifest**
+
+\`\`\`bash
+sudo grep -E 'listen-client|cert-file|key-file|trusted-ca|data-dir' /etc/kubernetes/manifests/etcd.yaml
+#     - --cert-file=/etc/kubernetes/pki/etcd/server.crt
+#     - --data-dir=/var/lib/etcd
+#     - --key-file=/etc/kubernetes/pki/etcd/server.key
+#     - --listen-client-urls=https://127.0.0.1:2379,https://192.168.252.35:2379
+#     - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
+#     - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
+#     - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+#     - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+sudo etcdctl $E member list -w table
+# | 9c6d935895988819 | started | cka-cp | https://192.168.252.35:2380 | https://192.168.252.35:2379 |      false |
+\`\`\`
+
+**2. Đánh dấu và chụp**
+
+\`\`\`bash
+k -n shop create configmap before-snapshot --from-literal=note=truoc
+sudo mkdir -p /opt/backup
+time sudo etcdctl $E snapshot save /opt/backup/etcd.db
+# …"msg":"fetched snapshot","endpoint":"https://127.0.0.1:2379","size":"39 MB","took":"371.430011ms","etcd-version":"3.7.0"}
+# Snapshot saved at /opt/backup/etcd.db
+# Server version 3.7.0
+# real	0m0.383s
+sudo etcdutl snapshot status /opt/backup/etcd.db -w table
+# ┌──────────┬──────────┬────────────┬────────────┬─────────┐
+# │   HASH   │ REVISION │ TOTAL KEYS │ TOTAL SIZE │ VERSION │
+# ├──────────┼──────────┼────────────┼────────────┼─────────┤
+# │ a39d0d66 │    53019 │       4490 │      39 MB │   3.7.0 │
+# └──────────┴──────────┴────────────┴────────────┴─────────┘
+etcdctl snapshot status /opt/backup/etcd.db
+# Manages etcd node snapshots          ← in lại trợ giúp: chỉ còn lệnh con save
+# …
+# Available Commands:
+#   save        Stores an etcd node backend snapshot to a given file
+\`\`\`
+
+**3. Sau snapshot**
+
+\`\`\`bash
+k -n shop create configmap after-snapshot --from-literal=note=sau
+k -n shop delete deploy order
+# deployment.apps "order" deleted from shop namespace
+k -n shop get deploy,rs,pod -l app=order          # 15 giây sau
+# No resources found in shop namespace.
+echo LOST_OBJECT=configmap/after-snapshot > ~/drills/s43/answers.env
+\`\`\`
+
+**4. Dừng control plane, restore**
+
+\`\`\`bash
+sudo mkdir -p /etc/kubernetes/s43-off
+sudo mv /etc/kubernetes/manifests/{kube-apiserver,kube-controller-manager,kube-scheduler}.yaml /etc/kubernetes/s43-off/
+# 30 giây sau ba container biến mất khỏi sudo crictl ps; etcd vẫn chạy
+k get node
+# The connection to the server 192.168.252.35:6443 was refused - did you specify the right host or port?
+sudo etcdutl snapshot restore /opt/backup/etcd.db --data-dir /var/lib/etcd-restore --name cka-cp \
+  --initial-cluster cka-cp=https://192.168.252.35:2380 --initial-advertise-peer-urls https://192.168.252.35:2380 \
+  --bump-revision 1000000000 --mark-compacted
+# … bumping latest revision {"latest-revision": 53019, "bump-amount": 1000000000, "new-latest-revision": 1000053019}
+# … marking revision compacted {"revision": 1000053019}
+# … added member {"cluster-id": "e9b2005d5ce4abef", … "added-peer-id": "9c6d935895988819", "added-peer-peer-urls": ["https://192.168.252.35:2380"]…}
+# … restored snapshot {"path": "/opt/backup/etcd.db", … "data-dir": "/var/lib/etcd-restore", …}
+sudo du -sh /var/lib/etcd-restore /var/lib/etcd
+# 99M	/var/lib/etcd-restore
+# 221M	/var/lib/etcd
+\`\`\`
+
+**5. Tình huống hỏng: chỉ sửa \`--data-dir\`**
+
+\`\`\`bash
+sudo cp /etc/kubernetes/manifests/etcd.yaml ~/drills/s43/etcd.yaml.orig
+sudo sed -i 's#- --data-dir=/var/lib/etcd$#- --data-dir=/var/lib/etcd-restore#' /etc/kubernetes/manifests/etcd.yaml
+sudo grep -nE 'data-dir|mountPath: /var/lib|path: /var/lib' /etc/kubernetes/manifests/etcd.yaml
+# 18:    - --data-dir=/var/lib/etcd-restore
+# 75:    - mountPath: /var/lib/etcd
+# 91:      path: /var/lib/etcd
+# 14 giây sau: container etcd mới (ATTEMPT 0)
+sudo crictl logs <id> 2>&1 | grep -E 'dir-type|ready to serve'
+# {"level":"info",…,"msg":"Initialize and start etcd server","data-dir":"/var/lib/etcd-restore","dir-type":"empty"}
+# {"level":"info",…,"msg":"ready to serve client requests"}
+sudo crictl inspect <id> | grep -A1 '"containerPath": "/var/lib'
+#     "containerPath": "/var/lib/etcd",
+#     "hostPath": "/var/lib/etcd",           ← /var/lib/etcd-restore trong container không được mount
+sudo etcdctl $E endpoint status -w table | cut -d'│' -f2,3,6
+#  https://127.0.0.1:2379 │ 9c6d935895988819 │   20 kB      ← cùng member ID, DB 20 kB
+sudo etcdctl $E get / --prefix --keys-only | grep -c .
+# 0
+\`\`\`
+
+Lab đã thử đưa apiserver lại lúc này (~50 giây) để xem cluster trên etcd rỗng: \`k get ns\`, \`k get node\` đều \`Error from server (Forbidden): … User "kubernetes-admin" cannot list resource …\`; với \`sudo kubectl --kubeconfig /etc/kubernetes/super-admin.conf get ns\` chỉ có \`default\`, \`kube-node-lease\`, \`kube-public\`, \`kube-system\` tuổi 46 giây, \`get node\`, \`get pod -A\` là \`No resources found\`. kubelet của cka-w1 log \`nodes "cka-w1" not found\` và \`Forbidden\` cho Pod của nó; 10 container trên cka-w1 vẫn chạy. Đừng lặp lại phần này trên đề.
+
+**6. Sửa đủ ba chỗ, bật lại**
+
+\`\`\`bash
+sudo vim /etc/kubernetes/manifests/etcd.yaml     # mountPath và hostPath path của etcd-data → /var/lib/etcd-restore
+sudo grep -nE 'data-dir|mountPath: /var/lib|path: /var/lib' /etc/kubernetes/manifests/etcd.yaml
+# 18:    - --data-dir=/var/lib/etcd-restore
+# 75:    - mountPath: /var/lib/etcd-restore
+# 91:      path: /var/lib/etcd-restore
+sudo mv /etc/kubernetes/s43-off/*.yaml /etc/kubernetes/manifests/
+until [ "$(k get --raw /readyz 2>/dev/null)" = ok ]; do sleep 2; done
+k -n shop get deploy order
+# NAME    READY   UP-TO-DATE   AVAILABLE   AGE
+# order   2/2     2            2           5d3h      ← đối tượng cũ từ snapshot
+k -n shop get cm | grep snapshot
+# before-snapshot                    1      4m6s     ← after-snapshot không còn
+helm -n shop list
+# shop	shop     	20      	2026-11-20 04:02:12.607126879 +0700 +07	deployed	shop-0.2.0	1.0
+k -n shop get pod -l app=order
+# order-5549bb6c64-qbhjf   1/1   Running   2 (14m ago)   82m   …   cka-w2
+# order-5549bb6c64-stt2c   0/1   Running   3 (14m ago)   81m   …   cka-w1     ← Pod cũ (đã bị xoá) được kubelet chạy lại, Ready sau ít phút
+sudo ls /var/lib | grep etcd
+# etcd
+# etcd-restore
+\`\`\`
+
+Lần làm tay: từ lúc sửa nốt hostPath tới khi \`order\` 2/2 và release \`deployed\` là 77 giây. Sau lần làm tay, Pod \`nginx-gateway\` (control plane của NGINX Gateway Fabric) vào \`CrashLoopBackOff\` vì nó khởi động lại đúng lúc apiserver tắt (\`dial tcp 10.96.0.1:443: connect: connection refused\`) và kubelet lùi thời gian thử lại tới 5 phút: Gateway \`:30280\` không trả lời cho tới lần thử sau. Ở lần chạy tự động (dưới), nơi apiserver chỉ tắt một lần, mọi Pod của NGINX Gateway Fabric Running và Gateway \`:30280\` trả 200 ngay sau đó.
+
+**Lời giải tự động** (\`labs/cka/sessions/s43/apply.sh\` → \`files/solve.sh\`, trên trạng thái cuối s42 sau \`restore cka s42\`): cùng luồng, nhưng sửa đủ ba chỗ ngay (không đi qua tình huống hỏng) và chỉ bật control plane lại sau khi container etcd mới đã mount \`/var/lib/etcd-restore\` vào đúng \`--data-dir\`. 2 phút 51 giây gồm vòng chờ; snapshot revision 51735, 4471 key; sau restore revision 1000051735; ba container control plane dừng sau ~30 giây. Lần này hai Pod \`order\` cũ (có trong snapshot) hiện lại ở \`STATUS Error\` bên cạnh hai Pod mới mà ReplicaSet tạo: kubelet không dọn được sandbox của chúng lúc apiserver tắt (\`KillPodSandboxError: … plugin type="calico" failed (delete): … dial tcp 10.96.0.1:443: connect: connection refused\`); vài phút sau chúng mới chuyển \`Error\` nên lọc theo phase ngay sau restore không bắt được (đo ở lần \`restore cka s44\`); \`solve.sh\` ghi tên Pod \`order\` ngay trước khi xoá Deployment và sau restore xoá đúng các Pod đó, từng Pod một, chờ \`order\` Available giữa hai lần. Chạy lần hai: manifest đã trỏ \`/var/lib/etcd-restore\` ở cả ba chỗ, \`before-snapshot\` có, \`after-snapshot\` không, \`order\` Available → bỏ qua (1,4 giây). Gặp manifest trỏ \`/var/lib/etcd-restore\` một phần (tình huống hỏng, hay kiểu chỉ đổi hostPath) và thư mục đó có \`member/snap/db\` thì nó sửa nốt cho đủ ba chỗ (đo: từ trạng thái hỏng ở bước 5, 77 giây tới 4/4; từ kiểu chỉ đổi hostPath, verify đỏ \`--data-dir=/var/lib/etcd\` rồi apply sửa xong). Script không bao giờ xoá \`/var/lib/etcd\` và không trỏ etcd sang thư mục chưa có dữ liệu.`,
+    exam: {
+      patterns: [
+        "\"Chụp snapshot etcd tại https://127.0.0.1:2379 vào /opt/xxx/etcd-snapshot.db, cert ở …\" — đọc lại cert trong manifest nếu đề không cho; `sudo etcdctl --endpoints … --cacert … --cert … --key … snapshot save <tệp>`; kiểm bằng `etcdutl snapshot status <tệp>`.",
+        "\"Khôi phục từ snapshot /opt/xxx.db\" — `etcdutl snapshot restore <tệp> --data-dir /var/lib/etcd-backup`, sửa `/etc/kubernetes/manifests/etcd.yaml` (ít nhất hostPath của `etcd-data`; đổi `--data-dir` thì đổi cả mountPath), chờ etcd và apiserver lên, `k get` đối tượng đề nhắc.",
+        "\"etcd không lên sau khi ai đó sửa manifest\" — `sudo crictl ps -a --name etcd`, `sudo crictl logs <id>`; so ba chỗ data-dir; đếm key.",
+      ],
+      timeTargetMin: 10,
+      drills: [
+        {
+          text: "Trong 4 phút, không mở tài liệu: từ một shell trên control plane, chụp snapshot vào `/opt/backup/drill.db` và in REVISION của nó.",
+          timeLimitMin: 4,
+          solution: "```bash\nsudo grep -E 'listen-client|cert-file|key-file|trusted-ca' /etc/kubernetes/manifests/etcd.yaml\nsudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt \\\n  --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key \\\n  snapshot save /opt/backup/drill.db\nsudo etcdutl snapshot status /opt/backup/drill.db -w table\n```",
+        },
+        {
+          text: "Trong 2 phút: manifest etcd có `--data-dir=/var/lib/etcd-new`, `mountPath: /var/lib/etcd`, `hostPath.path: /var/lib/etcd-new`. etcd chạy trên dữ liệu nào? Sửa ít nhất mấy dòng để nó chạy trên `/var/lib/etcd-new` của node?",
+          timeLimitMin: 2,
+          solution: "Trong container, `/var/lib/etcd-new` không được mount (volume `etcd-data` gắn ở `/var/lib/etcd`), nên etcd chạy trên một thư mục rỗng trong lớp ghi của container: cluster trông như bị xoá. Sửa một dòng: `mountPath: /var/lib/etcd-new` (ba chỗ khớp nhau), hoặc đưa `--data-dir` về `/var/lib/etcd` (hostPath đã trỏ thư mục mới).",
+        },
+      ],
+    },
+    tips: [
+      "Trên đề, mở trang \"Operating etcd clusters for Kubernetes\" và chép khối lệnh; chỉ thay bốn giá trị đọc từ `etcd.yaml`. Đừng gõ đường dẫn cert từ trí nhớ.",
+      "Trước khi sửa manifest, chép nó ra **ngoài** `/etc/kubernetes/manifests` (`~/etcd.yaml.orig`). Bản sao trong thư mục đó là một static pod thứ hai.",
+      "Restore xong, kiểm dữ liệu chứ không chỉ kiểm sức khoẻ: `k get` đúng đối tượng đề nhắc, hay đếm key. etcd rỗng vẫn `healthy`.",
+      "Đề có thể không có `etcdutl` mà có `etcdctl` cũ (3.5) vẫn còn `snapshot status`/`restore` (đã deprecated). Gõ `etcdctl version`, `which etcdutl` trước.",
+    ],
+    outcome: {
+      md: `Cluster đã đi một vòng mất dữ liệu và lấy lại: Deployment \`order\` bị xoá có lại đúng đối tượng cũ, ConfigMap tạo sau snapshot mất, release shop vẫn \`deployed\`. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s43
+\`\`\`
+
+Bốn dòng. **Snapshot:** \`sudo etcdutl snapshot status /opt/backup/etcd.db -w json\` đọc được và có key; tệp chứa key \`/registry/configmaps/shop/before-snapshot\` và \`/registry/deployments/shop/order\`, không chứa \`/registry/configmaps/shop/after-snapshot\` (tìm chuỗi byte trong tệp bbolt; snapshot chụp lại sau khi tạo \`after-snapshot\`: đỏ \`snapshot có after-snapshot\`, đo). **etcd:** đúng một manifest có \`component: etcd\` trong \`/etc/kubernetes/manifests\`; \`--data-dir\` là \`/var/lib/etcd-restore\`, có volumeMount ở đúng đường dẫn đó và volume của nó là hostPath \`/var/lib/etcd-restore\` (chỉ đổi hostPath như trang kubernetes.io: đỏ \`--data-dir=/var/lib/etcd\`, đo); container etcd đang chạy (\`crictl inspect\`) mount \`/var/lib/etcd-restore\` của node vào chính \`--data-dir\` của nó (đổi \`--data-dir\` mà quên hostPath: đỏ, etcd đang chạy trên thư mục trong container); \`/var/lib/etcd-restore/member/snap/db\` có; \`etcdctl endpoint health\` và apiserver \`/readyz\` ok. **shop:** \`before-snapshot\` có, \`after-snapshot\` trả \`NotFound\` (lệnh lỗi khác: đỏ), \`order\` chạy thật: số Pod Ready (không đang xoá) đủ replica và từ chính máy Mac \`:30180/api/orders\` trả 200 với một mảng JSON (không tin status của Deployment: ngay sau restore nó là status lúc chụp, đo \`2/2 available\` khi chưa có Pod \`order\` nào chạy; scale \`order\` về 0: đỏ, đo), release \`shop\` \`deployed\`, ba node Ready, và \`:30180/api/products\` trả 200 với 3 sản phẩm. **answers.env:** \`LOST_OBJECT\` là \`after-snapshot\` (chấp nhận \`configmap/\`, \`cm/\` ở trước). Trên đầu vào (cuối s42) cả bốn dòng đỏ (**0/4**, đo).`,
+      verifyOutput: "lab: kiểm s43\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~15 phút)\n  ✓ /opt/backup/etcd.db: etcdutl snapshot status đọc được; có before-snapshot và order, không có after-snapshot\n  ✓ etcd chạy từ /var/lib/etcd-restore (--data-dir, volumeMount, hostPath, container đang chạy); etcd healthy, apiserver /readyz\n  ✓ shop như lúc chụp: before-snapshot có, after-snapshot không, order Available, release shop deployed; ba node Ready; Mac :30180 trả 200\n  ✓ answers.env: LOST_OBJECT là đối tượng mất khi restore\n  → 4/4 đạt",
+      projectDelta: "etcd của cluster đã được chụp và khôi phục thật: Deployment order bị xoá có lại cùng tên Pod, cùng tuổi; ConfigMap tạo sau snapshot mất đúng như dự kiến; release shop vẫn deployed. etcd chạy từ /var/lib/etcd-restore (dữ liệu cũ /var/lib/etcd giữ trên đĩa). Mốc etcd-restore.",
+    },
+    review: [
+      { q: "Bốn cờ etcdctl cần để chụp snapshot trên cluster kubeadm, và mỗi cờ đọc từ đâu?", a: "`--endpoints=https://127.0.0.1:2379` (từ `--listen-client-urls`), `--cacert=/etc/kubernetes/pki/etcd/ca.crt` (từ `--trusted-ca-file`), `--cert=/etc/kubernetes/pki/etcd/server.crt` (từ `--cert-file`), `--key=/etc/kubernetes/pki/etcd/server.key` (từ `--key-file`), đều trong `/etc/kubernetes/manifests/etcd.yaml`. Chạy bằng sudo vì key chỉ root đọc được." },
+      { q: "Chụp snapshot, tạo ConfigMap B, xoá Deployment D, restore. B và D ra sao, và còn gì khác lùi về?", a: "D có lại (đối tượng cũ: đo `order` tuổi `5d3h`, tên Pod như trước khi xoá), B mất. Mọi thứ ghi vào etcd sau lúc chụp đều lùi: ReplicaSet/Pod mới, Event, Lease, Secret của Helm cho revision mới (release lùi về revision trong snapshot), CSR, token. Dữ liệu ngoài etcd (PV của PostgreSQL, tệp trên node) thì không." },
+      { q: "Sửa `--data-dir=/var/lib/etcd-restore` mà quên hostPath. Bạn thấy gì, và vì sao `etcdctl endpoint health` không giúp?", a: "Đường dẫn đó trong container không được mount, nên etcd khởi động trên thư mục rỗng (đo: `dir-type: empty`, 0 key, DB 20 kB) với cùng member ID và cluster ID, nên health và member list đều xanh. apiserver trên etcd rỗng chỉ có bốn namespace mặc định; `kubernetes-admin` bị Forbidden vì ClusterRoleBinding `kubeadm:cluster-admins` không còn; chỉ `super-admin.conf` đọc được, thấy không có node nào. Sửa mountPath và hostPath cho khớp là dữ liệu có lại." },
+      { q: "Vì sao dừng kube-apiserver trước khi restore, và `--bump-revision`/`--mark-compacted` giải quyết gì?", a: "apiserver và controller giữ cache và watch theo revision. Restore đưa revision về quá khứ (53019), client đang watch ở revision cao hơn có thể bỏ sót hay tin cache cũ. kubernetes.io bảo dừng mọi apiserver, restore, bật lại, và khởi động lại controller-manager, scheduler. `--bump-revision 1000000000 --mark-compacted` (trang Disaster recovery của etcd) đẩy revision vượt mọi giá trị đã thấy (đo: 1000053019) và đánh dấu compacted, nên mọi watch cũ phải list lại." },
+      { q: "Một đồng nghiệp nói \"có snapshot etcd hằng ngày rồi, database của shop an toàn\". Bạn trả lời sao?", a: "Không. etcd chỉ giữ đối tượng Kubernetes: PVC, PV, StatefulSet. Dữ liệu PostgreSQL nằm trên PV `local-path` ở đĩa cka-w2; snapshot etcd không có một dòng nào của bảng. Cần backup riêng (pg_dump, WAL archive, snapshot volume của CSI) và thử restore riêng. Hai loại backup bổ sung cho nhau: etcd đưa lại cấu hình cluster, backup database đưa lại dữ liệu." },
+    ],
   },
+// ───────────────────────────── s44 ─────────────────────────────
   {
     id: "s44",
     stage: "st8",
@@ -754,12 +1006,12 @@ Bảy dòng, mỗi dòng gom ít tiêu chí và lý do đỏ viết ngắn (lab 
     domain: "architecture",
     competencies: ["ar-ha", "ar-lifecycle"],
     requires: ["s43"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Gia hạn toàn bộ chứng chỉ kubeadm, khởi động lại control plane và kiểm ngày hết hạn mới.",
-      "Vẽ được topology HA stacked etcd và external etcd, nói quorum của 3 và 5 node.",
-      "Viết đúng lệnh kubeadm init/join cho control plane thứ hai (--control-plane-endpoint, --upload-certs) dù lab chỉ có một control plane.",
+      "Gia hạn toàn bộ chứng chỉ kubeadm, khởi động lại control plane và chứng minh apiserver đang phục vụ cert mới.",
+      "Cập nhật kubeconfig admin sau gia hạn và giải thích vì sao kubeconfig của người dùng khác không bị ảnh hưởng.",
+      "Vẽ được topology HA stacked etcd và external etcd, nói quorum của 3 và 5 node, và viết đúng lệnh kubeadm init/join cho control plane thứ hai.",
     ],
     skills: [
       { skill: "k-certs-renew", level: "Gõ được không tra" },
@@ -771,8 +1023,249 @@ Bảy dòng, mỗi dòng gom ít tiêu chí và lý do đỏ viết ngắn (lab 
       { skill: "k-docs-ha", level: "Tìm được trong 30 giây" },
     ],
     uses: ["k-certs-check-expiration", "lx-openssl-x509", "k-static-pod-dir", "k-etcd-certs", "k-kubeconfig-admin"],
-    stateIn: "Đầu ra s43.",
-    stateOut: "Mọi chứng chỉ kubeadm có ngày hết hạn mới; admin.conf mới đã chép lại vào ~/.kube/config; cluster hoạt động bình thường.",
+    foundation: null,
+    mindset: `**Một năm, trừ năm phút.** kubeadm ký mọi cert lá của control plane với hạn một năm (\`certificateValidityPeriod: 8760h0m0s\` trong ConfigMap \`kubeadm-config\`) và CA mười năm (\`caCertificateValidityPeriod: 87600h0m0s\`; ba CA của lab hết hạn 2036-11-10, đo). Đo trên 1.37.2: \`notBefore\` lùi 5 phút so với lúc ký (\`renew apiserver\` lúc 22:56:17 UTC cho \`notBefore=Nov 19 22:51:17 2026 GMT\`, \`notAfter=Nov 19 22:56:17 2027 GMT\`), để node lệch đồng hồ vài phút vẫn tin cert. \`kubeadm upgrade apply\` tự gia hạn mọi cert (s42 làm điều đó: đầu buổi mọi cert hết hạn \`Nov 19, 2027 21:08 UTC\`, cùng một phút), nên cluster nâng cấp đều đặn mỗi năm thì không bao giờ hết hạn. Cluster bị bỏ quên một năm thì hết: \`k\` báo \`x509: certificate has expired\`, kubelet không nói chuyện được với apiserver. Vì thế verify của buổi so với mốc \`~/drills/s44/started\` mà \`begin\` ghi, không so với hạn.
+
+**Mười một cert, một lệnh, bốn lần khởi động lại.** \`kubeadm certs check-expiration\` liệt kê đúng những gì \`renew all\` ký lại: bảy tệp trong \`/etc/kubernetes/pki\` (\`apiserver\`, \`apiserver-kubelet-client\`, \`apiserver-etcd-client\`, \`front-proxy-client\`, \`etcd/server\`, \`etcd/peer\`, \`etcd/healthcheck-client\`) và cert nhúng trong bốn kubeconfig (\`admin.conf\`, \`super-admin.conf\`, \`controller-manager.conf\`, \`scheduler.conf\`). CA không đổi, khoá riêng không đổi, chỉ cert được ký lại (đo: 0,97 giây cho cả mười một). Dòng cuối của output nói việc tiếp theo: \`You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.\` Với static pod, "restart" là dời manifest ra khỏi \`/etc/kubernetes/manifests\`, chờ kubelet dừng container (đo: 30–31 giây cho cả bốn), rồi đưa lại (apiserver \`/readyz\` ok sau 5 giây). Trong khoảng đó \`k\` báo \`connection refused\`; Pod của ứng dụng vẫn chạy, chỉ không ai thay đổi được gì.
+
+**Đo: apiserver và etcd tự nạp lại cert phục vụ; controller-manager và scheduler thì không.** Sau \`kubeadm certs renew apiserver\` (chưa khởi động lại gì), fingerprint mà \`openssl s_client -connect 127.0.0.1:6443\` thấy đã là cert mới ngay lập tức; sau \`renew all\`, cổng etcd 2379 cũng vậy (đo trên 1.37.2 / etcd 3.7.0). kube-apiserver nạp lại cert phục vụ khi tệp \`--tls-cert-file\` đổi, và etcd 3.7 cũng phục vụ cert mới mà không cần khởi động lại. Nhưng đó chỉ là cert **phục vụ**: kube-controller-manager và kube-scheduler dùng cert nhúng trong kubeconfig của chúng, còn apiserver dùng \`apiserver-etcd-client\`, \`apiserver-kubelet-client\` làm client; kubeadm không hứa những cert đó được nạp lại, và chính nó bảo khởi động lại cả bốn. "Fingerprint khớp" vì vậy chưa chứng minh bạn đã khởi động lại: verify so thêm giờ khởi động của bốn container (\`crictl inspect\`, \`startedAt\`) với giờ ghi tệp cert/kubeconfig của chính nó (renew mà không khởi động lại: đỏ \`apiserver chưa khởi động lại; controller-manager chưa khởi động lại; …\`, đo). Làm theo kubeadm: khởi động lại cả bốn.
+
+**kubeconfig của bạn không tự đổi.** \`renew\` ghi \`/etc/kubernetes/admin.conf\` mới, \`~/.kube/config\` vẫn là bản chép cũ (của s06). Nó vẫn chạy (đo: \`k auth whoami\` ra \`kubernetes-admin\` trước khi chép) vì cert cũ do cùng CA ký và chưa hết hạn; nhưng hạn của nó là hạn cũ. Chép lại: \`sudo cp /etc/kubernetes/admin.conf ~/.kube/config && sudo chown $(id -u):$(id -g) ~/.kube/config\`. Cert của \`dev\` và \`ops\` (s34) do controller-manager ký qua CSR bằng chính CA đó, nên không cần làm gì (đo: \`whoami\` ra \`dev\` nhóm \`shop-dev\`, \`ops\` nhóm \`shop-ops\` sau khi gia hạn). Đổi CA mới là việc khác hẳn (\`kubeadm certs renew\` không làm): mọi kubeconfig, mọi kubelet phải nhận CA mới. Với người viết Java: giống thay keystore của server bằng cert mới cùng CA; truststore của client không đổi nên client không biết gì; thay CA thì phải phát lại truststore cho mọi client.
+
+**kubelet tự xoay cert của nó.** \`/etc/kubernetes/kubelet.conf\` không nhúng cert mà trỏ \`client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem\`, một symlink tới tệp có ngày trong tên (\`kubelet-client-2026-11-14-00-39-21.pem\`, hạn \`Nov 13 17:38:39 2027 GMT\` trên cka-cp, đo). \`/var/lib/kubelet/config.yaml\` có \`rotateCertificates: true\`: gần hết hạn, kubelet tạo khoá mới, gửi CSR \`kubernetes.io/kube-apiserver-client-kubelet\`, controller-manager tự duyệt, kubelet ghi tệp mới và đổi symlink. Vì vậy \`check-expiration\` không liệt kê kubelet, và \`renew all\` không đụng tới nó.
+
+**HA: thêm control plane là thêm quầy, etcd là sổ cái cần đa số.** Topology **stacked** (mặc định của kubeadm): mỗi control plane chạy apiserver, controller-manager, scheduler và một member etcd; ít máy, nhưng mất một node là mất cả control plane lẫn member etcd của nó. **External etcd**: cụm etcd riêng trên máy riêng, control plane trỏ \`--etcd-servers\` vào đó; nhiều máy hơn, lỗi tách bạch. Cả hai đều cần một **load balancer** TCP 6443 trước mọi apiserver, và mọi kubeconfig, mọi kubelet trỏ vào địa chỉ của LB. etcd ghi được khi **đa số** member đồng ý: quorum = ⌊n/2⌋ + 1. 3 member → quorum 2, chịu 1 member chết; 5 → quorum 3, chịu 2; 4 → quorum 3, cũng chỉ chịu 1, nên số member luôn lẻ. Cụm lab có 1 member (\`etcdctl member list\`: \`9c6d935895988819 started cka-cp\`): quorum 1, mất cka-cp là mất cluster.
+
+**HA phải quyết lúc \`kubeadm init\`.** \`--control-plane-endpoint lb:6443\` ghi địa chỉ chung vào \`kubeadm-config\` và mọi kubeconfig; \`--upload-certs\` mã hoá các CA và khoá dùng chung, lưu vào Secret \`kubeadm-certs\` (hết hạn sau 2 giờ) và in \`--certificate-key\`. Control plane thứ hai: \`kubeadm join lb:6443 --token … --discovery-token-ca-cert-hash sha256:… --control-plane --certificate-key …\`. Cluster lab không có \`controlPlaneEndpoint\` (đo: \`kubeadm-config\` không có dòng đó; \`kubeadm token create --print-join-command\` in \`kubeadm join 192.168.252.35:6443 …\`, IP của cka-cp), nên không thêm control plane được: lab chỉ viết lệnh vào \`ha.txt\`. \`kubeadm init phase upload-certs --upload-certs\` vẫn chạy được trên lab (đo: \`Storing the certificates in Secret "kubeadm-certs"\`, in một key 64 ký tự hex); đó là cách lấy lại certificate key sau 2 giờ.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Certificates & kubeconfig — /etc/kubernetes/pki, /etc/kubernetes/*.conf", href: "#/roadmap/cka/cka-w1-5" },
+      { label: "Bài lộ trình CKA: Static Pods — kubelet tự quản lý /etc/kubernetes/manifests", href: "#/roadmap/cka/cka-w1-3" },
+      { label: "CKA Study Guide, chương 4 — Cài đặt và nâng cấp cluster (HA control plane)", href: "#/docs/ckabook-04" },
+      { label: "kubernetes.io: Certificate Management with kubeadm", href: "https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/" },
+      { label: "kubernetes.io: Options for Highly Available Topology", href: "https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/" },
+      { label: "kubernetes.io: Creating Highly Available Clusters with kubeadm", href: "https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/" },
+      { label: "kubernetes.io: Configure Certificate Rotation for the Kubelet", href: "https://kubernetes.io/docs/tasks/tls/certificate-rotation/" },
+      { label: "etcd.io: FAQ — Why an odd number of cluster members?", href: "https://etcd.io/docs/v3.6/faq/" },
+    ],
+    stateIn: "Đầu ra s43: etcd chạy từ /var/lib/etcd-restore, shop như lúc chụp; cert kubeadm do `kubeadm upgrade apply` ở s42 ký lại (hạn 2027-11-19). `./labs/lab begin cka s44` kiểm đầu vào bằng verify s43, ghi mốc giờ vào ~/drills/s44/started và xoá answers.env cũ.",
+    stateOut: "Mười một chứng chỉ kubeadm (apiserver, apiserver-kubelet-client, apiserver-etcd-client, front-proxy-client, etcd server/peer/healthcheck-client, admin.conf, super-admin.conf, controller-manager.conf, scheduler.conf) ký lại sau mốc started, CA không đổi; bốn static pod control plane đã khởi động lại và phục vụ cert mới; ~/.kube/config là bản chép của admin.conf mới; dev/ops.kubeconfig của s34 vẫn dùng được; ~/drills/s44/ha.txt có lệnh init/join HA; answers.env QUORUM_5=3; shop, Ingress, Gateway, cert-manager chạy như trước.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s44` (ghi mốc `~/drills/s44/started`), rồi `ssh cka-cp`. Mở trang \"Certificate Management with kubeadm\" (kubernetes.io, ô tìm: `kubeadm certs`): tìm được trong 30 giây không? `sudo kubeadm certs check-expiration`: cert nào hết hạn khi nào, CA nào, cột `EXTERNALLY MANAGED`? Vì sao các cert đều hết hạn vào cùng một ngày, gần một năm sau s42? `sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -subject -startdate -enddate -fingerprint -sha256`.",
+      },
+      {
+        id: "t2",
+        text: "So cert trên đĩa với cert apiserver đang phục vụ: `echo | openssl s_client -connect 127.0.0.1:6443 2>/dev/null | openssl x509 -noout -fingerprint -sha256`. Tình huống hỏng (cố ý): `sudo kubeadm certs renew apiserver` (chỉ một cert), rồi so lại hai fingerprint: apiserver đã phục vụ cert mới chưa, dù chưa khởi động lại gì? `./labs/lab verify cka s44` trên Mac: dòng nào đỏ, vì sao fingerprint khớp mà vẫn đỏ?",
+      },
+      {
+        id: "t3",
+        text: "`sudo kubeadm certs renew all` (đọc dòng cuối của output). `sudo kubeadm certs check-expiration` lần nữa. Khởi động lại bốn static pod: `sudo mkdir -p /etc/kubernetes/s44-off && sudo mv /etc/kubernetes/manifests/*.yaml /etc/kubernetes/s44-off/`, `watch -n2 'sudo crictl ps | grep -E \"etcd|kube-(apiserver|controller|scheduler)\"'` tới khi bốn container biến mất, rồi `sudo mv /etc/kubernetes/s44-off/*.yaml /etc/kubernetes/manifests/`; chờ `k get --raw /readyz` trả `ok` (`k` lúc này dùng kubeconfig nào, có chạy không?). So lại fingerprint của 6443 với tệp.",
+      },
+      {
+        id: "t4",
+        text: "kubeconfig: `sudo cp /etc/kubernetes/admin.conf ~/.kube/config && sudo chown $(id -u):$(id -g) ~/.kube/config`; `k auth whoami`. Kubeconfig của dev/ops ở s34: `k --kubeconfig ~/dev.kubeconfig auth whoami`, `k --kubeconfig ~/ops.kubeconfig auth whoami`: còn chạy không, vì sao? Kubelet thì sao: `sudo ls -l /var/lib/kubelet/pki/`, `sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -enddate`, `sudo grep rotateCertificates /var/lib/kubelet/config.yaml`.",
+      },
+      {
+        id: "t5",
+        text: "HA (lab chỉ có một control plane): mở \"Options for Highly Available Topology\" và \"Creating Highly Available Clusters with kubeadm\". Vẽ trên giấy stacked etcd và external etcd (mỗi máy chạy gì, load balancer ở đâu, kubelet của worker trỏ vào đâu). `sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=… --cert=… --key=… member list -w table`: mấy member, quorum của cụm này là bao nhiêu, mất cka-cp thì sao? Ghi `QUORUM_5=<số member phải còn sống để cụm 5 member còn quorum>` vào `~/drills/s44/answers.env`.",
+      },
+      {
+        id: "t6",
+        text: "Viết vào `~/drills/s44/ha.txt` (mỗi lệnh một dòng, được dùng `\\` xuống dòng): lệnh `kubeadm init` cho control plane đầu tiên của một cluster HA sau load balancer `lb.cka.local:6443` (với `--control-plane-endpoint` và `--upload-certs`), lệnh `kubeadm join` cho control plane thứ hai (với `--control-plane` và `--certificate-key`) và lệnh join của worker. `k -n kube-system get cm kubeadm-config -o yaml | grep controlPlaneEndpoint`: cluster lab có thêm control plane được không? Trên Mac: `./labs/lab verify cka s44` phải 5/5.",
+      },
+    ],
+    hints: [
+      "`kubeadm certs check-expiration` báo cert còn gần một năm ngay từ đầu buổi: `kubeadm upgrade apply` ở s42 đã tự gia hạn mọi cert (mặc định của `upgrade apply`; tắt bằng `--certificate-renewal=false`). Verify vì vậy so với mốc `~/drills/s44/started`, không so với hạn.",
+      "Fingerprint ở 6443 đã khớp tệp mà verify vẫn đỏ `apiserver chưa khởi động lại`: apiserver (và etcd) tự phục vụ cert mới (đo), nhưng controller-manager, scheduler và các cert client thì kubeadm bảo phải khởi động lại. Dời bốn manifest ra, chờ container dừng, đưa lại.",
+      "Verify đỏ `controller-manager không chạy` ngay sau khi đưa manifest lại: kubelet tạo lại bốn Pod không cùng lúc (đo). Chờ `sudo crictl ps` có đủ bốn container rồi chạy lại verify.",
+      "Dòng cert đỏ `10/11 chưa gia hạn` (hay số khác): bạn gia hạn từng cert (`renew apiserver`) thay vì `renew all`, hoặc gia hạn **trước** lúc `begin` (mốc mới hơn lần ký). Gia hạn lại sau mốc.",
+      "Verify dòng kubeconfig báo `~/.kube/config khác admin.conf`: chưa chép, renew lần nữa sau khi chép, hay chép `super-admin.conf`. Chép lại `admin.conf` sau lần renew cuối.",
+      "`kubeadm join … --control-plane` trên cluster lab sẽ không có tác dụng như mong đợi: `kubeadm-config` không có `controlPlaneEndpoint` (cluster init bằng IP của cka-cp, đo). HA phải quyết từ lúc `kubeadm init`.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-20, Kubernetes 1.37.2, sau s43); giờ, fingerprint, hạn sẽ khác. Bước 1–5 là **lần làm tay** (gồm hai lần cố ý làm thiếu); số đo của lời giải tự động ở cuối. Mọi lệnh chạy trên cka-cp.
+
+**1. Đầu buổi**
+
+\`\`\`bash
+cat ~/drills/s44/started
+# 1795128944                     ← 2026-11-20 05:55:44 +07 (22:55:44 UTC), begin ghi
+sudo kubeadm certs check-expiration
+# CERTIFICATE                EXPIRES                  RESIDUAL TIME   CERTIFICATE AUTHORITY   EXTERNALLY MANAGED
+# admin.conf                 Nov 19, 2027 21:08 UTC   364d            ca                      no
+# apiserver                  Nov 19, 2027 21:08 UTC   364d            ca                      no
+# apiserver-etcd-client      Nov 19, 2027 21:08 UTC   364d            etcd-ca                 no
+# apiserver-kubelet-client   Nov 19, 2027 21:08 UTC   364d            ca                      no
+# controller-manager.conf    Nov 19, 2027 21:08 UTC   364d            ca                      no
+# etcd-healthcheck-client    Nov 19, 2027 21:08 UTC   364d            etcd-ca                 no
+# etcd-peer                  Nov 19, 2027 21:08 UTC   364d            etcd-ca                 no
+# etcd-server                Nov 19, 2027 21:08 UTC   364d            etcd-ca                 no
+# front-proxy-client         Nov 19, 2027 21:08 UTC   364d            front-proxy-ca          no
+# scheduler.conf             Nov 19, 2027 21:08 UTC   364d            ca                      no
+# super-admin.conf           Nov 19, 2027 21:08 UTC   364d            ca                      no
+#
+# CERTIFICATE AUTHORITY   EXPIRES                  RESIDUAL TIME   EXTERNALLY MANAGED
+# ca                      Nov 10, 2036 17:38 UTC   9y              no
+# etcd-ca                 Nov 10, 2036 17:38 UTC   9y              no
+# front-proxy-ca          Nov 10, 2036 17:38 UTC   9y              no
+sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -subject -startdate -enddate -fingerprint -sha256
+# subject=CN = kube-apiserver
+# notBefore=Nov 19 21:03:18 2026 GMT          ← s42: upgrade apply lúc 21:08, lùi 5 phút
+# notAfter=Nov 19 21:08:18 2027 GMT
+# sha256 Fingerprint=0B:79:75:EB:…:A4:73
+echo | openssl s_client -connect 127.0.0.1:6443 2>/dev/null | openssl x509 -noout -fingerprint -sha256
+# sha256 Fingerprint=0B:79:75:EB:…:A4:73
+\`\`\`
+
+**2. Làm thiếu lần một: chỉ một cert**
+
+\`\`\`bash
+sudo kubeadm certs renew apiserver
+# certificate for serving the Kubernetes API renewed
+sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -startdate -enddate -fingerprint -sha256
+# notBefore=Nov 19 22:51:17 2026 GMT
+# notAfter=Nov 19 22:56:17 2027 GMT
+# sha256 Fingerprint=C8:63:80:48:…:54:8C
+echo | openssl s_client -connect 127.0.0.1:6443 2>/dev/null | openssl x509 -noout -fingerprint -sha256
+# sha256 Fingerprint=C8:63:80:48:…:54:8C     ← apiserver đã phục vụ cert mới, chưa khởi động lại gì
+\`\`\`
+
+Verify lúc này (trên Mac):
+
+\`\`\`
+  ✗ Mười một cert kubeadm (pki, etcd, bốn kubeconfig) ký lại sau mốc ~/drills/s44/started (thực tế: 10/11 chưa gia hạn: as-kubelet-client,as-etcd-client,front-proxy-client,etcd-ser)
+  ✗ apiserver :6443 và etcd :2379 phục vụ cert trên đĩa; … (thực tế: apiserver chưa khởi động lại; controller-manager chưa khởi động lại; scheduler c)
+\`\`\`
+
+**3. Làm thiếu lần hai: renew all mà không khởi động lại**
+
+\`\`\`bash
+time sudo kubeadm certs renew all
+# certificate embedded in the kubeconfig file for the admin to use and for kubeadm itself renewed
+# certificate for serving the Kubernetes API renewed
+# … (11 dòng)
+# certificate embedded in the kubeconfig file for the super-admin renewed
+#
+# Done renewing certificates. You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd, so that they can use the new certificates.
+# real	0m0.970s
+P=/etc/kubernetes/pki/etcd
+sudo openssl x509 -in $P/server.crt -noout -fingerprint -sha256
+# sha256 Fingerprint=AC:8C:E7:B6:…:AF:29
+echo | sudo openssl s_client -connect 127.0.0.1:2379 -cert $P/healthcheck-client.crt -key $P/healthcheck-client.key -CAfile $P/ca.crt 2>/dev/null | openssl x509 -noout -fingerprint -sha256
+# sha256 Fingerprint=AC:8C:E7:B6:…:AF:29     ← etcd cũng đã phục vụ cert mới
+sudo kubeadm certs check-expiration | grep -E '^(admin|apiserver |scheduler)'
+# admin.conf                 Nov 19, 2027 22:56 UTC   364d            ca                      no
+# apiserver                  Nov 19, 2027 22:56 UTC   364d            ca                      no
+# scheduler.conf             Nov 19, 2027 22:56 UTC   364d            ca                      no
+\`\`\`
+
+Verify: dòng cert xanh, dòng thứ hai vẫn đỏ \`apiserver chưa khởi động lại; controller-manager chưa khởi động lại; scheduler c…\` (giờ khởi động container trước giờ ghi tệp), dòng kubeconfig đỏ \`~/.kube/config khác admin.conf\`. Fingerprint khớp không đủ: kubeadm bảo khởi động lại cả bốn.
+
+**4. Khởi động lại bốn static pod, kubeconfig**
+
+\`\`\`bash
+sudo mkdir -p /etc/kubernetes/s44-off
+sudo mv /etc/kubernetes/manifests/*.yaml /etc/kubernetes/s44-off/
+until [ -z "$(sudo crictl ps -q --name '^(etcd|kube-apiserver|kube-controller-manager|kube-scheduler)$')" ]; do sleep 2; done   # 31 giây
+k get node
+# The connection to the server 192.168.252.35:6443 was refused - did you specify the right host or port?
+sudo mv /etc/kubernetes/s44-off/*.yaml /etc/kubernetes/manifests/
+until [ "$(k get --raw /readyz 2>/dev/null)" = ok ]; do sleep 2; done                                                          # 5 giây
+sudo crictl ps --name '^(etcd|kube-apiserver|kube-controller-manager|kube-scheduler)$'
+# cc5e761958713   a6d02e64d4827   3 seconds ago   Running   kube-apiserver            0   …
+# 19fffd055a6d1   97b03ac504259   4 seconds ago   Running   kube-scheduler            4   …
+# 052593755100d   c2e426bbd1cd6   4 seconds ago   Running   etcd                      1   …
+# f2065cda8b46a   9958587f99032   4 seconds ago   Running   kube-controller-manager   4   …
+k auth whoami | head -2              # vẫn bản ~/.kube/config cũ
+# ATTRIBUTE   VALUE
+# Username    kubernetes-admin
+sudo cp /etc/kubernetes/admin.conf ~/.kube/config && sudo chown $(id -u):$(id -g) ~/.kube/config
+k --kubeconfig ~/dev.kubeconfig auth whoami
+# Username    dev
+# Groups      [shop-dev system:authenticated]
+k --kubeconfig ~/ops.kubeconfig auth whoami
+# Username    ops
+# Groups      [shop-ops system:authenticated]
+sudo ls -l /var/lib/kubelet/pki/
+# -rw------- 1 root root 2822 Nov 14 00:39 kubelet-client-2026-11-14-00-39-21.pem
+# lrwxrwxrwx 1 root root   59 Nov 14 00:39 kubelet-client-current.pem -> /var/lib/kubelet/pki/kubelet-client-2026-11-14-00-39-21.pem
+# -rw-r--r-- 1 root root 2254 Nov 14 00:39 kubelet.crt
+# -rw------- 1 root root 1679 Nov 14 00:39 kubelet.key
+sudo openssl x509 -in /var/lib/kubelet/pki/kubelet-client-current.pem -noout -subject -enddate
+# subject=O = system:nodes, CN = system:node:cka-cp
+# notAfter=Nov 13 17:38:39 2027 GMT
+sudo grep -n rotateCertificates /var/lib/kubelet/config.yaml
+# 42:rotateCertificates: true
+\`\`\`
+
+**5. HA**
+
+\`\`\`bash
+sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$P/ca.crt --cert=$P/server.crt --key=$P/server.key member list -w table
+# | 9c6d935895988819 | started | cka-cp | https://192.168.252.35:2380 | https://192.168.252.35:2379 |      false |
+k -n kube-system get cm kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' | grep controlPlaneEndpoint
+# (không in gì: cluster init không có controlPlaneEndpoint)
+sudo kubeadm token create --print-join-command --ttl 10m
+# kubeadm join 192.168.252.35:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>     ← IP của cka-cp, không phải LB
+sudo kubeadm init phase upload-certs --upload-certs
+# [upload-certs] Storing the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace
+# [upload-certs] Using certificate key:
+# fbc0d6fb2eae846e81683b7dfb7ed87702a7377b7297fc964e012b6ff231f638
+cat > ~/drills/s44/ha.txt <<'HA'
+sudo kubeadm init --control-plane-endpoint lb.cka.local:6443 --upload-certs --pod-network-cidr 192.168.0.0/16
+sudo kubeadm join lb.cka.local:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash> --control-plane --certificate-key <key>
+sudo kubeadm join lb.cka.local:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+HA
+echo QUORUM_5=3 > ~/drills/s44/answers.env
+\`\`\`
+
+Lần làm tay đầu tiên viết \`join\` thiếu \`--certificate-key\` và \`QUORUM_5=2\`: verify đỏ \`join thiếu --control-plane/--certificate-key\` và \`QUORUM_5=2 chưa đúng\` (3/5); sửa thì 5/5. Lệnh trải nhiều dòng bằng \`\\\` vẫn được chấm (verify nối dòng trước khi đọc).
+
+**Lời giải tự động** (\`labs/cka/sessions/s44/apply.sh\` → \`setup.sh\` đặt mốc mới, rồi \`files/solve.sh\`): \`check-expiration\`, \`renew all\`, dời bốn manifest ra \`/etc/kubernetes/s44-off\`, chờ container dừng (30–31 giây), đưa lại, chờ \`/readyz\` **và** đủ bốn container chạy (lần đầu chưa chờ bước này: verify chạy ngay sau đó thấy \`controller-manager không chạy\`, 4/5, đo), chép \`admin.conf\`, \`member list\`, \`ha.txt\`, \`answers.env\`. 1 phút 28 giây; chạy lại được (mỗi lần là một mốc mới và một lần gia hạn mới), lần hai 5/5.`,
+    exam: {
+      patterns: [
+        "\"Cert của apiserver sắp hết hạn, gia hạn mọi cert của control plane bằng kubeadm\" — `kubeadm certs check-expiration`, `kubeadm certs renew all`, khởi động lại bốn static pod (dời manifest ra rồi vào), chép `admin.conf` vào `~/.kube/config`, `check-expiration` lại.",
+        "\"Cert của apiserver hết hạn khi nào? Ghi ngày vào /opt/xxx\" — `kubeadm certs check-expiration` hay `openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -enddate`.",
+        "\"Cluster HA: control plane thứ hai join thế nào?\" (thường là câu hỏi lý thuyết hoặc chọn lệnh) — `kubeadm join <LB>:6443 --token … --discovery-token-ca-cert-hash sha256:… --control-plane --certificate-key …`; certificate-key từ `kubeadm init --upload-certs` hay `kubeadm init phase upload-certs --upload-certs`.",
+      ],
+      timeTargetMin: 8,
+      drills: [
+        {
+          text: "Trong 8 phút: gia hạn mọi cert kubeadm của control plane, làm cho apiserver dùng cert mới, và chứng minh bằng một lệnh so fingerprint.",
+          timeLimitMin: 8,
+          solution: "```bash\nsudo kubeadm certs renew all\nsudo mkdir -p /etc/kubernetes/off && sudo mv /etc/kubernetes/manifests/*.yaml /etc/kubernetes/off/\nwatch -n2 'sudo crictl ps | grep -E \"etcd|kube-\"'     # chờ bốn container biến mất\nsudo mv /etc/kubernetes/off/*.yaml /etc/kubernetes/manifests/\nsudo cp /etc/kubernetes/admin.conf ~/.kube/config && sudo chown $(id -u):$(id -g) ~/.kube/config\ndiff <(sudo openssl x509 -in /etc/kubernetes/pki/apiserver.crt -noout -fingerprint -sha256) \\\n     <(echo | openssl s_client -connect 127.0.0.1:6443 2>/dev/null | openssl x509 -noout -fingerprint -sha256) && echo khớp\n```",
+        },
+        {
+          text: "Trong 1 phút: cụm etcd 3, 4, 5, 6 member chịu được mấy member chết? Vì sao không ai chạy 4?",
+          timeLimitMin: 1,
+          solution: "Quorum = ⌊n/2⌋ + 1. 3 → quorum 2, chịu 1; 4 → quorum 3, chịu 1; 5 → quorum 3, chịu 2; 6 → quorum 4, chịu 2. Thêm member thứ 4 không chịu thêm được lỗi nào mà tăng số máy phải đồng ý mỗi lần ghi (và chia mạng 2–2 thì cả hai nửa đều mất quorum).",
+        },
+      ],
+    },
+    tips: [
+      "`kubeadm certs renew all` in sẵn việc phải làm tiếp: \"You must restart the kube-apiserver, kube-controller-manager, kube-scheduler and etcd\". Đọc dòng cuối của output trước khi gõ lệnh tiếp.",
+      "Đừng quên `~/.kube/config`: renew ghi `admin.conf` mới, không đụng bản chép trong thư mục home.",
+      "Dời manifest **ra ngoài** `/etc/kubernetes/manifests` (không đổi tên trong cùng thư mục: kubelet đọc mọi tệp ở đó).",
+      "Câu HA trên đề thường là lý thuyết: nhớ ba thứ — load balancer trước apiserver (`--control-plane-endpoint`), `--upload-certs` để control plane mới tải cert về, `--control-plane --certificate-key` khi join.",
+    ],
+    outcome: {
+      md: `Control plane đã có cert mới và đang dùng chúng, kubeconfig admin đã cập nhật, kubeconfig của dev/ops vẫn chạy. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s44
+\`\`\`
+
+Năm dòng. **Cert:** mười một cert của \`kubeadm certs check-expiration\` (bảy tệp trong \`/etc/kubernetes/pki\`, cert nhúng trong \`admin.conf\`, \`super-admin.conf\`, \`controller-manager.conf\`, \`scheduler.conf\`) có \`notBefore\` + 300 giây (kubeadm lùi 5 phút, đo) không sớm hơn mốc \`~/drills/s44/started\` của \`begin\` (chỉ \`renew apiserver\`: đỏ \`10/11 chưa gia hạn\`, đo). **Control plane:** fingerprint SHA-256 mà \`openssl s_client\` thấy ở \`127.0.0.1:6443\` và \`127.0.0.1:2379\` bằng tệp \`apiserver.crt\`, \`etcd/server.crt\`; container \`kube-apiserver\`, \`kube-controller-manager\`, \`kube-scheduler\`, \`etcd\` (\`crictl inspect\`, \`startedAt\`) khởi động sau mốc và sau lần ghi tệp cert/kubeconfig của chính nó (\`renew all\` không khởi động lại: đỏ \`apiserver chưa khởi động lại; …\`, đo, dù fingerprint đã khớp); \`/readyz\`; ba node Ready; ba Deployment cert-manager Available, Certificate \`shop-local\` Ready, webhook nhận một Certificate tạo thử \`--dry-run=server\`; gateway, catalog, order Available; và từ chính máy Mac \`:30180\`, Ingress \`shop.local:30080\`, Gateway \`shop.local:30280\` trả 200 với 3 sản phẩm. **kubeconfig:** client cert trong \`~/.kube/config\` trùng cert của \`admin.conf\` (đã gia hạn sau mốc), \`k auth whoami\` ra \`kubernetes-admin\`; \`~/dev.kubeconfig\`, \`~/ops.kubeconfig\` của s34 \`whoami\` ra \`dev\`, \`ops\`. **ha.txt:** có dòng \`kubeadm init\` mang \`--control-plane-endpoint\` và \`--upload-certs\`, và dòng \`kubeadm join\` mang \`--control-plane\` và \`--certificate-key\` (dòng nối bằng \`\\\` được ghép lại; thiếu \`--certificate-key\`: đỏ, đo). **answers.env:** \`QUORUM_5=3\` (\`2\`: đỏ, đo). Trên đầu vào (cuối s43) cả năm dòng đỏ, trước \`begin\` (\`chưa có mốc started\`) và ngay sau \`begin\` (**0/5**, đo); chạy lại \`begin\` là đặt mốc mới, phải gia hạn lại.`,
+      verifyOutput: "lab: kiểm s44\n  (chờ apiserver, Deployment của shop và cert-manager, nếu đang khởi động: tối đa ~30 phút)\n  ✓ Mười một cert kubeadm (pki, etcd, bốn kubeconfig) ký lại sau mốc ~/drills/s44/started\n  ✓ apiserver :6443 và etcd :2379 phục vụ cert trên đĩa; control plane khởi động lại sau gia hạn; node, cert-manager, shop chạy; Mac :30180, :30080, :30280 trả 200\n  ✓ ~/.kube/config dùng client cert của admin.conf mới; dev/ops.kubeconfig (s34) vẫn gọi được API\n  ✓ ~/drills/s44/ha.txt: kubeadm init --control-plane-endpoint --upload-certs; kubeadm join --control-plane --certificate-key\n  ✓ answers.env: QUORUM_5 là số member etcd phải sống trong cụm 5\n  → 5/5 đạt",
+      projectDelta: "Chứng chỉ của control plane có hạn mới (một năm từ hôm nay), apiserver và etcd đang dùng chúng, kubeconfig admin đã cập nhật mà kubeconfig dev/ops cấp ở s34 vẫn chạy vì CA không đổi. Bản kế hoạch HA (lệnh init/join, quorum) nằm trong ~/drills/s44/ha.txt.",
+    },
+    review: [
+      { q: "Vì sao sau `kubeadm certs renew all` vẫn phải khởi động lại control plane, và làm sao chứng minh đã khởi động lại đúng?", a: "kube-apiserver, controller-manager, scheduler và etcd đọc cert/kubeconfig lúc khởi động; renew chỉ ghi tệp mới. Dời bốn manifest ra khỏi /etc/kubernetes/manifests, chờ container dừng, đưa lại. Chứng minh: fingerprint của `openssl s_client -connect 127.0.0.1:6443` (và :2379) bằng tệp trên đĩa, **và** `crictl inspect` cho giờ khởi động mỗi container sau giờ ghi tệp của nó. Fingerprint một mình không đủ: đo trên 1.37.2, apiserver và etcd đã phục vụ cert mới ngay sau `renew` mà chưa khởi động lại gì; verify vẫn đỏ `apiserver chưa khởi động lại; controller-manager chưa khởi động lại; …`." },
+      { q: "Renew xong, `~/dev.kubeconfig` của s34 có cần cấp lại không? Còn `~/.kube/config`?", a: "dev.kubeconfig không: cert của dev do CA của cluster ký qua CSR, `kubeadm certs renew` ký lại cert của control plane bằng chính CA đó, CA (10 năm) không đổi, nên mọi cert client do CA ký vẫn được tin (đo: whoami ra dev, ops). ~/.kube/config cũ cũng vẫn chạy tới hạn của nó, nhưng đó là cert admin cũ: chép admin.conf mới để có hạn mới." },
+      { q: "kubelet có được `kubeadm certs renew` gia hạn không?", a: "Không. kubelet.conf trỏ tới /var/lib/kubelet/pki/kubelet-client-current.pem, và kubelet tự xoay cert client đó (`rotateCertificates: true` trong /var/lib/kubelet/config.yaml): gần hết hạn thì nó gửi CSR mới, controller-manager tự duyệt và ký. Vì thế `check-expiration` không liệt kê kubelet." },
+      { q: "Stacked etcd và external etcd khác nhau thế nào? Cụm 5 member cần mấy member sống?", a: "Stacked: mỗi control plane chạy cả apiserver lẫn một member etcd (mặc định của kubeadm, ít máy, nhưng mất một node là mất cả hai). External: cụm etcd riêng trên máy riêng, control plane chỉ trỏ vào (nhiều máy hơn, cô lập lỗi). Quorum ⌊n/2⌋+1: 5 member cần 3 sống (QUORUM_5=3), chịu 2 member chết; 3 member cần 2, chịu 1." },
+      { q: "Vì sao không thêm được control plane thứ hai vào cluster lab, và lần sau dựng cluster bạn làm gì khác?", a: "kubeadm-config không có `controlPlaneEndpoint`: mọi kubeconfig và kubelet trỏ thẳng IP của cka-cp, nên không có địa chỉ chung để control plane thứ hai đứng sau. Lần sau `kubeadm init --control-plane-endpoint lb:6443 --upload-certs` ngay từ đầu (kể cả khi lúc đó chỉ có một control plane), rồi `kubeadm join lb:6443 … --control-plane --certificate-key …`." },
+    ],
   },
   {
     id: "s45",

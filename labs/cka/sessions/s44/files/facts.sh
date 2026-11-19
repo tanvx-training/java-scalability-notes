@@ -77,6 +77,7 @@ say("CERTS", bad)
 # SAU mốc và sau lần ghi tệp cert/kubeconfig của chính nó (gia hạn mà không khởi động lại: đỏ); /readyz; ba node Ready;
 # cert-manager (ba Deployment, Certificate shop-local, webhook nhận dry-run); gateway/catalog/order Available.
 bad = []
+if started is None: bad.append("chưa có mốc started")
 def served(port, extra=()):
     rc, out, _ = run("sh", "-c", f"openssl s_client -connect 127.0.0.1:{port} {' '.join(extra)} </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256", timeout=20)
     f = re.search(r"Fingerprint=([0-9A-F:]+)", out)

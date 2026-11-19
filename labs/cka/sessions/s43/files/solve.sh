@@ -47,10 +47,23 @@ sys.exit(0 if any(m["containerPath"] == dd and m["hostPath"] == sys.argv[1] for 
     [ $(date +%s) -lt $end ] || return 1; sleep 2; done
   wait_etcd $(( end - $(date +%s) > 10 ? end - $(date +%s) : 10 ))
 }
-wait_order() { # Deployment order Available đủ replica, tối đa 5 phút
-  local end=$(($(date +%s) + 300)) o
-  until o=$(k -n shop get deploy order -o jsonpath='{.spec.replicas} {.status.availableReplicas}' 2>/dev/null) && set -- $o && [ "${2:-0}" -ge "${1:-1}" ]; do
-    [ $(date +%s) -lt $end ] || return 1; sleep 3; done
+wait_order() { # order chạy thật, tối đa 7 phút: đủ Pod Ready, không đang xoá, không phải Pod có tên ghi lúc chụp (status của
+  # chúng sau restore là status cũ trong snapshot), và /api/orders qua NodePort 30180 trả 200. Không tin status của Deployment:
+  # sau restore nó là status lúc chụp (đo: "2/2 available" khi chưa có Pod order nào chạy).
+  local end=$(($(date +%s) + ${1:-420})) ip
+  ip=$(k get node cka-w1 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null)
+  until k -n shop get deploy order -o json 2>/dev/null >/tmp/s43-order.json && k -n shop get pod -l app=order -o json 2>/dev/null | python3 -c '
+import json, sys
+want = json.load(open("/tmp/s43-order.json"))["spec"].get("replicas", 1)
+try: old = set(l.strip().split("/", 1)[-1] for l in open(sys.argv[1]))
+except Exception: old = set()
+ok = [p for p in json.load(sys.stdin)["items"] if not p["metadata"].get("deletionTimestamp") and p["metadata"]["name"] not in old
+      and any(c["type"] == "Ready" and c["status"] == "True" for c in p.get("status", {}).get("conditions", []))]
+sys.exit(0 if len(ok) >= want else 1)' ~/drills/s43/order-pods-at-snapshot &&
+        [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://$ip:30180/api/orders")" = 200 ]; do
+    [ $(date +%s) -lt $end ] || { rm -f /tmp/s43-order.json; return 1; }; sleep 3
+  done
+  rm -f /tmp/s43-order.json
 }
 # manifest_state: in "<--data-dir> <mountPath của volume etcd-data> <hostPath của etcd-data>"
 manifest_state() {
@@ -113,6 +126,7 @@ case "$st" in
   "$OLD $OLD $OLD")
     [ -n "$IP" ] || die "không đọc được IP của etcd trong manifest"
     wait_readyz 240 || die "apiserver chưa sẵn sàng"
+    rm -f ~/drills/s43/order-pods-at-snapshot     # danh sách của một lần chạy trước không áp dụng cho lần chụp này
     k -n shop get deploy order >/dev/null 2>&1 || die "Deployment order đã mất trước khi chụp (lần trước bị ngắt sau bước xoá?). Làm lại: ./labs/lab restore cka s42"
     wait_order || die "order chưa Available"
     log "1. ConfigMap before-snapshot, rồi snapshot"
@@ -121,6 +135,8 @@ case "$st" in
     snapshot_save
     log "2. sau snapshot: ConfigMap after-snapshot, xoá Deployment order"
     k -n shop create cm after-snapshot --from-literal=note="tạo sau snapshot" --dry-run=client -o yaml | k apply -f -
+    # Tên Pod của order lúc chụp: sau restore chúng có lại trong API (đối tượng trong snapshot) mà container đã bị xoá.
+    k -n shop get pod -l app=order -o name > ~/drills/s43/order-pods-at-snapshot
     k -n shop delete deploy order --wait=true --timeout=60s
     k -n shop get deploy,cm | grep -E 'order|snapshot' || true
     log "3. dừng kube-apiserver, kube-controller-manager, kube-scheduler (cất manifest ra $OFF)"
@@ -146,8 +162,16 @@ case "$st" in
   *) die "manifest etcd lạ ($st). Làm lại: ./labs/lab restore cka s42" ;;
 esac
 # Pod của order có trong snapshot nhưng container đã bị xoá: kubelet không dọn được sandbox của chúng lúc apiserver tắt (Calico
-# CNI gọi apiserver), nên chúng nằm lại ở phase Failed (STATUS Error) bên cạnh hai Pod mới (đo). ReplicaSet không đếm Pod Failed;
-# dọn cho `k get pod` sạch. Chỉ Pod Failed của Deployment order, không đụng Pod nào khác.
+# CNI gọi apiserver), chúng chuyển sang STATUS Error vài phút sau, bên cạnh hai Pod mới mà ReplicaSet tạo (đo). Xoá đúng các Pod
+# có tên ghi lúc chụp (không đụng Pod nào khác); Pod đã Failed thì xoá thêm theo phase. Chạy lại được.
+# Ngay sau restore, status của các Pod này là status lúc chụp (Ready), nên không chọn theo Ready: xoá cả hai rồi chờ Pod mới thật
+# sự chạy (wait_order bỏ qua tên cũ). Đo: Pod cũ Terminating vài phút vì CNI không dọn được sandbox, ReplicaSet chỉ tạo Pod mới
+# khi Pod cũ biến mất, và kubelet nhận Pod mới chậm ~1 phút (watch phải list lại sau --bump-revision).
+for p in $(cat ~/drills/s43/order-pods-at-snapshot 2>/dev/null); do
+  k -n shop get "$p" >/dev/null 2>&1 || continue
+  k -n shop delete "$p" --ignore-not-found --wait=false
+done
+wait_order || die "order chưa chạy (Pod mới Ready, /api/orders 200) sau 7 phút"
 k -n shop delete pod -l app=order --field-selector=status.phase=Failed --ignore-not-found
 echo "LOST_OBJECT=configmap/after-snapshot" > ~/drills/s43/answers.env
 cat ~/drills/s43/answers.env

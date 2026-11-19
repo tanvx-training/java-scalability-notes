@@ -100,11 +100,15 @@ if rc != 0: bad.append("thiếu before-snapshot" if "NotFound" in err else "khô
 rc, out, err = run("kubectl", "--request-timeout=10s", "-n", "shop", "get", "cm", "after-snapshot", "-o", "name")
 if rc == 0: bad.append("còn after-snapshot")
 elif "NotFound" not in err: bad.append("không đọc được after-snapshot")
+# order: đếm Pod Ready không đang xoá, không tin status của Deployment (sau restore nó là status lúc chụp: đo "2/2 available"
+# khi chưa Pod order nào chạy). verify.sh còn gọi /api/orders từ Mac.
 d = kj("-n", "shop", "get", "deploy", "order")
 if d is None: bad.append("không có Deployment order")
 else:
-    s, want = d.get("status") or {}, d["spec"].get("replicas", 1)
-    if s.get("availableReplicas", 0) < want or want < 1: bad.append(f"order {s.get('availableReplicas', 0)}/{want} sẵn sàng")
+    want = d["spec"].get("replicas", 1)
+    pods = (kj("-n", "shop", "get", "pod", "-l", "app=order") or {}).get("items") or []
+    n = sum(1 for p in pods if not p["metadata"].get("deletionTimestamp") and ready(p))
+    if n < want or want < 1: bad.append(f"order {n}/{want} Pod Ready")
 rc, out, _ = run("helm", "list", "-n", "shop", "-o", "json")
 try: r = next((x for x in json.loads(out) if x.get("name") == "shop"), None)
 except Exception: r = None
