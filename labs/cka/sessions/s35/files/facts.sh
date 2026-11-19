@@ -58,7 +58,16 @@ else:
         [("create", "deployments.apps", "-n", "shop"), ("patch", "deployments.apps", "-n", "shop"), ("get", "pods", "-n", "shop")],
         [("get", "nodes"), ("list", "pods", "-n", "kube-system"), ("get", "secrets", "-n", "kube-system"),
          ("create", "deployments.apps", "-n", "kube-system"), ("delete", "configmaps", "-n", "kube-system"),
-         ("patch", "daemonsets.apps", "-n", "kube-system"), ("create", f"clusterroles.{RBAC}")],
+         ("patch", "daemonsets.apps", "-n", "kube-system"), ("create", f"clusterroles.{RBAC}"),
+         # Trong shop: những thứ shop-deployer cố ý không cho (Secret, RBAC và hai verb leo quyền, NetworkPolicy, quota,
+         # StatefulSet postgres, deployments/scale, đóng vai SA). Role `*` hay RoleBinding tới admin/edit ở shop: đỏ.
+         ("get", "secrets", "-n", "shop"), ("list", "secrets", "-n", "shop"),
+         ("create", f"roles.{RBAC}", "-n", "shop"), ("create", f"rolebindings.{RBAC}", "-n", "shop"),
+         ("escalate", f"roles.{RBAC}", "-n", "shop"), ("bind", f"clusterroles.{RBAC}", "-n", "shop"),
+         ("create", "networkpolicies.networking.k8s.io", "-n", "shop"), ("delete", "networkpolicies.networking.k8s.io", "-n", "shop"),
+         ("patch", "resourcequotas", "-n", "shop"), ("create", "limitranges", "-n", "shop"),
+         ("delete", "statefulsets.apps", "-n", "shop"), ("patch", "deployments.apps", "--subresource=scale", "-n", "shop"),
+         ("impersonate", "serviceaccounts", "-n", "shop")],
         ["-n", "shop", "get", "pods"]))
 
 # 2. ops
@@ -69,7 +78,9 @@ else:
         [("create", "deployments.apps", "--all-namespaces"), ("patch", "deployments.apps", "-n", "shop"),
          ("delete", "pods", "-n", "shop"), ("create", "pods", "-n", "default"), ("patch", "nodes"), ("delete", "nodes"),
          ("delete", "namespaces"), ("create", f"clusterrolebindings.{RBAC}"), ("get", "secrets", "-n", "shop"),
-         ("list", "secrets", "--all-namespaces")],
+         ("list", "secrets", "--all-namespaces"), ("patch", "deployments.apps", "-n", "kube-system"),
+         ("create", "pods", "--subresource=exec", "-n", "shop"), ("impersonate", "users"),
+         ("impersonate", "serviceaccounts", "-n", "shop")],
         ["get", "nodes"]))
 
 # 3. SA order: SA có, Deployment dùng SA order và ConfigMap order-config, mọi Pod order đang chạy dùng SA order, Available;
@@ -146,6 +157,22 @@ L = lambda kn: live.get(kn) or {}
 if ("RoleBinding", "shop-dev") in live:
     if subj(L(("RoleBinding", "shop-dev")), "shop") != [("Group", "shop-dev", "", RBAC)] or rref(L(("RoleBinding", "shop-dev"))) != ("Role", "shop-deployer"):
         bad.append("RoleBinding shop-dev phải gắn Role shop-deployer cho đúng Group shop-dev")
+if ("Role", "shop-deployer") in live:
+    if any("*" in (r.get(f) or []) for r in L(("Role", "shop-deployer")).get("rules") or [] for f in ("apiGroups", "resources", "verbs")):
+        bad.append("shop-deployer có * trong apiGroups/resources/verbs")
+# Ngoài RoleBinding shop-dev, không binding nào (ở mọi namespace hay toàn cluster) cấp thêm cho group shop-dev hay user dev.
+extra = []
+for res in ("rolebindings", "clusterrolebindings"):
+    rc, out, _ = k("get", res, *(["-A"] if res == "rolebindings" else []), "-o", "json")
+    try: items = json.loads(out)["items"]
+    except Exception: bad.append(f"không đọc được {res}"); continue
+    for b in items:
+        md = b["metadata"]
+        if res == "rolebindings" and (md.get("namespace"), md["name"]) == ("shop", "shop-dev"): continue
+        for sj in b.get("subjects") or []:
+            if (sj.get("kind"), sj.get("name")) in (("Group", "shop-dev"), ("User", "dev")):
+                extra.append(f"{md.get('namespace', '')}/{md['name']}".lstrip("/"))
+if extra: bad.append("binding khác cho dev/shop-dev: " + ", ".join(sorted(set(extra)))[:60])
 if ("ClusterRoleBinding", "shop-ops") in live:
     if subj(L(("ClusterRoleBinding", "shop-ops")), "") != [("Group", "shop-ops", "", RBAC)] or rref(L(("ClusterRoleBinding", "shop-ops"))) != ("ClusterRole", "shop-ops-view"):
         bad.append("ClusterRoleBinding shop-ops phải gắn ClusterRole shop-ops-view cho đúng Group shop-ops")

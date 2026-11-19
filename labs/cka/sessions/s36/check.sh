@@ -3,10 +3,11 @@
 # khớp cluster" của verify s35 đỏ suốt buổi: bỏ chúng để `begin cka s36` chạy lại được giữa chừng (gây lại sự cố, xoá
 # answers.env cũ) mà không phải restore. Còn lại: SA order (dòng của s35), ~/ops.kubeconfig như cuối s34, và RBAC của dev trong
 # cluster (hỏi bằng --as, vì kubeconfig của dev đang hỏng). Chỉ đọc. Nạp bởi `lab` (bash 3.2).
-# Sau khi VM khởi động lại: chờ như verify s35 (420 giây) cộng ba lần đọc dữ kiện: in ra ~10 phút.
+# Sau khi VM khởi động lại: chờ như verify s35 (420 giây) cộng ba lần đọc dữ kiện (~60 lệnh kubectl, mỗi lệnh tối đa 10
+# giây): chậm nhất ~17 phút, in ra đúng con số đó.
 cp="$LAB_CP"
 s35="$SESSION_DIR/../s35"
-echo "  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~10 phút)"
+echo "  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~17 phút)"
 vm "$cp" "$(cat "$SESSION_DIR/../s26/files/wait.sh")" >/dev/null 2>&1 || true
 
 facts="$(vm "$cp" "$(cat "$s35/files/facts.sh")" 2>/dev/null)

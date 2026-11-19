@@ -1,6 +1,7 @@
 # Lỗi st6-access: "một đồng nghiệp sửa lại quyền truy cập" và làm hỏng hai chỗ (không in ra đã làm gì: đây là đề bài sự cố):
-# 1. ~/dev.kubeconfig: server đổi sang cổng 10250 (kubelet của cka-cp, cert serving tự ký nên kubectl báo lỗi TLS
-#    "certificate signed by unknown authority"), và cert + key nhúng của user dev thay bằng của ops (~/users/ops.{crt,key}):
+# 1. ~/dev.kubeconfig: server đổi sang cổng 10250 (kubelet của cka-cp; cert serving tự ký chỉ có DNS:cka-cp trong SAN, nên
+#    kubectl báo lỗi TLS "x509: cannot validate certificate for 192.168.252.35 because it doesn't contain any IP SANs": Go
+#    kiểm tên/IP trước chuỗi CA), và cert + key nhúng của user dev thay bằng của ops (~/users/ops.{crt,key}):
 #    sửa được cổng rồi thì tệp xác thực là ops, không phải dev. Các trường khác của tệp giữ nguyên, quyền 600.
 # 2. ClusterRoleBinding shop-ops (trong ~/shop/rbac.yaml, tìm theo nội dung): subjects thành User shop-ops thay cho Group
 #    shop-ops, ghi lại tệp bằng PyYAML (comment mất) rồi apply: ops mất mọi quyền đọc.
