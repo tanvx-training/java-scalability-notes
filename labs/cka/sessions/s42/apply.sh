@@ -63,6 +63,11 @@ else
       node_step "$cp" repo
       node_step "$cp" kubeadm
       vm "$cp" "sudo kubeadm config images pull --kubernetes-version v$V"
+      # Kéo trước image addon trên hai worker: `upgrade apply` thay Pod kube-proxy trên mọi node cùng lúc với rollout CoreDNS; Pod
+      # kube-proxy mới phải kéo image (đo: 22 giây) và trong lúc đó node giữ rule iptables cũ trỏ Pod CoreDNS đã xoá (đo: 16
+      # request lỗi trên cka-w2). crictl pull đúng image mà kubeadm 1.37.2 liệt kê.
+      imgs="$(vm "$cp" "kubeadm config images list --kubernetes-version v$V | grep -E 'kube-proxy|coredns|pause'" | tr '\n' ' ')"
+      for w in cka-w1 cka-w2; do vm "$w" "for i in $imgs; do sudo crictl pull \$i >/dev/null && echo \"$w: \$i\"; done"; done
       vm "$cp" "sudo kubeadm upgrade plan v$V" | sed -n '/^COMPONENT/,/^$/p'
       if [ "$(vm "$cp" "kubectl --request-timeout=10s -n kube-system get cm kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' | sed -n 's/^kubernetesVersion: //p'")" != "v$V" ]; then
         vm "$cp" "sudo kubeadm upgrade apply v$V --yes" | tail -4
