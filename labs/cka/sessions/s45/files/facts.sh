@@ -34,17 +34,25 @@ if not fast:
             if n["spec"].get("unschedulable"): bad.append(f"{name} đang cordon")
     say("NODES", bad)
 
-    # 2. REV: revision etcd hiện tại ≥ revision lúc gây sự cố.
+    # 2. REV: revision và raft index của etcd không nhỏ hơn lúc gây sự cố. Revision bắt restore lại snapshot với cùng
+    # --bump-revision của s43; raft index bắt cả --bump-revision lớn hơn: nó chỉ tăng trên cùng data-dir, còn data-dir restore
+    # từ snapshot bắt đầu lại từ vài chục (đo).
     bad = []
     rc, out, _ = run("sudo", "etcdctl", "--endpoints=https://127.0.0.1:2379", f"--cacert={PKI}/ca.crt", f"--cert={PKI}/server.crt",
                      f"--key={PKI}/server.key", "--command-timeout=5s", "endpoint", "status", "-w", "json")
-    try: cur = json.loads(out)[0]["Status"]["header"]["revision"] if rc == 0 else None
-    except Exception: cur = None
-    rc, out, _ = run("sudo", "cat", "/root/.lab/st8-ops/rev")
-    rec = int(out.strip()) if rc == 0 and out.strip().isdigit() else None
-    if rec is None: bad.append("chưa có mốc revision của sự cố (chạy begin)")
-    elif cur is None: bad.append("không đọc được revision etcd")
-    elif cur < rec: bad.append(f"revision etcd {cur} < {rec} lúc gây sự cố: dữ liệu đã lùi")
+    try:
+        st = json.loads(out)[0]["Status"] if rc == 0 else None
+        cur, ri = (st["header"]["revision"], st["raftIndex"]) if st else (None, None)
+    except Exception: cur, ri = None, None
+    def rec(f):
+        rc, out, _ = run("sudo", "cat", f"/root/.lab/st8-ops/{f}")
+        return int(out.strip()) if rc == 0 and out.strip().isdigit() else None
+    rrev, rraft = rec("rev"), rec("raft")
+    if rrev is None or rraft is None: bad.append("chưa có mốc revision/raft của sự cố (chạy begin)")
+    elif cur is None: bad.append("không đọc được trạng thái etcd")
+    else:
+        if cur < rrev: bad.append(f"revision etcd {cur} < {rrev} lúc gây sự cố: dữ liệu đã lùi")
+        if ri < rraft: bad.append(f"raft index {ri} < {rraft} lúc gây sự cố: data-dir đã restore lại")
     say("REV", bad)
 
 # 3. ANS: BROKEN_COMPONENTS là đúng hai thành phần bị phá: etcd (manifest) và kubelet (cka-w2). kube-apiserver không lên chỉ
@@ -60,11 +68,16 @@ except Exception: ans = None
 if ans is None: bad.append("chưa có ~/drills/s45/answers.env")
 elif ans.get("BROKEN_COMPONENTS") is None: bad.append("answers.env chưa có BROKEN_COMPONENTS")
 else:
-    got = set()
+    got, wrong = set(), []
     for t in re.split(r"[,;\s]+", ans["BROKEN_COMPONENTS"].strip().lower()):
         if not t: continue
-        t = re.sub(r"^cka-(cp|w1|w2)[/:@]|[/:@(]cka-(cp|w1|w2)\)?$", "", t)
-        got.add(t)
+        m = re.fullmatch(r"(?:cka-(cp|w1|w2)[/:@])?([a-z-]+?)(?:[/:@(]cka-(cp|w1|w2)\)?)?", t)
+        if not m: got.add(t); continue
+        node = m.group(1) or m.group(3); name = m.group(2)
+        got.add(name)
+        # Tên node đi kèm phải đúng chỗ hỏng: etcd ở cka-cp, kubelet ở cka-w2.
+        if node and {"etcd": "cp", "kubelet": "w2"}.get(name, node) != node: wrong.append(f"{name}@cka-{node}")
     if got != {"etcd", "kubelet"}: bad.append(f"BROKEN_COMPONENTS={ans['BROKEN_COMPONENTS']} chưa đúng")
+    elif wrong: bad.append("sai node: " + ", ".join(wrong))
 say("ANS", bad)
 PY

@@ -12,8 +12,10 @@
 # STEP=prep: kiểm trạng thái cuối s44 (etcdctl, snapshot, dữ liệu thật trong /var/lib/etcd-restore, đúng một manifest etcd).
 #   Lần đầu: manifest phải trỏ /var/lib/etcd-restore ở cả --data-dir, mountPath, hostPath; etcd chạy từ đó và healthy; lưu
 #   bản manifest tốt vào $H (thư mục chỉ root đọc). Lần sau (begin chạy lại giữa buổi): manifest khác bản đã lưu thì cài lại
-#   bản đó (theo nội dung). Rồi chờ etcd chạy từ /var/lib/etcd-restore, apiserver /readyz, và ghi revision etcd hiện tại vào
-#   $H/rev (verify đòi revision không lùi: khôi phục lại snapshot cũ là mất dữ liệu ghi sau đó).
+#   bản đó (theo nội dung). Rồi chờ etcd chạy từ /var/lib/etcd-restore, apiserver /readyz (kick_apiserver nếu kẹt back-off),
+#   và ghi revision và raft index etcd hiện tại vào $H/rev, $H/raft (verify đòi cả hai không lùi: khôi phục lại snapshot cũ là
+#   mất dữ liệu ghi sau đó; raft index bắt cả --bump-revision lớn). Trước hết đưa lại kube-apiserver.yaml nếu một lần chạy
+#   trước bị ngắt giữa lúc kick (unstrand). "Sự cố đang dở" (check.sh) = manifest etcd khác bản tốt đã lưu; không có dấu riêng.
 # STEP=break: ghi manifest lỗi (từ bản tốt đã lưu, đổi đúng hai dòng path/type của volume etcd-data), chờ etcd ngừng phục vụ.
 set -e
 H=/root/.lab/st8-ops
@@ -65,10 +67,26 @@ n_etcd() {
   for f in $(sudo ls $MAN); do sudo grep -q '^ *component: etcd$' "$MAN/$f" && n=$((n + 1)); done
   echo $n
 }
+raft() { ec endpoint status -w json | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["Status"]["raftIndex"])'; }
+# unstrand: một lần chạy trước bị ngắt giữa lúc kick_apiserver (manifest đang ở $OFF): đưa lại trước khi làm gì (như s44).
+OFF=/etc/kubernetes/s45-off
+unstrand() {
+  if sudo test -f $OFF/kube-apiserver.yaml && ! sudo test -f $MAN/kube-apiserver.yaml; then sudo mv $OFF/kube-apiserver.yaml $MAN/; fi
+  sudo rm -f $H/active      # dấu của bản trước (đợt đầu); "sự cố đang dở" nay là: manifest khác bản tốt đã lưu
+}
+# kick_apiserver: kube-apiserver kẹt trong back-off của CrashLoopBackOff (tới 5 phút) dù etcd đã lên. Bộ đếm back-off chỉ
+# nằm trong bộ nhớ của kubelet: `systemctl restart kubelet` xoá nó, kubelet thử lại apiserver ngay; container đang chạy
+# không bị khởi động lại (đo, cả cka-cp lẫn cka-w2). Đo sau ≥ 6 phút hỏng, tính từ lúc cài lại manifest etcd tốt: chỉ chờ
+# /readyz 310 giây; dời manifest apiserver ra, chờ kubelet bỏ hẳn Pod (49 giây) rồi đưa lại 71 giây; restart kubelet
+# 51 giây.
+kick_apiserver() {
+  sudo systemctl restart kubelet
+}
 rev() { ec endpoint status -w json | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["Status"]["header"]["revision"])'; }
 
 case "$STEP" in
   prep)
+    unstrand
     command -v etcdctl >/dev/null 2>&1 || miss "etcdctl (s43)"
     sudo test -f $SNAP || miss "$SNAP (s43)"
     has_data || miss "dữ liệu etcd trong $NEW (s43)"
@@ -79,14 +97,9 @@ case "$STEP" in
       good $MAN/etcd.yaml || miss "manifest etcd trỏ $NEW ở --data-dir, mountPath và hostPath (s43)"
     fi
     until_t 240 live_new || fail 1
-    # Sau khi etcd vắng lâu, kube-apiserver nằm trong CrashLoopBackOff (chờ tới 5 phút giữa hai lần thử): khởi động lại nó
-    # bằng cách dời manifest ra rồi đưa lại, như s43/s44, nếu sau 60 giây vẫn chưa /readyz.
-    if ! until_t 60 readyz; then
-      sudo mkdir -p /etc/kubernetes/s45-off
-      sudo mv $MAN/kube-apiserver.yaml /etc/kubernetes/s45-off/
-      until_t 90 sh -c '[ -z "$(sudo crictl ps -q --name "^kube-apiserver$")" ]' || true
-      sudo mv /etc/kubernetes/s45-off/kube-apiserver.yaml $MAN/
-    fi
+    # Sau khi etcd vắng lâu, kube-apiserver nằm trong CrashLoopBackOff (kubelet chờ tới 5 phút giữa hai lần thử): chưa
+    # /readyz sau 60 giây thì kick_apiserver (cách đã đo, xem hàm).
+    until_t 60 readyz || kick_apiserver
     until_t 300 readyz || fail 1
     if ! sudo test -f $H/etcd.yaml; then
       sudo mkdir -p -m 0700 $H
@@ -96,6 +109,12 @@ case "$STEP" in
     old=$(sudo cat $H/rev 2>/dev/null || echo 0)
     [ "$r" -ge "$old" ] || { echo "lab: revision etcd ($r) nhỏ hơn lúc begin trước ($old): dữ liệu đã lùi; thử: ./labs/lab restore cka s44" >&2; exit 1; }
     echo "$r" | sudo tee $H/rev >/dev/null
+    # Raft index của member: chỉ tăng trên cùng một data-dir (qua mọi lần khởi động lại); restore một snapshot (kể cả
+    # --bump-revision lớn) bắt đầu lại từ vài chục. Verify đòi raft index hiện tại ≥ số này.
+    x=$(raft) || fail 1
+    old=$(sudo cat $H/raft 2>/dev/null || echo 0)
+    [ "$x" -ge "$old" ] || { echo "lab: raft index etcd ($x) nhỏ hơn lúc begin trước ($old): data-dir đã bị restore lại; thử: ./labs/lab restore cka s44" >&2; exit 1; }
+    echo "$x" | sudo tee $H/raft >/dev/null
     ;;
   break)
     sudo test -f $H/etcd.yaml || fail 3
@@ -121,7 +140,6 @@ sys.stdout.write(out)' "$SNAP" > "$t" || { rm -f "$t"; fail 3; }
     sudo install -m 0600 -o root -g root "$t" $MAN/etcd.yaml
     rm -f "$t"
     until_t 120 gone || fail 3
-    sudo touch $H/active
     ;;
   *) echo "lab: STEP lạ: $STEP" >&2; exit 2 ;;
 esac

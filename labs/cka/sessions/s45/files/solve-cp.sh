@@ -8,6 +8,7 @@ set -e
 NEW=/var/lib/etcd-restore
 MAN=/etc/kubernetes/manifests
 GOOD=/root/.lab/st8-ops/etcd.yaml
+OFF=/etc/kubernetes/s45-off
 PKI=/etc/kubernetes/pki/etcd
 k() { kubectl --request-timeout=5s "$@"; }
 ec() { sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$PKI/ca.crt --cert=$PKI/server.crt --key=$PKI/server.key --command-timeout=3s "$@"; }
@@ -15,6 +16,14 @@ log() { echo "s45: $*"; }
 die() { echo "s45: $*" >&2; exit 1; }
 until_t() { local end=$(($(date +%s) + $1)); shift; until "$@"; do [ $(date +%s) -lt $end ] || return 1; sleep 2; done; }
 readyz() { [ "$(k get --raw /readyz 2>/dev/null)" = ok ]; }
+# kick_apiserver: kube-apiserver kẹt trong back-off của CrashLoopBackOff (tới 5 phút) dù etcd đã lên. Bộ đếm back-off chỉ
+# nằm trong bộ nhớ của kubelet: `systemctl restart kubelet` xoá nó, kubelet thử lại apiserver ngay; container đang chạy
+# không bị khởi động lại (đo, cả cka-cp lẫn cka-w2). Đo sau ≥ 6 phút hỏng, tính từ lúc cài lại manifest etcd tốt: chỉ chờ
+# /readyz 310 giây; dời manifest apiserver ra, chờ kubelet bỏ hẳn Pod (49 giây) rồi đưa lại 71 giây; restart kubelet
+# 51 giây.
+kick_apiserver() {
+  sudo systemctl restart kubelet
+}
 live_new() {
   local id
   id=$(sudo crictl ps -q --name '^etcd$' --state running 2>/dev/null | head -1)
@@ -26,6 +35,9 @@ sys.exit(0 if any(m["containerPath"] == dd and m["hostPath"] == sys.argv[1] for 
     ec endpoint health >/dev/null 2>&1
 }
 
+# Lần trước bị ngắt giữa lúc kick_apiserver (manifest đang ở $OFF): đưa lại trước (như s44).
+if sudo test -f $OFF/kube-apiserver.yaml && ! sudo test -f $MAN/kube-apiserver.yaml; then log "đưa lại kube-apiserver.yaml từ $OFF (lần trước bị ngắt)"; sudo mv $OFF/kube-apiserver.yaml $MAN/; fi
+sudo rm -f /root/.lab/st8-ops/active   # dấu của bản trước; không còn dùng
 log "1. kubectl"
 k get node 2>&1 | tail -1 || true
 log "2. kubelet trên cka-cp"
@@ -67,15 +79,11 @@ until_t 180 live_new || die "etcd chưa chạy từ $NEW sau 3 phút: sudo crict
 log "   etcd healthy sau $(($(date +%s) - s)) giây"
 ec endpoint health
 ec endpoint status -w table
-# kube-apiserver nằm trong CrashLoopBackOff suốt lúc etcd vắng (kubelet chờ tới 5 phút giữa hai lần thử): nếu sau 60 giây
-# chưa /readyz thì khởi động lại nó bằng cách dời manifest ra rồi đưa lại (như s43/s44).
-if ! until_t 60 readyz; then
-  log "   apiserver chưa /readyz sau 60 giây (CrashLoopBackOff): dời manifest ra rồi đưa lại"
-  sudo mkdir -p /etc/kubernetes/s45-off
-  sudo mv $MAN/kube-apiserver.yaml /etc/kubernetes/s45-off/
-  until_t 90 sh -c '[ -z "$(sudo crictl ps -q --name "^kube-apiserver$")" ]' || true
-  sudo mv /etc/kubernetes/s45-off/kube-apiserver.yaml $MAN/
-fi
+# kube-apiserver nằm trong CrashLoopBackOff suốt lúc etcd vắng (kubelet chờ tới 5 phút giữa hai lần thử): chưa /readyz
+# sau 60 giây thì kick_apiserver (cách đã đo, xem hàm).
+until_t 60 readyz || { log "   apiserver chưa /readyz sau 60 giây (CrashLoopBackOff)"; kick_apiserver; }
 until_t 300 readyz || die "apiserver chưa /readyz sau 5 phút"
 log "   apiserver /readyz sau $(($(date +%s) - s)) giây"
-k get node
+# /readyz vừa ok mà apiserver còn chậm (đo, lần chạy thứ hai khi máy chủ tải cao: `k get node` hết 5 giây ngay sau /readyz):
+# không coi là lỗi của lời giải; verify chờ có giới hạn riêng.
+k get node || true

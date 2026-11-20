@@ -3,7 +3,7 @@
 #   etcd.sh STEP=prep   (cka-cp) đưa manifest etcd về bản tốt nếu lần trước đã gây lỗi, chờ etcd và apiserver, ghi mốc.
 #   kubelet.sh          (cka-w2) hạ kubelet về 1.36.6-1.1 (gói .deb ghim sha256), hold ở 1.36.
 #   etcd.sh STEP=break  (cka-cp) sửa manifest etcd để etcd không khởi động được (không bao giờ trên data-dir rỗng hay cũ).
-# Chạy lại được (`begin cka s45` giữa buổi): bước prep luôn đưa etcd về bản tốt trước khi gây lại. Mất ~2–4 phút. Cần trạng
+# Chạy lại được (`begin cka s45` giữa buổi): bước prep luôn đưa etcd về bản tốt trước khi gây lại. Thường dưới 1 phút (đo 15–32 giây); sau một sự cố dài có thể tới ~8 phút (chờ etcd, apiserver back-off). Cần trạng
 # thái cuối s44; thiếu thì dừng, không gây gì. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 vm "$LAB_CP" "STEP=prep
 $(cat "$SESSION_DIR/etcd.sh")"
