@@ -1,5 +1,5 @@
 // Chặng 8 — Vận hành cluster: bảo trì node, nâng cấp, etcd, chứng chỉ, HA.
-// s41–s44 đã phát hành (đợt 4); s45 là buổi khung: đủ trường cấu trúc (check-data PR7), nội dung ở đợt sau.
+// s41–s45 đã phát hành (đợt 4).
 
 export const sessions = [
 // ───────────────────────────── s41 ─────────────────────────────
@@ -1276,12 +1276,12 @@ Năm dòng. **Cert:** mười một cert của \`kubeadm certs check-expiration\
     domain: "troubleshooting",
     competencies: ["ts-components"],
     requires: ["s44"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Sửa trong 20 phút một worker còn kubelet bản cũ và một etcd khởi động sai data-dir sau restore.",
-      "Đọc phiên bản của từng thành phần để tìm chỗ lệch.",
-      "Đọc log container control plane bằng crictl khi kubectl chưa dùng được.",
+      "Sửa trong 20 phút một worker còn kubelet bản cũ và một etcd không khởi động vì volume dữ liệu trỏ sai sau restore, mà không mất hay lùi dữ liệu của cluster.",
+      "Đọc phiên bản của từng thành phần (kubectl, apiserver, kubelet từng node, gói apt) để tìm chỗ lệch, và biết lệch nào version skew cho phép.",
+      "Khi kubectl không dùng được, đi đúng thứ tự kubelet → crictl → manifest → log để tìm thành phần hỏng thật, phân biệt nó với thành phần chỉ là nạn nhân.",
     ],
     skills: [
       { skill: "k-version-check", level: "Gõ được không tra" },
@@ -1290,7 +1290,271 @@ Năm dòng. **Cert:** mười một cert của \`kubeadm certs check-expiration\
       { skill: "k-post-restore-check", level: "Dưới 5 phút" },
     ],
     uses: ["k-version-skew", "k-etcd-manifest", "k-kubelet-journal", "k-upgrade-worker-flow", "k-crictl-ps"],
-    stateIn: "Đầu ra s44 cộng `./labs/lab break`.",
-    stateOut: "Ba node Ready cùng minor, etcd khoẻ, shop chạy đủ như cuối s44.",
+    foundation: null,
+    mindset: `**Khi \`k\` không trả lời, đi xuống một tầng.** \`kubectl\` chỉ là một client của kube-apiserver; apiserver chỉ là một client của etcd; cả hai là static pod mà kubelet của cka-cp chạy từ \`/etc/kubernetes/manifests\`. Vì vậy thứ tự hỏi bệnh khi \`k get node\` báo \`connection refused\` là: **kubelet** còn chạy không (\`systemctl status kubelet\`, \`journalctl -u kubelet\`), nó đã tạo container nào và container nào chết (\`sudo crictl ps -a\`), container chết nói gì (\`sudo crictl logs <id>\`), rồi **manifest** của nó viết gì (\`sudo cat /etc/kubernetes/manifests/<tên>.yaml\`, so với một bản bạn biết là đúng). \`crictl\` nói chuyện thẳng với containerd qua socket trên node, không cần apiserver: nó là \`kubectl\` của lúc control plane chết.
+
+**Nạn nhân và thủ phạm.** Trong buổi này \`sudo crictl ps -a\` cho thấy kube-apiserver cũng \`Exited\`, đang \`CrashLoopBackOff\` (đo: \`ATTEMPT\` tăng dần, log cuối \`"command failed" err="error creating storage factory: etcd grpc connection not ready: context deadline exceeded"\`). Sửa apiserver là sửa nhầm: nó chết vì không có etcd để nói chuyện. Log của etcd thì nói thẳng lý do của chính nó: \`"msg":"failed to list data directory","dir":"/var/lib/etcd-restore","error":"readdirent /var/lib/etcd-restore: not a directory"\` (đo). Đọc log từ dưới lên theo chuỗi phụ thuộc (etcd ← apiserver ← controller-manager, scheduler ← \`kubectl\`), và dừng ở thành phần đầu tiên tự nó hỏng: đó là điều \`BROKEN_COMPONENTS\` hỏi.
+
+**etcd không lên còn tốt hơn etcd lên với dữ liệu sai.** Manifest của sự cố trỏ volume \`etcd-data\` vào **tệp** snapshot \`/opt/backup/etcd.db\` với \`type: File\` ("một đồng nghiệp tưởng etcd đọc thẳng snapshot"). kubelet mount tệp đó vào \`/var/lib/etcd-restore\` trong container, etcd thấy thư mục dữ liệu là một tệp và dừng ngay, không ghi một byte (đo: sha256 của snapshot và \`db\` của \`/var/lib/etcd-restore\` giống hệt trước và sau). Hai kiểu "sửa" sau đây làm etcd **lên** nhưng là thảm hoạ, vì etcd không có cách nào biết dữ liệu của mình cũ: trỏ lại \`/var/lib/etcd\` (dữ liệu của lúc ngay trước restore ở s43: có \`after-snapshot\`, không có \`order\`, thiếu mọi thứ ghi sau đó), hay gõ sai một đường dẫn với \`type: DirectoryOrCreate\` của kubeadm (kubelet tạo thư mục rỗng, etcd lên với cluster rỗng: s43 đã đo, cùng member ID, 0 key, \`kubernetes-admin\` bị \`Forbidden\` mọi thứ). Restore lại snapshot \`/opt/backup/etcd.db\` cũng sai: nó lùi cluster về lúc chụp ở s43, mất mọi thứ ghi sau đó (verify so revision etcd với revision lúc gây sự cố: lùi là đỏ). Dữ liệu đúng đang nằm nguyên ở \`/var/lib/etcd-restore\`; việc của bạn chỉ là trỏ volume về đó.
+
+**Trạng thái của Pod không cần apiserver.** Suốt lúc etcd chết, shop vẫn trả lời: từ Mac \`:30180/api/products\` và \`/api/orders\` đều 200 (đo). Container đang chạy được kubelet giữ, rule iptables của kube-proxy vẫn còn, order nói chuyện với PostgreSQL không qua apiserver. Thứ mất là khả năng **thay đổi**: không deploy, không scale, không reschedule khi node chết, không \`k logs\`. Control plane chết là "cluster đóng băng", không phải "app chết"; vì thế đừng hoảng mà restore vội.
+
+**Version skew: cái được phép và cái tiêu chí đòi.** kubelet được cũ hơn kube-apiserver tối đa **ba** minor (từ 1.28; trước đó là hai) và không bao giờ được mới hơn; kubectl lệch ±1 minor (s42, \`SKEW_RULE=3\`). Vì thế cka-w2 với kubelet 1.36.6 dưới apiserver 1.37.2 vẫn \`Ready\` (đo: \`k get node\` cột VERSION \`v1.36.6\`, Pod của nó chạy tiếp): skew không cảnh báo gì, chỉ \`k get node\` và \`kubelet --version\` cho thấy. Tiêu chí của buổi (và của một lần nâng cấp xong) là **ba node cùng minor 1.37** và gói hold ở 1.37: cluster lệch minor là cluster chưa nâng xong, lần nâng 1.38 sau sẽ thành lệch hai minor. Phiên bản đọc ở bốn chỗ khác nhau: \`k version\` (client và server), \`k get node\` (kubelet mỗi node báo lên), \`kubelet --version\` (binary trên đĩa của node), \`dpkg -l | grep kube\` và \`apt-mark showhold\` (gói và hold). Binary trên đĩa và kubelet đang chạy có thể khác nhau tới khi khởi động lại.
+
+**Sửa kubelet một worker là bước cuối của quy trình nâng worker.** Trang "Upgrading kubeadm clusters": \`k drain\`, unhold, \`apt-get install kubelet=… kubectl=…\`, hold, \`systemctl daemon-reload && systemctl restart kubelet\`, \`k uncordon\`. Repo apt của cka-w2 đã trỏ v1.37 (s42), nên \`apt-cache madison kubelet\` có sẵn \`1.37.2-1.1\`. Đo trên lab: khởi động lại kubelet **không** khởi động lại container nào (số RESTARTS của mười Pod trên cka-w2 không đổi trước và sau cả lần hạ lẫn lần nâng), và \`apt-get install\` tự khởi động lại kubelet (needrestart). Drain vẫn là bước của trang tài liệu (đề thi chấm cả bước đó); trên lab, drain cka-w2 làm \`postgres-0\` ngừng như ở s42.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Control plane hỏng — kiểm tra static pod manifest, crictl ps -a / crictl logs", href: "#/roadmap/cka/cka-w8-2" },
+      { label: "Bài lộ trình CKA: Node NotReady — systemctl status kubelet → journalctl", href: "#/roadmap/cka/cka-w8-1" },
+      { label: "Bài lộ trình CKA: etcd restore — snapshot restore rồi trỏ static pod sang data-dir mới", href: "#/roadmap/cka/cka-w3-2" },
+      { label: "Bài lộ trình CKA: Cluster upgrade với kubeadm — control plane trước, worker sau", href: "#/roadmap/cka/cka-w3-4" },
+      { label: "CKA Study Guide, chương 22 — Xử lý sự cố cluster", href: "#/docs/ckabook-22" },
+      { label: "kubernetes.io: Troubleshooting Clusters", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/" },
+      { label: "kubernetes.io: Debugging Kubernetes nodes with crictl", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/crictl/" },
+      { label: "kubernetes.io: Version Skew Policy", href: "https://kubernetes.io/releases/version-skew-policy/" },
+      { label: "kubernetes.io: Upgrading kubeadm clusters (Upgrade worker nodes)", href: "https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/" },
+      { label: "kubernetes.io: Volumes — hostPath (type: File, DirectoryOrCreate)", href: "https://kubernetes.io/docs/concepts/storage/volumes/#hostpath" },
+      { label: "etcd.io: Disaster recovery", href: "https://etcd.io/docs/v3.6/op-guide/recovery/" },
+    ],
+    stateIn: "Đầu ra s44 (cluster 1.37.2, etcd chạy từ /var/lib/etcd-restore, cert vừa gia hạn). Trên Mac chạy `./labs/lab begin cka s45`: kiểm đầu vào bằng check.sh riêng (cert và đáp án của s44, công cụ etcd, snapshot, dữ liệu trong /var/lib/etcd-restore: những gì sự cố không đụng), xoá answers.env cũ rồi **gây sự cố** (~20–40 giây; chạy lại `begin` giữa buổi thì trước hết đưa etcd về bản manifest tốt, rồi gây lại): \"sau nâng cấp và sau restore, một đồng nghiệp sửa thêm hai chỗ\". Bấm giờ 20 phút.",
+    stateOut: "Ba node v1.37.2 Ready, schedulable; gói kubeadm/kubelet/kubectl 1.37.2-1.1 hold trên cả ba node, repo apt v1.37; etcd chạy từ /var/lib/etcd-restore (manifest như trước sự cố), healthy, revision không lùi; dữ liệu như cuối s44 (before-snapshot có, after-snapshot không, order 2 Pod, release shop deployed); shop, Ingress, Gateway, cert-manager chạy; ~/drills/s45/answers.env (BROKEN_COMPONENTS). Mốc st8-done chụp ở đây.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s45`. Bấm giờ 20 phút. Trên cka-cp: `k get node`, `k version`. Lỗi gì, lỗi đó nói gì về thành phần nào? Trên Mac: `curl -s -o /dev/null -w '%{http_code}\\n' http://<IP cka-w1>:30180/api/products`: shop còn trả lời không, vì sao?",
+      },
+      {
+        id: "t2",
+        text: "Tầng kubelet của cka-cp: `systemctl status kubelet` (active?), `sudo journalctl -u kubelet --since -5min | grep -E 'etcd|apiserver' | tail` (tìm `CrashLoopBackOff`, `Failed deleting a mirror pod`). Tầng container: `sudo crictl ps -a` (container nào `Exited`, ATTEMPT bao nhiêu?), `sudo crictl logs <id kube-apiserver mới nhất> 2>&1 | tail -3`, `sudo crictl logs <id etcd mới nhất> 2>&1 | tail -2`. Thành phần nào hỏng thật, thành phần nào là nạn nhân?",
+      },
+      {
+        id: "t3",
+        text: "`sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key endpoint health` (lỗi gì, mất bao lâu?). Manifest: `sudo grep -nE -e '--data-dir|mountPath|path:|type:' /etc/kubernetes/manifests/etcd.yaml`, `sudo crictl inspect <id etcd> | grep -A1 hostPath`, `sudo diff ~/drills/s43/etcd.yaml.orig /etc/kubernetes/manifests/etcd.yaml` (bản gốc của s43, trước khi trỏ data-dir mới). `ls -la /opt/backup/etcd.db`, `sudo ls -la /var/lib/etcd-restore/member/snap/`: dữ liệu đúng đang ở đâu?",
+      },
+      {
+        id: "t4",
+        text: "Trước khi sửa, nói thành tiếng vì sao ba cách này sai: trỏ hostPath về `/var/lib/etcd`; đổi `type` thành `DirectoryOrCreate` và giữ đường dẫn tới snapshot; `etcdutl snapshot restore /opt/backup/etcd.db` vào một thư mục mới. Rồi sửa đúng hai dòng của volume `etcd-data` (`path: /var/lib/etcd-restore`, `type: DirectoryOrCreate`) bằng `sudo vim`. Chờ: `watch -n2 'sudo crictl ps -a | grep -E \"etcd|apiserver\"'`, `etcdctl … endpoint health`, `k get --raw /readyz`. Mất bao lâu từ lúc lưu tệp tới `ok`? apiserver lâu hơn etcd thì vì sao (đọc cột ATTEMPT và `journalctl -u kubelet | grep back-off`)?",
+      },
+      {
+        id: "t5",
+        text: "Dữ liệu: `k -n shop get cm before-snapshot -o jsonpath='{.metadata.uid} {.metadata.resourceVersion}{\"\\n\"}'` (so với lúc bạn đọc ở s43, s44 nếu có ghi), `k -n shop get cm after-snapshot` (phải NotFound), `k -n shop get deploy order`, `helm -n shop list`, `etcdctl … endpoint status -w table` (REVISION, DB SIZE). Rồi `k get node`: node nào lệch phiên bản? Nó Ready không, vì sao version skew cho phép?",
+      },
+      {
+        id: "t6",
+        text: "Trên cka-w2 (`ssh cka-w2`): `kubelet --version`, `dpkg -l | grep -E 'kube(adm|let|ctl)'`, `apt-mark showhold`, `apt-cache madison kubelet | head -3`, `grep -h pkgs.k8s.io /etc/apt/sources.list.d/*.list`. Theo trang \"Upgrading kubeadm clusters\" (phần worker): `k drain cka-w2 --ignore-daemonsets --delete-emptydir-data` trên cka-cp (hay bỏ qua drain và đo: `k get pod -o wide -A --field-selector spec.nodeName=cka-w2` trước và sau, cột RESTARTS), `sudo apt-mark unhold kubelet kubectl`, `sudo apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1`, `sudo apt-mark hold kubelet kubectl`, `sudo systemctl daemon-reload && sudo systemctl restart kubelet`, `k uncordon cka-w2`.",
+      },
+      {
+        id: "t7",
+        text: "Ghi `BROKEN_COMPONENTS=<các thành phần tự nó hỏng, cách nhau dấu phẩy>` vào `~/drills/s45/answers.env` (chỉ thủ phạm, không ghi nạn nhân). Kiểm lại toàn cảnh: `k get node` (ba node v1.37.2, không cordon), `sudo crictl ps | grep -E 'etcd|kube-'`, `k -n shop get pod`. Trên Mac: `./labs/lab verify cka s45` phải 5/5. Ghi thời gian bạn đã dùng.",
+      },
+    ],
+    hints: [
+      "`The connection to the server 192.168.252.35:6443 was refused` (đo): kubeconfig đúng, apiserver không nghe. Không phải lỗi kubeconfig (s34); xuống tầng kubelet và crictl trên cka-cp.",
+      "`sudo crictl ps` (không `-a`) không thấy etcd hay apiserver: chúng đang `Exited`. `crictl ps -a` mới hiện container đã dừng; lấy id mới nhất của từng cái rồi `crictl logs`.",
+      "`\"msg\":\"failed to list data directory\",\"dir\":\"/var/lib/etcd-restore\",\"error\":\"readdirent /var/lib/etcd-restore: not a directory\"` (đo, `crictl logs` của etcd): `--data-dir` đúng, nhưng thứ được mount vào đó không phải thư mục. `sudo crictl inspect <id> | grep -B1 -A1 hostPath` cho biết nó lấy từ đâu trên node.",
+      "`error creating storage factory: etcd grpc connection not ready: context deadline exceeded` (đo, log apiserver): apiserver chết vì không có etcd. Đừng sửa manifest của apiserver.",
+      "`is unhealthy: failed to commit proposal: context deadline exceeded` sau 5 giây (đo, `etcdctl endpoint health` lúc không có gì nghe ở 2379): với etcdctl, \"không ai trả lời\" trông giống \"cụm không có quorum\". `sudo ss -ltnp | grep 2379` để chắc.",
+      "Sửa xong mà etcd chưa có container mới sau nửa phút: kubelet đang cố xoá mirror pod cũ qua apiserver đã chết (`Failed deleting a mirror pod … TLS handshake timeout`, đo) và chờ hết timeout. Chờ thêm; đừng sửa tệp lần nữa.",
+      "etcd đã healthy mà `k` vẫn `connection refused` một lúc: kube-apiserver đang trong back-off của CrashLoopBackOff (kubelet chờ dài dần tới 5 phút giữa hai lần thử). Chờ, hoặc dời `kube-apiserver.yaml` ra khỏi `manifests/` rồi đưa lại để kubelet tạo container mới ngay.",
+      "Verify dòng gói đỏ `w2: hold [kubeadm kubectl ]` (đo): đã nâng kubelet mà quên `apt-mark hold kubelet`. Dòng node đỏ `w2 kubelet v1.36.6` mà `kubelet --version` đã 1.37: tiến trình cũ chưa khởi động lại (`sudo systemctl restart kubelet`).",
+      "Verify dòng etcd đỏ `revision etcd … < … lúc gây sự cố: dữ liệu đã lùi`: bạn đã restore lại snapshot thay vì sửa manifest. Cluster đã mất những gì ghi sau lần chụp ở s43; làm lại từ `./labs/lab restore cka s44`.",
+    ],
+    solution: `Quy trình dưới đây là cách tìm ra lỗi, không chỉ lệnh sửa. Output là của máy soạn bài (2026-11-20, Kubernetes 1.37.2, etcd 3.7.0, sau \`restore cka s44\` rồi \`begin cka s45\`); id container, giờ, revision của bạn sẽ khác. Mọi lệnh chạy trên cka-cp trừ khi ghi khác.
+
+**1. kubectl không dùng được, shop vẫn chạy**
+
+\`\`\`bash
+k get node
+# Get "https://192.168.252.35:6443/api/v1/nodes?limit=500": dial tcp 192.168.252.35:6443: connect: connection refused
+k version
+# Client Version: v1.37.2
+# Kustomize Version: v5.8.1
+# The connection to the server 192.168.252.35:6443 was refused - did you specify the right host or port?
+\`\`\`
+
+Từ Mac lúc đó: \`/api/products\` 200, \`/api/orders\` 200 (đo nhiều lần suốt sự cố).
+
+**2. kubelet và container**
+
+\`\`\`bash
+systemctl status kubelet | head -3
+# ● kubelet.service - kubelet: The Kubernetes Node Agent
+#      Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; preset: enabled)
+sudo journalctl -u kubelet --since -2min | grep etcd | grep -vE 'Failed to get status|reconciler|operation_generator' | tail -3
+# … "Error syncing pod, skipping" err="failed to \\"StartContainer\\" for \\"etcd\\" with CrashLoopBackOff: \\"back-off 1m20s restarting failed container=etcd pod=etcd-cka-cp_kube-system(…)\\""
+# … "Trying to delete pod" pod="kube-system/etcd-cka-cp" …
+# … "Failed deleting a mirror pod" err="Delete \\"https://192.168.252.35:6443/api/v1/namespaces/kube-system/pods/etcd-cka-cp\\": net/http: TLS handshake timeout"
+sudo crictl ps -a --name '^(etcd|kube-apiserver|kube-controller-manager|kube-scheduler)$'
+# CONTAINER       IMAGE           CREATED              STATE     NAME                      ATTEMPT   …
+# 9e24bc909ad53   a6d02e64d4827   22 seconds ago       Exited    kube-apiserver            4         …
+# 4450b9a08652a   c2e426bbd1cd6   22 seconds ago       Exited    etcd                      1         …
+# 097076bb3f83d   97b03ac504259   About a minute ago   Running   kube-scheduler            2         …
+# de4c1483ee015   9958587f99032   About a minute ago   Running   kube-controller-manager   2         …
+sudo crictl logs --tail 1 9e24bc909ad53 2>&1
+# E1120 03:14:23.173671  1 run.go:72] "command failed" err="error creating storage factory: etcd grpc connection not ready: context deadline exceeded"
+sudo crictl logs --tail 1 4450b9a08652a 2>&1
+# {"level":"fatal",…,"caller":"etcdmain/etcd.go:201","msg":"failed to list data directory","dir":"/var/lib/etcd-restore","error":"readdirent /var/lib/etcd-restore: not a directory",…}
+\`\`\`
+
+apiserver chết vì không nối được etcd; controller-manager và scheduler khởi động lại theo (mất lease) nhưng vẫn \`Running\`. Thủ phạm ở tầng control plane là **etcd**.
+
+**3. etcd: health, manifest, mount**
+
+\`\`\`bash
+E="--endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key"
+time sudo etcdctl $E endpoint health
+# https://127.0.0.1:2379 is unhealthy: failed to commit proposal: context deadline exceeded
+# Error: unhealthy cluster
+# real	0m5.102s
+sudo ss -ltnp | grep -E ':2379|:2380' || echo "không có gì nghe 2379/2380"
+# không có gì nghe 2379/2380
+sudo crictl inspect 4450b9a08652a | python3 -c 'import json,sys; [print(m["containerPath"], "<-", m["hostPath"]) for m in json.load(sys.stdin)["status"]["mounts"]]'
+# /var/lib/etcd-restore <- /opt/backup/etcd.db
+# /etc/kubernetes/pki/etcd <- /etc/kubernetes/pki/etcd
+sudo diff ~/drills/s43/etcd.yaml.orig /etc/kubernetes/manifests/etcd.yaml
+# 18c18
+# <     - --data-dir=/var/lib/etcd
+# ---
+# >     - --data-dir=/var/lib/etcd-restore
+# 75c75
+# <     - mountPath: /var/lib/etcd
+# ---
+# >     - mountPath: /var/lib/etcd-restore
+# 91,92c91,92
+# <       path: /var/lib/etcd
+# <       type: DirectoryOrCreate
+# ---
+# >       path: /opt/backup/etcd.db
+# >       type: File
+ls -la /opt/backup/etcd.db; sudo ls -ld /var/lib/etcd*
+# -rw------- 1 root root 39292960 Nov 20 09:58 /opt/backup/etcd.db
+# drwx------ 3 root root 4096 Nov 20 09:54 /var/lib/etcd
+# drwx------ 3 root root 4096 Nov 20 10:08 /var/lib/etcd-restore
+\`\`\`
+
+Ba chỗ của s43 thì hai chỗ vẫn đúng (\`--data-dir\`, \`mountPath\` là \`/var/lib/etcd-restore\`); volume \`etcd-data\` bị đổi sang tệp snapshot với \`type: File\`. Đúng là phải đổi cả \`type\`: với \`DirectoryOrCreate\` của kubeadm, kubelet từ chối vì đường dẫn là tệp; với một đường dẫn không tồn tại, nó **tạo thư mục rỗng** và etcd lên với cluster rỗng.
+
+**4. Sửa đúng hai dòng, chờ**
+
+\`\`\`bash
+sudo vim /etc/kubernetes/manifests/etcd.yaml     # volume etcd-data: path: /var/lib/etcd-restore, type: DirectoryOrCreate
+sudo grep -n -A1 'path: /var/lib/etcd-restore' /etc/kubernetes/manifests/etcd.yaml
+# 91:      path: /var/lib/etcd-restore
+# 92-      type: DirectoryOrCreate
+until sudo etcdctl $E endpoint health >/dev/null 2>&1; do sleep 2; done     # 16 giây sau khi lưu tệp
+until [ "$(k get --raw /readyz 2>/dev/null)" = ok ]; do sleep 2; done       # 39 giây sau khi lưu tệp
+k get node
+# NAME     STATUS   ROLES           AGE    VERSION
+# cka-cp   Ready    control-plane   6d9h   v1.37.2
+# cka-w1   Ready    <none>          6d9h   v1.37.2
+# cka-w2   Ready    <none>          6d9h   v1.36.6
+\`\`\`
+
+Lần trên là sửa sau ~1 phút hỏng. Ở lần sửa sau **8 phút** hỏng, etcd vẫn healthy sau 16 giây nhưng \`/readyz\` sau **310 giây**: kube-apiserver đã vào back-off \`5m0s\` (\`sudo journalctl -u kubelet | grep back-off\`: \`back-off 5m0s restarting failed container=kube-apiserver\`, đo) và kubelet chờ hết lượt đó. Không muốn chờ thì cho kubelet tạo Pod mới:
+
+\`\`\`bash
+sudo mv /etc/kubernetes/manifests/kube-apiserver.yaml /tmp/ && sleep 20 && sudo mv /tmp/kube-apiserver.yaml /etc/kubernetes/manifests/
+\`\`\`
+
+Sau lần hỏng dài, \`cert-manager-cainjector\` và \`nginx-gateway\` (cũng nói chuyện với apiserver) nằm \`CrashLoopBackOff\` thêm vài phút rồi tự lên; \`k -n <ns> delete pod <tên>\` nếu không muốn chờ.
+
+**5. Dữ liệu không đổi**
+
+\`\`\`bash
+k -n shop get cm before-snapshot -o jsonpath='{.metadata.uid} {.metadata.resourceVersion}{"\\n"}'
+# fb181282-88ef-45cd-b816-1b141bc1d123 52191      ← đúng uid và resourceVersion của trước sự cố
+k -n shop get cm after-snapshot
+# Error from server (NotFound): configmaps "after-snapshot" not found
+sudo etcdctl $E endpoint status -w json | python3 -c 'import json,sys; s=json.load(sys.stdin)[0]["Status"]; print(s["header"]["revision"], hex(s["header"]["member_id"]), hex(s["header"]["cluster_id"]))'
+# 1000053357 0x9c6d935895988819 0xe9b2005d5ce4abef  ← trước sự cố: 1000052833, cùng member ID, cùng cluster ID
+sudo etcdctl $E get '' --from-key --keys-only | grep -c .
+# 4624                                            ← trước sự cố 4569 (thêm Lease, Event trong lúc làm bài)
+helm -n shop list | tail -1
+# shop	shop	20	2026-11-20 04:02:12 …	deployed	shop-0.2.0	1.0
+\`\`\`
+
+**6. Worker còn kubelet cũ**
+
+\`\`\`bash
+ssh cka-w2
+kubelet --version
+# Kubernetes v1.36.6
+dpkg-query -W kubeadm kubelet kubectl
+# kubeadm	1.37.2-1.1
+# kubectl	1.37.2-1.1
+# kubelet	1.36.6-1.1
+apt-mark showhold
+# kubeadm
+# kubectl
+# kubelet                                       ← hold ở 1.36: apt sẽ không tự nâng
+apt-cache madison kubelet | head -2
+#    kubelet | 1.37.2-1.1 | https://pkgs.k8s.io/core:/stable:/v1.37/deb  Packages
+#    kubelet | 1.37.1-1.1 | https://pkgs.k8s.io/core:/stable:/v1.37/deb  Packages
+sudo apt-mark unhold kubelet kubectl
+sudo apt-get install -y kubelet=1.37.2-1.1 kubectl=1.37.2-1.1    # 15 giây; needrestart tự khởi động lại kubelet
+sudo apt-mark hold kubelet kubectl
+sudo systemctl daemon-reload && sudo systemctl restart kubelet
+kubelet --version
+# Kubernetes v1.37.2
+exit
+k get node cka-w2
+# cka-w2   Ready    <none>   6d9h   v1.37.2
+\`\`\`
+
+Không drain (đo): RESTARTS của mười Pod trên cka-w2 (calico-node, kube-proxy, catalog, gateway, order, log-agent, postgres-0, …) giống hệt trước lần hạ và sau lần nâng; chỉ Pod của CronJob \`order-report\` đổi tên theo lịch. Lần làm tay đầu tiên quên \`apt-mark hold kubelet\`: verify đỏ \`w2: hold [kubeadm kubectl ]\` (4/5 tới khi hold).
+
+**7. Đáp án**
+
+\`\`\`bash
+echo "BROKEN_COMPONENTS=etcd,kubelet" > ~/drills/s45/answers.env
+\`\`\`
+
+Ghi thêm \`kube-apiserver\` (nạn nhân): đỏ \`BROKEN_COMPONENTS=etcd,kubelet,kube-apiserver chưa đúng\` (đo). Thứ tự và tên node đi kèm không quan trọng (\`kubelet@cka-w2, etcd\`: xanh, đo).
+
+**Lời giải tự động** (\`labs/cka/sessions/s45/apply.sh\`): gây sự cố như \`begin\` (\`setup.sh\` → \`lab_break st8-ops\`), rồi \`files/solve-cp.sh\` trên cka-cp đi đúng bước 1–4 (in \`crictl ps -a\`, log, manifest), sửa hai dòng như trên, so với bản manifest tốt mà sự cố lưu trước khi gây lỗi và cài đúng bản đó nếu khác (theo nội dung), chờ etcd chạy từ \`/var/lib/etcd-restore\` (17 giây) và \`/readyz\` (36 giây; quá 60 giây thì dời manifest apiserver ra rồi vào); rồi \`s42/files/node.sh\` \`STEP=kubelet\` trên cka-w2 (unhold, \`apt-get install kubelet=1.37.2-1.1 kubectl=1.37.2-1.1\`, hold, restart) và \`answers.env\`. Đo: 76 giây lần đầu, 84 giây lần hai, cả hai rồi verify 5/5 (lần hai etcd healthy 3 giây và \`/readyz\` 13 giây sau khi sửa). Sự cố ở \`labs/cka/breaks/st8-ops/\`: nó không bao giờ cho etcd lên trên thư mục rỗng hay cũ, và \`begin\` lại giữa buổi thì đưa etcd về bản tốt trước rồi mới gây lại.`,
+    exam: {
+      patterns: [
+        "\"kubectl trên control plane không kết nối được, sửa cluster\" — `systemctl status kubelet`, `sudo crictl ps -a`, `sudo crictl logs <id>` của etcd và kube-apiserver, `/etc/kubernetes/manifests/*.yaml`; sửa đúng chỗ manifest, chờ kubelet tạo lại container.",
+        "\"Node X báo phiên bản khác các node còn lại, đưa về cùng phiên bản\" — `k get node`, ssh vào node, `kubelet --version`, `apt-mark unhold`, `apt-get install kubelet=<bản>`, `apt-mark hold`, `systemctl daemon-reload && systemctl restart kubelet`; drain/uncordon nếu đề đòi.",
+        "\"Ghi phiên bản của kube-apiserver / kubelet trên node Y vào /opt/xxx\" — `k version` (Server Version), `k get node Y -o jsonpath='{.status.nodeInfo.kubeletVersion}'`.",
+        "\"etcd sau restore không lên\" — `crictl logs` của etcd, so `--data-dir`, `volumeMounts`, `volumes` trong `etcd.yaml`; đừng trỏ về thư mục cũ hay thư mục rỗng.",
+      ],
+      timeTargetMin: 10,
+      drills: [
+        {
+          text: "Trong 3 phút, không dùng kubectl: trên control plane, tìm thành phần static pod nào đang crash và in dòng log cuối của nó.",
+          timeLimitMin: 3,
+          solution: "```bash\nsudo crictl ps -a | grep -v Running          # container đã dừng, cột ATTEMPT\nsudo crictl ps -a --name etcd -q | head -1   # id mới nhất\nsudo crictl logs --tail 1 $(sudo crictl ps -a --name etcd -q | head -1)\nsudo journalctl -u kubelet --since -5min | grep -i back-off | tail -2\n```",
+        },
+        {
+          text: "Trong 2 phút: kubelet của node01 là 1.36, control plane 1.37. Node có Ready không? Lệch thế nào thì không được?",
+          timeLimitMin: 2,
+          solution: "Ready: kubelet được cũ hơn kube-apiserver tối đa 3 minor (1.37 → 1.34–1.37) và không được mới hơn. kube-proxy theo kubelet; kubectl lệch ±1 minor. Lệch không được: kubelet 1.38 với apiserver 1.37, hay kubelet 1.33 với 1.37. Kiểm bằng `k get node` (VERSION) và `ssh node01 kubelet --version`.",
+        },
+      ],
+    },
+    tips: [
+      "Khi `k` chết, lệnh đầu tiên là `sudo crictl ps -a` trên control plane, không phải sửa kubeconfig: `connection refused` là apiserver không nghe, không phải bạn gõ sai địa chỉ.",
+      "Đọc log từ thành phần thấp nhất (etcd) lên; container chết vì phụ thuộc chết thì đừng sửa nó.",
+      "Trước khi sửa manifest etcd, `sudo cp /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml.bak` (ngoài thư mục manifests); và trước khi trỏ etcd sang thư mục nào, `sudo ls <thư mục>/member/snap/` để chắc nó có dữ liệu.",
+      "Sau khi nâng hay sửa kubelet, `apt-mark showhold` và `k get node`: gói nâng mà không hold, hay binary nâng mà tiến trình chưa khởi động lại, đều là việc dở.",
+    ],
+    outcome: {
+      md: `Hai thành phần hỏng đều về đúng chỗ, dữ liệu của cluster như lúc trước sự cố, và shop phục vụ suốt buổi. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s45
+\`\`\`
+
+Năm dòng. **Gói:** trên từng node (\`s42/files/node-facts.sh\`) kubeadm, kubelet, kubectl \`1.37.x\` và đều \`hold\`, repo \`pkgs.k8s.io\` trỏ v1.37, \`kubelet --version\` 1.37, kubelet \`active\` (nâng mà quên hold: đỏ \`w2: hold [kubeadm kubectl ]\`, đo). **Node:** ba node Ready, không cordon, \`kubeletVersion\` \`v1.37.x\` (binary đã nâng mà tiến trình cũ còn chạy: đỏ). **etcd:** dòng etcd của verify s43 (manifest trỏ \`/var/lib/etcd-restore\` ở \`--data-dir\`, volumeMount và hostPath, đúng một manifest etcd, container đang chạy mount đúng thư mục đó, db có dữ liệu, \`endpoint health\`, apiserver \`/readyz\`), cộng revision etcd không nhỏ hơn revision \`begin\` ghi lúc gây sự cố (restore lại snapshot: đỏ \`dữ liệu đã lùi\`). **Dữ liệu:** dòng trạng thái của verify s43 (\`before-snapshot\` có, \`after-snapshot\` NotFound, Pod \`order\` Ready đủ replica, release \`shop\` \`deployed\`, ba node Ready) và từ chính máy Mac \`:30180/api/products\` (3 sản phẩm) và \`/api/orders\` trả 200. **answers.env:** \`BROKEN_COMPONENTS\` đúng hai thành phần \`etcd\`, \`kubelet\` (thứ tự bất kỳ, có thể kèm tên node; thêm \`kube-apiserver\`: đỏ, đo). Verify không treo khi etcd hỏng: nó hỏi etcd trước (tối đa 45 giây, hay tới phút thứ 5 sau khi cka-cp bật), etcd không phục vụ thì ba dòng cần apiserver đỏ ngay với lý do đọc từ \`crictl\`. Ngay sau \`begin\`: **0/5** trong 53–59 giây (đo, ba lần).`,
+      verifyOutput: "lab: kiểm s45\n  (chờ etcd tối đa 45 giây; nếu etcd phục vụ: chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~18 phút)\n  ✓ Ba node: kubeadm, kubelet, kubectl 1.37.x và hold; repo pkgs.k8s.io v1.37; kubelet đang chạy bản 1.37\n  ✓ Ba node Ready, schedulable, kubelet báo v1.37.x (k get node)\n  ✓ etcd chạy từ /var/lib/etcd-restore (--data-dir, volumeMount, hostPath, container đang chạy), healthy; revision không lùi; apiserver /readyz\n  ✓ Dữ liệu như cuối s44: before-snapshot có, after-snapshot không, order chạy, release shop deployed; Mac :30180 /api/products, /api/orders 200\n  ✓ answers.env: BROKEN_COMPONENTS là hai thành phần bị phá\n  → 5/5 đạt",
+      projectDelta: "Cluster như cuối s44, không thiếu một đối tượng nào: ba node cùng 1.37.2, etcd chạy từ dữ liệu đã khôi phục ở s43, shop chạy suốt sự cố. Thứ mới là quy trình khi kubectl không dùng được (kubelet → crictl → manifest → log) và thói quen đọc phiên bản ở bốn chỗ. Mốc st8-done (cuối chặng 8) chụp ở đây.",
+    },
+    review: [
+      { q: "`k get node` báo `connection refused`, `crictl ps -a` thấy cả etcd lẫn kube-apiserver `Exited`. Sửa cái nào trước, làm sao biết?", a: "etcd. Đọc `crictl logs` của từng cái: apiserver báo `error creating storage factory: etcd grpc connection not ready` (nó chết vì etcd), etcd báo lý do của chính nó (`failed to list data directory … not a directory`). Theo chuỗi phụ thuộc etcd ← apiserver ← controller-manager/scheduler ← kubectl, sửa thành phần thấp nhất tự nó hỏng; apiserver tự lên lại khi etcd lên (đo: 39 giây sau khi sửa)." },
+      { q: "Vì sao trỏ hostPath của etcd về `/var/lib/etcd` để \"cho nó lên đã\" là sai, dù etcd sẽ lên và healthy?", a: "`/var/lib/etcd` là dữ liệu của lúc ngay trước restore ở s43: có `after-snapshot`, không có `order`, thiếu mọi thứ ghi sau đó. etcd không biết dữ liệu của mình cũ; apiserver sẽ phục vụ trạng thái cũ, controller sẽ \"sửa\" cluster theo nó (xoá Pod order đang chạy, tạo lại thứ đã xoá). Thư mục rỗng còn tệ hơn: cluster mới tinh, admin bị Forbidden (s43). Dữ liệu đúng đang ở `/var/lib/etcd-restore`." },
+      { q: "Sửa manifest xong, etcd healthy sau 16 giây mà apiserver còn `connection refused` thêm một lúc. Vì sao, và làm gì nếu không muốn chờ?", a: "kubelet đã đưa container apiserver vào CrashLoopBackOff trong lúc etcd chết: mỗi lần thử lỗi, nó chờ lâu gấp đôi (10 giây, 20, 40, … tối đa 5 phút) trước lần sau. Chờ hết back-off, hoặc dời `kube-apiserver.yaml` ra khỏi `/etc/kubernetes/manifests` rồi đưa lại: kubelet tạo Pod mới, không còn back-off." },
+      { q: "kubelet của cka-w2 là 1.36.6 dưới apiserver 1.37.2. Node có Ready không? Vì sao vẫn phải sửa?", a: "Ready: version skew cho kubelet cũ hơn apiserver tới 3 minor (đo: Pod chạy bình thường, `k get node` chỉ khác cột VERSION). Phải sửa vì cluster lệch minor là nâng cấp chưa xong: lần nâng 1.38 sau thì node này lệch hai minor, và gói đang hold ở 1.36 nên apt không tự nâng. Tiêu chí là ba node cùng minor, gói hold ở 1.37." },
+      { q: "Nâng kubelet của worker có làm Pod trên node đó khởi động lại không? Vậy drain để làm gì?", a: "Không (đo: RESTARTS của mười Pod trên cka-w2 không đổi qua cả lần hạ lẫn lần nâng): container do containerd giữ, kubelet khởi động lại chỉ nhận lại chúng. Drain là bước của quy trình chính thức vì một lần nâng có thể đổi cấu hình kubelet, runtime hay phải reboot node; đề thi chấm theo quy trình đó. Trên lab, drain cka-w2 làm postgres-0 ngừng (PV local-path, s24, s42)." },
+    ],
   },
 ];

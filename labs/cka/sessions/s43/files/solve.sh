@@ -1,6 +1,6 @@
 # s43 — lời giải trên cka-cp (user ubuntu, sudo), gọi bởi apply.sh. Không bao giờ xoá thư mục dữ liệu etcd nào: /var/lib/etcd
 # (data-dir cũ) giữ nguyên; /var/lib/etcd-restore cũ mà etcd không dùng thì đổi tên thành /var/lib/etcd-restore.old-<giờ>.
-# Không bao giờ trỏ etcd sang một thư mục chưa có dữ liệu (member/snap/db). Ba trường hợp, theo manifest etcd lúc bắt đầu:
+# Không bao giờ trỏ etcd sang một thư mục chưa có dữ liệu của cluster (db có key /registry/namespaces/shop, xem has_data). Ba trường hợp, theo manifest etcd lúc bắt đầu:
 #   A. đã trỏ /var/lib/etcd-restore ở cả --data-dir, mountPath, hostPath, có dữ liệu, shop đúng dấu hiệu (before-snapshot có,
 #      after-snapshot không, order Available): bỏ qua, chỉ chụp lại snapshot nếu /opt/backup/etcd.db mất, ghi answers.env.
 #   B. trỏ /var/lib/etcd-restore ở một hay hai chỗ (tình huống hỏng của buổi: sửa --data-dir mà quên hostPath) và thư mục đó có
