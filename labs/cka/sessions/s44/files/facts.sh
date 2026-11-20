@@ -163,7 +163,7 @@ else:
     if not init: bad.append("chưa có kubeadm init")
     elif not any("--control-plane-endpoint" in l and "--upload-certs" in l for l in init): bad.append("init thiếu --control-plane-endpoint/--upload-certs")
     if not join: bad.append("chưa có kubeadm join")
-    elif not any(re.search(r"--control-plane(\s|$)", l) and "--certificate-key" in l for l in join): bad.append("join thiếu --control-plane/--certificate-key")
+    elif not any(re.search(r"--control-plane(=true)?(\s|$)", l) and "--certificate-key" in l for l in join): bad.append("join thiếu --control-plane/--certificate-key")
 say("HA", bad)
 
 # 5. ANS: QUORUM_5 = số member phải còn sống để cụm etcd 5 member có quorum (⌊5/2⌋ + 1 = 3).

@@ -4,7 +4,8 @@
 #   A. đã trỏ /var/lib/etcd-restore ở cả --data-dir, mountPath, hostPath, có dữ liệu, shop đúng dấu hiệu (before-snapshot có,
 #      after-snapshot không, order Available): bỏ qua, chỉ chụp lại snapshot nếu /opt/backup/etcd.db mất, ghi answers.env.
 #   B. trỏ /var/lib/etcd-restore ở một hay hai chỗ (tình huống hỏng của buổi: sửa --data-dir mà quên hostPath) và thư mục đó có
-#      dữ liệu: sửa nốt cho đủ ba chỗ, chờ etcd và apiserver, rồi đòi dấu hiệu như A.
+#      dữ liệu thật (key /registry/namespaces/shop): sửa nốt cho đủ ba chỗ, chờ etcd mới, khởi động lại apiserver, controller-manager,
+#      scheduler, rồi đòi dấu hiệu như A.
 #   C. còn nguyên /var/lib/etcd: cả luồng của buổi (before-snapshot → snapshot → after-snapshot → xoá order → dừng apiserver,
 #      controller-manager, scheduler → restore → sửa manifest → bật lại).
 # Còn lại (manifest lạ, dấu hiệu sai sau restore): dừng, gợi ý `./labs/lab restore cka s42`.
@@ -86,8 +87,29 @@ snapshot_save() {
   etcdctl_ snapshot save $SNAP
   sudo etcdutl snapshot status $SNAP -w table
 }
+has_data() { # $NEW có dữ liệu thật của cluster này (key /registry/namespaces/shop trong db), không chỉ là một db rỗng mà etcd tự
+  # tạo khi hostPath DirectoryOrCreate trỏ vào thư mục chưa restore (review M2)
+  sudo grep -qaF /registry/namespaces/shop $NEW/member/snap/db 2>/dev/null
+}
+drop_ghost_pods() { # Pod order ghi tên lúc chụp: sau restore chúng có lại trong API với status cũ (Ready) mà container đã bị xoá;
+  # ReplicaSet tính chúng là còn sống nên không tạo Pod mới (đo). Xoá ngay sau /readyz, TRƯỚC mọi vòng chờ order (review I1).
+  local p
+  for p in $(cat ~/drills/s43/order-pods-at-snapshot 2>/dev/null); do
+    k -n shop get "$p" >/dev/null 2>&1 || continue
+    k -n shop delete "$p" --ignore-not-found --wait=false
+  done
+}
+restart_cp() { # khởi động lại kube-apiserver, controller-manager, scheduler sau khi đổi dữ liệu etcd dưới chân chúng (kubernetes.io)
+  local f end
+  sudo mkdir -p $OFF
+  for f in kube-apiserver kube-controller-manager kube-scheduler; do sudo mv $MAN/$f.yaml $OFF/; done
+  end=$(($(date +%s) + 120))
+  until [ -z "$(sudo crictl ps -q --name 'kube-apiserver|kube-controller-manager|kube-scheduler')" ]; do
+    [ $(date +%s) -lt $end ] || break; sleep 2; done
+  for f in kube-apiserver kube-controller-manager kube-scheduler; do sudo mv $OFF/$f.yaml $MAN/; done
+}
 point_to_new() { # sửa đủ ba chỗ trong manifest etcd sang $NEW (giữ bản gốc ở ~/drills/s43/etcd.yaml.orig, ngoài $MAN)
-  sudo test -s $NEW/member/snap/db || die "$NEW chưa có dữ liệu (member/snap/db): không trỏ etcd sang đó"
+  has_data || die "$NEW chưa có dữ liệu của cluster (không thấy /registry/namespaces/shop): không trỏ etcd sang đó"
   [ -f ~/drills/s43/etcd.yaml.orig ] || sudo cat $MAN/etcd.yaml > ~/drills/s43/etcd.yaml.orig
   # Sửa đúng ba dòng, giữ nguyên định dạng của kubeadm: --data-dir; mountPath ngay trên "name: etcd-data" của volumeMounts;
   # path trong khối hostPath ngay trên "name: etcd-data" của volumes.
@@ -107,12 +129,13 @@ sys.stdout.write("\n".join(L))' "$NEW" > /tmp/s43-etcd.yaml
   log "manifest etcd: $(manifest_state)"
 }
 
-st=$(manifest_state)
+st=$(manifest_state 2>/dev/null) || st="(không đọc được)"
 log "manifest etcd lúc bắt đầu (--data-dir mountPath hostPath): $st"
 case "$st" in
   "$NEW $NEW $NEW")
     wait_etcd 180 || die "etcd chưa healthy sau 3 phút"
     wait_readyz 240 || die "apiserver chưa sẵn sàng sau 4 phút"
+    drop_ghost_pods
     markers_ok || die "etcd đã chạy từ $NEW nhưng shop chưa đúng dấu hiệu (before-snapshot, after-snapshot, order). Làm lại: ./labs/lab restore cka s42"
     log "etcd đã chạy từ $NEW, before-snapshot có, after-snapshot không, order Available: bỏ qua phần restore"
     sudo etcdutl snapshot status $SNAP -w table >/dev/null 2>&1 || { log "chưa có $SNAP hợp lệ: chụp lại"; snapshot_save; } ;;
@@ -120,7 +143,10 @@ case "$st" in
     log "manifest mới trỏ $NEW ở một phần (tình huống hỏng): sửa đủ ba chỗ"
     point_to_new
     wait_new_etcd 180 || die "etcd chưa chạy từ $NEW sau 3 phút"
+    log "khởi động lại kube-apiserver, kube-controller-manager, kube-scheduler (dữ liệu etcd vừa đổi dưới chân chúng)"
+    restart_cp
     wait_readyz 240 || die "apiserver chưa sẵn sàng sau 4 phút"
+    drop_ghost_pods
     markers_ok || die "etcd chạy từ $NEW nhưng shop chưa đúng dấu hiệu. Làm lại: ./labs/lab restore cka s42"
     sudo etcdutl snapshot status $SNAP -w table >/dev/null 2>&1 || snapshot_save ;;
   "$OLD $OLD $OLD")
@@ -157,21 +183,14 @@ case "$st" in
     log "6. bật lại kube-apiserver, kube-controller-manager, kube-scheduler"
     for f in kube-apiserver kube-controller-manager kube-scheduler; do sudo mv $OFF/$f.yaml $MAN/; done
     wait_readyz 240 || die "apiserver chưa sẵn sàng sau 4 phút"
+    drop_ghost_pods
     markers_ok || die "sau restore shop chưa đúng dấu hiệu"
     ;;
   *) die "manifest etcd lạ ($st). Làm lại: ./labs/lab restore cka s42" ;;
 esac
-# Pod của order có trong snapshot nhưng container đã bị xoá: kubelet không dọn được sandbox của chúng lúc apiserver tắt (Calico
-# CNI gọi apiserver), chúng chuyển sang STATUS Error vài phút sau, bên cạnh hai Pod mới mà ReplicaSet tạo (đo). Xoá đúng các Pod
-# có tên ghi lúc chụp (không đụng Pod nào khác); Pod đã Failed thì xoá thêm theo phase. Chạy lại được.
-# Ngay sau restore, status của các Pod này là status lúc chụp (Ready), nên không chọn theo Ready: xoá cả hai rồi chờ Pod mới thật
-# sự chạy (wait_order bỏ qua tên cũ). Đo: Pod cũ Terminating vài phút vì CNI không dọn được sandbox, ReplicaSet chỉ tạo Pod mới
-# khi Pod cũ biến mất, và kubelet nhận Pod mới chậm ~1 phút (watch phải list lại sau --bump-revision).
-for p in $(cat ~/drills/s43/order-pods-at-snapshot 2>/dev/null); do
-  k -n shop get "$p" >/dev/null 2>&1 || continue
-  k -n shop delete "$p" --ignore-not-found --wait=false
-done
-wait_order || die "order chưa chạy (Pod mới Ready, /api/orders 200) sau 7 phút"
+# Pod order ghi tên lúc chụp đã bị xoá ở trên (drop_ghost_pods, trước vòng chờ). Đo: chúng Terminating vài phút vì Calico CNI không
+# dọn được sandbox khi apiserver tắt; ReplicaSet chỉ tạo Pod mới khi chúng biến mất; kubelet nhận Pod mới chậm ~1 phút (watch
+# list lại sau --bump-revision). Pod Failed còn sót thì xoá theo phase.
 k -n shop delete pod -l app=order --field-selector=status.phase=Failed --ignore-not-found
 echo "LOST_OBJECT=configmap/after-snapshot" > ~/drills/s43/answers.env
 cat ~/drills/s43/answers.env

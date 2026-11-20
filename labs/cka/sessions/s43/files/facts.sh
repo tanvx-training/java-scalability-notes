@@ -28,7 +28,7 @@ def ready(o):
     return any(c.get("type") == "Ready" and c.get("status") == "True" for c in (o.get("status") or {}).get("conditions") or [])
 
 # 1. SNAP: snapshot hợp lệ (etcdutl đọc được, có key), chụp đúng lúc: sau before-snapshot, trước after-snapshot và trước khi xoá
-# order. Key của etcd nằm nguyên văn trong tệp bbolt (giá trị là protobuf KeyValue chứa cả key), nên tìm chuỗi byte là đủ.
+# order, xét theo key còn sống ở revision cuối của snapshot.
 bad = []
 rc, out, err = run("sudo", "etcdutl", "snapshot", "status", SNAP, "-w", "json")
 st = None
@@ -37,11 +37,100 @@ except Exception: pass
 if rc != 0 and "no such file" in (err + out).lower(): bad.append(f"chưa có {SNAP}")
 elif st is None: bad.append("etcdutl snapshot status lỗi: " + ((err or out).strip().splitlines() or [""])[-1][:40])
 elif not st.get("totalKey"): bad.append("snapshot không có key")
+# Key còn sống trong snapshot ở revision cuối (review M1): tìm chuỗi byte trong tệp không đủ, vì lịch sử MVCC và tombstone vẫn
+# chứa key đã xoá (snapshot chụp lại sau khi xoá after-snapshot thì đỏ oan; chụp sau khi xoá order thì xanh oan). Restore snapshot
+# vào một thư mục tạm (mktemp, không phải data-dir nào đang chạy; kiểm luôn hash của snapshot), đọc bucket "key" của db bằng
+# live_keys (không khởi động etcd nào), rồi xoá thư mục tạm.
+def live_keys(db):
+    """Key etcd còn sống ở revision mới nhất trong một tệp bbolt (bytes) của etcd 3.x: đọc bucket "key" (B+tree: key = revision
+    8 byte main + '_' + 8 byte sub, thêm 't' nếu là tombstone; value = protobuf mvccpb.KeyValue, trường 1 là key), lấy bản ghi
+    revision lớn nhất của từng key, bỏ key mà bản ghi cuối là tombstone. Không khởi động gì, chỉ đọc bytes."""
+    import struct
+    def meta(off):
+        magic, ver, psz, flags, root, seq, freelist, pgid, txid = struct.unpack_from("<IIIIQQQQQ", db, off + 16)
+        return (txid, psz, root) if magic == 0xED0CDAED else None
+    m0 = meta(0)
+    psz0 = m0[1] if m0 else 4096
+    ms = [x for x in (m0, meta(psz0)) if x]
+    txid, psz, root = max(ms)
+    def page(pgid):
+        return pgid * psz
+    def walk(off, out):  # duyệt một trang (đã biết offset); gom (key, value, flags) của các phần tử lá
+        pid, flags, count, overflow = struct.unpack_from("<QHHI", db, off)
+        base = off + 16
+        if flags & 0x01:  # branch
+            for i in range(count):
+                e = base + 16 * i
+                pos, ksz, child = struct.unpack_from("<IIQ", db, e)
+                walk(page(child), out)
+        elif flags & 0x02:  # leaf
+            for i in range(count):
+                e = base + 16 * i
+                fl, pos, ksz, vsz = struct.unpack_from("<IIII", db, e)
+                k = db[e + pos:e + pos + ksz]; v = db[e + pos + ksz:e + pos + ksz + vsz]
+                out.append((k, v, fl, e + pos + ksz))
+        return out
+    def bucket(name):
+        for k, v, fl, voff in walk(page(root), []):
+            if k == name and fl & 0x01:
+                broot, _ = struct.unpack_from("<QQ", v, 0)
+                if broot == 0:  # bucket nội tuyến: trang nằm ngay sau header 16 byte
+                    return walk(voff + 16, [])
+                return walk(page(broot), [])
+        return []
+    def pb_key(v):  # trường 1 (bytes) của KeyValue
+        i = 0
+        while i < len(v):
+            tag = v[i]; i += 1
+            if tag == 0x0a:
+                n = 0; s = 0
+                while True:
+                    b = v[i]; i += 1; n |= (b & 0x7f) << s; s += 7
+                    if b < 0x80: break
+                return bytes(v[i:i + n])
+            wt = tag & 7
+            if wt == 0:
+                while v[i] & 0x80: i += 1
+                i += 1
+            elif wt == 2:
+                n = 0; s = 0
+                while True:
+                    b = v[i]; i += 1; n |= (b & 0x7f) << s; s += 7
+                    if b < 0x80: break
+                i += n
+            else:
+                return None
+        return None
+    last = {}
+    for k, v, fl, _ in bucket(b"key"):
+        if len(k) < 17: continue
+        rev = (struct.unpack(">Q", k[:8])[0], struct.unpack(">Q", k[9:17])[0])
+        key = pb_key(v)
+        if key is None: continue
+        tomb = len(k) == 18 and k[17:18] == b"t"
+        if key not in last or rev > last[key][0]: last[key] = (rev, tomb)
+    return {k for k, (r, t) in last.items() if not t}
+
 if st is not None:
-    has = lambda k: run("sudo", "grep", "-qaF", k, SNAP)[0] == 0
-    if not has("/registry/configmaps/shop/before-snapshot"): bad.append("snapshot thiếu before-snapshot")
-    if has("/registry/configmaps/shop/after-snapshot"): bad.append("snapshot có after-snapshot")
-    if not has("/registry/deployments/shop/order"): bad.append("snapshot thiếu Deployment order")
+    rc, tmp, _ = run("mktemp", "-d", "/tmp/s43-verify.XXXXXX")
+    tmp = tmp.strip()
+    keys = None
+    if rc == 0 and tmp.startswith("/tmp/s43-verify."):
+        rc, out, err = run("sudo", "etcdutl", "snapshot", "restore", SNAP, "--data-dir", f"{tmp}/r", timeout=120)
+        if rc != 0: bad.append("etcdutl snapshot restore (thử) lỗi: " + ((err or out).strip().splitlines() or [""])[-1][:40])
+        else:
+            try:
+                p = subprocess.run(["sudo", "cat", f"{tmp}/r/member/snap/db"], capture_output=True, timeout=60)
+                keys = live_keys(p.stdout) if p.returncode == 0 else None
+            except Exception: keys = None
+            if keys is None: bad.append("không đọc được key trong snapshot")
+        run("sudo", "rm", "-rf", "--one-file-system", tmp)
+    else: bad.append("không tạo được thư mục tạm")
+    if keys is not None:
+        if b"/registry/configmaps/shop/before-snapshot" not in keys: bad.append("snapshot thiếu before-snapshot")
+        if b"/registry/configmaps/shop/after-snapshot" in keys: bad.append("snapshot có after-snapshot")
+        if b"/registry/deployments/shop/order" not in keys: bad.append("snapshot thiếu Deployment order")
+        print(f"SNAPLIVE={len(keys)}")
 say("SNAP", bad)
 if st: print(f"SNAPREV={st.get('revision')} SNAPKEYS={st.get('totalKey')}")
 
@@ -101,7 +190,8 @@ rc, out, err = run("kubectl", "--request-timeout=10s", "-n", "shop", "get", "cm"
 if rc == 0: bad.append("còn after-snapshot")
 elif "NotFound" not in err: bad.append("không đọc được after-snapshot")
 # order: đếm Pod Ready không đang xoá, không tin status của Deployment (sau restore nó là status lúc chụp: đo "2/2 available"
-# khi chưa Pod order nào chạy). verify.sh còn gọi /api/orders từ Mac.
+# khi chưa Pod order nào chạy). Số đếm này KHÔNG bắt được Pod "bóng ma" của snapshot (chúng mang status Ready cũ, review M7):
+# bằng chứng order chạy thật là /api/orders gọi từ Mac trong verify.sh (gateway → order → PostgreSQL).
 d = kj("-n", "shop", "get", "deploy", "order")
 if d is None: bad.append("không có Deployment order")
 else:
