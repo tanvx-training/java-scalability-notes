@@ -73,10 +73,11 @@ else:
         if not t: continue
         m = re.fullmatch(r"(?:cka-(cp|w1|w2)[/:@])?([a-z-]+?)(?:[/:@(]cka-(cp|w1|w2)\)?)?", t)
         if not m: got.add(t); continue
-        node = m.group(1) or m.group(3); name = m.group(2)
+        name = m.group(2)
         got.add(name)
-        # Tên node đi kèm phải đúng chỗ hỏng: etcd ở cka-cp, kubelet ở cka-w2.
-        if node and {"etcd": "cp", "kubelet": "w2"}.get(name, node) != node: wrong.append(f"{name}@cka-{node}")
+        # Tên node đi kèm (trước, sau, hay cả hai) phải đúng chỗ hỏng: etcd ở cka-cp, kubelet ở cka-w2.
+        for node in dict.fromkeys(g for g in (m.group(1), m.group(3)) if g):
+            if {"etcd": "cp", "kubelet": "w2"}.get(name, node) != node: wrong.append(f"{name}@cka-{node}")
     if got != {"etcd", "kubelet"}: bad.append(f"BROKEN_COMPONENTS={ans['BROKEN_COMPONENTS']} chưa đúng")
     elif wrong: bad.append("sai node: " + ", ".join(wrong))
 say("ANS", bad)
