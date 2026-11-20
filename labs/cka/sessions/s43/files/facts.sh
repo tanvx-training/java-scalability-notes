@@ -30,7 +30,9 @@ def ready(o):
 # 1. SNAP: snapshot hợp lệ (etcdutl đọc được, có key), chụp đúng lúc: sau before-snapshot, trước after-snapshot và trước khi xoá
 # order, xét theo key còn sống ở revision cuối của snapshot.
 bad = []
-rc, out, err = run("sudo", "etcdutl", "snapshot", "status", SNAP, "-w", "json")
+rc, out, err = run("sudo", "test", "-e", SNAP)
+if rc != 0: out, err = "", "no such file"
+else: rc, out, err = run("sudo", "etcdutl", "snapshot", "status", SNAP, "-w", "json")
 st = None
 try: st = json.loads(out) if rc == 0 else None
 except Exception: pass
