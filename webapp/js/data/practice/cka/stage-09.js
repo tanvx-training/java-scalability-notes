@@ -1,5 +1,5 @@
 // Chặng 9 — Troubleshooting tổng hợp (lỗi ẩn do ./labs/lab break, có bấm giờ).
-// s46–s47 đã phát hành (đợt 5); các buổi còn lại là khung: đủ trường cấu trúc (check-data PR7), nội dung đầy đủ ở các task sau.
+// s46–s49 đã phát hành (đợt 5); các buổi còn lại là khung: đủ trường cấu trúc (check-data PR7), nội dung đầy đủ ở các task sau.
 
 export const sessions = [
   {
@@ -545,12 +545,12 @@ Bảy dòng, so với bản tốt mà \`begin\` lưu lần đầu ở \`/root/.l
     domain: "troubleshooting",
     competencies: ["ts-nodes"],
     requires: ["s47"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Đưa node NotReady về Ready trong 20 phút khi lỗi nằm ở containerd chứ không phải kubelet.",
-      "Nhận ra lỗi cấu hình kubelet qua log: cgroup driver lệch, đường dẫn CA sai, runtime endpoint sai.",
-      "Vào node bằng kubectl debug node khi không ssh được.",
+      "Đưa hai worker NotReady về Ready trong 20 phút khi mỗi node hỏng một kiểu: cka-w1 ở containerd (kubelet vẫn chạy, chỉ báo tin), cka-w2 ở một trường của /var/lib/kubelet/config.yaml.",
+      "Đọc đúng chỗ theo thứ tự node → kubelet → runtime → tệp cấu hình: Conditions, systemctl status/cat, journalctl -u containerd -u kubelet, crictl info và crictl inspect.",
+      "Biết khi nào kubectl debug node dùng được, đọc MemoryPressure/DiskPressure để loại trừ áp lực tài nguyên, và đưa shop trải lại hai worker sau khi Pod bị evict.",
     ],
     skills: [
       { skill: "k-debug-node", level: "Gõ được có tra" },
@@ -560,8 +560,241 @@ Bảy dòng, so với bản tốt mà \`begin\` lưu lần đầu ở \`/root/.l
       { skill: "k-node-pressure", level: "Giải thích được" },
     ],
     uses: ["k-node-notready-flow", "k-kubelet-journal", "lx-systemctl-cat", "k-containerd-systemdcgroup", "lx-df-du"],
-    stateIn: "Đầu ra s47 cộng `./labs/lab break` (lỗi ở node).",
-    stateOut: "Ba node Ready, kubelet và containerd active trên mọi node.",
+    foundation: {
+      area: "linux",
+      md: `**Unit systemd có nhiều tầng, log có mức độ.** Trên node, kubelet và containerd là hai unit systemd. Trước khi đọc log, biết unit thật sự chạy lệnh gì.
+
+**1. \`systemctl cat\`: unit cộng mọi drop-in.** \`systemctl cat kubelet\` in \`/usr/lib/systemd/system/kubelet.service\` rồi từng drop-in trong \`kubelet.service.d/\`, theo thứ tự áp dụng. Với kubeadm, drop-in \`10-kubeadm.conf\` xoá \`ExecStart\` gốc (\`ExecStart=\` rỗng) và đặt lại bằng bốn biến: \`--config=/var/lib/kubelet/config.yaml\` (KubeletConfiguration), \`kubeadm-flags.env\`, \`/etc/default/kubelet\`. Cờ trên dòng lệnh thắng trường trong config.yaml; trên lab \`kubeadm-flags.env\` rỗng (đo), nên runtime endpoint và CA của kubelet chỉ nằm trong config.yaml.
+
+\`\`\`bash
+systemctl cat kubelet | grep -E '^# /|^(ExecStart|EnvironmentFile|Environment)='
+systemctl show kubelet -p NRestarts -p ActiveState -p SubState    # vòng crash: NRestarts tăng, SubState auto-restart
+\`\`\`
+
+**2. \`journalctl\`: lọc theo unit, thời gian, mức độ.** \`-u\` lặp được (\`-u containerd -u kubelet\` trộn hai log theo thời gian), \`--since -10min\` hay \`--since "10 min ago"\`, \`-p err\` chỉ mức err trở lên, \`--no-pager\` để pipe được.
+
+\`\`\`bash
+sudo journalctl -u containerd -u kubelet --since -10min --no-pager | tail -20
+sudo journalctl -u containerd -p err --since -10min --no-pager      # đo: chỉ thấy dòng của systemd "Failed to start containerd.service"
+\`\`\`
+
+**Bẫy của \`-p err\`** (đo trên lab): containerd và kubelet ghi log ra stderr, journald xếp chúng ở mức \`info\` dù nội dung là \`level=error\` hay \`E1125\`. \`-p err\` vì vậy chỉ còn dòng của chính systemd ("Failed to start …", "Main process exited"): đủ để biết unit **có** chết, không đủ để biết **vì sao**. Dòng vì sao phải tìm trong log đầy đủ bằng grep (\`failed to unmarshal TOML\`, \`"command failed"\`).
+
+**Bài tập nền (5 phút, trên một worker trước khi \`begin\`):** \`systemctl cat containerd\` (có drop-in không? \`KillMode\` là gì?), \`systemctl show kubelet -p NRestarts\`, \`sudo journalctl -u kubelet --since -5min -p err --no-pager\` rồi bỏ \`-p err\`: hai lệnh khác nhau bao nhiêu dòng?`,
+    },
+    mindset: `**Node NotReady: kubelet là người báo tin, chưa chắc là thủ phạm.** Trạng thái node do kubelet ghi lên apiserver (Conditions và Lease mỗi vài giây). Khi node NotReady, câu hỏi đầu tiên là **kubelet có còn báo không**, vì câu trả lời chia đôi cây chẩn đoán:
+
+| Ready | Reason, message (đo trên lab) | Ý nghĩa | Nhìn tiếp |
+|---|---|---|---|
+| \`False\` | \`KubeletNotReady\`, \`container runtime is down\` | kubelet sống, nó báo **runtime** chết | \`systemctl status containerd\`, \`journalctl -u containerd\`, \`crictl info\` |
+| \`Unknown\` | \`NodeStatusUnknown\`, \`Kubelet stopped posting node status.\` | không ai báo nữa: kubelet chết hay mất mạng | \`systemctl status kubelet\`, \`journalctl -u kubelet\`, \`systemctl cat kubelet\`, config.yaml |
+
+Trong buổi này cka-w1 là dòng trên: \`/etc/containerd/config.toml\` có \`SystemdCgroup = True\` (TOML chỉ có \`true\`/\`false\`), containerd thoát ngay lúc khởi động với \`failed to unmarshal TOML at row 109 column 29: toml: incomplete number\`, systemd chạy lại mỗi 5 giây; kubelet vẫn chạy, log đầy \`"Container runtime sanity check failed" … dial unix /var/run/containerd/containerd.sock: connect: no such file or directory\`. Node NotReady sau ~40 giây (đo). **Restart kubelet ở đây làm tệ hơn**: kubelet mới thoát ngay lúc khởi động (\`"command failed" err="failed to run Kubelet: validate service connection: validate CRI v1 runtime API for endpoint …"\`), node chuyển sang \`Unknown\` sau ~45 giây (đo): bạn vừa xoá người báo tin duy nhất. cka-w2 là dòng dưới: một trường của \`/var/lib/kubelet/config.yaml\` sai, kubelet thoát lúc khởi động mỗi 10 giây.
+
+Giống một service Java không lên: \`java -Xmx2gb -jar app.jar\` in \`Invalid maximum heap size: -Xmx2gb\` rồi \`Error: Could not create the Java Virtual Machine\` và thoát mã 1; restart bao nhiêu lần cũng vậy, vì lỗi nằm trong **cấu hình**, không trong tiến trình. kubelet cũng thế (\`Restart=always\` chỉ làm vòng lặp chạy mãi), và containerd cũng thế. Khác ở chỗ: JVM chết là app chết; containerd chết thì **container vẫn chạy** (\`KillMode=process\`, các \`containerd-shim\` ở lại: \`Unit process … (containerd-shim) remains running after unit stopped\`, đo), chỉ không ai quản lý chúng nữa.
+
+**\`kubectl debug node\` cần chính node đó khoẻ.** Lệnh tạo một Pod có \`nodeName\` là node đó, toleration \`operator: Exists\` (chịu mọi taint, đo), mount \`/\` của node vào \`/host\`. Pod được kubelet **của node đó** chạy qua containerd **của node đó**: runtime chết thì Pod debug nằm \`Pending\`, không có event nào (đo trên cka-w1 hỏng). Nó là cách vào node khi không có ssh, không phải cách vào node hỏng runtime. Dùng nó sau khi sửa, hay trên node khoẻ, để đọc tệp của node (\`/host/var/lib/kubelet/config.yaml\`).
+
+**NotReady quá 300 giây thì Pod bị evict.** Node lifecycle controller gắn taint \`node.kubernetes.io/not-ready:NoExecute\` (kubelet còn báo) hay \`unreachable:NoExecute\` (không báo); Pod thường có toleration 300 giây cho hai taint đó. Hết 300 giây (đo): Pod cũ \`Terminating\` (kubelet của node đó vắng nên không ai xác nhận xoá), ReplicaSet tạo Pod mới \`Pending\`; CoreDNS dời sang cka-cp vì chịu được taint control-plane; postgres-0 (PV local-path ghim cka-w2) chờ đúng cka-w2 và \`Running\` lại ~8 giây sau khi kubelet của cka-w2 chạy. Node nào lên trước nhận hết Pod đang chờ: shop **mất trải hai worker** (đo: \`gateway: Pod Ready chỉ ở w1; catalog: …; order: …\`), cần \`rollout restart\`. **MemoryPressure/DiskPressure** là hai condition khác: kubelet tự evict Pod khi bộ nhớ hay đĩa dưới ngưỡng \`evictionHard\`. Trong buổi này cả hai \`False\` trên cka-w1 và \`Unknown\` trên cka-w2: đọc chúng để loại trừ, không phải để sửa.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Tuần 8 — Node NotReady", href: "#/roadmap/cka/cka-w8-1" },
+      { label: "CKA Study Guide, chương 22 — Xử lý sự cố cluster", href: "#/docs/ckabook-22" },
+      { label: "kubernetes.io: Debugging Kubernetes Nodes With Kubectl (kubectl debug node)", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/kubectl-node-debug/" },
+      { label: "kubernetes.io: Troubleshooting Clusters — node, kubelet, container runtime", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/" },
+      { label: "kubernetes.io: Set Kubelet Parameters Via A Configuration File", href: "https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/" },
+      { label: "kubernetes.io: Container Runtimes — containerd, systemd cgroup driver", href: "https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd-systemd" },
+      { label: "kubernetes.io: Taint based Evictions", href: "https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/#taint-based-evictions" },
+      { label: "kubernetes.io: Node-pressure Eviction", href: "https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/" },
+    ],
+    stateIn: "Đầu ra s47 (mọi luồng của shop và DNS như cuối s31, sổ tay có mục s47). Trên Mac chạy `./labs/lab begin cka s48`: kiểm đầu vào bằng check.sh riêng (answers.env và mục s47 của sổ tay, control plane: những gì sự cố không đụng), xoá answers.env cũ rồi **gây sự cố** (đo 56 giây, gồm chờ hai worker hết Ready; chạy lại `begin` giữa buổi thì trước hết đưa hai worker về bản tốt, bỏ cordon, chờ ba node Ready rồi gây lại, đo 64 giây): \"sáng nay hai worker NotReady, shop chập chờn\". Bấm giờ 20 phút; sau 5 phút NotReady Pod bắt đầu bị evict.",
+    stateOut: "Ba node Ready, không cordon; containerd và kubelet active, enabled trên ba node; config.toml và config.yaml của hai worker như bản tốt; shop trải lại hai worker (gateway, catalog, order ≥ 2 Pod Ready trên cả cka-w1 lẫn cka-w2), postgres-0 Ready; ~/drills/s48/answers.env (W1_COMPONENT, W2_FIELD, NODE_DEBUG_CGROUP); mục s48 trong ~/notes/runbook.md.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s48`. Bấm giờ 20 phút. Trên cka-cp: `k get node`, rồi `k describe node cka-w1 | sed -n '/Conditions/,/Addresses/p'` và cùng lệnh cho cka-w2. Với mỗi node: Ready là `False` hay `Unknown`, reason và message là gì? MemoryPressure, DiskPressure nói gì? Điền bảng hai dòng của phần Tư duy trước khi ssh vào đâu.",
+      },
+      {
+        id: "t2",
+        text: "Thử vào cka-w1 không qua ssh: `k debug node/cka-w1 -it --image=busybox:1.37 -- sh`. Chờ 30 giây (hay Ctrl-C rồi `k get pod -o wide | grep node-debugger`, `k describe pod node-debugger-cka-w1-…`). Pod ở trạng thái nào, có event không, vì sao? Xoá Pod đó.",
+      },
+      {
+        id: "t3",
+        text: "`ssh cka-w1`: `systemctl status containerd kubelet`, `systemctl cat kubelet`, `sudo crictl info | head`. Rồi `sudo journalctl -u containerd -p err --since -15min --no-pager` và cùng lệnh bỏ `-p err` (dùng `| grep -i toml`). Dòng nào nói vì sao, ở dòng mấy cột mấy của tệp nào? Ghi `W1_COMPONENT=` vào `~/drills/s48/answers.env` trên cka-cp (thành phần hỏng, không phải thành phần báo tin).",
+      },
+      {
+        id: "t4",
+        text: "Tình huống hỏng: trên cka-w1 `sudo systemctl restart kubelet` **trước khi** sửa containerd. Sau 1 phút `k describe node cka-w1`: Ready và message đổi thành gì? `sudo journalctl -u kubelet --since -2min --no-pager | grep '\"command failed\"'`. Rồi sửa đúng dòng trong `/etc/containerd/config.toml` (vim `:109`, hay `sed -n '109p'` trước), `sudo systemctl restart containerd`, `sudo crictl info` cho `RuntimeReady`. kubelet có tự lên lại không, sau bao lâu node Ready?",
+      },
+      {
+        id: "t5",
+        text: "Sau khi cka-w1 Ready: `k debug node/cka-w1 -it --image=busybox:1.37 -- grep cgroupDriver /host/var/lib/kubelet/config.yaml` (nhớ xoá Pod node-debugger sau đó). Ghi `NODE_DEBUG_CGROUP=`. Ngưỡng evict của kubelet: `k get --raw /api/v1/nodes/cka-w1/proxy/configz | python3 -m json.tool | grep -A6 evictionHard`, so với `free -m` và `df -h /var/lib/containerd` trên cka-w1. Trên cka-w1: `sudo crictl ps | head -3`, `sudo crictl inspect <một container> | grep -m1 cgroupsPath`: dạng `…slice:cri-containerd:…` nói cgroup driver nào đang chạy, có khớp kubelet và `SystemdCgroup = true` không?",
+      },
+      {
+        id: "t6",
+        text: "`ssh cka-w2`: `systemctl status kubelet` (auto-restart?), `systemctl show kubelet -p NRestarts`, `sudo journalctl -u kubelet --since -5min --no-pager | grep '\"command failed\"' | tail -1`. Lỗi nói gì? Tìm trường của `/var/lib/kubelet/config.yaml` gây ra nó (so với `/var/lib/kubelet/config.yaml` của cka-w1: `diff <(ssh cka-w1 sudo cat …) <(sudo cat …)`, hay `grep -n` đường dẫn trong lỗi). Ghi `W2_FIELD=` (tên trường), sửa, `sudo systemctl restart kubelet`.",
+      },
+      {
+        id: "t7",
+        text: "Ba node Ready. Nếu đã quá 5 phút từ `begin`: `k get pod -A -o wide | grep -E 'Terminating|Pending'`, `k -n shop get pod -o wide`, postgres-0 ở đâu, gateway/catalog/order còn trải hai worker không? Trải lại bằng `k -n shop rollout restart deploy/<tên>` cho Deployment nào cần. Thêm mục `## s48 …` vào `~/notes/runbook.md` (triệu chứng, nguyên nhân, lệnh: ≥ 3 dòng). Trên Mac: `./labs/lab verify cka s48` phải 5/5. Ghi thời gian bạn đã dùng.",
+      },
+    ],
+    hints: [
+      "`Ready=False` với message `container runtime is down` là kubelet đang nói; `Ready=Unknown` với `Kubelet stopped posting node status` là không ai nói. Hai câu đó dẫn tới hai unit khác nhau.",
+      "`kubectl debug node` Pending không event (đo): Pod debug chỉ chạy được khi kubelet và runtime của chính node đó chạy. Muốn đọc tệp của node khi node hỏng: ssh.",
+      "`failed to unmarshal TOML at row 109 column 29` (đo): TOML không có `True`, chỉ có `true`. `sed -n '109p' /etc/containerd/config.toml` rồi sửa đúng dòng đó; `python3 -c 'import tomllib; tomllib.load(open(\"/etc/containerd/config.toml\",\"rb\"))'` kiểm cú pháp trước khi restart.",
+      "`journalctl -p err` chỉ còn `Failed to start containerd.service` (đo): log của containerd và kubelet nằm ở mức info dù nội dung là lỗi. Bỏ `-p err`, dùng grep.",
+      "cka-w2: `validate CRI v1 runtime API for endpoint \"unix:///var/run/cri-dockerd.sock\"` là trường `containerRuntimeEndpoint`; `open /etc/kubernetes/pki/ca.pem: no such file or directory` không nêu tên trường: `sudo grep -n ca.pem /var/lib/kubelet/config.yaml`. Lần `begin` của bạn là một trong hai.",
+      "Sửa config.yaml xong phải `systemctl restart kubelet`: kubelet chỉ đọc tệp đó lúc khởi động. Sửa config.toml xong phải restart containerd; containerd lên thì kubelet đang chạy tự nối lại, kubelet đang vòng crash thì lần chạy lại sau ≤ 10 giây sẽ lên.",
+      "Verify dòng lõi đỏ `gateway: Pod Ready chỉ ở w1`: Pod bị evict sau 300 giây đã dồn về node lên trước. `k -n shop rollout restart deploy/gateway` (topologySpreadConstraints của chart trải lại).",
+      "Verify dòng lõi đỏ `w1 đang cordon`: cordon node hỏng để \"cách ly\" không phải là sửa; `k uncordon`.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-25, Kubernetes 1.37.2, containerd 2.2.1, sau \`apply\` s47 rồi \`begin cka s48\`); trường hỏng của cka-w2, tên Pod và giờ của bạn sẽ khác. Lệnh \`k\` chạy trên cka-cp, lệnh \`sudo\` trên worker ghi trong ngoặc.
+
+**1. Hai node, hai kiểu NotReady**
+
+\`\`\`bash
+k get node
+# cka-w1   NotReady   <none>   11d   v1.37.2
+# cka-w2   NotReady   <none>   11d   v1.37.2
+k describe node cka-w1 | grep -E 'Ready|MemoryPressure|DiskPressure|Taints'
+# Taints:             node.kubernetes.io/not-ready:NoExecute
+# MemoryPressure  False  …  KubeletHasSufficientMemory   kubelet has sufficient memory available
+# DiskPressure    False  …  KubeletHasNoDiskPressure     kubelet has no disk pressure
+# Ready           False  …  KubeletNotReady              container runtime is down
+k describe node cka-w2 | grep -E 'Ready|Taints'
+# Taints:             node.kubernetes.io/unreachable:NoExecute
+# Ready           Unknown  …  NodeStatusUnknown          Kubelet stopped posting node status.
+\`\`\`
+
+cka-w1: kubelet còn báo, nó báo runtime chết. cka-w2: không ai báo. Áp lực tài nguyên bị loại (MemoryPressure, DiskPressure \`False\` trên cka-w1).
+
+**2. kubectl debug node trên node hỏng runtime**
+
+\`\`\`bash
+k debug node/cka-w1 --image=busybox:1.37 -- true
+# Creating debugging pod node-debugger-cka-w1-l4lqz with container debugger on node cka-w1.
+k get pod node-debugger-cka-w1-l4lqz -o wide        # 0/1 Pending … cka-w1 (sau 20 giây vẫn vậy)
+k get events --field-selector involvedObject.name=node-debugger-cka-w1-l4lqz   # No resources found
+k delete pod node-debugger-cka-w1-l4lqz
+\`\`\`
+
+**3. cka-w1: containerd (ssh cka-w1)**
+
+\`\`\`bash
+systemctl status containerd | sed -n 3p
+#      Active: activating (auto-restart) (Result: exit-code) since …
+sudo journalctl -u containerd -p err --since -15min --no-pager | tail -2
+# … systemd[1]: Failed to start containerd.service - containerd container runtime.
+sudo journalctl -u containerd --since -15min --no-pager | grep -m1 'unmarshal TOML'
+# … containerd: failed to unmarshal TOML at row 109 column 29: toml: incomplete number
+sed -n '109p' /etc/containerd/config.toml
+#             SystemdCgroup = True
+sudo journalctl -u kubelet --since -2min --no-pager | grep -m1 'sanity check'
+# … "Container runtime sanity check failed" err="rpc error: code = Unavailable desc = connection error: … dial unix /var/run/containerd/containerd.sock: connect: no such file or directory"
+\`\`\`
+
+\`W1_COMPONENT=containerd\`. Tình huống hỏng (t4) đo được: \`sudo systemctl restart kubelet\` lúc này thì kubelet thoát với \`"command failed" err="failed to run Kubelet: validate service connection: validate CRI v1 runtime API for endpoint \\"unix:///var/run/containerd/containerd.sock\\" …"\`, và 46 giây sau \`k describe node cka-w1\` cho \`Ready Unknown … Kubelet stopped posting node status.\`. Sửa:
+
+\`\`\`bash
+sudo sed -i '109s/= True/= true/' /etc/containerd/config.toml
+sudo systemctl restart containerd
+sudo crictl info | grep -A1 '"type": "RuntimeReady"'      # "status": true
+\`\`\`
+
+Node Ready ~15 giây sau khi sửa (đo; kubelet đang vòng crash tự lên ở lần chạy lại kế tiếp, không cần restart).
+
+**4. Đọc tệp của node bằng kubectl debug node, và cgroup thật**
+
+\`\`\`bash
+k debug node/cka-w1 --image=busybox:1.37 -- grep cgroupDriver /host/var/lib/kubelet/config.yaml
+k logs node-debugger-cka-w1-rvpdv                    # cgroupDriver: systemd
+k delete pod node-debugger-cka-w1-rvpdv
+sudo crictl inspect $(sudo crictl ps -q | head -1) | grep -m1 cgroupsPath     # (cka-w1)
+#         "cgroupsPath": "kubepods-burstable-pod9bf3a66f_ca3c_4481_a78b_e89d8f831a96.slice:cri-containerd:a029b0c5…",
+k get --raw /api/v1/nodes/cka-w1/proxy/configz | python3 -c 'import json,sys; print(json.load(sys.stdin)["kubeletconfig"]["evictionHard"])'
+# {'imagefs.available': '15%', 'imagefs.inodesFree': '5%', 'memory.available': '100Mi', 'nodefs.available': '10%', 'nodefs.inodesFree': '5%'}
+\`\`\`
+
+\`NODE_DEBUG_CGROUP=systemd\`. Dạng \`<slice>:cri-containerd:<id>\` là cgroup driver systemd: khớp \`cgroupDriver: systemd\` của kubelet và \`SystemdCgroup = true\` của containerd. Hai bên lệch nhau là lỗi kinh điển khác của buổi cài cluster (s05). \`configz\` (qua apiserver, đọc cấu hình kubelet đang chạy) cho ngưỡng \`evictionHard\` mặc định: dưới 100Mi bộ nhớ trống hay 10% đĩa nodefs thì kubelet bật MemoryPressure/DiskPressure và tự evict Pod; \`df -h /var/lib/containerd /var/lib/kubelet\` và \`free -m\` trên node cho biết còn xa ngưỡng bao nhiêu.
+
+**5. cka-w2: kubelet (ssh cka-w2)**
+
+\`\`\`bash
+systemctl show kubelet -p NRestarts -p SubState      # NRestarts=… SubState=auto-restart
+sudo journalctl -u kubelet --since -5min --no-pager | grep '"command failed"' | tail -1
+# lần begin này:  … "command failed" err="failed to run Kubelet: open /etc/kubernetes/pki/ca.pem: no such file or directory"
+sudo grep -n ca.pem /var/lib/kubelet/config.yaml
+# 9:    clientCAFile: /etc/kubernetes/pki/ca.pem
+# lần begin khác: … "command failed" err="failed to run Kubelet: validate service connection: validate CRI v1 runtime API for endpoint \\"unix:///var/run/cri-dockerd.sock\\": … no such file or directory"
+#                 → containerRuntimeEndpoint: unix:///var/run/cri-dockerd.sock
+\`\`\`
+
+\`W2_FIELD=clientCAFile\` (hay \`containerRuntimeEndpoint\`: đúng trường của lần \`begin\` của bạn). Sửa về \`/etc/kubernetes/pki/ca.crt\` (hay \`unix:///var/run/containerd/containerd.sock\`), \`sudo systemctl restart kubelet\`; node Ready vài giây sau.
+
+**6. Sau 300 giây: Pod bị evict, trải lại**
+
+Lần đo để sự cố kéo dài 8 phút trước khi sửa:
+
+\`\`\`bash
+k get pod -A -o wide | grep -E 'Terminating|Pending' | head -6
+# kube-system   coredns-5b8b7df479-2rxzr     Terminating   … cka-w1
+# shop          catalog-6b56c9c687-vhdkn     Pending       … <none>
+# shop          postgres-0                   Terminating   … cka-w2
+# …
+k -n shop wait pod postgres-0 --for=condition=Ready --timeout=240s     # Running lại ~8 giây sau khi kubelet của cka-w2 chạy
+k -n shop get pod -l 'app in (gateway,catalog,order)' -o wide           # cả sáu Pod trên cka-w1: node lên trước nhận hết
+for d in gateway catalog order; do k -n shop rollout restart deploy/$d; done
+for d in gateway catalog order; do k -n shop rollout status deploy/$d; done   # 42 giây, mỗi service một Pod trên mỗi worker
+\`\`\`
+
+CoreDNS dời sang cka-cp trong lúc đó (toleration control-plane) và ở lại đó: không sao, verify không đòi chỗ của CoreDNS. Rồi thêm mục \`## s48 — node NotReady: containerd và kubelet\` vào sổ tay: bảng hai dòng của phần Tư duy, hai nguyên nhân, lệnh đã dùng.
+
+**Lời giải tự động** (\`labs/cka/sessions/s48/apply.sh\`): gây sự cố như \`begin\`, rồi \`files/solve-cp.sh STEP=look\` (node, Conditions, thử debug node trên cka-w1), \`files/solve-node.sh\` trên từng worker (không biết trước node hỏng ở đâu: \`crictl info\` lỗi thì đọc dòng TOML từ journal và sửa đúng dòng đó; kubelet không chạy yên 12 giây thì đọc dòng \`"command failed"\` cuối cùng và sửa trường tương ứng), rồi \`STEP=fix\` (chờ Ready, debug node đọc cgroupDriver, postgres-0, \`rollout restart\` Deployment nào mất trải, answers.env, sổ tay). Đo: 1 phút 46 giây và 1 phút 38 giây (gồm ~1 phút gây sự cố), cả hai rồi verify 5/5.`,
+    exam: {
+      patterns: [
+        "\"Node X NotReady, sửa để node Ready (thay đổi phải bền qua reboot)\" — `k describe node` (Conditions), ssh, `systemctl status kubelet containerd`, `journalctl -u …`, sửa tệp cấu hình, `systemctl enable --now`.",
+        "\"kubelet trên node Y không chạy\" — `systemctl cat kubelet` (drop-in, `--config`), `/var/lib/kubelet/config.yaml` (containerRuntimeEndpoint, clientCAFile, staticPodPath, cgroupDriver), `/etc/default/kubelet`.",
+        "\"Ghi lý do node Z NotReady / thành phần hỏng vào /opt/…\" — đọc message của condition Ready, phân biệt người báo tin và thủ phạm.",
+        "\"Pod bị evict / Pending sau khi node hỏng\" — taint `not-ready`/`unreachable` NoExecute, 300 giây, `k get pod -A -o wide`, `rollout restart`.",
+      ],
+      timeTargetMin: 20,
+      drills: [
+        {
+          text: "Trong 3 phút: node `cka-w1` NotReady, message `container runtime is down`. Tìm dòng lỗi và tệp cần sửa, không đoán.",
+          timeLimitMin: 3,
+          solution: "```bash\nssh cka-w1\nsystemctl status containerd | sed -n 3p\nsudo journalctl -u containerd --since -15min --no-pager | grep -iE 'toml|failed to|error' | tail -3\n```\nDòng `failed to unmarshal TOML at row N column M` chỉ đúng chỗ: `sed -n 'Np' /etc/containerd/config.toml`.",
+        },
+        {
+          text: "Trong 2 phút: kubelet trên `cka-w2` khởi động lại liên tục. In dòng lỗi gốc và tên tệp cấu hình kubelet đang đọc.",
+          timeLimitMin: 2,
+          solution: "```bash\nsystemctl cat kubelet | grep -E 'config=|EnvironmentFile'\nsudo journalctl -u kubelet --since -5min --no-pager | grep '\"command failed\"' | tail -1\n```\n`--config=/var/lib/kubelet/config.yaml` (drop-in 10-kubeadm.conf). Lỗi `open <tệp>` không nêu tên trường: `grep -n <tệp> /var/lib/kubelet/config.yaml`.",
+        },
+      ],
+    },
+    tips: [
+      "Đọc message của condition Ready trước khi ssh: `False … container runtime is down` và `Unknown … stopped posting` dẫn tới hai unit khác nhau.",
+      "Đừng restart kubelet \"cho chắc\" khi runtime đang chết: kubelet mới sẽ không lên được và bạn mất luôn thông tin node đang báo.",
+      "Sửa tệp cấu hình xong luôn kiểm cú pháp trước khi restart (`tomllib`, `python3 -c 'import yaml; …'`, `containerd config dump`), rồi `systemctl is-active` và `is-enabled`: đề hỏi trạng thái bền.",
+      "Sau một sự cố node dài hơn 5 phút, nhìn lại Pod của workload quan trọng: chúng có thể đã dồn về một node hay nằm Pending.",
+    ],
+    outcome: {
+      md: `Hai worker Ready, hai unit chạy và bật trên ba node, shop trải lại hai worker. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s48
+\`\`\`
+
+Năm dòng. **Tệp cấu hình:** \`/etc/containerd/config.toml\` và \`/var/lib/kubelet/config.yaml\` của cka-w1, cka-w2 giống bản tốt mà \`begin\` lưu lần đầu ở \`/root/.lab/st9-node/\` trên từng worker, so **nội dung đã nạp** (TOML, YAML) nên thêm comment hay đổi thứ tự khoá vẫn xanh. **Unit:** containerd và kubelet \`active\` (kubelet chạy liền ≥ 15 giây, không phải một lần khởi động sắp thoát) và \`enabled\` trên ba node (chỉ \`systemctl start containerd\` khi config.toml còn hỏng: đỏ cả hai dòng và dòng lõi, đo). **answers.env:** \`W1_COMPONENT=containerd\`, \`W2_FIELD\` đúng trường của lần \`begin\` này (ghi ở \`/root/.lab/st9-node/field\` của cka-w2), \`NODE_DEBUG_CGROUP\` bằng cgroupDriver thật của cka-w1 (đáp án sai cả ba: đỏ, đo). **Sổ tay:** heading chứa \`s48\` với ≥ 3 dòng. **Lõi khoẻ** (\`s46/files/core-facts.sh\`): ba node Ready và không cordon (cordon hai node hỏng: đỏ \`w1 đang cordon\`, đo), control plane, shop rollout xong và gateway/catalog/order ≥ 2 Pod Ready trên cả hai worker (sau evict mà không trải lại: đỏ \`gateway: Pod Ready chỉ ở w1\`, đo), postgres-0 Ready, cộng Mac \`:30180\`. Ngay sau \`begin\`: **0/5** trong 3 giây (đo).`,
+      verifyOutput: "lab: kiểm s48\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~14 phút)\n  ✓ cka-w1, cka-w2: /etc/containerd/config.toml và /var/lib/kubelet/config.yaml như bản tốt\n  ✓ containerd và kubelet active, enabled trên ba node\n  ✓ answers.env: W1_COMPONENT, W2_FIELD, NODE_DEBUG_CGROUP\n  ✓ ~/notes/runbook.md có mục s48 (triệu chứng, nguyên nhân, lệnh) ≥ 3 dòng\n  ✓ Lõi khoẻ: ba node Ready, không cordon; control plane; shop trải hai worker, postgres-0 Ready; Mac /api/products, /api/orders 200\n  → 5/5 đạt",
+      projectDelta: "Node của cluster trở lại như cuối s47 (cấu hình containerd và kubelet như bản tốt, shop trải hai worker). Sổ tay có mục s48: bảng \"ai báo tin, ai là thủ phạm\" cho node NotReady.",
+    },
+    review: [
+      { q: "Node NotReady với `Ready=False, KubeletNotReady, container runtime is down`. Bạn ssh vào và nhìn gì đầu tiên, vì sao không restart kubelet?", a: "kubelet còn sống và đang báo runtime chết: nhìn containerd (`systemctl status containerd`, `journalctl -u containerd`, `crictl info`). Restart kubelet lúc runtime chết thì kubelet mới thoát ngay ở bước kiểm CRI (`validate CRI v1 runtime API`), node chuyển `Unknown`, bạn mất người báo tin (đo)." },
+      { q: "Vì sao `kubectl debug node/cka-w1` nằm Pending không event khi containerd của cka-w1 chết?", a: "Pod debug được ghim `nodeName: cka-w1` (không qua scheduler, nên không có event FailedScheduling) và chịu mọi taint; nhưng chính kubelet của cka-w1 phải tạo sandbox qua containerd của cka-w1. Runtime chết thì không ai tạo được container. `kubectl debug node` là cách vào node khoẻ không có ssh, không phải cách vào node hỏng runtime." },
+      { q: "containerd của cka-w1 chết. Container đang chạy trên node đó có chết theo không, và chuyện gì xảy ra sau 300 giây?", a: "Không chết ngay: unit containerd có `KillMode=process`, chỉ tiến trình containerd bị dừng, các `containerd-shim` và container ở lại (đo: `Unit process … (containerd-shim) remains running after unit stopped`). Nhưng không ai quản lý chúng nữa. Node NotReady mang taint `not-ready:NoExecute`; Pod thường chịu taint đó 300 giây, hết hạn thì bị evict: Pod cũ `Terminating` (kubelet không xác nhận được vì không nói chuyện được với runtime), ReplicaSet tạo Pod mới `Pending` hay trên node khác (đo)." },
+      { q: "`journalctl -u containerd -p err` chỉ ra `Failed to start containerd.service`. Vì sao không thấy lỗi TOML?", a: "containerd ghi log ra stderr và journald xếp ở mức info; `-p err` chỉ giữ dòng mức err trở lên, tức các dòng của chính systemd. Lý do nằm trong log đầy đủ: bỏ `-p err`, grep `unmarshal TOML` hay `level=error`." },
+      { q: "So sánh một service Spring không lên vì `-Xmx2gb` với kubelet không lên vì `clientCAFile` trỏ tệp không có.", a: "Cả hai là lỗi cấu hình đọc lúc khởi động: tiến trình thoát mã 1 với một dòng nói đúng tham số (`Invalid maximum heap size`, `open /etc/kubernetes/pki/ca.pem: no such file`), restart bao nhiêu lần cũng vậy (`Restart=always` chỉ làm vòng lặp chạy mãi). Sửa ở tệp cấu hình hay cờ, rồi khởi động lại một lần; đọc dòng lỗi đầu tiên của lần chạy gần nhất, không phải dòng cuối." },
+    ],
   },
   {
     id: "s49",
@@ -571,12 +804,12 @@ Bảy dòng, so với bản tốt mà \`begin\` lưu lần đầu ở \`/root/.l
     domain: "troubleshooting",
     competencies: ["ts-components"],
     requires: ["s48"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Đưa apiserver lên lại trong 15 phút sau khi manifest bị sửa sai, chỉ bằng crictl và log trên đĩa.",
-      "Nhận ra scheduler hoặc controller-manager hỏng từ triệu chứng của workload.",
-      "Luôn sao lưu manifest trước khi sửa và biết kubelet cần bao lâu để nạp lại.",
+      "Đưa apiserver lên lại trong 15 phút khi manifest có một cờ hỏng không nhìn thấy bằng mắt, chỉ bằng crictl, log trên đĩa và cat -A, sau khi đã sao lưu manifest ra ngoài thư mục manifests/.",
+      "Nhận ra scheduler hỏng (Pod Pending không event) và controller-manager hỏng (Deployment không có ReplicaSet) từ triệu chứng của workload, rồi sửa cả hai trong 15 phút nữa.",
+      "Biết kubelet nạp lại static pod sau bao lâu và kiểm control plane bằng /livez?verbose, ss -lntp trước khi tuyên bố đã xong.",
     ],
     skills: [
       { skill: "k-apiserver-down-flow", level: "Dưới 10 phút" },
@@ -586,8 +819,223 @@ Bảy dòng, so với bản tốt mà \`begin\` lưu lần đầu ở \`/root/.l
       { skill: "k-manifest-backup", level: "Thành phản xạ" },
     ],
     uses: ["k-static-pod-dir", "k-crictl-logs", "k-crictl-ps", "net-ss-listen", "vim-show-whitespace"],
-    stateIn: "Đầu ra s48 cộng `./labs/lab break` (lỗi ở control plane).",
-    stateOut: "apiserver, scheduler, controller-manager chạy đúng manifest gốc; workload mới được xếp lịch bình thường.",
+    foundation: null,
+    mindset: `**kubectl chết thì xuống một tầng.** kubectl chỉ là một client của apiserver; khi nó báo \`The connection to the server 192.168.252.35:6443 was refused\` (đo), mọi lệnh \`k\` đều vô dụng, kể cả \`k logs\` của chính apiserver. Control plane của kubeadm là **static pod**: kubelet trên cka-cp đọc \`/etc/kubernetes/manifests/\` và tự chạy chúng qua containerd, không cần apiserver. Vì vậy đi xuống đúng các tầng đó:
+
+| Tầng | Câu hỏi | Lệnh (trên cka-cp) |
+|---|---|---|
+| Cổng | Có ai nghe 6443, 10259 (scheduler), 10257 (controller-manager), 2379 (etcd)? | \`sudo ss -lntp \\| grep -E '6443\\|10259\\|10257\\|2379'\` |
+| Runtime | Container có chạy, thoát mấy lần, mã gì? | \`sudo crictl ps -a --name kube-apiserver\`, \`sudo crictl inspect <id>\` |
+| Log container | Lần chạy vừa rồi nói gì trước khi chết? | \`sudo crictl logs <id>\` |
+| Log trên đĩa | Còn đọc được khi container đã bị dọn | \`sudo sh -c 'tail /var/log/pods/kube-system_kube-apiserver-cka-cp_*/kube-apiserver/*.log'\` |
+| kubelet | Manifest có đọc được không, có Pod nào trùng tên? | \`sudo journalctl -u kubelet --since -5min\`, \`ls -la /etc/kubernetes/manifests\` |
+
+Giống đọc một service Spring không trả lời: HTTP chết thì xem tiến trình JVM còn không (\`ps\`, \`ss -lntp\`), rồi log trên đĩa của lần khởi động vừa rồi (dòng \`APPLICATION FAILED TO START\`, \`Caused by\`), không ngồi gọi lại endpoint đã chết. Trên lab: \`/var/log/pods\` chỉ root đọc được, nên glob phải chạy **trong** \`sudo sh -c '…'\` (gõ \`sudo ls /var/log/pods/kube-system_kube-apiserver-*\` thì shell của bạn mở glob trước, không thấy gì, đo). Mỗi lần manifest đổi là một Pod mới với UID mới: có hai thư mục \`kube-system_kube-apiserver-cka-cp_<uid>\`, cái mới hơn là của bản hỏng.
+
+**Cờ trông đúng mà sai.** Lỗi của apiserver trong buổi này là \`Error: unknown flag: --<cờ> \` (đo) cho một cờ có thật của kubeadm: tên cờ đúng từng chữ, nhưng giữa tên và dấu \`=\` có một ký tự NBSP (U+00A0) mà \`cat\` và vim mặc định hiển thị như khoảng trắng. \`cat -A\` in nó thành \`M-BM- \`, \`:set list\` (với \`listchars\` có \`nbsp:+\`) in \`+\`. Đây là lỗi dán từ trình duyệt hay từ tài liệu. Cùng họ với NBSP trong \`JAVA_OPTS\` ở s16, nhưng ở đây không có Events hay \`describe\` nào để đọc.
+
+**Sao lưu ra ngoài manifests/, trước khi sửa.** kubelet chạy **mọi** tệp trong \`staticPodPath\` không bắt đầu bằng dấu chấm, kể cả \`kube-apiserver.yaml.bak\`. Đo: để bản sao hỏng \`kube-apiserver.yaml.bak\` trong manifests/ rồi sửa \`kube-apiserver.yaml\` thì 4 phút sau kubectl vẫn \`connection refused\` và \`crictl logs\` vẫn \`unknown flag\`: hai tệp sinh hai Pod cùng tên \`kube-apiserver-cka-cp\`, bản hỏng thắng. Dời \`.bak\` đi: \`/readyz\` ok sau 8 giây. Chỗ đúng là \`~/drills/s49/backup/\` (hay \`/root/\`), chép **trước** khi chạm vào tệp.
+
+**Chờ kubelet nạp lại, đừng restart lung tung.** kubelet đọc lại thư mục manifests ~20 giây một lần; manifest đổi nội dung là Pod mới, không chờ back-off. Đo: sửa xong apiserver, \`/readyz\` ok sau 14–17 giây; sửa xong scheduler và controller-manager, cả bốn static pod Ready sau 24 giây.
+
+**Apiserver lên rồi, ai còn hỏng? Đọc triệu chứng của workload.**
+
+| Thành phần hỏng | Triệu chứng (đo) | Vì sao |
+|---|---|---|
+| scheduler | Pod mới \`Pending\`, \`NODE <none>\`, **Events: <none>** | không ai gán \`nodeName\`, cũng không ai báo \`FailedScheduling\` |
+| controller-manager | Deployment \`0/2\`, \`UP-TO-DATE 0\`, không có ReplicaSet; namespace mới không có ServiceAccount \`default\` (\`k run\` lỗi \`serviceaccount "default" not found\`) | Deployment, ReplicaSet, ServiceAccount controller đều chạy trong controller-manager |
+
+Bẫy: \`k -n kube-system get pod\` có lúc cho \`kube-controller-manager-cka-cp 1/1 Running\` (đo): nó chạy ~20 giây, chờ giành leader lease, rồi mới đọc \`--root-ca-file\` và thoát. Nhìn cột RESTARTS, \`crictl ps -a\` (nhiều container Exited), và triệu chứng, không nhìn một lần chữ Running.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Tuần 8 — Control plane hỏng", href: "#/roadmap/cka/cka-w8-2" },
+      { label: "CKA Study Guide, chương 22 — Xử lý sự cố cluster", href: "#/docs/ckabook-22" },
+      { label: "kubernetes.io: Troubleshooting Clusters — control plane", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/" },
+      { label: "kubernetes.io: Create static Pods", href: "https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/" },
+      { label: "kubernetes.io: Kubernetes API health endpoints (/livez, /readyz)", href: "https://kubernetes.io/docs/reference/using-api/health-checks/" },
+      { label: "kubernetes.io: Debugging Kubernetes nodes with crictl", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/crictl/" },
+      { label: "kubernetes.io: Ports and Protocols", href: "https://kubernetes.io/docs/reference/networking/ports-and-protocols/" },
+    ],
+    stateIn: "Đầu ra s48 (ba node Ready, containerd và kubelet như bản tốt, shop trải hai worker, sổ tay có mục s48). Trên Mac chạy `./labs/lab begin cka s49`: kiểm đầu vào bằng check.sh riêng, **không cần apiserver** (tệp cấu hình và unit của ba node, answers.env và mục s48, etcd phục vụ), xoá answers.env và ~/drills/s49/backup/ cũ rồi **gây sự cố** (đo 33 giây; chạy lại `begin` khi apiserver còn hỏng từ lần trước: dời tệp thừa khỏi manifests/, cài lại bản tốt bằng tệp, chờ ba thành phần chạy rồi gây lại, đo 73 giây; ngay sau khi VM bật lại 3 phút 11 giây): \"sau một lần dọn dẹp cka-cp, kubectl báo connection refused\". Bấm giờ 15 phút cho apiserver, 15 phút cho phần còn lại.",
+    stateOut: "kube-apiserver, kube-scheduler, kube-controller-manager chạy đúng manifest gốc (nội dung như bản tốt), /etc/kubernetes/manifests chỉ có bốn manifest; Pod mới được xếp lịch, Deployment tạo ReplicaSet bình thường; ~/drills/s49/backup/ có bản chép manifest lúc sự cố; ~/drills/s49/answers.env (APISERVER_BAD_FLAG, SCHEDULER_SYMPTOM, CM_SYMPTOM); mục s49 trong ~/notes/runbook.md.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s49`. Bấm giờ 15 phút. Trên cka-cp: `k get node` (đọc đúng thông báo lỗi), `sudo ss -lntp | grep -E '6443|10259|10257|2379'`. Cổng nào có người nghe, cổng nào không?",
+      },
+      {
+        id: "t2",
+        text: "Một tầng xuống: `sudo crictl ps -a --name kube-apiserver` (ATTEMPT, STATE), `sudo crictl logs <id của container Exited mới nhất>`, rồi `sudo sh -c 'ls -t /var/log/pods/ | head; tail -n2 /var/log/pods/kube-system_kube-apiserver-cka-cp_*/kube-apiserver/*.log'`. Có mấy thư mục của kube-apiserver, vì sao? Lỗi nói cờ nào?",
+      },
+      {
+        id: "t3",
+        text: "**Trước khi sửa:** `mkdir -p ~/drills/s49/backup && sudo cp /etc/kubernetes/manifests/kube-{apiserver,scheduler,controller-manager}.yaml ~/drills/s49/backup/`. Tình huống hỏng (đọc, đừng làm): một đồng nghiệp làm `cp kube-apiserver.yaml kube-apiserver.yaml.bak` ngay trong manifests/ rồi sửa tệp chính. Theo phần Tư duy, apiserver có lên không?",
+      },
+      {
+        id: "t4",
+        text: "Cờ trong lỗi có thật và đánh vần đúng. `sudo grep -n -- '--<cờ>' /etc/kubernetes/manifests/kube-apiserver.yaml | cat -A`, hay mở bằng `sudo vim` rồi `:set list`. Ký tự lạ ở đâu? Ghi `APISERVER_BAD_FLAG=` (tên cờ) vào `~/drills/s49/answers.env`. Sửa (xoá ký tự đó, gõ lại dấu cách nếu cần), lưu, rồi bấm giờ: `until [ \"$(k get --raw /readyz 2>/dev/null)\" = ok ]; do sleep 2; done`. Bao nhiêu giây?",
+      },
+      {
+        id: "t5",
+        text: "Apiserver lên. `k run p49 --image=busybox:1.37 -- sleep 600`, chờ 15 giây, `k get pod p49 -o wide`, `k describe pod p49 | tail -3`. Pod ở đâu, có event không? `k -n kube-system get pod -l tier=control-plane` (cột RESTARTS). Ghi `SCHEDULER_SYMPTOM=`. `sudo crictl logs` container scheduler vừa thoát: tệp nào không có? Sửa manifest scheduler.",
+      },
+      {
+        id: "t6",
+        text: "`k create deploy d49 --image=busybox:1.37 --replicas=1 -- sleep 600`, `k scale deploy d49 --replicas=2`, `k get deploy,rs -l app=d49`. Có ReplicaSet không? Thử `k create ns t49 && k -n t49 run x --image=busybox:1.37 -- sleep 60`: lỗi gì? Ghi `CM_SYMPTOM=` (một câu mô tả triệu chứng, trong dấu nháy). Tìm lỗi của controller-manager (`crictl ps -a`, `crictl logs` của container Exited, có thể phải chờ ~20 giây), sửa manifest.",
+      },
+      {
+        id: "t7",
+        text: "Chờ bốn static pod Ready (`k -n kube-system get pod -l tier=control-plane -w`), `k get --raw '/livez?verbose' | tail -3` và `curl -k https://localhost:6443/livez?verbose | tail -3`, `sudo ss -lntp | grep -E '6443|10259|10257'`. p49 và d49 đã chạy chưa? Xoá p49, d49, t49. `ls /etc/kubernetes/manifests` chỉ còn bốn tệp. Thêm mục `## s49 …` vào sổ tay (≥ 3 dòng). Trên Mac: `./labs/lab verify cka s49` phải 6/6. Ghi thời gian bạn đã dùng.",
+      },
+    ],
+    hints: [
+      "`connection refused` là không ai nghe cổng đó (apiserver không chạy); `timeout` hay `TLS handshake timeout` mới là có người nghe mà không trả lời. `ss -lntp` trả lời câu đó trong một giây.",
+      "`crictl ps` chỉ in container đang chạy; container thoát ngay chỉ thấy với `-a`. Lấy id của dòng Exited mới nhất (ATTEMPT lớn nhất) cho `crictl logs`.",
+      "`sudo ls /var/log/pods/kube-system_kube-apiserver-*` báo không có tệp (đo): glob được mở bởi shell của bạn, mà bạn không đọc được /var/log/pods. Chạy cả câu trong `sudo sh -c '…'` hay `sudo -i`.",
+      "`Error: unknown flag: --client-ca-file ` mà manifest có đúng `--client-ca-file=…`: có ký tự lạ giữa tên và `=`. `cat -A` in `M-BM- ` cho NBSP (đo); trong vim `:set list` cần `listchars` có `nbsp:+` (s16).",
+      "Sửa xong mà kubectl vẫn refused sau một phút: `ls -la /etc/kubernetes/manifests` có tệp thừa không (`.bak`, bản sao), YAML có đọc được không (`sudo journalctl -u kubelet --since -2min | grep -i manifest`).",
+      "Pod Pending mà `describe` không có event nào: không phải thiếu tài nguyên (đó là `FailedScheduling`), mà không có scheduler. `stat /etc/kubernetes/scheduler.config: no such file or directory` (đo): đọc kỹ đuôi tệp.",
+      "controller-manager trông `1/1 Running` một lúc rồi thoát: nó chờ leader lease ~20 giây mới dựng controller. Lỗi `error parsing root-ca-file at /etc/kubernetes/pki/ca.cert` (đo) chỉ có trong log của container đã thoát.",
+      "Verify dòng backup đỏ `backup không phải bản lúc sự cố`: bạn chép sau khi sửa, hay chép bản tốt từ đâu đó. Bản sao lưu phải là thứ bạn thấy lúc sự cố; làm lại buổi thì `begin` lại.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-25, Kubernetes 1.37.2, sau \`apply\` s48 rồi \`begin cka s49\`); cờ hỏng của bạn có thể khác (một trong sáu cờ), id container và giờ khác. Mọi lệnh chạy trên cka-cp.
+
+**1. kubectl chết: cổng và container**
+
+\`\`\`bash
+k get node
+# The connection to the server 192.168.252.35:6443 was refused - did you specify the right host or port?
+sudo ss -lntp | grep -E '6443|10259|10257|2379'
+# LISTEN … 192.168.252.35:2379 … users:(("etcd",…))
+# LISTEN … 127.0.0.1:2379      … users:(("etcd",…))
+# LISTEN … 127.0.0.1:10257     … users:(("kube-controller",…))
+#   (6443 không ai nghe; 10259 lúc có lúc không: scheduler đang vòng crash)
+sudo crictl ps -a --name 'kube-(apiserver|scheduler|controller-manager)'
+# … Exited    kube-scheduler            0   …
+# … Running   kube-controller-manager   0   …
+# … Exited    kube-apiserver            2   …
+\`\`\`
+
+**2. Log của lần chạy vừa chết, và log trên đĩa**
+
+\`\`\`bash
+sudo crictl logs $(sudo crictl ps -a -q --name '^kube-apiserver$' --state exited | head -1) 2>&1 | cat -A
+# Error: unknown flag: --client-ca-fileM-BM- $
+sudo sh -c 'ls -d /var/log/pods/kube-system_kube-apiserver-*; tail -n1 /var/log/pods/kube-system_kube-apiserver-cka-cp_*/kube-apiserver/*.log'
+# /var/log/pods/kube-system_kube-apiserver-cka-cp_6a4338a124af6d80e97a40136bdf2ed8
+# /var/log/pods/kube-system_kube-apiserver-cka-cp_b28c42db89fcd7dfb3d5a84d4356dafa
+# 2026-11-25T01:45:38.315867138+07:00 stderr F Error: unknown flag: --client-ca-file
+\`\`\`
+
+Hai thư mục: UID của static pod tính từ nội dung manifest, manifest đổi là Pod mới. Không có \`cat -A\` thì dòng lỗi trông như cờ đúng kèm một dấu cách thừa.
+
+**3. Sao lưu trước, rồi nhìn ký tự lạ**
+
+\`\`\`bash
+mkdir -p ~/drills/s49/backup
+sudo cp /etc/kubernetes/manifests/kube-{apiserver,scheduler,controller-manager}.yaml ~/drills/s49/backup/
+sudo grep -n -- '--client-ca-file' /etc/kubernetes/manifests/kube-apiserver.yaml | cat -A
+# 18:    - --client-ca-fileM-BM- =/etc/kubernetes/pki/ca.crt$
+sudo sed -i 's/\\xc2\\xa0//g' /etc/kubernetes/manifests/kube-apiserver.yaml      # hay vim: :set list, xoá ký tự +
+until [ "$(k get --raw /readyz 2>/dev/null)" = ok ]; do sleep 2; done            # 14 giây (đo)
+\`\`\`
+
+\`APISERVER_BAD_FLAG=--client-ca-file\`.
+
+**4. scheduler: Pod Pending không event**
+
+\`\`\`bash
+k run s49-probe --image=busybox:1.37 --restart=Never -- sleep 300; sleep 15
+k get pod s49-probe -o jsonpath='{.status.phase} node={.spec.nodeName}{"\\n"}'      # Pending node=
+k get events --field-selector involvedObject.name=s49-probe                       # No resources found
+k -n kube-system get pod -l tier=control-plane
+# kube-controller-manager-cka-cp   1/1     Running            0             4m13s
+# kube-scheduler-cka-cp            0/1     CrashLoopBackOff   0             4m27s
+sudo crictl logs $(sudo crictl ps -a -q --name '^kube-scheduler$' --state exited | head -1) 2>&1 | tail -1
+# E1124 18:45:15.549482  1 run.go:72] "command failed" err="stat /etc/kubernetes/scheduler.config: no such file or directory"
+sudo grep -n scheduler.config /etc/kubernetes/manifests/kube-scheduler.yaml       # 16:    - --kubeconfig=/etc/kubernetes/scheduler.config
+sudo sed -i 's#--kubeconfig=/etc/kubernetes/scheduler.config#--kubeconfig=/etc/kubernetes/scheduler.conf#' /etc/kubernetes/manifests/kube-scheduler.yaml
+\`\`\`
+
+\`SCHEDULER_SYMPTOM=Pending\`. Để ý controller-manager đang \`1/1 Running\` ở đây: nó chưa chết, chỉ đang chờ leader lease.
+
+**5. controller-manager: Deployment không có ReplicaSet**
+
+\`\`\`bash
+k create deploy s49-scale --image=busybox:1.37 --replicas=1 -- sleep 300
+k scale deploy s49-scale --replicas=2; sleep 10; k get deploy,rs -l app=s49-scale
+# deployment.apps/s49-scale   0/2     0            0           11s          (không có dòng ReplicaSet nào)
+k create ns t49 && k -n t49 run x --image=busybox:1.37 -- sleep 60
+# Error from server (Forbidden): pods "x" is forbidden: error looking up service account t49/default: serviceaccount "default" not found
+for id in $(sudo crictl ps -a -q --name '^kube-controller-manager$'); do sudo crictl logs $id 2>&1 | grep -m1 'Error building controllers'; done
+# E1124 18:46:10.464042  1 controllermanager.go:278] "Error building controllers" err="error parsing root-ca-file at /etc/kubernetes/pki/ca.cert: open /etc/kubernetes/pki/ca.cert: no such file or directory"
+sudo sed -i 's#--root-ca-file=/etc/kubernetes/pki/ca.cert#--root-ca-file=/etc/kubernetes/pki/ca.crt#' /etc/kubernetes/manifests/kube-controller-manager.yaml
+\`\`\`
+
+\`CM_SYMPTOM="Deployment scale lên 2 mà không có ReplicaSet nào, không có Pod mới"\`.
+
+**6. Kiểm trước khi tuyên bố xong**
+
+\`\`\`bash
+k -n kube-system get pod -l tier=control-plane          # bốn dòng 1/1 Running sau 24 giây (đo)
+k get --raw '/livez?verbose' | tail -3
+# [+]poststarthook/apiservice-openapi-controller ok
+# [+]poststarthook/apiservice-openapiv3-controller ok
+# livez check passed
+curl -sk https://localhost:6443/livez?verbose | tail -1                # livez check passed (không cần cert: /livez mở cho mọi người)
+curl -sk -o /dev/null -w '%{http_code}\\n' https://localhost:6443/livez   # 200
+k get pod s49-probe -o wide; k get pod -l app=s49-scale -o wide      # Running trên cka-w2; hai Pod, cka-w1 và cka-w2
+k delete pod s49-probe; k delete deploy s49-scale; k delete ns t49
+ls /etc/kubernetes/manifests                                         # etcd.yaml kube-apiserver.yaml kube-controller-manager.yaml kube-scheduler.yaml
+\`\`\`
+
+Rồi thêm mục \`## s49 — control plane: apiserver, scheduler, controller-manager\` vào sổ tay: bảng tầng của phần Tư duy, ba nguyên nhân, luật sao lưu.
+
+**Lời giải tự động** (\`labs/cka/sessions/s49/apply.sh\`): gây sự cố như \`begin\`, rồi \`files/solve.sh\` đi đúng bước 1–6 (cờ đọc từ \`crictl logs\` của container apiserver đã thoát, sao lưu ba manifest trước khi sửa, xoá NBSP bằng \`sed\`, đường dẫn sai của scheduler và controller-manager đọc từ log rồi sửa đúng dòng đó, chờ bốn static pod, \`/livez?verbose\`, thử lại một Pod và một Deployment), ghi answers.env và mục s49 của sổ tay nếu chưa có. Đo: 3 phút 10 giây và 1 phút 57 giây, cả hai rồi verify 6/6.`,
+    exam: {
+      patterns: [
+        "\"Sau khi sửa kube-apiserver.yaml, kubectl không kết nối được; sửa\" — `crictl ps -a`, `crictl logs`, `/var/log/pods/`, `cat -A` hay `:set list`, sao lưu trước khi sửa, chờ kubelet nạp lại.",
+        "\"Pod mới trong namespace X ở Pending mãi\" — không có event nào thì nhìn scheduler (`k -n kube-system get pod`, `crictl logs`), có `FailedScheduling` thì nhìn tài nguyên, taint, affinity.",
+        "\"Deployment Y không tạo Pod khi scale\" — `k get rs`, controller-manager (log, cờ trong manifest), ServiceAccount của namespace.",
+        "\"Kiểm sức khoẻ control plane và ghi kết quả vào /opt/…\" — `k get --raw '/livez?verbose'`, `/readyz?verbose`, `curl -k https://localhost:6443/livez`.",
+      ],
+      timeTargetMin: 30,
+      drills: [
+        {
+          text: "Trong 3 phút: kubectl `connection refused`. In dòng lỗi của lần chạy gần nhất của kube-apiserver mà không dùng kubectl, hai cách.",
+          timeLimitMin: 3,
+          solution: "```bash\nsudo crictl logs $(sudo crictl ps -a -q --name '^kube-apiserver$' | head -1) 2>&1 | tail -3\nsudo sh -c 'tail -n3 $(ls -t /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/*.log | head -1)'\n```\nThêm `| cat -A` khi dòng lỗi trông đúng.",
+        },
+        {
+          text: "Trong 2 phút: Pod mới Pending không event. Chứng minh trong một lệnh rằng scheduler không chạy, không dùng `get pod -n kube-system`.",
+          timeLimitMin: 2,
+          solution: "```bash\nsudo ss -lntp | grep 10259 || echo 'không ai nghe 10259: kube-scheduler không chạy'\n```\nHay `sudo crictl ps --name kube-scheduler` (rỗng), `crictl ps -a` thấy Exited.",
+        },
+      ],
+    },
+    tips: [
+      "Phản xạ trước mọi sửa static pod: `sudo cp /etc/kubernetes/manifests/<tệp> /root/` (hay một thư mục bạn chọn), **không bao giờ** chép vào chính manifests/.",
+      "Sửa xong, đếm 20–30 giây trước khi kết luận \"vẫn hỏng\"; rồi mới đọc lại `crictl ps -a` và log. Đừng restart kubelet để \"ép\" nạp lại.",
+      "Lỗi kiểu `unknown flag` mà cờ trông đúng: nghĩ ngay tới ký tự vô hình, `cat -A`.",
+      "Xong control plane chưa phải xong: tạo một Pod và một Deployment thử, xem được xếp lịch và có ReplicaSet, rồi dọn.",
+    ],
+    outcome: {
+      md: `Control plane chạy đúng manifest gốc và workload mới được xếp lịch. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s49
+\`\`\`
+
+Sáu dòng, so với bản tốt và mốc mà \`begin\` lưu ở \`/root/.lab/st9-cp/\`. **Manifest:** ba tệp giống bản tốt theo **nội dung YAML đã nạp** (viết lại cả tệp với khoá xếp theo thứ tự khác và thêm comment: vẫn xanh, đo), và manifests/ không có tệp thừa ngoài bốn manifest (tệp bắt đầu bằng dấu chấm thì kubelet bỏ qua; \`kube-apiserver.yaml.bak\` trong đó: đỏ \`thừa trong manifests/: kube-apiserver.yaml.bak\`, đo). **Xếp lịch:** một Deployment tạm 2 replica trong namespace tạm \`lab-verify-s49-…\` đạt 2 Pod Ready trong 90 giây (sửa apiserver mà chừa scheduler và controller-manager: đỏ \`sau 90 giây Deployment tạm không có ReplicaSet\`, đo). **Sao lưu:** \`~/drills/s49/backup/kube-apiserver.yaml\` có sha256 bằng bản hỏng lúc \`begin\` (chép bản tốt vào đó: đỏ, đo). **answers.env:** đúng cờ của lần \`begin\` này (cờ khác: đỏ, đo), \`SCHEDULER_SYMPTOM\` chứa \`Pending\`, \`CM_SYMPTOM\` chứa \`replica\`. **Sổ tay:** heading chứa \`s49\`. **Lõi khoẻ:** bốn static pod Running, etcd từ \`/var/lib/etcd-restore\`, \`/readyz\`, ba node, shop trải hai worker, postgres-0. Verify không treo khi apiserver còn chết: hỏi etcd trước, chờ \`/readyz\` có giới hạn. Ngay sau \`begin\`: **0/6** trong 63 giây; ngay sau khi VM bật lại giữa sự cố 1/6 trong 4 phút 13 giây (đo).`,
+      verifyOutput: "lab: kiểm s49\n  (chờ etcd, apiserver và Deployment của shop, nếu đang khởi động: tối đa ~16 phút)\n  ✓ Ba manifest (apiserver, scheduler, controller-manager) như bản tốt; /etc/kubernetes/manifests không có tệp thừa\n  ✓ Deployment tạm 2 replica được xếp lịch và sẵn sàng trong 90 giây (scheduler, controller-manager làm việc)\n  ✓ ~/drills/s49/backup/kube-apiserver.yaml là bản chép TRƯỚC khi sửa (sha256 bằng bản hỏng)\n  ✓ answers.env: APISERVER_BAD_FLAG, SCHEDULER_SYMPTOM, CM_SYMPTOM\n  ✓ ~/notes/runbook.md có mục s49 (triệu chứng, nguyên nhân, lệnh) ≥ 3 dòng\n  ✓ Lõi khoẻ: bốn static pod Running, etcd từ /var/lib/etcd-restore, /readyz; ba node; shop trải hai worker, postgres-0\n  → 6/6 đạt",
+      projectDelta: "Control plane trở lại như cuối s48. Sổ tay có mục s49: khi kubectl chết thì xuống tầng nào, và luật sao lưu manifest ra ngoài manifests/.",
+    },
+    review: [
+      { q: "kubectl báo `connection refused` tới :6443. Ba lệnh đầu tiên của bạn trên cka-cp là gì, theo thứ tự nào?", a: "`sudo ss -lntp | grep 6443` (có ai nghe không), `sudo crictl ps -a --name kube-apiserver` (container có chạy, thoát mấy lần), `sudo crictl logs <id Exited mới nhất>` (vì sao). Log trên đĩa `/var/log/pods/kube-system_kube-apiserver-…/` khi container đã bị dọn; `journalctl -u kubelet` khi không có container nào (manifest không đọc được)." },
+      { q: "Vì sao để `kube-apiserver.yaml.bak` trong /etc/kubernetes/manifests làm hỏng việc sửa?", a: "kubelet chạy mọi tệp trong staticPodPath trừ tệp bắt đầu bằng dấu chấm, không quan tâm đuôi. Hai tệp định nghĩa cùng Pod `kube-apiserver` trên cka-cp; đo trên lab: bản hỏng trong `.bak` thắng, 4 phút sau khi sửa tệp chính vẫn `connection refused`. Sao lưu ra ngoài thư mục đó." },
+      { q: "Pod mới Pending, `describe` không có event nào. Pod khác Pending với `FailedScheduling: 0/3 nodes are available`. Khác nhau thế nào?", a: "`FailedScheduling` là scheduler đang chạy, đã xét và không tìm được node (tài nguyên, taint, affinity, nodeSelector). Không có event nào là không ai xét: scheduler không chạy (đo: `stat /etc/kubernetes/scheduler.config: no such file or directory`, CrashLoopBackOff) hay Pod dùng `schedulerName` không tồn tại." },
+      { q: "Deployment scale lên mà không có Pod mới, `k get rs` rỗng, và `k -n t49 run` báo `serviceaccount \"default\" not found`. Thành phần nào hỏng, vì sao một triệu chứng ở namespace mới?", a: "kube-controller-manager: Deployment controller (tạo ReplicaSet), ReplicaSet controller (tạo Pod) và ServiceAccount controller (tạo SA `default` cho namespace mới) đều chạy trong nó. Namespace mới không có SA nên admission từ chối Pod. Nó có thể trông `1/1 Running` một lúc vì chờ leader lease rồi mới đọc cấu hình và thoát." },
+      { q: "So sánh đọc sự cố control plane với đọc sự cố một ứng dụng Spring theo tầng.", a: "Cùng một cách: endpoint chết (kubectl/HTTP) thì không gọi lại nó, mà xuống tầng tiến trình (crictl ps/ps, ss -lntp), rồi log của lần khởi động vừa chết (crictl logs, /var/log/pods/ như log tệp của Spring), tìm dòng đầu tiên nói vì sao (`unknown flag`, `APPLICATION FAILED TO START`). Sửa cấu hình, chờ tiến trình được chạy lại (kubelet ~20 giây), rồi kiểm từ ngoài vào (/livez, một request thật)." },
+    ],
   },
   {
     id: "s50",

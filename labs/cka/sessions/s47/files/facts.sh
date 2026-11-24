@@ -14,7 +14,9 @@
 #   ANS      ~/drills/s47/answers.env: DNS_ZONE_FOUND bằng zone sự cố đã ghi; PROXY_NODE cka-w1; BLOCKING_POLICY allow-monitoring;
 #            ONE_TEST có nslookup hay dig và một ClusterIP hay tên Service đang có trong cluster.
 #   RUNBOOK  ~/notes/runbook.md có heading chứa `s47` với ≥ 3 dòng không rỗng (tới heading cùng cấp hay cao hơn).
-python3 - "$HOME" <<'PY'
+# FAST=1 (dòng đầu của lệnh gửi, check.sh của s48): chỉ ANS và RUNBOOK, không tạo Pod tạm, không exec (sự cố st9-node làm
+# hai worker NotReady: Pod tạm ghim node sẽ treo ở đó và làm rối `k get pod -A` của bạn).
+python3 - "$HOME" "${FAST:-0}" <<'PY'
 import copy, json, re, secrets, subprocess, sys, time
 home = sys.argv[1]
 LAB = "/root/.lab/st9-net"
@@ -41,6 +43,49 @@ def strip_ann(t):
     if not (t.get("metadata") or {}).get("annotations"): (t.get("metadata") or {}).pop("annotations", None)
     return t
 NOMARK = "chưa có bản tốt của sự cố (chạy begin)"
+
+# 5. ANS
+bad = []
+ans = {}
+try:
+    for l in open(f"{home}/drills/s47/answers.env", encoding="utf-8"):
+        if "=" in l and not l.lstrip().startswith("#"):
+            a, b = l.strip().split("=", 1); ans[a.strip()] = b.strip().strip('"\'')
+except Exception: ans = None
+zone = (saved("zone") or "").strip()
+if ans is None: bad.append("chưa có ~/drills/s47/answers.env")
+else:
+    z = (ans.get("DNS_ZONE_FOUND") or "").strip().lower().rstrip(".")
+    if not zone: bad.append(NOMARK)
+    elif z != zone: bad.append(f"DNS_ZONE_FOUND={ans.get('DNS_ZONE_FOUND')} chưa đúng")
+    if (ans.get("PROXY_NODE") or "").strip().lower() not in ("cka-w1", "node/cka-w1"): bad.append(f"PROXY_NODE={ans.get('PROXY_NODE')} chưa đúng")
+    b = re.sub(r"^(networkpolic(y|ies)(\.networking\.k8s\.io)?/|netpol/|shop/)", "", (ans.get("BLOCKING_POLICY") or "").strip().lower())
+    if b != "allow-monitoring": bad.append(f"BLOCKING_POLICY={ans.get('BLOCKING_POLICY')} chưa đúng")
+    t = ans.get("ONE_TEST") or ""
+    ips = {s["spec"].get("clusterIP") for s in (kj("get", "svc", "-A") or {}).get("items", [])} - {None, "None", ""}
+    names = {s["metadata"]["name"] for s in (kj("get", "svc", "-A") or {}).get("items", [])}
+    if not re.search(r"\b(nslookup|dig)\b", t): bad.append("ONE_TEST chưa có nslookup/dig")
+    elif not (any(ip in t for ip in ips) or any(re.search(rf"\b{re.escape(n)}(\.|\b)", t) for n in names)):
+        bad.append("ONE_TEST chưa nêu ClusterIP hay tên Service")
+say("ANS", bad)
+
+# 6. RUNBOOK
+bad = []
+try: text = open(f"{home}/notes/runbook.md", encoding="utf-8").read()
+except Exception: text = None
+if text is None: bad.append("chưa có ~/notes/runbook.md")
+else:
+    best, cur = 0, None
+    for l in text.splitlines():
+        m = re.match(r"^(#{1,6})\s+(.*)", l)
+        if m:
+            if cur and len(m.group(1)) <= cur[0]: best = max(best, cur[1]); cur = None
+            if cur is None and re.search(r"s47", m.group(2), re.I): cur = [len(m.group(1)), 0]
+        elif cur and l.strip(): cur[1] += 1
+    if cur: best = max(best, cur[1])
+    if best < 3: bad.append("runbook.md chưa có mục s47 ≥ 3 dòng")
+say("RUNBOOK", bad)
+if sys.argv[2:3] == ["1"]: sys.exit(0)   # FAST=1: chỉ hai dòng tệp (check.sh của s48: node có thể đang NotReady)
 
 # 1. COREDNS
 bad = []
@@ -125,45 +170,4 @@ else:
         if rc != 0: bad.append(f"order trên {p['spec'].get('nodeName', '?').replace('cka-', '')} không nối được catalog:8080")
 say("NETPOL", bad)
 
-# 5. ANS
-bad = []
-ans = {}
-try:
-    for l in open(f"{home}/drills/s47/answers.env", encoding="utf-8"):
-        if "=" in l and not l.lstrip().startswith("#"):
-            a, b = l.strip().split("=", 1); ans[a.strip()] = b.strip().strip('"\'')
-except Exception: ans = None
-zone = (saved("zone") or "").strip()
-if ans is None: bad.append("chưa có ~/drills/s47/answers.env")
-else:
-    z = (ans.get("DNS_ZONE_FOUND") or "").strip().lower().rstrip(".")
-    if not zone: bad.append(NOMARK)
-    elif z != zone: bad.append(f"DNS_ZONE_FOUND={ans.get('DNS_ZONE_FOUND')} chưa đúng")
-    if (ans.get("PROXY_NODE") or "").strip().lower() not in ("cka-w1", "node/cka-w1"): bad.append(f"PROXY_NODE={ans.get('PROXY_NODE')} chưa đúng")
-    b = re.sub(r"^(networkpolic(y|ies)(\.networking\.k8s\.io)?/|netpol/|shop/)", "", (ans.get("BLOCKING_POLICY") or "").strip().lower())
-    if b != "allow-monitoring": bad.append(f"BLOCKING_POLICY={ans.get('BLOCKING_POLICY')} chưa đúng")
-    t = ans.get("ONE_TEST") or ""
-    ips = {s["spec"].get("clusterIP") for s in (kj("get", "svc", "-A") or {}).get("items", [])} - {None, "None", ""}
-    names = {s["metadata"]["name"] for s in (kj("get", "svc", "-A") or {}).get("items", [])}
-    if not re.search(r"\b(nslookup|dig)\b", t): bad.append("ONE_TEST chưa có nslookup/dig")
-    elif not (any(ip in t for ip in ips) or any(re.search(rf"\b{re.escape(n)}(\.|\b)", t) for n in names)):
-        bad.append("ONE_TEST chưa nêu ClusterIP hay tên Service")
-say("ANS", bad)
-
-# 6. RUNBOOK
-bad = []
-try: text = open(f"{home}/notes/runbook.md", encoding="utf-8").read()
-except Exception: text = None
-if text is None: bad.append("chưa có ~/notes/runbook.md")
-else:
-    best, cur = 0, None
-    for l in text.splitlines():
-        m = re.match(r"^(#{1,6})\s+(.*)", l)
-        if m:
-            if cur and len(m.group(1)) <= cur[0]: best = max(best, cur[1]); cur = None
-            if cur is None and re.search(r"s47", m.group(2), re.I): cur = [len(m.group(1)), 0]
-        elif cur and l.strip(): cur[1] += 1
-    if cur: best = max(best, cur[1])
-    if best < 3: bad.append("runbook.md chưa có mục s47 ≥ 3 dòng")
-say("RUNBOOK", bad)
 PY
