@@ -288,7 +288,7 @@ k get pod -o wide -l app=gateway | awk '{print $1, $7}'
 # gateway-68c4768b4f-vzxmk cka-w1
 ~/drills/s41/loop.sh stop ~/drills/s41/loop.log
 # đã dừng; 1286 request, 0 lỗi
-grep '^#' ~/drills/s41/loop.log      # (lần chạy của apply.sh, bản loop.sh có ev:: 188 request, 0 lỗi)
+grep '^#' ~/drills/s41/loop.log      # (lần chạy của apply.sh, bản loop.sh có ev:, 188 request, 0 lỗi)
 # # 1795126263 05:11:03 start http://192.168.252.36:30180/api/products
 # # 1795126264 05:11:04 nodes cka-cp=v1.36.6/sched cka-w1=v1.36.6/sched cka-w2=v1.36.6/sched pods cka-cp=0 cka-w1=3 cka-w2=4
 # # 1795126276 05:11:16 nodes cka-cp=v1.36.6/sched cka-w1=v1.36.6/cordon cka-w2=v1.36.6/sched pods cka-cp=0 cka-w1=3 cka-w2=4 ev:cka-w1=3
