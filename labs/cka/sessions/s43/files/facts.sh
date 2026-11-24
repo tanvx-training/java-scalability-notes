@@ -39,7 +39,7 @@ except Exception: pass
 if rc != 0 and "no such file" in (err + out).lower(): bad.append(f"chưa có {SNAP}")
 elif st is None: bad.append("etcdutl snapshot status lỗi: " + ((err or out).strip().splitlines() or [""])[-1][:40])
 elif not st.get("totalKey"): bad.append("snapshot không có key")
-# Key còn sống trong snapshot ở revision cuối (review M1): tìm chuỗi byte trong tệp không đủ, vì lịch sử MVCC và tombstone vẫn
+# Key còn sống trong snapshot ở revision cuối: tìm chuỗi byte trong tệp không đủ, vì lịch sử MVCC và tombstone vẫn
 # chứa key đã xoá (snapshot chụp lại sau khi xoá after-snapshot thì đỏ oan; chụp sau khi xoá order thì xanh oan). Restore snapshot
 # vào một thư mục tạm (mktemp, không phải data-dir nào đang chạy; kiểm luôn hash của snapshot), đọc bucket "key" của db bằng
 # live_keys (không khởi động etcd nào), rồi xoá thư mục tạm.
@@ -192,7 +192,7 @@ rc, out, err = run("kubectl", "--request-timeout=10s", "-n", "shop", "get", "cm"
 if rc == 0: bad.append("còn after-snapshot")
 elif "NotFound" not in err: bad.append("không đọc được after-snapshot")
 # order: đếm Pod Ready không đang xoá, không tin status của Deployment (sau restore nó là status lúc chụp: đo "2/2 available"
-# khi chưa Pod order nào chạy). Số đếm này KHÔNG bắt được Pod "bóng ma" của snapshot (chúng mang status Ready cũ, review M7):
+# khi chưa Pod order nào chạy). Số đếm này KHÔNG bắt được Pod "bóng ma" của snapshot (chúng mang status Ready cũ):
 # bằng chứng order chạy thật là /api/orders gọi từ Mac trong verify.sh (gateway → order → PostgreSQL).
 d = kj("-n", "shop", "get", "deploy", "order")
 if d is None: bad.append("không có Deployment order")

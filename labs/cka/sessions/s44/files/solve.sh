@@ -3,6 +3,7 @@
 # lại (kubelet dừng Pod khi tệp biến mất, tạo lại khi tệp quay về), chép admin.conf mới vào ~/.kube/config, ghi ha.txt và
 # answers.env. Lần trước bị ngắt khi manifest đang ở /etc/kubernetes/s44-off thì đưa lại trước.
 set -e
+set -o pipefail   # `kubeadm certs renew all | tail` phải dừng khi renew lỗi
 MAN=/etc/kubernetes/manifests
 OFF=/etc/kubernetes/s44-off
 PKI=/etc/kubernetes/pki/etcd
@@ -46,7 +47,7 @@ cat > ~/drills/s44/ha.txt <<'HA'
 # HA control plane, stacked etcd (lab chỉ có một control plane; đây là lệnh của một cluster dựng mới).
 # Load balancer TCP 6443 đặt trước mọi apiserver; mọi node và kubeconfig trỏ vào lb.cka.local:6443.
 # Control plane đầu tiên:
-sudo kubeadm init --control-plane-endpoint "lb.cka.local:6443" --upload-certs --pod-network-cidr 192.168.0.0/16
+sudo kubeadm init --control-plane-endpoint "lb.cka.local:6443" --upload-certs --pod-network-cidr 10.244.0.0/16
 # Control plane thứ hai, thứ ba (token, hash, certificate-key lấy từ output của init; certificate-key hết hạn sau 2 giờ,
 # in lại bằng: sudo kubeadm init phase upload-certs --upload-certs):
 sudo kubeadm join lb.cka.local:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash> --control-plane --certificate-key <key>

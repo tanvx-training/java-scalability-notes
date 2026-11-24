@@ -1,4 +1,4 @@
-# s42 — kiểm (7 dòng; ba dòng đầu tách từ một dòng cũ để lý do đỏ không bị cắt mất, review M1): ba node kubelet v1.37.x cùng bản, Ready, schedulable; kube-apiserver/controller-manager/scheduler image
+# s42 — kiểm (7 dòng; ba dòng đầu tách từ một dòng cũ để lý do đỏ không bị cắt mất): ba node kubelet v1.37.x cùng bản, Ready, schedulable; kube-apiserver/controller-manager/scheduler image
 # v1.37.x, etcd/CoreDNS/kube-proxy đúng image `kubeadm config images list` của bản đó, kubeadm-config 1.37; shop (release, ba
 # service ≥ 2 replica, postgres) và cert-manager (Certificate shop-local, webhook nhận dry-run) chạy; curl TỪ MÁY MAC tới
 # 30180, Ingress :30080, Gateway :30280 trả 200 (một dòng). Trên từng node (files/node-facts.sh): kubeadm, kubelet, kubectl

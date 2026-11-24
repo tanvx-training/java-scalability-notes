@@ -11,7 +11,7 @@ mkdir -p ~/drills/s37 ~/charts
 echo "== helm $HELM_VERSION"
 if [ "$(helm version --template '{{.Version}}' 2>/dev/null || true)" != "$HELM_VERSION" ]; then
   t=$(mktemp -d)
-  curl -fsSL --retry 3 -o "$t/helm.tgz" "https://get.helm.sh/helm-$HELM_VERSION-linux-arm64.tar.gz"
+  curl -fsSL --retry 3 --max-time 180 -o "$t/helm.tgz" "https://get.helm.sh/helm-$HELM_VERSION-linux-arm64.tar.gz"
   echo "$HELM_SHA256  $t/helm.tgz" | sha256sum -c -
   tar xzf "$t/helm.tgz" -C "$t"
   sudo install -m 0755 "$t/linux-arm64/helm" /usr/local/bin/helm
@@ -20,8 +20,8 @@ fi
 helm version
 
 echo "== repo công khai, cài demo (podinfo $PODINFO_VERSION) lên cka-cp"
-helm repo add podinfo https://stefanprodan.github.io/podinfo --force-update
-helm repo update podinfo
+timeout 120 helm repo add podinfo https://stefanprodan.github.io/podinfo --force-update
+timeout 120 helm repo update podinfo
 helm search repo podinfo/podinfo --versions | head -4
 cat > ~/drills/s37/demo-values.yaml <<'EOF'
 # Ghi đè cho release demo: chạy trên control plane (toleration + nodeSelector), giới hạn RAM.

@@ -36,7 +36,9 @@ k apply -f ~/shop/postgres.yaml
 k -n shop rollout status sts/postgres --timeout=5m
 end=$(($(date +%s) + 300)); w1=$(k get node cka-w1 -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
 until [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://$w1:30180/api/products")" = 200 ] || [ "$(date +%s)" -ge "$end" ]; do sleep 3; done
-helm upgrade shop ~/charts/shop -n shop --reset-values --force-conflicts --wait --timeout 5m | sed -n '1,6p'
+# Lấy output trước rồi mới cắt: `helm upgrade … | sed` (không pipefail) bỏ qua mã lỗi khi upgrade hết giờ.
+out=$(helm upgrade shop ~/charts/shop -n shop --reset-values --force-conflicts --wait --timeout 5m 2>&1) || { printf '%s\n' "$out" >&2; echo "s41: helm upgrade shop lỗi; dừng trước vòng request và drain" >&2; exit 1; }
+printf '%s\n' "$out" | sed -n '1,6p'
 k -n shop get pdb
 
 # rebalance: Pod của một service dồn hết lên một worker thì rollout restart (matchLabelKeys pod-template-hash trải lại).

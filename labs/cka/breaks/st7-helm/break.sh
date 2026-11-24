@@ -24,7 +24,7 @@ if [ -n "$miss" ]; then
   echo "lab: thiếu$miss (trạng thái cuối s39); thử: ./labs/lab restore cka s39" >&2; exit 1
 fi
 # Repo podinfo phải đọc được để gây lỗi (lần chạy trước đã xoá index): cập nhật lặng lẽ.
-helm repo update podinfo >/dev/null 2>&1 || { echo "lab: helm repo update podinfo lỗi (cka-cp không ra được mạng? https://stefanprodan.github.io/podinfo); thử lại khi có mạng" >&2; exit 1; }
+timeout 120 helm repo update podinfo >/dev/null 2>&1 || { echo "lab: helm repo update podinfo lỗi (cka-cp không ra được mạng? https://stefanprodan.github.io/podinfo); thử lại khi có mạng" >&2; exit 1; }
 # fail <bước>: một bước không có hiệu lực. Không nói bước đó làm gì (đây là đề bài sự cố).
 fail() { echo "lab: không gây được sự cố st7-helm (bước $1/3); chạy lại ./labs/lab begin cka s40, vẫn lỗi thì ./labs/lab restore cka s39" >&2; exit 1; }
 

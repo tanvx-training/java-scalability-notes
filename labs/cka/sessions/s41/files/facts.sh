@@ -212,7 +212,7 @@ else:
 say("LOG", bad)
 
 # 6. DRAIN (chỉ verify s41 dùng; check.sh của s42 chỉ dùng LOG, vì log cũ trước bản loop.sh này không có ev:): bằng chứng
-# đoạn drain là thật (review M5). (a) Trong đoạn đó loop.sh thấy ít nhất một Pod trên cka-w1 bị đuổi qua Eviction API
+# đoạn drain là thật. (a) Trong đoạn đó loop.sh thấy ít nhất một Pod trên cka-w1 bị đuổi qua Eviction API
 # (ev:cka-w1, condition DisruptionTarget=EvictionByEvictionAPI): cordon rồi `kubectl delete pod` thì không có, đỏ. (b) Mọi Pod
 # gateway/catalog/order đang ở cka-w1 được tạo sau lúc cordon của đoạn đó: một log viết tay mang thời điểm sau khi Pod đã
 # chạy thì đỏ. (c) ~/drills/s41/loop.sh đúng bản cho sẵn (sha256 do verify.sh truyền vào), không bị sửa để luôn ghi 200.

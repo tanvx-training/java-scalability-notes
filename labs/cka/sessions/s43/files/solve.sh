@@ -88,11 +88,11 @@ snapshot_save() {
   sudo etcdutl snapshot status $SNAP -w table
 }
 has_data() { # $NEW có dữ liệu thật của cluster này (key /registry/namespaces/shop trong db), không chỉ là một db rỗng mà etcd tự
-  # tạo khi hostPath DirectoryOrCreate trỏ vào thư mục chưa restore (review M2)
+  # tạo khi hostPath DirectoryOrCreate trỏ vào thư mục chưa restore
   sudo grep -qaF /registry/namespaces/shop $NEW/member/snap/db 2>/dev/null
 }
 drop_ghost_pods() { # Pod order ghi tên lúc chụp: sau restore chúng có lại trong API với status cũ (Ready) mà container đã bị xoá;
-  # ReplicaSet tính chúng là còn sống nên không tạo Pod mới (đo). Xoá ngay sau /readyz, TRƯỚC mọi vòng chờ order (review I1).
+  # ReplicaSet tính chúng là còn sống nên không tạo Pod mới (đo). Xoá ngay sau /readyz, TRƯỚC mọi vòng chờ order.
   local p
   for p in $(cat ~/drills/s43/order-pods-at-snapshot 2>/dev/null); do
     k -n shop get "$p" >/dev/null 2>&1 || continue

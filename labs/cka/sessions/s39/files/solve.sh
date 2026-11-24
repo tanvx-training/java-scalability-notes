@@ -39,8 +39,8 @@ k apply -f ~/drills/s39/bad-feature.yaml > ~/drills/s39/rejected.txt 2>&1 || tru
 cat ~/drills/s39/rejected.txt
 
 echo "== cert-manager $CM_VERSION bằng Helm (crds.enabled=true, ba thành phần trên cka-cp)"
-helm repo add jetstack https://charts.jetstack.io --force-update
-helm repo update jetstack
+timeout 120 helm repo add jetstack https://charts.jetstack.io --force-update
+timeout 120 helm repo update jetstack
 helm upgrade --install cert-manager jetstack/cert-manager --version "$CM_VERSION" -n cert-manager --create-namespace \
   -f ~/drills/s39/cert-manager-values.yaml --wait --timeout 10m > ~/drills/s39/helm.log
 head -6 ~/drills/s39/helm.log

@@ -80,7 +80,7 @@ print("VER=" + (ver or ""))
 
 # CoreDNS có PDB thật sự giữ được Pod (kubeadm không tạo PDB nào): giữ ít nhất một Pod (minAvailable ≥ 1 hay ≥ 1%) hay không
 # cho đuổi hết (maxUnavailable là số, hay phần trăm < 100%), và lúc này còn ít nhất một Pod không được đuổi (ALLOWED
-# DISRUPTIONS < số Pod khoẻ). Nhận cả dạng phần trăm (minAvailable: 50%, review N1). maxUnavailable 100%, minAvailable 0
+# DISRUPTIONS < số Pod khoẻ). Nhận cả dạng phần trăm (minAvailable: 50%). maxUnavailable 100%, minAvailable 0
 # hay 0%, hay maxUnavailable 2 với 2 replica (ALLOWED DISRUPTIONS = số Pod khoẻ): đỏ.
 pdbs = (kj("-n", "kube-system", "get", "pdb") or {}).get("items") or []
 def intstr(v):

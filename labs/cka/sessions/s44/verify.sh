@@ -30,7 +30,7 @@ mac_get() { # <IP> <cổng> <host hay ->
   done
   echo ":$port trả mã ${code:-000}"
 }
-# order chạy thật (review M7): /api/orders (gateway → order → PostgreSQL) trả 200 với một mảng JSON; status của Deployment có thể là
+# order chạy thật: /api/orders (gateway → order → PostgreSQL) trả 200 với một mảng JSON; status của Deployment có thể là
 # status cũ sau một lần restore etcd bằng tay ở s43.
 mac_orders() {
   local ip="$1" i body code
