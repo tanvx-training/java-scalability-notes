@@ -6,7 +6,10 @@
 # sha256 rồi `dpkg -i`; không thêm nguồn apt nào (repo của node vẫn chỉ v1.37). Có sẵn đúng tệp trong /var/cache/apt/archives
 # (sha256 khớp) thì dùng, không tải. Phụ thuộc của gói (kubernetes-cni ≥ 1.2.0, mount, util-linux) đã có từ s06.
 # Chạy lại được: kubelet đã là 1.36.6-1.1 thì chỉ hold lại và đảm bảo kubelet đang chạy bản đó.
+# Khoá dpkg: apt_mark / sudo_lock của sessions/s42/files/aptlock.sh (run.sh ghép tệp đó lên trước, LOCK_QUIET=1 để không
+# in gì): unattended-upgrade có thể giữ khoá ngay sau khi VM bật lại; chờ tối đa 600 giây rồi mới báo lỗi.
 set -e
+command -v sudo_lock >/dev/null 2>&1 || { echo "lab: kubelet.sh cần sessions/s42/files/aptlock.sh ghép phía trước" >&2; exit 2; }
 V=1.36.6-1.1
 SHA=3bcb290c74e70068b782d8b4578fd3d64377c2f196d6ef50272c0e45c36934dc
 URL="https://pkgs.k8s.io/core:/stable:/v1.36/deb/arm64/kubelet_${V}_arm64.deb"
@@ -20,10 +23,10 @@ if [ "$(dpkg-query -W -f='${Version}' kubelet 2>/dev/null)" != "$V" ]; then
     curl -fsSL --retry 3 --max-time 180 -o "$deb" "$URL" 2>/dev/null || fail "không tải được gói (cka-w2 ra được mạng?)"
     echo "$SHA  $deb" | sha256sum -c --quiet >/dev/null 2>&1 || fail "sha256 của gói không khớp"
   fi
-  sudo apt-mark unhold kubelet >/dev/null
-  sudo DEBIAN_FRONTEND=noninteractive dpkg -i "$deb" >/dev/null 2>&1 || fail
+  apt_mark unhold kubelet || fail "apt-mark"
+  sudo_lock DEBIAN_FRONTEND=noninteractive dpkg -i "$deb" || fail
 fi
-sudo apt-mark hold kubelet >/dev/null
+apt_mark hold kubelet || fail "apt-mark"
 case "$(/usr/bin/kubelet --version 2>/dev/null)" in "Kubernetes v${V%%-*}") ;; *) fail ;; esac
 # kubelet đang chạy phải là binary 1.36: tiến trình cũ vẫn chạy binary 1.37 tới khi khởi động lại (dpkg thay tệp, nên
 # /proc/<pid>/exe của nó là "/usr/bin/kubelet (deleted)").

@@ -4,20 +4,9 @@
 #   STEP=kubeadm  unhold kubeadm, cài kubeadm=$PKG, hold lại
 #   STEP=kubelet  unhold kubelet kubectl, cài bản $PKG, hold lại, daemon-reload, restart kubelet
 set -e
-# apt-daily-upgrade.timer của Ubuntu có thể chạy unattended-upgrade đúng lúc này (đo 2026-11-24 trên cka-cp, sau khi VM bật
-# lại: `dpkg frontend lock was locked by another process`, apt-mark mã 100). apt-get chờ khoá bằng DPkg::Lock::Timeout;
-# apt-mark không có tuỳ chọn đó nên thử lại khi lỗi là khoá dpkg, tối đa 10 phút.
-LOCKWAIT=600
-apt_get() { sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=$LOCKWAIT "$@"; }
-apt_mark() {
-  local t=0 err
-  until err="$(sudo apt-mark "$@" 2>&1 >/dev/null)"; do
-    case "$err" in *lock*) ;; *) echo "$err" >&2; return 1 ;; esac
-    [ "$t" -ge "$LOCKWAIT" ] && { echo "lab: khoá dpkg bị giữ quá $LOCKWAIT giây (unattended-upgrade?), thử lại sau" >&2; return 1; }
-    [ "$t" -eq 0 ] && echo "khoá dpkg đang bị giữ (thường là unattended-upgrade), chờ tối đa $LOCKWAIT giây" >&2
-    sleep 5; t=$((t+5))
-  done
-}
+# Khoá dpkg: apt_get / apt_mark của files/aptlock.sh (bên gửi ghép tệp đó lên trước tệp này). unattended-upgrade có thể
+# giữ khoá ngay sau khi VM bật lại (đo 2026-11-24, s42 trong selftest); thiếu aptlock.sh thì dừng, không đổi gì.
+command -v apt_mark >/dev/null 2>&1 || { echo "lab: node.sh cần files/aptlock.sh ghép phía trước" >&2; exit 2; }
 minor="v$(echo "$PKG" | cut -d. -f1-2)"   # 1.37.2-1.1 → v1.37
 case "$STEP" in
   repo)

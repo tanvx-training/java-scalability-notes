@@ -12,6 +12,7 @@ vm "$cp" "kubectl --request-timeout=10s get node; kubectl version 2>/dev/null | 
 echo "s45: 8. cka-w2: kubelet --version, gói, hold; nâng kubelet và kubectl về $PKG"
 vm cka-w2 "kubelet --version; dpkg-query -W -f='\${Package} \${Version}\n' kubeadm kubelet kubectl; apt-mark showhold"
 vm cka-w2 "export STEP=kubelet PKG=$PKG
+$(cat "$SESSION_DIR/../s42/files/aptlock.sh")
 $(cat "$SESSION_DIR/../s42/files/node.sh")"
 vm "$cp" 'end=$(($(date +%s) + 120))
 until [ "$(kubectl --request-timeout=5s get node cka-w2 -o jsonpath={.status.nodeInfo.kubeletVersion} 2>/dev/null)" = v1.37.2 ] || [ $(date +%s) -ge $end ]; do sleep 2; done

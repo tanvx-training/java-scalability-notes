@@ -7,6 +7,8 @@
 # thái cuối s44; thiếu thì dừng, không gây gì. Nạp bởi `lab` trên máy Mac (bash 3.2, set -e).
 vm "$LAB_CP" "STEP=prep
 $(cat "$SESSION_DIR/etcd.sh")"
-vm cka-w2 "$(cat "$SESSION_DIR/kubelet.sh")"
+vm cka-w2 "LOCK_QUIET=1
+$(cat "$SESSION_DIR/../../sessions/s42/files/aptlock.sh")
+$(cat "$SESSION_DIR/kubelet.sh")"
 vm "$LAB_CP" "STEP=break
 $(cat "$SESSION_DIR/etcd.sh")"

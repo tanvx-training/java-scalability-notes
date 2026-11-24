@@ -12,6 +12,7 @@ vm "$cp" "$(cat "$SESSION_DIR/../s26/files/wait.sh")" >/dev/null 2>&1 || true
 . "$SESSION_DIR/setup.sh"
 loop="~/drills/s42/loop.sh"
 node_step() { vm "$1" "export STEP=$2 PKG=$PKG
+$(cat "$SESSION_DIR/files/aptlock.sh")
 $(cat "$SESSION_DIR/files/node.sh")"; }
 # done_node <node>: kubelet báo v$V, gói đủ bản $PKG và hold.
 done_node() {
