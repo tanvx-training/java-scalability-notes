@@ -10,7 +10,8 @@ for i in 1 2 3 4 5; do \$ns task ls -q 2>/dev/null | grep -qx catalog || break; 
 for v in $LAB_VMS; do
   echo "s06: chuẩn bị $v"
   vm_put "$SESSION_DIR/files/prepare-node.sh" "$v" /tmp/s06-prepare.sh
-  vm "$v" "sudo bash /tmp/s06-prepare.sh $K8S_INSTALL_MINOR && rm -f /tmp/s06-prepare.sh"
+  vm_put "$SESSION_DIR/../s42/files/aptlock.sh" "$v" /tmp/s06-aptlock.sh
+  vm "$v" "sudo bash /tmp/s06-prepare.sh $K8S_INSTALL_MINOR /tmp/s06-aptlock.sh && rm -f /tmp/s06-prepare.sh /tmp/s06-aptlock.sh"
   # Môi trường lab, không thuộc bài: TCP MTU probing để containerd kéo được image từ registry.k8s.io (files/node-net.sh).
   vm "$v" "$(cat "$SESSION_DIR/files/node-net.sh")" || { echo "s06: $v: không bật được net.ipv4.tcp_mtu_probing" >&2; exit 1; }
 done

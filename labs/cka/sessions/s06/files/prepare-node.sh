@@ -1,9 +1,14 @@
 #!/bin/bash
 # Chạy trong VM bằng root: chuẩn bị một node cho kubeadm theo trang "Installing kubeadm".
-# Cách dùng: sudo bash prepare-node.sh <minor, vd. 1.36>
+# Cách dùng: sudo bash prepare-node.sh <minor, vd. 1.36> <đường dẫn aptlock.sh>
+# Khoá dpkg: nạp sessions/s42/files/aptlock.sh (apply.sh chép nó vào VM, đối số thứ hai): unattended-upgrade có thể giữ khoá
+# ngay sau khi VM bật lại; apt-get chờ bằng DPkg::Lock::Timeout=$LOCKWAIT, apt-mark thử lại khi lỗi là khoá (apt_mark), tối
+# đa 600 giây. Thiếu tệp đó thì dừng, không đổi gì.
 # Chạy lại nhiều lần được.
 set -euo pipefail
 minor="$1"
+[ -s "${2:-}" ] || { echo "lab: prepare-node.sh cần đường dẫn aptlock.sh (đối số thứ hai)" >&2; exit 2; }
+. "$2"
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 
 # 1. Swap: tắt ngay và chú thích mọi dòng swap trong fstab (bền qua reboot)
@@ -34,10 +39,10 @@ if [ ! -s /etc/apt/keyrings/kubernetes-apt-keyring.gpg ]; then
 fi
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$minor/deb/ /" \
   > /etc/apt/sources.list.d/kubernetes.list
-apt-get -o DPkg::Lock::Timeout=300 update -qq >/dev/null
+apt-get -o DPkg::Lock::Timeout=$LOCKWAIT update -qq >/dev/null
 
 # 5. containerd với SystemdCgroup = true
-apt-get -o DPkg::Lock::Timeout=300 install -y -qq containerd >/dev/null
+apt-get -o DPkg::Lock::Timeout=$LOCKWAIT install -y -qq containerd >/dev/null
 install -d -m 755 /etc/containerd
 if [ ! -s /etc/containerd/config.toml ]; then
   containerd config default > /etc/containerd/config.toml
@@ -53,10 +58,10 @@ timeout: 10
 CONF
 
 # 6. kubeadm, kubelet, kubectl đúng minor, hold cả ba. cri-tools (crictl) cài riêng: kubeadm 1.36 không kéo theo nó.
-apt-mark unhold kubelet kubeadm kubectl >/dev/null 2>&1 || true
+LOCK_QUIET=1 apt_mark unhold kubelet kubeadm kubectl || true
 for p in kubelet kubeadm kubectl cri-tools; do
   dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'ok installed' \
-    || apt-get -o DPkg::Lock::Timeout=300 install -y -qq "$p" >/dev/null
+    || apt-get -o DPkg::Lock::Timeout=$LOCKWAIT install -y -qq "$p" >/dev/null
 done
-apt-mark hold kubelet kubeadm kubectl >/dev/null
+apt_mark hold kubelet kubeadm kubectl
 systemctl enable kubelet >/dev/null 2>&1

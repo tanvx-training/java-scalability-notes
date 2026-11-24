@@ -1,7 +1,9 @@
 # s33 — kiểm (6 dòng): ~/users/{dev,ops}.{key,crt} có đủ; cert do CA của cluster ký (openssl verify -CAfile
 # /etc/kubernetes/pki/ca.crt), dùng cho client auth, còn hạn ≥ 30 ngày; subject đúng một CN (dev/ops) và một O (shop-dev/shop-ops);
-# key khớp cert; CSR dev, ops Approved với signer kube-apiserver-client, cert đã cấp trùng tệp (CSR đã duyệt bị controller dọn
-# sau 1 giờ: khi đó chấm ~/users/<u>-csr.yaml), CSR nháp đã xoá; hai đáp án. Chỉ đọc. Nạp bởi `lab` trên Mac (bash 3.2).
+# key khớp cert; CSR dev, ops Approved với signer kube-apiserver-client, cert trên đĩa trùng status.certificate của CSR đó
+# (CSR đã duyệt bị controller dọn sau 1 giờ: khi đó chấm ~/users/<u>-csr.yaml cộng dấu vết signer của kube-controller-manager
+# trên cert, để cert tự ký bằng ca.key không xanh chỉ vì CSR đã hết), CSR nháp đã xoá; hai đáp án. Chỉ đọc. Nạp bởi `lab` trên
+# Mac (bash 3.2).
 # Sau khi VM khởi động lại: chỉ cần apiserver (CSR), chờ có giới hạn 180 giây, cộng facts.sh (một lệnh kubectl 10 giây):
 # in ra ~4 phút.
 cp="$LAB_CP"

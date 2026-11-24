@@ -87,7 +87,37 @@ print("KEYMATCH=" + ("; ".join(bad) or "đạt"))
 
 # 5. CSR: object dev/ops Approved, signer kube-apiserver-client, usages có client auth, cert đã cấp trùng ~/users/<u>.crt.
 # kube-controller-manager (csrcleaner) xoá CSR đã duyệt sau 1 giờ: khi object không còn và notBefore của cert đã qua 1 giờ,
-# chấm ~/users/<u>-csr.yaml (CSR đúng signer/usages, request mang public key của <u>.key) thay cho object.
+# chấm ~/users/<u>-csr.yaml (CSR đúng signer/usages, request mang public key của <u>.key) thay cho object, cộng dấu vết của
+# signer kube-controller-manager trên chính cert (kcm_profile): không có object CSR thì cert tự ký bằng ca.key (openssl x509
+# -req -CA … -CAkey …) không được xanh chỉ vì đủ cũ.
+def kcm_profile(path, exp):
+    """Lý do cert không phải do signer kubernetes.io/kube-apiserver-client của kube-controller-manager cấp, hay None. Đo trên
+    1.37.2 (cert dev/ops của s33): đúng ba extension (extendedKeyUsage chỉ clientAuth, basicConstraints critical CA:FALSE,
+    authorityKeyIdentifier bằng subjectKeyIdentifier của ca.crt), không subjectKeyIdentifier hay keyUsage; serial ≤ 128 bit;
+    notAfter − notBefore đúng thời hạn xin (spec.expirationSeconds, trần 1 năm của --cluster-signing-duration), vì signer lùi
+    notBefore 5 phút và cộng thời hạn từ đó. openssl x509 -req của OpenSSL 3 thêm subjectKeyIdentifier, serial 159 bit."""
+    try:
+        from cryptography import x509
+        from cryptography.x509.oid import ExtendedKeyUsageOID, ExtensionOID
+        c = x509.load_pem_x509_certificate(open(path, "rb").read())
+        ca = x509.load_pem_x509_certificate(open(CA, "rb").read())
+    except Exception:
+        return "không đọc được cert"
+    oids = {e.oid for e in c.extensions}
+    want = {ExtensionOID.EXTENDED_KEY_USAGE, ExtensionOID.BASIC_CONSTRAINTS, ExtensionOID.AUTHORITY_KEY_IDENTIFIER}
+    if oids != want: return "extension khác cert do kube-controller-manager cấp"
+    if list(c.extensions.get_extension_for_oid(ExtensionOID.EXTENDED_KEY_USAGE).value) != [ExtendedKeyUsageOID.CLIENT_AUTH]:
+        return "EKU khác clientAuth"
+    bc = c.extensions.get_extension_for_oid(ExtensionOID.BASIC_CONSTRAINTS)
+    if not bc.critical or bc.value.ca: return "basicConstraints khác"
+    try: ski = ca.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_KEY_IDENTIFIER).value.digest
+    except Exception: ski = None
+    if c.extensions.get_extension_for_oid(ExtensionOID.AUTHORITY_KEY_IDENTIFIER).value.key_identifier != ski:
+        return "authorityKeyIdentifier khác CA"
+    if c.serial_number.bit_length() > 128: return "serial dài hơn 128 bit"
+    life = int((c.not_valid_after - c.not_valid_before).total_seconds())
+    if life != min(int(exp or 31536000), 31536000): return f"thời hạn {life} giây khác thời hạn xin"
+    return None
 bad = []
 if csrs is None: bad.append("không đọc được CSR")
 else:
@@ -121,7 +151,9 @@ else:
         try: req = base64.b64decode(sp.get("request") or "")
         except Exception: req = b""
         rc, out, _ = run("openssl", "req", "-noout", "-pubkey", data=req)
-        if rc != 0 or out.strip() != (pubkey_of_key(f"{d}/{u}.key") or "-"): bad.append(f"request trong ~/users/{u}-csr.yaml không mang key của {u}")
+        if rc != 0 or out.strip() != (pubkey_of_key(f"{d}/{u}.key") or "-"): bad.append(f"request trong ~/users/{u}-csr.yaml không mang key của {u}"); continue
+        why = kcm_profile(crt, sp.get("expirationSeconds"))
+        if why: bad.append(f"{u}.crt không do CSR cấp ({why})")
     left = [n for n in ("dev-draft",) if n in csrs]
     if left: bad.append("còn CSR nháp " + ", ".join(left))
 print("CSR=" + ("; ".join(bad) or "đạt"))
