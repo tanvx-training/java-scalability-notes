@@ -114,7 +114,7 @@ const EXPECTED = {
     // Module Thực hành — chương trình CKA: 53 buổi (11 chặng). Số buổi đã phát
     // hành TĂNG DẦN theo từng đợt nội dung; sửa ở đây TRƯỚC khi phát hành buổi.
     "practice-sessions:cka": 53,
-    "practice-published:cka": 51,
+    "practice-published:cka": 52,
     // Chương trình ssia: 17 chặng (chương 2–18 của sách), 53 buổi. Số buổi đã phát hành TĂNG DẦN
     // theo từng đợt nội dung (đợt 1 = st02–st04, s01–s08); sửa ở đây TRƯỚC khi phát hành buổi.
     "practice-sessions:ssia": 53,
@@ -1627,6 +1627,14 @@ await check("PR11 — thư mục lab khớp dữ liệu (ORDER, script buổi đ
     for (const m of p.mocks ?? []) {
       for (const f of ["setup.sh", "score.sh"]) {
         if (!existsSync(join(dir, "mocks", m.id, f))) bad.push(`thiếu labs/${p.id}/mocks/${m.id}/${f}`);
+      }
+      // score.sh khai bảng TABLE="qN:domain:max …" (mocks/m1/files/scorelib.sh): phải trùng id, domain, weight của đề.
+      const score = join(dir, "mocks", m.id, "score.sh");
+      const table = existsSync(score) ? /^TABLE="([^"]*)"/m.exec(readFileSync(score, "utf8")) : null;
+      if (table) {
+        const got = table[1].split(/\s+/).filter(Boolean).join(" ");
+        const want = (m.questions ?? []).map((q) => `${q.id}:${q.domain}:${q.weight}`).join(" ");
+        if (got !== want) bad.push(`labs/${p.id}/mocks/${m.id}/score.sh: TABLE lệch câu/domain/weight của mocks.js`);
       }
     }
     // Chiều ngược lại: thư mục đề mock không có trong mocks.js.
