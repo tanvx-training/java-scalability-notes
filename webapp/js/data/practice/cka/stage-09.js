@@ -1,5 +1,5 @@
 // Chặng 9 — Troubleshooting tổng hợp (lỗi ẩn do ./labs/lab break, có bấm giờ).
-// s46–s49 đã phát hành (đợt 5); các buổi còn lại là khung: đủ trường cấu trúc (check-data PR7), nội dung đầy đủ ở các task sau.
+// s46–s51 đã phát hành (đợt 5): sáu buổi sự cố, mỗi buổi một lỗi st9-* của labs/cka/breaks.
 
 export const sessions = [
   {
@@ -1045,12 +1045,12 @@ Sáu dòng, so với bản tốt và mốc mà \`begin\` lưu ở \`/root/.lab/s
     domain: "troubleshooting",
     competencies: ["ts-components"],
     requires: ["s49"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Sửa trong 20 phút apiserver không nói chuyện được với etcd vì sai cờ chứng chỉ.",
-      "Kiểm ngày hết hạn của cert trong kubeconfig và cert trên đĩa, nhận ra lỗi x509.",
-      "Đọc trạng thái etcd bằng endpoint status.",
+      "Đưa apiserver lên lại trong 20 phút khi một cờ --etcd-* trỏ tệp của CA khác: đọc lỗi TLS trong crictl logs, chứng minh etcd vẫn khoẻ bằng etcdctl endpoint status và health, so ba cờ với các tệp trong pki/ bằng openssl.",
+      "Nhận ra một kubeconfig bị Unauthorized vì cert hết hạn: tìm lý do ở log của apiserver, tách cert khỏi kubeconfig bằng jsonpath + base64 -d, đọc notAfter, rồi cấp cert mới qua CSR và nhúng lại thay vì chỉnh giờ.",
+      "Đọc mọi lỗi x509 bằng ba câu hỏi: cert nào, CA nào, giờ nào; nối được với PKIX path building failed của Java.",
     ],
     skills: [
       { skill: "k-cert-expired", level: "Nhận ra trong 30 giây" },
@@ -1059,8 +1059,263 @@ Sáu dòng, so với bản tốt và mốc mà \`begin\` lưu ở \`/root/.lab/s
       { skill: "k-apiserver-etcd-flags", level: "Biết cờ nào trỏ tệp nào" },
     ],
     uses: ["k-etcd-certs", "lx-openssl-x509", "k-certs-renew", "k-etcd-health", "k-kubeconfig-structure"],
-    stateIn: "Đầu ra s49 cộng `./labs/lab break` (lỗi etcd/chứng chỉ/kubeconfig).",
-    stateOut: "Control plane khoẻ, mọi kubeconfig (admin, dev, ops) dùng được.",
+    foundation: {
+      area: "linux",
+      md: `**Đọc một cert mà không cần công cụ của Kubernetes.** Ba lệnh \`openssl\` và một \`base64 -d\` là đủ cho mọi câu hỏi của buổi này; trên lab không có \`yq\` (đo: \`which yq\` rỗng), nên tách dữ liệu khỏi kubeconfig bằng jsonpath của kubectl.
+
+**1. Ai là ai, hạn tới bao giờ.**
+
+\`\`\`bash
+openssl x509 -in /etc/kubernetes/pki/etcd/server.crt -noout -subject -issuer -dates
+# subject=CN = cka-cp
+# issuer=CN = etcd-ca
+openssl x509 -in cert.pem -noout -checkend 3600 && echo "còn ≥ 1 giờ" || echo "hết hạn hay sắp hết"
+\`\`\`
+
+\`subject\` là cert này nói nó là ai; \`issuer\` là ai ký nó. Một CA tự ký có \`subject = issuer\`. \`-checkend N\` trả mã 0 khi cert còn hạn ít nhất N giây nữa: dùng được trong \`if\`.
+
+**2. Cert nằm trong kubeconfig.** Trường \`client-certificate-data\` là PEM đã base64 (nên bắt đầu bằng \`LS0tLS1CRUdJTi\` — chính là \`-----BEGIN\`):
+
+\`\`\`bash
+kubectl config view --raw --kubeconfig ~/ops.kubeconfig -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject -enddate
+\`\`\`
+
+Không có \`--raw\` thì kubectl in \`DATA+OMITTED\` và \`base64 -d\` ra rác.
+
+**3. Ai tin cert này, vào lúc nào.** \`openssl verify -CAfile <ca> <cert>\` đi ngược chuỗi tới CA bạn đưa vào **và** kiểm thời hạn theo đồng hồ của máy; \`-attime <epoch>\` hỏi "nếu bây giờ là lúc đó thì sao".
+
+\`\`\`bash
+openssl verify -CAfile /etc/kubernetes/pki/ca.crt ops.pem                                  # error 10 … certificate has expired
+openssl verify -CAfile /etc/kubernetes/pki/ca.crt -attime $(date -d '-10 days' +%s) ops.pem  # ops.pem: OK
+\`\`\`
+
+**Bài tập nền (5 phút, trước khi \`begin\`):** với \`/etc/kubernetes/pki/apiserver-etcd-client.crt\` và \`apiserver-kubelet-client.crt\`, in subject và issuer. Hai cert cùng là "client của apiserver", vì sao issuer khác nhau? Rồi tách cert của \`~/dev.kubeconfig\` và in \`-enddate\`.`,
+    },
+    mindset: `**Lỗi x509: đọc ba thứ — cert nào, CA nào, giờ nào.** Mọi thông báo TLS trong buổi này (đo trên lab) đều trả lời được bằng ba câu hỏi đó, theo đúng thứ tự:
+
+| Thông báo (đo) | Ai từ chối ai | Cert nào | CA nào | Giờ nào |
+|---|---|---|---|---|
+| apiserver: \`tls: failed to verify certificate: x509: certificate signed by unknown authority\` | apiserver (client) không tin cert **server** của etcd | \`pki/etcd/server.crt\`, issuer \`etcd-ca\` | \`--etcd-cafile\` không phải \`etcd-ca\` | — |
+| apiserver: \`remote error: tls: unknown certificate authority\`; etcd: \`rejected connection on client endpoint … x509: certificate signed by unknown authority\` | etcd (server) không tin cert **client** của apiserver | \`--etcd-certfile\` | issuer của nó không phải \`etcd-ca\` (\`--trusted-ca-file\` của etcd) | — |
+| apiserver: \`x509: certificate has expired or is not yet valid: current time 2026-11-24T19:39:26Z is after 2026-11-23T19:39:26Z\`; kubectl: \`Unauthorized\` | apiserver không nhận cert client của ops | cert nhúng trong \`~/ops.kubeconfig\` | đúng CA cluster | \`notAfter\` đã qua |
+
+Chữ "remote error" nói **bên kia** từ chối mình: dòng thứ hai là etcd đóng kết nối vì client cert, không phải apiserver nghi ngờ etcd. Cả hai dòng đầu đều là kubeadm có **hai CA riêng**: \`/etc/kubernetes/pki/ca.crt\` (CN \`kubernetes\`) ký cert cho apiserver và client của nó; \`/etc/kubernetes/pki/etcd/ca.crt\` (CN \`etcd-ca\`) ký mọi cert nói chuyện với etcd. Ba cờ của apiserver phải cùng nằm ở thế giới etcd: \`--etcd-cafile=…/etcd/ca.crt\`, \`--etcd-certfile=…/apiserver-etcd-client.crt\` (issuer \`etcd-ca\`), \`--etcd-keyfile\` là key của đúng cert đó.
+
+**Nối với Java.** \`javax.net.ssl.SSLHandshakeException: PKIX path building failed: … unable to find valid certification path to requested target\` là dòng "CA nào": truststore của JVM (\`cacerts\`, hay \`-Djavax.net.ssl.trustStore\`) không có CA đã ký cert server. Đó đúng là \`--etcd-cafile\` sai — chỉ khác là apiserver ghi bằng chữ của Go. \`CertificateExpiredException: NotAfter: …\` là dòng "giờ nào". Cách sửa cũng giống: thêm đúng CA vào truststore (đúng tệp vào \`--etcd-cafile\`), hay cấp cert mới; không bao giờ là tắt kiểm (\`insecure-skip-tls-verify\`, \`TrustAllCerts\`).
+
+**Client không tự kiểm cert của chính nó.** kubectl gửi cert hết hạn đi bình thường; apiserver xác thực thất bại và chỉ trả \`401\`: \`error: You must be logged in to the server (Unauthorized)\` (đo). Lý do x509 chỉ có trong **log của apiserver** (\`"Unable to authenticate the request" err="[x509: certificate has expired …]"\`). \`Unauthorized\` (401) là "không biết bạn là ai": cert, token. \`Forbidden\` (403) là "biết bạn là ai, nhưng RBAC không cho": đừng lẫn hai thứ.
+
+**etcd khoẻ thì đừng đụng etcd.** apiserver không lên vì etcd là chuyện thường gặp, nên câu đầu tiên là "etcd có thật sự hỏng không?". \`etcdctl endpoint status -w table\` và \`endpoint health\` (cert lấy từ \`etcd.yaml\`, như s43) trả lời mà không cần apiserver. Đo trong sự cố: \`is healthy: successfully committed proposal\`, RAFT INDEX vẫn tăng. Khôi phục snapshot ở đây là làm mất dữ liệu cho một lỗi nằm trong manifest của apiserver.
+
+**Đừng chỉnh giờ.** Cert hết hạn "hợp lệ trở lại" nếu đồng hồ lùi (\`openssl verify -attime\` cho \`OK\`, đo), nhưng trên cka-cp đồng hồ đó cũng là đồng hồ của etcd lease, token ServiceAccount, cert của chính apiserver, và NTP sẽ kéo nó về. Sửa là cấp cert mới.
+
+**Nạn nhân phụ.** Khi apiserver chết, scheduler và controller-manager mất leader lease (\`"Leaderelection lost"\`, đo), tự thoát, và kubelet chạy lại chúng sau back-off: apiserver lên rồi mà \`kube-scheduler-cka-cp\` còn \`0/1\` hay restart thêm một lần trong 1–2 phút là bình thường. Chờ, đừng sửa chúng.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Tuần 8 — Control plane hỏng", href: "#/roadmap/cka/cka-w8-2" },
+      { label: "Bài lộ trình CKA: Tuần 8 — kubectl không kết nối được, kubeconfig sai", href: "#/roadmap/cka/cka-w8-3" },
+      { label: "CKA Study Guide, chương 22 — Xử lý sự cố cluster", href: "#/docs/ckabook-22" },
+      { label: "CKA Study Guide, chương 6 — Xác thực, ủy quyền và kiểm soát tiếp nhận", href: "#/docs/ckabook-06" },
+      { label: "kubernetes.io: PKI certificates and requirements", href: "https://kubernetes.io/docs/setup/best-practices/certificates/" },
+      { label: "kubernetes.io: Certificate Management with kubeadm", href: "https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/" },
+      { label: "kubernetes.io: Certificates and Certificate Signing Requests", href: "https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/" },
+      { label: "kubernetes.io: Operating etcd clusters for Kubernetes", href: "https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/" },
+    ],
+    stateIn: "Đầu ra s49 (control plane chạy đúng manifest gốc, sổ tay có mục s49), cộng ~/ops.kubeconfig và ~/users/ops.{key,crt} của s33–s34. Trên Mac chạy `./labs/lab begin cka s50`: kiểm đầu vào bằng check.sh riêng, **không cần apiserver** (manifest scheduler và controller-manager như bản tốt, bản sao lưu, answers.env và mục s49, etcd phục vụ), xoá answers.env rồi **gây sự cố** (đo 32 giây; chạy lại `begin` khi apiserver còn hỏng: cài lại manifest tốt bằng tệp, chờ /readyz rồi gây lại, 50 giây; ngay sau khi VM bật lại giữa sự cố 3 phút 11 giây): \"sau một lần xoay vòng chứng chỉ, kubectl không vào được cluster, và nhóm ops báo kubeconfig của họ bị từ chối\". Bấm giờ 20 phút.",
+    stateOut: "kube-apiserver chạy với ba cờ --etcd-* như kubeadm tạo (nội dung manifest như bản tốt), etcd không bị đụng (revision, raft index chỉ tăng); ~/ops.kubeconfig nhúng cert ops mới (CN=ops, O=shop-ops, do CA cluster ký, còn hạn) và ~/users/ops.crt là cert đó; ~/dev.kubeconfig và kubeconfig admin dùng được; ~/drills/s50/answers.env (ETCD_FLAG, EXPIRED_KUBECONFIG, ETCD_LEADER_ID, ETCD_VERSION); mục s50 trong ~/notes/runbook.md.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s50`. Bấm giờ 20 phút. Trên cka-cp chạy `k get node` ba lần cách vài giây và chép nguyên thông báo. Vì sao lúc thì `connection refused`, lúc thì `TLS handshake timeout`? `sudo ss -lntp | grep -E ':(6443|2379) '`, `sudo crictl ps -a --name kube-apiserver`.",
+      },
+      {
+        id: "t2",
+        text: "Một tầng xuống: `sudo crictl logs <id> 2>&1 | grep -m3 -iE 'x509|tls'` của container apiserver mới nhất, và dòng `\"command failed\"` của một container đã thoát. apiserver đang cố nói chuyện với ai, ở địa chỉ nào? Lỗi nói **ai** từ chối **ai** (có chữ `remote error` không)?",
+      },
+      {
+        id: "t3",
+        text: "etcd có hỏng không? Lấy ba tệp cert từ `/etc/kubernetes/manifests/etcd.yaml` (như s43), chạy `etcdctl endpoint status -w table` và `endpoint health`. Ghi `ETCD_LEADER_ID=` (cột ID của dòng `IS LEADER true`) và `ETCD_VERSION=` vào `~/drills/s50/answers.env`. Nếu etcd khoẻ, có lý do nào để restore snapshot không?",
+      },
+      {
+        id: "t4",
+        text: "`sudo grep -n -- '--etcd' /etc/kubernetes/manifests/kube-apiserver.yaml`. Với mỗi tệp của ba cờ, `openssl x509 -noout -subject -issuer`; so với issuer của `/etc/kubernetes/pki/etcd/server.crt`. Cờ nào trỏ sai thế giới CA? Ghi `ETCD_FLAG=` (cờ đã bị đổi; nếu là cặp cert/key thì một hay cả hai). Sao lưu manifest ra `~/drills/s50/backup/` **trước**, sửa, rồi bấm giờ tới khi `k get --raw /readyz` = `ok`. Chờ thêm tới khi bốn static pod Ready (scheduler, controller-manager có thể restart một lần: vì sao?).",
+      },
+      {
+        id: "t5",
+        text: "`k --kubeconfig ~/ops.kubeconfig get nodes`. Thông báo có chữ x509 không? Tìm lý do ở `k -n kube-system logs kube-apiserver-cka-cp --since=2m | grep x509`. Tách cert khỏi kubeconfig (jsonpath + `base64 -d` + `openssl x509 -noout -subject -issuer -enddate`), so với `date -u`. Làm tương tự cho `~/dev.kubeconfig`. Ghi `EXPIRED_KUBECONFIG=` (tên kubeconfig hỏng).",
+      },
+      {
+        id: "t6",
+        text: "Tình huống hỏng (đọc, đừng làm): một đồng nghiệp đề nghị `sudo timedatectl set-ntp false && sudo date -s '2026-11-20'` cho \"nhanh\". Chạy `openssl verify -CAfile /etc/kubernetes/pki/ca.crt -attime $(date -d '-10 days' +%s) <cert ops>` để thấy vì sao ý đó \"có vẻ chạy\", rồi giải thích vì sao nó hỏng nhiều thứ khác. Cách đúng: cấp cert mới cho ops qua CertificateSigningRequest như s33 (dùng lại `~/users/ops.key`), lấy cert vào `~/users/ops.crt`, `kubectl config set-credentials ops … --embed-certs --kubeconfig ~/ops.kubeconfig`.",
+      },
+      {
+        id: "t7",
+        text: "Thử bằng chính tệp: `k --kubeconfig ~/ops.kubeconfig auth whoami`, `get nodes` (được), `-n default create configmap x --from-literal=a=b --dry-run=server` (Forbidden có `User \"ops\"`). `~/dev.kubeconfig` và `~/.kube/config` vẫn chạy? Thêm mục `## s50 …` vào sổ tay (≥ 3 dòng: triệu chứng, nguyên nhân, lệnh). Trên Mac: `./labs/lab verify cka s50` phải 7/7. Ghi thời gian bạn đã dùng.",
+      },
+    ],
+    hints: [
+      "`connection refused` là không ai nghe 6443; `TLS handshake timeout` và `context deadline exceeded` là có tiến trình nghe nhưng chưa phục vụ. Ở đây cả hai xen nhau (đo): container apiserver chạy ~20 giây chờ etcd rồi thoát, lặp lại.",
+      "Dòng lỗi có ích là `grpc: addrConn.createTransport failed to connect to {Addr: \"127.0.0.1:2379\" …}`: apiserver là client của etcd. Dòng `\"command failed\" err=\"error creating storage factory: etcd grpc connection not ready\"` chỉ nói hậu quả.",
+      "`etcdctl` cần đủ `--cacert`, `--cert`, `--key` (đọc từ etcd.yaml: `--trusted-ca-file`, `--cert-file`, `--key-file`) và `--endpoints=https://127.0.0.1:2379`. Thiếu một cái thì chính etcdctl báo lỗi TLS và bạn tưởng etcd hỏng.",
+      "Hai CA: `pki/ca.crt` (CN kubernetes), `pki/etcd/ca.crt` (CN etcd-ca). `for f in /etc/kubernetes/pki/*.crt /etc/kubernetes/pki/etcd/*.crt; do echo \"$f $(openssl x509 -in $f -noout -issuer)\"; done` cho bạn bản đồ trong một lệnh.",
+      "Cặp `--etcd-certfile`/`--etcd-keyfile` phải là **một cặp**: cert đổi mà key không đổi thì lỗi khác hẳn và thoát ngay (đo: `\"command failed\" err=\"error creating storage factory: tls: private key does not match public key\"`). So bằng `openssl x509 -noout -pubkey` và `openssl pkey -pubout`.",
+      "kubectl chỉ in `Unauthorized`; lý do nằm ở log của apiserver (`authentication.go … x509: certificate has expired or is not yet valid`). `k logs` của apiserver chạy được khi bạn còn một kubeconfig khác đang dùng được (admin).",
+      "`kubectl config view` không có `--raw` in `DATA+OMITTED`. `--minify` chỉ lấy context hiện tại; với tệp chỉ có một user thì `{.users[0]…}` là đủ.",
+      "Verify dòng ops đỏ `vẫn là cert có từ trước sự cố`: bạn nhúng lại cert cũ (cert hết hạn, hay cert gốc của s33 nếu tìm được nó ở đâu đó). Phải là cert **mới** do CA cluster ký: CSR như s33, hay `kubeadm kubeconfig user --client-name=ops --org=shop-ops` cũng được.",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-25, Kubernetes 1.37.2, etcd 3.7.0, sau \`apply\` s49 rồi \`begin cka s50\`); cờ hỏng của bạn có thể khác (một trong bốn cách), id, giờ và serial khác. Mọi lệnh chạy trên cka-cp.
+
+**1. kubectl chết: cổng và container**
+
+\`\`\`bash
+k get node
+# Unable to connect to the server: net/http: TLS handshake timeout
+# … dial tcp 192.168.252.35:6443: connect: connection refused - error from a previous attempt: read tcp …: read: connection reset by peer
+sudo ss -lntp | grep -E ':(6443|2379) '
+# LISTEN … 192.168.252.35:2379 … users:(("etcd",pid=1199,fd=7))
+# LISTEN … 127.0.0.1:2379      … users:(("etcd",pid=1199,fd=8))
+sudo crictl ps -a --name kube-apiserver
+# 3d5b544edebee  …  29 seconds ago  Exited  kube-apiserver  1  …
+\`\`\`
+
+**2. Lỗi TLS trong log của apiserver**
+
+\`\`\`bash
+sudo crictl logs $(sudo crictl ps -a -q --name '^kube-apiserver$' | head -1) 2>&1 | grep -m1 createTransport
+# W1124 20:48:29.857480  1 logging.go:55] [core] … grpc: addrConn.createTransport failed to connect to {Addr: "127.0.0.1:2379", …}.
+#   Err: connection error: desc = "error reading server preface: remote error: tls: unknown certificate authority"
+sudo crictl logs $(sudo crictl ps -a -q --name '^kube-apiserver$' --state exited | head -1) 2>&1 | grep '"command failed"'
+# E1124 20:48:49.867153  1 run.go:72] "command failed" err="error creating storage factory: etcd grpc connection not ready: context deadline exceeded"
+sudo crictl logs --since 1m $(sudo crictl ps -q --name '^etcd$') 2>&1 | grep -m1 rejected
+# {"level":"warn",…,"msg":"rejected connection on client endpoint","remote-addr":"127.0.0.1:46420",…,"error":"tls: failed to verify certificate: x509: certificate signed by unknown authority"}
+\`\`\`
+
+\`remote error\`: etcd từ chối cert client của apiserver. Ở lần \`begin\` khác (đo), \`--etcd-cafile\` bị đổi thì dòng là \`… authentication handshake failed: tls: failed to verify certificate: x509: certificate signed by unknown authority\` (apiserver không tin cert server của etcd) và etcd ghi \`"error":"remote error: tls: bad certificate"\`.
+
+**3. etcd vẫn khoẻ**
+
+\`\`\`bash
+E=/etc/kubernetes/pki/etcd
+sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$E/ca.crt --cert=$E/server.crt --key=$E/server.key endpoint status -w table
+# │        ENDPOINT        │        ID        │ VERSION │ … │ IS LEADER │ … │ RAFT TERM │ RAFT INDEX │ …
+# │ https://127.0.0.1:2379 │ 9c6d935895988819 │   3.7.0 │ … │      true │ … │        11 │      47958 │ …
+sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$E/ca.crt --cert=$E/server.crt --key=$E/server.key endpoint health
+# https://127.0.0.1:2379 is healthy: successfully committed proposal: took = 5.340503ms
+\`\`\`
+
+\`ETCD_LEADER_ID=9c6d935895988819\`, \`ETCD_VERSION=3.7.0\` (của máy soạn bài; ID của bạn khác).
+
+**4. Ba cờ so với pki/, sao lưu, sửa**
+
+\`\`\`bash
+sudo grep -n -- '--etcd' /etc/kubernetes/manifests/kube-apiserver.yaml
+# 21:    - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
+# 22:    - --etcd-certfile=/etc/kubernetes/pki/apiserver-kubelet-client.crt
+# 23:    - --etcd-keyfile=/etc/kubernetes/pki/apiserver-kubelet-client.key
+openssl x509 -in /etc/kubernetes/pki/etcd/server.crt -noout -issuer                   # issuer=CN = etcd-ca
+openssl x509 -in /etc/kubernetes/pki/etcd/ca.crt -noout -subject                      # subject=CN = etcd-ca      (cafile đúng)
+openssl x509 -in /etc/kubernetes/pki/apiserver-kubelet-client.crt -noout -issuer      # issuer=CN = kubernetes   (sai CA)
+openssl x509 -in /etc/kubernetes/pki/apiserver-etcd-client.crt -noout -subject -issuer
+# subject=CN = kube-apiserver-etcd-client
+# issuer=CN = etcd-ca
+mkdir -p ~/drills/s50/backup && sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/drills/s50/backup/
+sudo sed -i -e 's#--etcd-certfile=.*#--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt#' \\
+  -e 's#--etcd-keyfile=.*#--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key#' /etc/kubernetes/manifests/kube-apiserver.yaml
+until [ "$(k get --raw /readyz 2>/dev/null)" = ok ]; do sleep 2; done      # 28–33 giây (đo)
+k get --raw '/readyz?verbose' | grep etcd
+# [+]etcd ok
+# [+]etcd-readiness ok
+\`\`\`
+
+\`ETCD_FLAG=--etcd-certfile,--etcd-keyfile\` (khi \`--etcd-cafile\` trỏ \`pki/ca.crt\` hay \`pki/front-proxy-ca.crt\` thì \`subject\` của nó là \`kubernetes\`/\`front-proxy-ca\`, khác \`etcd-ca\`: \`ETCD_FLAG=--etcd-cafile\`). Sau đó \`k -n kube-system get pod -l tier=control-plane\` có lúc cho \`kube-scheduler-cka-cp 0/1 Running\`: log của container đã thoát là \`"Leaderelection lost"\` (đo); 1–2 phút sau cả bốn Ready.
+
+**5. ops: Unauthorized, lý do ở apiserver**
+
+\`\`\`bash
+k --kubeconfig ~/ops.kubeconfig get nodes
+# error: You must be logged in to the server (Unauthorized)
+k -n kube-system logs kube-apiserver-cka-cp --since=1m | grep -m1 'certificate has expired'
+# E1124 … authentication.go:76] "Unable to authenticate the request" err="[x509: certificate has expired or is not yet valid: current time 2026-11-24T20:04:59Z is after 2026-11-21T19:35:15Z, verifying certificate SN=…
+for u in ops dev; do kubectl config view --raw --kubeconfig ~/$u.kubeconfig -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -subject -issuer -enddate; done
+# subject=O = shop-ops, CN = ops    issuer=CN = kubernetes    notAfter=Nov 21 19:35:15 2026 GMT
+# subject=O = shop-dev, CN = dev    issuer=CN = kubernetes    notAfter=Nov 24 10:29:47 2027 GMT
+date -u                                                   # Tue Nov 24 20:05:00 UTC 2026
+\`\`\`
+
+\`EXPIRED_KUBECONFIG=ops\`. Tình huống hỏng, đo bằng \`-attime\` thay vì đổi đồng hồ thật:
+
+\`\`\`bash
+kubectl config view --raw --kubeconfig ~/ops.kubeconfig -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d > /tmp/ops.pem
+openssl verify -CAfile /etc/kubernetes/pki/ca.crt /tmp/ops.pem                                    # error 10 at 0 depth lookup: certificate has expired
+openssl verify -CAfile /etc/kubernetes/pki/ca.crt -attime $(date -d '-10 days' +%s) /tmp/ops.pem  # /tmp/ops.pem: OK
+\`\`\`
+
+**6. Cert mới qua CSR (như s33), nhúng lại**
+
+\`\`\`bash
+cd ~/users
+openssl req -new -key ops.key -subj "/CN=ops/O=shop-ops" -out ops.csr
+# ops-csr.yaml: như s33 (signerName kubernetes.io/kube-apiserver-client, usages: client auth, request = base64 -w0 ops.csr)
+k delete csr ops --ignore-not-found; k apply -f ops-csr.yaml; k certificate approve ops
+k get csr ops            # ops  21s  kubernetes.io/kube-apiserver-client  kubernetes-admin  365d  Approved,Issued
+k get csr ops -o jsonpath='{.status.certificate}' | base64 -d > ops.crt
+kubectl config set-credentials ops --client-certificate=$HOME/users/ops.crt --client-key=$HOME/users/ops.key --embed-certs --kubeconfig ~/ops.kubeconfig
+chmod 600 ~/ops.kubeconfig
+k --kubeconfig ~/ops.kubeconfig auth whoami | sed -n 2,3p
+# Username   ops
+# Groups     [shop-ops system:authenticated]
+k --kubeconfig ~/ops.kubeconfig get nodes | tail -n +2 | wc -l                                       # 3
+k --kubeconfig ~/ops.kubeconfig -n default create configmap x --from-literal=a=b --dry-run=server
+# error: failed to create configmap: configmaps is forbidden: User "ops" cannot create resource "configmaps" in API group "" in the namespace "default"
+\`\`\`
+
+Cách khác verify cũng nhận (đo): \`sudo kubeadm kubeconfig user --client-name=ops --org=shop-ops --validity-period=24h > /tmp/k && install -m 600 /tmp/k ~/ops.kubeconfig\`. Cert đó có \`notBefore\` bằng của CA (kubeadm không lùi 5 phút như CSR), nên verify không chấm theo \`notBefore\` mà theo "không phải cert nào có từ trước sự cố".
+
+**Lời giải tự động** (\`labs/cka/sessions/s50/apply.sh\`): gây sự cố như \`begin\`, rồi \`files/solve-api.sh\` (bước 1–4: lấy dòng \`createTransport\` từ \`crictl logs\`, endpoint status/health, so subject/issuer và cặp key, sao lưu rồi sửa đúng dòng, chờ \`/readyz\` và chờ scheduler, controller-manager chạy liền ≥ 40 giây), \`files/solve-ops.sh STEP=read\` (bước 5), \`s33/files/issue.sh\` với \`u=ops\` (CSR mới bằng key cũ), \`files/solve-ops.sh STEP=embed\` (nhúng, thử ba quyền, answers.env, mục s50). Đo: 1 phút 54 giây tới 2 phút 30 giây, ngay sau khi VM bật lại giữa sự cố 3 phút 19 giây; lần nào cũng rồi verify 7/7.`,
+    exam: {
+      patterns: [
+        "\"kubectl không kết nối được sau khi ai đó sửa control plane; sửa\" — `crictl ps -a`, `crictl logs`, đọc lỗi TLS tới etcd, so `--etcd-*` với `pki/` và `etcd.yaml`.",
+        "\"Kiểm tra sức khoẻ etcd, ghi ID của leader / phiên bản vào /opt/…\" — `etcdctl endpoint status -w table` hay `-w json`, `endpoint health`, đủ ba tệp cert.",
+        "\"User X không gọi được API, tìm vì sao và sửa\" — `Unauthorized` là xác thực (cert hết hạn, sai CA, kubeconfig sai), `Forbidden` là RBAC; tách cert, `openssl x509 -enddate`, CSR mới.",
+        "\"Cert nào của cluster hết hạn trước tiên? Gia hạn\" — `kubeadm certs check-expiration`, `kubeadm certs renew <tên>` rồi để kubelet nạp lại static pod (s44).",
+      ],
+      timeTargetMin: 15,
+      drills: [
+        {
+          text: "Trong 2 phút: in ngày hết hạn của client cert trong `~/dev.kubeconfig` mà không mở tệp bằng editor.",
+          timeLimitMin: 2,
+          solution: "```bash\nkubectl config view --raw --kubeconfig ~/dev.kubeconfig -o jsonpath='{.users[0].user.client-certificate-data}' | base64 -d | openssl x509 -noout -enddate\n```\nThiếu `--raw` thì ra `DATA+OMITTED`.",
+        },
+        {
+          text: "Trong 3 phút: ghi ID (hex) của member etcd đang là leader vào `/tmp/leader.txt`, không dùng kubectl.",
+          timeLimitMin: 3,
+          solution: "```bash\nE=/etc/kubernetes/pki/etcd\nsudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$E/ca.crt --cert=$E/server.crt --key=$E/server.key endpoint status -w json \\\n  | python3 -c 'import json,sys; print(\"%x\" % json.load(sys.stdin)[0][\"Status\"][\"leader\"])' > /tmp/leader.txt\n```\nHay đọc cột ID của dòng `IS LEADER true` trong `-w table`.",
+        },
+      ],
+    },
+    tips: [
+      "Lỗi x509: trước khi sửa gì, viết ra ba thứ — cert nào (đường dẫn hay trường kubeconfig), CA nào (issuer của cert, CA của bên kiểm), giờ nào (`-dates` so với `date -u`).",
+      "apiserver không lên: `etcdctl endpoint health` trước. etcd khoẻ thì lỗi nằm ở apiserver, đừng nghĩ tới restore.",
+      "`Unauthorized` thì xem log của apiserver, không phải kubectl `-v=6`: kubectl chỉ thấy mã 401.",
+      "Sửa xong apiserver, chờ scheduler và controller-manager tự lên lại (leader lease) trước khi tuyên bố xong; đừng restart kubelet.",
+    ],
+    outcome: {
+      md: `Apiserver nói chuyện lại với etcd, ops có cert mới. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s50
+\`\`\`
+
+Bảy dòng, so với bản tốt và mốc mà \`begin\` lưu ở \`/root/.lab/st9-etcd/\`. **Manifest:** \`kube-apiserver.yaml\` giống bản tốt theo nội dung YAML, manifests/ không có tệp thừa (tệp lạ trong đó: đỏ \`thừa trong manifests/: notes.txt\`, đo). **etcd:** healthy, revision và raft index không nhỏ hơn lúc \`begin\` (restore snapshot là lùi), \`/readyz\`. **ops:** cert nhúng là cert **mới** (không phải cert hết hạn đã gây, không phải cert gốc của s33), CN=ops O=shop-ops, do CA cluster ký, còn hạn ≥ 1 giờ, đồng hồ cka-cp khớp đồng hồ Mac trong 5 phút (chỉnh giờ là đỏ), whoami ra ops, \`get nodes\` được, \`create\` Forbidden có \`User "ops"\`; cộng cấu trúc như s34. Đo, đỏ cả ba: cert tự ký bằng một CA khác (\`cert nhúng không do CA cluster ký; ops: Unauthorized\`), cert gốc của s33 chép từ \`/root/.lab/\` (\`vẫn là cert có từ trước sự cố\`), cert admin (\`cert nhúng CN=kubernetes-admin…; whoami ra kubernetes-admin\`); \`kubeadm kubeconfig user\`: xanh. **dev và admin** vẫn dùng được. **answers.env:** cờ của lần \`begin\` này, \`ops\`, ID và phiên bản thật của etcd (sai cả bốn: đỏ, đo). **Sổ tay:** heading chứa \`s50\`. **Lõi khoẻ.** Ngay sau \`begin\`: **0/7** trong 80 giây; ngay sau khi VM bật lại giữa sự cố 1/7 (sổ tay) trong 3 phút 49 giây, không treo (đo).`,
+      verifyOutput: "lab: kiểm s50\n  (chờ etcd, apiserver và Deployment của shop, nếu đang khởi động: tối đa ~17 phút)\n  ✓ kube-apiserver.yaml như bản tốt (--etcd-cafile, --etcd-certfile, --etcd-keyfile); manifests/ không có tệp thừa\n  ✓ etcd healthy, không bị đụng (revision, raft index không lùi so với lúc begin); apiserver /readyz\n  ✓ ~/ops.kubeconfig: cert ops MỚI do CA cluster ký, còn hạn ≥ 1 giờ, giờ cka-cp đúng; whoami ops, get nodes, create Forbidden\n  ✓ ~/dev.kubeconfig (như s34) và kubeconfig admin vẫn dùng được\n  ✓ answers.env: ETCD_FLAG, EXPIRED_KUBECONFIG, ETCD_LEADER_ID, ETCD_VERSION\n  ✓ ~/notes/runbook.md có mục s50 (triệu chứng, nguyên nhân, lệnh) ≥ 3 dòng\n  ✓ Lõi khoẻ: bốn static pod Running, etcd từ /var/lib/etcd-restore, /readyz; ba node; shop trải hai worker, postgres-0\n  → 7/7 đạt",
+      projectDelta: "Control plane và ba kubeconfig trở lại dùng được; ops có cert mới một năm. Sổ tay có mục s50: ba câu hỏi cho lỗi x509 và hai CA của kubeadm.",
+    },
+    review: [
+      { q: "apiserver log `x509: certificate signed by unknown authority` khi nối etcd. Ba câu hỏi \"cert nào, CA nào, giờ nào\" trả lời thế nào, và sửa tệp nào?", a: "Cert nào: cert server của etcd (`pki/etcd/server.crt`, issuer `etcd-ca`). CA nào: apiserver kiểm nó bằng `--etcd-cafile`, mà tệp đó không phải `etcd-ca` (vd `pki/ca.crt` CN kubernetes). Giờ: không liên quan. Sửa `--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt` trong kube-apiserver.yaml; etcd không cần đụng." },
+      { q: "Cùng là apiserver không nối được etcd, khi nào lỗi có chữ `remote error: tls: unknown certificate authority`, và etcd ghi gì?", a: "Khi etcd (bên kia) từ chối cert client mà apiserver trình ra: `--etcd-certfile` do CA khác ký (vd `apiserver-kubelet-client.crt`, issuer kubernetes) trong khi etcd chỉ tin `--trusted-ca-file=…/etcd/ca.crt`. etcd ghi `rejected connection on client endpoint … x509: certificate signed by unknown authority` (đo). Sửa cặp certfile/keyfile về `apiserver-etcd-client.{crt,key}`." },
+      { q: "Vì sao kubectl với cert hết hạn chỉ báo `Unauthorized`, và bạn tìm chữ `certificate has expired` ở đâu?", a: "Client không kiểm hạn cert của chính nó; apiserver kiểm, xác thực thất bại và chỉ trả 401 (không nói lý do cho client, để không lộ thông tin). Lý do nằm trong log của apiserver: `\"Unable to authenticate the request\" err=\"[x509: certificate has expired or is not yet valid: current time … is after …]\"` (đo), đọc bằng `k logs` với một kubeconfig khác hay `crictl logs`." },
+      { q: "Vì sao không sửa cert hết hạn bằng cách lùi đồng hồ của cka-cp?", a: "Đồng hồ đó cũng là của etcd (lease, TTL), token ServiceAccount, cert của chính control plane (có thể thành \"not yet valid\"), log và metrics; NTP sẽ kéo nó về và cert lại hết hạn. Nó chỉ làm `openssl verify -attime` kiểu \"có vẻ đúng\". Cách đúng là cert mới (CSR hay `kubeadm kubeconfig user`), và verify của lab đỏ khi đồng hồ lệch giờ Mac quá 5 phút." },
+      { q: "So sánh `PKIX path building failed` của một client Java với lỗi `--etcd-cafile` sai.", a: "Cùng là câu hỏi \"CA nào\": bên kiểm (JVM với truststore `cacerts`/`javax.net.ssl.trustStore`; apiserver với `--etcd-cafile`) không có CA đã ký cert server. Sửa bằng cách đưa đúng CA vào chỗ tin cậy (import vào truststore; trỏ đúng tệp), không bao giờ tắt kiểm (`TrustAllCerts`, `insecure-skip-tls-verify`). `CertificateExpiredException` của Java ứng với câu \"giờ nào\"." },
+    ],
   },
   {
     id: "s51",
@@ -1070,12 +1325,12 @@ Sáu dòng, so với bản tốt và mốc mà \`begin\` lưu ở \`/root/.lab/s
     domain: "troubleshooting",
     competencies: ["ts-monitor"],
     requires: ["s50"],
-    status: "skeleton",
+    status: "published",
     pieces: [],
     goals: [
-      "Giải một bộ 6 câu kiểu đề trong 60 phút: tìm Pod ngốn tài nguyên nhất, ghi đáp án ra tệp, sửa hai sự cố nhiều tầng.",
-      "Phân bổ thời gian như phòng thi: làm câu nhanh trước, đánh dấu câu kẹt.",
-      "Đọc số liệu tài nguyên thẳng từ Metrics API khi kubectl top không đủ.",
+      "Giải sáu câu kiểu đề trong 60 phút trên namespace s51-batch: bốn câu ghi đáp án ra /opt/answers/ (Pod ngốn CPU nhất, NodeMetrics thô, reason của Event, log container phụ) và hai sự cố mỗi cái hỏng hai chỗ cùng lúc.",
+      "Phân bổ thời gian như phòng thi: câu nhanh trước, đánh dấu câu kẹt quá thời gian mục tiêu rồi quay lại, ghi đáp án đúng đường dẫn và định dạng.",
+      "Đọc số liệu tài nguyên thẳng từ Metrics API, Event và log theo đúng đối tượng, đúng container; sửa một sự cố xong thì đọc lại tầng kế tiếp thay vì tuyên bố đã xong.",
     ],
     skills: [
       { skill: "k-metrics-raw", level: "Gõ được có tra" },
@@ -1084,7 +1339,249 @@ Sáu dòng, so với bản tốt và mốc mà \`begin\` lưu ở \`/root/.lab/s
       { skill: "k-events-watch", level: "Gõ được không tra" },
     ],
     uses: ["k-top-pod", "k-top-containers", "k-sort-by", "k-diagnosis-layers", "k-use-context"],
-    stateIn: "Đầu ra s50 cộng `./labs/lab break` (nhiều lỗi nhỏ ở các tầng).",
-    stateOut: "Cluster và shop trở lại trạng thái cuối chặng 8; tệp đáp án trong /opt/answers/ đúng định dạng.",
+    foundation: null,
+    mindset: `**Một câu, hai chỗ hỏng: sửa xong một tầng thì đọc lại tầng kế.** Hai sự cố của buổi này cố ý hỏng hai chỗ cùng lúc, như phần lớn câu troubleshooting trong đề. Sửa chỗ đầu tiên thì triệu chứng **đổi**, không biến mất; người đọc vội thấy "vẫn lỗi" và quay lại sửa tiếp chỗ đã đúng. Đi theo tầng như s46:
+
+| Câu | Lần đọc đầu (đo) | Sửa | Lần đọc sau (đo) | Sửa tiếp |
+|---|---|---|---|---|
+| (a) report | \`curl\` tới report-svc treo tới hết giờ; EndpointSlice \`PORTS 8081\`, container nghe \`8080\` | \`targetPort\` | 502 sau 20 giây: \`report: wget: bad address 'gateway.shop:8080'\`; \`nslookup\` trong Pod: \`connection timed out; no servers could be reached\` | policy egress DNS (53/UDP, TCP tới kube-dns), giữ \`default-deny\` |
+| (b) indexer | \`FailedScheduling\`: \`1 node(s) didn't match Pod's node affinity/selector, 2 node(s) had untolerated taint(s)\` | \`nodeSelector\` \`disk\` → \`disktype\` | Pod mới vẫn \`Pending\`; \`Taints: maintenance=planned:NoSchedule\` trên cka-w2 | gỡ taint |
+
+Vì sao (a) **treo** chứ không \`connection refused\`: \`default-deny\` cộng policy \`report\` chỉ mở ingress cổng 8080, nên gói tới 8081 bị Calico bỏ, không có ai trả RST (đo: \`curl -m 60\` hết 60 giây, mã 000). "Treo" ở tầng Service gần như luôn là NetworkPolicy hay không có route; "refused" là có đường mà không ai nghe. Thông điệp của (b) đọc **từng vế**: số node ở mỗi lý do cộng lại bằng tổng; sửa một vế thì vế kia vẫn còn.
+
+**Giống đọc log Spring theo tầng.** Một request 500 trong Spring: lớp ngoài (\`DispatcherServlet\`) chỉ nói "500", lớp trong nói \`Caused by: java.net.UnknownHostException: gateway.shop\`. Sửa kết nối DB xong mà vẫn 500 thì đọc lại \`Caused by\` mới nhất, đừng giả định là lỗi cũ. Ở đây "lớp ngoài" là curl (000, 502), "lớp trong" là EndpointSlice, log CGI, \`nslookup\`, Event.
+
+**Đọc đúng đối tượng.** \`k top pod -A --sort-by=cpu\` xếp theo số đo **của metrics-server** (đo 5 lần cách 30 giây: \`cruncher-…\` 299–301m, Pod kế tiếp 24–55m; lúc apiserver bận nhất đo được 100m), và số đó trễ một nhịp: ngay sau khi một Pod bị xoá, \`top\` còn in nó thêm một lúc (đo khi \`begin\` lại liền: dòng đầu là \`cruncher\` cũ đã mất). Trước khi ghi đáp án, \`k get pod <tên>\` để chắc nó còn. \`k logs <pod>\` của Pod hai container in container **mặc định** (\`Defaulted container "app" out of: app, shipper\`, đo); container phụ cần \`-c\`. \`k get events\` của cả namespace lẫn lộn; \`--field-selector involvedObject.name=<pod>,type=Warning\` chỉ lấy đúng đối tượng. Metrics API là một API bình thường: \`k get --raw /apis/metrics.k8s.io/v1beta1/nodes/cka-w1\` trả JSON \`kind: NodeMetrics\` mà \`k top node\` chỉ in thành bảng.`,
+    refs: [
+      { label: "Bài lộ trình CKA: Tuần 8 — Debug Service/DNS", href: "#/roadmap/cka/cka-w8-4" },
+      { label: "CKA Study Guide, chương 21 — Xử lý sự cố ứng dụng", href: "#/docs/ckabook-21" },
+      { label: "CKA Study Guide, chương 14 — Lập lịch Pod", href: "#/docs/ckabook-14" },
+      { label: "CKA Study Guide, chương 1 — Chi tiết về kỳ thi và tài nguyên", href: "#/docs/ckabook-01" },
+      { label: "kubernetes.io: Resource metrics pipeline (Metrics API)", href: "https://kubernetes.io/docs/tasks/debug/debug-cluster/resource-metrics-pipeline/" },
+      { label: "kubernetes.io: Debug Services", href: "https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/" },
+      { label: "kubernetes.io: Taints and Tolerations", href: "https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/" },
+      { label: "kubernetes.io: kubectl events", href: "https://kubernetes.io/docs/reference/kubectl/generated/kubectl_events/" },
+    ],
+    stateIn: "Đầu ra s50 (control plane, etcd, ba kubeconfig dùng được, sổ tay có mục s50). Trên Mac chạy `./labs/lab begin cka s51`: kiểm đầu vào bằng check.sh riêng (đầu ra s50 trừ việc shop trải hai worker), xoá bốn tệp đáp án cũ trong /opt/answers/ rồi **gây sự cố** (đo 12 giây, chạy lại liền 12 giây: xoá namespace s51-batch, gỡ taint rồi dựng lại): \"một lô việc batch mới vào namespace s51-batch, vài thứ chưa chạy\". Bấm giờ 60 phút cho sáu câu.",
+    stateOut: "Cluster như cuối chặng 8 cộng namespace s51-batch đã sửa: report-svc trả 200 qua report (policy DNS mới, default-deny giữ nguyên), indexer chạy trên cka-w2 (nhãn disktype=ssd, không còn taint maintenance), Pod ingest còn, **không còn Pod cruncher**; bốn tệp đáp án trong /opt/answers/ (chủ ubuntu); mục s51 trong ~/notes/runbook.md. Đây là mốc `st9-done`, đầu vào của hai đề mock.",
+    tasks: [
+      {
+        id: "t1",
+        text: "`./labs/lab begin cka s51`. Bấm giờ **60 phút** cho sáu câu dưới đây (Q1–Q6). Như đề thật: trước mỗi câu `k config current-context` (đề thật mở đầu mỗi câu bằng một `kubectl config use-context …`: gõ nó trước tiên). Đọc lướt cả sáu, làm **Q1–Q4 trước** (mỗi câu ≤ 5 phút), câu nào quá 1,5 lần thời gian mục tiêu thì ghi số câu vào giấy nháp và đi tiếp. Lưu ý thứ tự: Q3 hỏi Event **lúc sự cố**, làm trước Q6.",
+      },
+      {
+        id: "t2",
+        text: "**Q1.** Tìm Pod dùng nhiều CPU nhất trong toàn cluster. Ghi `<namespace>/<tên Pod>` (đúng một dòng) vào `/opt/answers/top-cpu.txt`.",
+      },
+      {
+        id: "t3",
+        text: "**Q2.** Ghi dữ liệu thô (JSON) NodeMetrics của node `cka-w1`, lấy trực tiếp từ Metrics API, vào `/opt/answers/node-metrics.json`.",
+      },
+      {
+        id: "t4",
+        text: "**Q3.** Deployment `indexer` trong namespace `s51-batch` không chạy. Ghi `reason` của Event loại Warning mới nhất của Pod thuộc `indexer` vào `/opt/answers/events.txt` (chỉ chuỗi reason). Thử thêm `k get events -w` với cùng field selector trong lúc làm câu khác.",
+      },
+      {
+        id: "t5",
+        text: "**Q4.** Pod `ingest` trong `s51-batch` có một container phụ ghi lỗi. Ghi toàn bộ log của **container đó** (không thêm gì, không tiền tố thời gian) vào `/opt/answers/sidecar.log`. Dùng `k top pod -n s51-batch --containers` để thấy cột container.",
+      },
+      {
+        id: "t6",
+        text: "**Q5.** Deployment `report` trong `s51-batch` phục vụ `/cgi-bin/products` sau Service `report-svc` (cổng 8080) và lấy dữ liệu từ `gateway.shop:8080`. Từ cka-cp, `curl` tới ClusterIP của `report-svc` không được. Sửa để nó trả 200 với danh sách sản phẩm. Không xoá, không nới NetworkPolicy `default-deny` của namespace.",
+      },
+      {
+        id: "t7",
+        text: "**Q6.** `indexer` phải chạy trên node có ổ SSD (nhãn `disktype=ssd`). Sửa để Pod của nó Running. Không xoá Deployment, không đổi image hay lệnh, không cordon node nào.",
+      },
+      {
+        id: "t8",
+        text: "Hết giờ (hay xong sớm): `ls -l /opt/answers/` (bốn tệp, đúng tên), `cat` từng tệp. Thêm mục `## s51 …` vào sổ tay (≥ 3 dòng). Dọn Pod ngốn CPU: `k -n s51-batch delete pod -l app=cruncher` (đáp án Q1 vẫn được chấm theo Pod lúc sự cố). Trên Mac: `./labs/lab verify cka s51` phải 7/7. Ghi lại: mỗi câu mất bao lâu, câu nào bạn đánh dấu.",
+      },
+    ],
+    hints: [
+      "Q1: `k top pod -A --sort-by=cpu --no-headers | head -1 | awk '{print $1\"/\"$2}'`. Ngay sau `begin`, metrics của Pod mới cần ~1 phút mới có, và Pod vừa bị xoá có thể còn nằm trên đầu bảng: `k -n <ns> get pod <tên>` trước khi ghi.",
+      "Q1 verify đỏ `cần đúng một dòng <namespace>/<Pod>`: bạn ghi mỗi tên Pod, hay thêm cột CPU, hay hai dòng. Đề bảo định dạng nào ghi đúng định dạng đó.",
+      "Q2: `k get --raw /apis/metrics.k8s.io/v1beta1/nodes/cka-w1 > /opt/answers/node-metrics.json`. `k top node cka-w1` không phải JSON; `k get nodes.metrics.k8s.io cka-w1 -o json` cũng ra NodeMetrics.",
+      "Q3: tên Pod đổi mỗi lần ReplicaSet tạo lại; lấy bằng `-l app=indexer`. `k -n s51-batch get events --field-selector involvedObject.name=<pod>,type=Warning --sort-by=.lastTimestamp -o jsonpath='{.items[-1:].reason}'`.",
+      "Q4: `k logs ingest` in container mặc định (`Defaulted container \"app\" out of: app, shipper`). `--all-containers` trộn cả hai; `--timestamps` thêm tiền tố. Chỉ `-c shipper`.",
+      "Q5 treo chứ không refused: `k -n s51-batch get endpointslice -l kubernetes.io/service-name=report-svc` (cột PORTS) so với `containerPort` của Pod; `k get endpoints` vẫn chạy nhưng báo deprecated.",
+      "Q5 sau khi sửa cổng mà 502 `bad address`: tên không phân giải. `k -n s51-batch describe netpol` — egress chỉ có cổng 8080. Thêm một policy egress tới `k8s-app=kube-dns` ở `kube-system` cổng 53 UDP và TCP (như `allow-dns-egress` của shop, s31).",
+      "Q6: `k get node -L disktype,disk`, `k describe node cka-w2 | grep -A1 Taints`, `k taint node cka-w2 maintenance-`. Sửa nodeSelector bằng `k edit` hay `k patch --type=json` (patch merge chỉ thêm khoá, không xoá `disk`).",
+    ],
+    solution: `Output là của máy soạn bài (2026-11-25, Kubernetes 1.37.2, metrics-server của s20, sau \`apply\` s50 rồi \`begin cka s51\`); tên \`cruncher-…\`, mã lô của ingest và tên Pod của bạn khác. Mọi lệnh chạy trên cka-cp. Thứ tự đúng như phòng thi: Q2, Q3, Q4 (mỗi câu dưới 2 phút), Q1 khi metrics của Pod mới đã có, rồi Q5, Q6.
+
+**Q2 — Metrics API thô (1 phút)**
+
+\`\`\`bash
+k get --raw /apis/metrics.k8s.io/v1beta1/nodes/cka-w1 > /opt/answers/node-metrics.json
+python3 -m json.tool /opt/answers/node-metrics.json | sed -n '2,3p;16,21p'
+#     "kind": "NodeMetrics",
+#     "apiVersion": "metrics.k8s.io/v1beta1",
+#     "timestamp": "2026-11-24T20:27:49Z",
+#     "window": "20.064s",
+#     "usage": {
+#         "cpu": "42912679n",
+#         "memory": "1171944Ki"
+\`\`\`
+
+**Q3 — reason của Event cảnh báo (2 phút, trước Q6)**
+
+\`\`\`bash
+p=$(k -n s51-batch get pod -l app=indexer -o jsonpath='{.items[0].metadata.name}')
+k -n s51-batch get events --field-selector involvedObject.name=$p,type=Warning
+# LAST SEEN   TYPE      REASON             OBJECT                         MESSAGE
+# 2m11s       Warning   FailedScheduling   pod/indexer-59ccc85f74-67lds   0/3 nodes are available: 1 node(s) didn't match Pod's node affinity/selector, 2 node(s) had untolerated taint(s). …
+k -n s51-batch get events --field-selector involvedObject.name=$p,type=Warning --sort-by=.lastTimestamp -o jsonpath='{.items[-1:].reason}' > /opt/answers/events.txt
+cat /opt/answers/events.txt          # FailedScheduling
+\`\`\`
+
+**Q4 — log của container phụ (1 phút)**
+
+\`\`\`bash
+k -n s51-batch get pod ingest -o jsonpath='{.spec.containers[*].name}{"\\n"}'     # app shipper
+k -n s51-batch logs ingest 2>&1 | head -2
+# Defaulted container "app" out of: app, shipper
+# INFO ingest batch=7c23f0-01 accepted records=120
+k -n s51-batch logs ingest -c shipper > /opt/answers/sidecar.log
+cat /opt/answers/sidecar.log
+# ERROR shipper batch=7c23f0-01 upload to s3://archive-7c23f0 failed: 403 Forbidden
+# … (bốn dòng)
+\`\`\`
+
+**Q1 — Pod ngốn CPU nhất (2 phút)**
+
+\`\`\`bash
+k top pod -A --sort-by=cpu | head -4
+# NAMESPACE     NAME                    CPU(cores)   MEMORY(bytes)
+# s51-batch     cruncher-d48b           300m         0Mi
+# kube-system   calico-node-qn2dk       39m          106Mi
+# kube-system   etcd-cka-cp             36m          84Mi
+k -n s51-batch get pod cruncher-d48b -o name          # còn tồn tại
+k top pod -A --sort-by=cpu --no-headers | head -1 | awk '{print $1"/"$2}' > /opt/answers/top-cpu.txt
+k top pod -n s51-batch --containers
+# POD             NAME      CPU(cores)   MEMORY(bytes)
+# cruncher-d48b   burn      300m         0Mi
+# ingest          app       1m           0Mi
+# ingest          shipper   0m           0Mi
+\`\`\`
+
+**Q5 — report: hai chỗ (10 phút)**
+
+\`\`\`bash
+cip=$(k -n s51-batch get svc report-svc -o jsonpath='{.spec.clusterIP}')
+curl -s -m 60 -w ' code=%{http_code}\\n' http://$cip:8080/cgi-bin/products      #  code=000 (treo hết 60 giây)
+k -n s51-batch get endpointslice -l kubernetes.io/service-name=report-svc
+# NAME               ADDRESSTYPE   PORTS   ENDPOINTS       AGE
+# report-svc-t8qdb   IPv4          8081    10.244.62.189   31s
+k -n s51-batch get pod -l app=report -o jsonpath='{.items[0].spec.containers[0].ports}{"\\n"}'
+# [{"containerPort":8080,"name":"http","protocol":"TCP"}]
+k -n s51-batch patch svc report-svc --type=json -p '[{"op":"replace","path":"/spec/ports/0/targetPort","value":8080}]'
+curl -s -m 60 -w ' code=%{http_code}\\n' http://$cip:8080/cgi-bin/products
+# report: wget: bad address 'gateway.shop:8080'
+#  code=502                                                   (sau 20 giây)
+k -n s51-batch exec deploy/report -- nslookup gateway.shop | tail -2     # ;; connection timed out; no servers could be reached
+k -n s51-batch describe netpol report | sed -n '/Allowing egress/,$p'
+#   Allowing egress traffic:
+#     To Port: 8080/TCP
+#     To:
+#       NamespaceSelector: kubernetes.io/metadata.name=shop
+#       PodSelector: app=gateway
+k -n s51-batch apply -f - <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: allow-dns-egress, namespace: s51-batch}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+  - to: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}, podSelector: {matchLabels: {k8s-app: kube-dns}}}]
+    ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+EOF
+curl -s -m 30 -w ' code=%{http_code}\\n' http://$cip:8080/cgi-bin/products
+# [{"id":1,"name":"Bàn phím cơ","price":49.90},{"id":2,"name":"Chuột không dây","price":19.90},{"id":3,"name":"Màn hình 27 inch","price":229.00}]
+#  code=200
+\`\`\`
+
+Vì sao report gọi \`gateway.shop\` chứ không gọi thẳng \`catalog.shop\`: policy \`catalog\` của s31 chỉ nhận từ gateway, gateway-v1, order trong shop. Không mở policy của shop cho một namespace khác chỉ để làm câu này.
+
+**Q6 — indexer: hai chỗ (8 phút)**
+
+\`\`\`bash
+k get node -L disktype,disk
+# NAME     STATUS   ROLES           AGE   VERSION   DISKTYPE   DISK
+# cka-cp   Ready    control-plane   11d   v1.37.2
+# cka-w1   Ready    <none>          11d   v1.37.2
+# cka-w2   Ready    <none>          11d   v1.37.2   ssd
+k -n s51-batch get deploy indexer -o jsonpath='{.spec.template.spec.nodeSelector}{"\\n"}'     # {"disk":"ssd"}
+k -n s51-batch patch deploy indexer --type=json -p '[{"op":"replace","path":"/spec/template/spec/nodeSelector","value":{"disktype":"ssd"}}]'
+k -n s51-batch get pod -l app=indexer
+# indexer-59ccc85f74-xx24w   0/1     Pending   0          78s      (Pod cũ, ReplicaSet cũ)
+# indexer-98f864686-zm7js    0/1     Pending   0          8s       (Pod mới: vẫn Pending)
+k describe node cka-w2 | grep -A1 '^Taints'
+# Taints:             maintenance=planned:NoSchedule
+# Unschedulable:      false
+k taint node cka-w2 maintenance-
+k -n s51-batch rollout status deploy/indexer
+# Waiting for deployment "indexer" rollout to finish: 1 old replicas are pending termination...
+# deployment "indexer" successfully rolled out
+k -n s51-batch get pod -l app=indexer -o wide        # indexer-98f864686-zm7js  1/1  Running  …  cka-w2
+\`\`\`
+
+Không xoá indexer để "làm lại cho sạch" (verify đỏ \`thiếu Deployment indexer\`, đo), không thêm nhãn \`disk=ssd\` vào cka-w1 để khớp selector sai, không cordon cka-w2 thay cho gỡ taint (lõi đỏ \`w2 đang cordon\`).
+
+**Dọn và kiểm**
+
+\`\`\`bash
+ls -l /opt/answers/          # events.txt  node-metrics.json  sidecar.log  top-cpu.txt   (chủ ubuntu)
+k -n s51-batch delete pod -l app=cruncher
+\`\`\`
+
+**Lời giải tự động** (\`labs/cka/sessions/s51/apply.sh\`): gây sự cố như \`begin\`, rồi \`files/solve.sh\` theo đúng thứ tự trên (Q1 chờ tới khi Pod đứng đầu \`top\` thuộc s51-batch **và còn tồn tại**: lần đầu viết thiếu điều kiện thứ hai, \`begin\` lại liền khiến lời giải ghi tên \`cruncher\` cũ đã bị xoá và verify đỏ Q1, đo), kiểm shop còn trải hai worker (\`rollout restart\` nếu Pod bị xếp lại trong lúc có taint), mục s51 của sổ tay, xoá cruncher. Đo: 71–91 giây, rồi verify 7/7.`,
+    exam: {
+      patterns: [
+        "**Phân bổ 120 phút** (đề thật khoảng 15–20 câu, mỗi câu vài phần trăm điểm): đọc lướt cả đề 3 phút; lượt một làm mọi câu ≤ 5 phút (ghi tệp, top, logs, events, scale, label) — khoảng 35–40 phút; lượt hai các câu sự cố và câu nhiều bước, mỗi câu đặt trần 1,5 lần thời gian mục tiêu; còn ~10 phút cuối quay lại câu đã đánh dấu và kiểm lại đường dẫn tệp. Câu kẹt không bao giờ được ăn quá 15 phút trong lượt hai.",
+        "\"Tìm Pod/node dùng nhiều CPU/RAM nhất (theo label, namespace), ghi tên vào /opt/…\" — `k top pod -A --sort-by=cpu|memory`, `-l`, `--containers`, `--no-headers | head -1`; đúng định dạng đề yêu cầu (`<ns>/<pod>` hay chỉ tên).",
+        "\"Ghi log của container X trong Pod Y / Event của đối tượng Z vào /opt/…\" — `k logs -c`, `--previous`, `k get events --field-selector involvedObject.name=…,type=Warning --sort-by=.lastTimestamp`.",
+        "\"Service S không trả lời / Deployment D Pending; sửa\" — EndpointSlice và containerPort, DNS và NetworkPolicy egress, Event FailedScheduling đọc từng vế (taint, nodeSelector, affinity, tài nguyên).",
+        "Ghi đáp án: đúng đường dẫn tuyệt đối đề cho (thư mục có thể chưa có: `mkdir -p`), đúng định dạng, không thêm dòng tiêu đề; `cat` lại tệp trước khi sang câu khác.",
+      ],
+      timeTargetMin: 10,
+      drills: [
+        {
+          text: "Trong 2 phút: ghi tên (chỉ tên) của Pod dùng nhiều bộ nhớ nhất trong namespace `kube-system` vào `/tmp/top-mem.txt`.",
+          timeLimitMin: 2,
+          solution: "```bash\nk top pod -n kube-system --sort-by=memory --no-headers | head -1 | awk '{print $1}' > /tmp/top-mem.txt\ncat /tmp/top-mem.txt\n```\nTrên lab là `kube-apiserver-cka-cp` (đo 407–511Mi).",
+        },
+        {
+          text: "Trong 3 phút: ghi lượng CPU (nguyên chuỗi, như `42912679n`) mà Metrics API báo cho node `cka-w2` vào `/tmp/w2-cpu.txt`.",
+          timeLimitMin: 3,
+          solution: "```bash\nk get --raw /apis/metrics.k8s.io/v1beta1/nodes/cka-w2 | python3 -c 'import json,sys; print(json.load(sys.stdin)[\"usage\"][\"cpu\"])' > /tmp/w2-cpu.txt\n```\nHay `k get nodes.metrics.k8s.io cka-w2 -o jsonpath='{.usage.cpu}'`. `n` là nanocore: 42912679n ≈ 43m.",
+        },
+      ],
+    },
+    tips: [
+      "Mỗi câu: `use-context` của đề trước tiên, đáp án ghi xong thì `cat` lại tệp. Sai đường dẫn hay sai định dạng là 0 điểm dù bạn tìm đúng.",
+      "Câu hỏi về \"lúc sự cố\" (Event, log, Pod không Ready) làm **trước** khi sửa câu cùng đối tượng: sửa xong thì bằng chứng đổi.",
+      "Sửa một chỗ mà triệu chứng đổi (treo → 502, selector → taint) là tiến bộ, không phải thất bại: đọc thông báo mới.",
+      "Dọn Pod ngốn CPU và Pod thử trước khi sang việc khác, nhất là trước buổi mock: `cruncher` chiếm 300m của một worker 2 CPU.",
+    ],
+    outcome: {
+      md: `Sáu câu xong trong giờ, cluster sạch cho mock. Trên Mac:
+
+\`\`\`bash
+./labs/lab verify cka s51
+\`\`\`
+
+Bảy dòng, chấm theo sự thật lúc sự cố mà \`begin\` ghi ở \`/root/.lab/st9-multi/\`, không theo chuỗi đoán được. **Q1:** đúng một dòng \`<namespace>/<Pod>\` bằng Pod ngốn CPU nhất lúc sự cố (chỉ tên Pod: đỏ, đo), \`/opt/answers/\` chủ ubuntu; vẫn xanh sau khi xoá cruncher. **Q2:** JSON NodeMetrics của \`cka-w1\` có usage, timestamp sau lúc \`begin\` (của cka-w2: đỏ \`metadata.name cka-w2\`, đo). **Q3:** đúng reason đã ghi (\`Warning\`: đỏ). **Q4:** đúng bốn dòng của container phụ (\`--all-containers\`: đỏ \`có dòng của container app\`, đo). **Q5:** \`curl\` từ cka-cp tới ClusterIP:port của report-svc trả 200 với 3 sản phẩm, \`default-deny\` còn nguyên spec (xoá mọi NetworkPolicy mà không sửa targetPort: đỏ cả hai lý do, đo). **Q6:** worker không còn taint ngoài \`node.kubernetes.io/*\`, indexer còn (xoá thay vì sửa: đỏ \`thiếu Deployment indexer\`, đo), container như lúc sự cố, \`nodeSelector\` \`disktype=ssd\`, Pod Ready trên node mang nhãn đó; cộng lõi khoẻ (ba node, control plane, shop trải hai worker) và dữ liệu như cuối s45 (dòng \`STATE\` của s43). **Sổ tay:** heading chứa \`s51\`. Ngay sau \`begin\`: **0/7** trong 74 giây (đo).`,
+      verifyOutput: "lab: kiểm s51\n  (chờ apiserver và Deployment của shop, nếu đang khởi động: tối đa ~16 phút)\n  ✓ Q1 /opt/answers/top-cpu.txt: <namespace>/<Pod> ngốn CPU nhất toàn cluster; /opt/answers chủ ubuntu\n  ✓ Q2 /opt/answers/node-metrics.json: NodeMetrics thô của cka-w1 (Metrics API), lấy sau khi begin\n  ✓ Q3 /opt/answers/events.txt: reason của Event cảnh báo mới nhất của indexer\n  ✓ Q4 /opt/answers/sidecar.log: đúng các dòng log của container phụ\n  ✓ Q5 report-svc → report → gateway.shop trả 200 (3 sản phẩm); default-deny của s51-batch còn nguyên\n  ✓ Q6 worker không còn taint lạ, indexer chạy trên node disktype=ssd; lõi khoẻ (ba node, control plane, shop), dữ liệu như s45\n  ✓ ~/notes/runbook.md có mục s51 (triệu chứng, nguyên nhân, lệnh) ≥ 3 dòng\n  → 7/7 đạt",
+      projectDelta: "Sổ tay sự cố đủ sáu mục s46–s51 (mốc project của chặng 9). Cluster ở mốc `st9-done`: lõi khoẻ, s51-batch đã sửa và không còn Pod ngốn CPU, /opt/answers/ sẵn cho mock.",
+    },
+    review: [
+      { q: "Sửa `targetPort` của report-svc xong, curl đổi từ treo sang 502 `bad address`. Bạn đọc gì tiếp, và vì sao không quay lại sửa Service?", a: "Triệu chứng đổi nghĩa là tầng Service đã đúng (request đã tới Pod, CGI đã chạy) và lỗi nằm ở tầng kế: report không phân giải `gateway.shop`. `nslookup` trong Pod (`connection timed out`), `describe netpol` (egress chỉ cổng 8080): default-deny chặn DNS. Sửa bằng policy egress 53/UDP, TCP tới kube-dns, giữ default-deny." },
+      { q: "Vì sao curl tới cổng sai (8081) **treo** chứ không `connection refused`?", a: "default-deny cộng policy report chỉ cho ingress cổng 8080: gói tới 8081 bị dataplane của Calico bỏ, không ai trả RST, nên client chờ tới hết giờ (đo: 60 giây, mã 000). `refused` là gói tới được Pod mà không ai nghe cổng đó. Treo ở tầng Service thường là NetworkPolicy hay route." },
+      { q: "`FailedScheduling: 0/3 nodes are available: 1 node(s) didn't match Pod's node affinity/selector, 2 node(s) had untolerated taint(s)`. Đọc thế nào, và vì sao sửa nodeSelector rồi Pod vẫn Pending?", a: "Mỗi vế là một nhóm node bị loại vì một lý do, cộng lại bằng 3: cka-cp và cka-w2 có taint (control-plane, maintenance), cka-w1 không có nhãn đúng. Chỉ cka-w2 có `disktype=ssd`, mà nó lại có taint lạ; sửa selector xong thì cka-w2 khớp nhãn nhưng vẫn bị taint loại. Gỡ taint (hay thêm toleration nếu taint là cố ý — ở đây không)." },
+      { q: "Vì sao câu Q3 (Event lúc sự cố) phải làm trước Q6, và Q1 vẫn được chấm đúng sau khi bạn xoá cruncher?", a: "Sửa indexer thì ReplicaSet mới tạo Pod mới, Event Warning cũ thuộc Pod cũ và hết hạn sau ~1 giờ: bằng chứng đổi. Đề thường hỏi \"lúc này\" nên làm câu đọc trước câu sửa. Q1 hỏi Pod ngốn CPU lúc sự cố; lab ghi tên Pod đó lúc `begin`, nên dọn nó sau khi đã ghi đáp án là đúng (và nên làm trước mock)." },
+      { q: "So sánh đọc hai sự cố hai chỗ của buổi này với đọc một stack trace Spring nhiều tầng.", a: "Lớp ngoài chỉ nói kết quả (curl 000 rồi 502; `DispatcherServlet` 500), lớp trong nói nguyên nhân (EndpointSlice cổng 8081, `bad address`; `Caused by: UnknownHostException`). Sửa một nguyên nhân thì đọc lại lớp trong mới nhất, không giả định lỗi cũ còn; dừng khi kiểm từ ngoài vào (curl 200, Pod Running) thành công." },
+    ],
   },
 ];
