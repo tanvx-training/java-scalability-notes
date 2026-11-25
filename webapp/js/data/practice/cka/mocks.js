@@ -3,9 +3,10 @@
 // Id đề và id câu là khoá lưu tiến độ: đặt một lần, không đổi. Script dựng/chấm ở labs/cka/mocks/<id>/
 // (setup.sh, score.sh; bảng TABLE của score.sh phải trùng id, domain, weight dưới đây — check-data PR11). `solution`
 // của từng câu là cách làm của labs/cka/mocks/<id>/files/solve.sh (cùng lệnh; solve.sh chỉ thêm --dry-run | apply
-// để chạy lại được và vòng chờ), mà s52/apply.sh chạy và đòi 100/100.
+// để chạy lại được và vòng chờ), mà s52/apply.sh (m1) và s53/apply.sh (m2) chạy và đòi 100/100.
 
 const M1_ALL = "Mọi câu làm trên `cka-cp` (`multipass shell cka-cp`, user ubuntu, `kubectl`/`helm` sẵn), trừ khi câu ghi node khác. Tệp đáp án ghi vào `/opt/m1/` đúng tên câu yêu cầu.";
+const M2_ALL = "Mọi câu làm trên `cka-cp` (`multipass shell cka-cp`, user ubuntu, `kubectl`/`kubeadm` sẵn), trừ khi câu ghi node khác. Tệp đáp án ghi vào `/opt/m2/` đúng tên câu yêu cầu. Cluster dùng chung cho cả 16 câu (đề thật mỗi câu một cluster): sự cố ở một câu có thể làm câu khác chưa làm được — đọc lướt hết đề trước.";
 
 export const mocks = [
   {
@@ -531,6 +532,614 @@ k -n m1-q16 exec deploy/worker -- printenv MODE      # batch
 \`\`\`
 
 Chấm: reason (1), requests.cpu 50m (1), ConfigMap \`MODE=batch\` và container vẫn \`envFrom\` nó (2), 2 replica sẵn sàng (2), \`MODE=batch\` trong Pod (1). Bỏ \`envFrom\` để Pod chạy: 4/7.`,
+      },
+    ],
+  },
+  {
+    id: "m2",
+    title: "Mock 2",
+    durationMin: 120,
+    questions: [
+      {
+        id: "q1",
+        domain: "troubleshooting",
+        weight: 8,
+        context: "cka-cp, namespace m2-q1 và kube-system (control plane)",
+        text: `${M2_ALL}
+
+Deployment \`nightly\` trong \`m2-q1\` vừa được tạo nhưng Pod của nó đứng \`Pending\`, và \`kubectl describe\` không có Event nào. Mọi node đều Ready.
+
+1. Tìm nguyên nhân trong control plane và sửa tận gốc để Pod mới của cluster lại được xếp lịch. Không tạo namespace mới để "lách".
+2. Ghi tên cờ dòng lệnh gây lỗi (chỉ tên cờ, dạng \`--tên-cờ\`, không kèm giá trị) vào \`/opt/m2/q1-flag.txt\`.`,
+        solution: `Thời gian mục tiêu: **8 phút**.
+
+Pod \`Pending\` **không có Event** nghĩa là chưa ai thử xếp lịch nó: không có \`FailedScheduling\` thì scheduler không làm việc (có \`FailedScheduling\` thì scheduler làm việc mà không node nào hợp). \`k -n kube-system get pod\` cho thấy \`kube-scheduler-cka-cp\` **Running và Ready** — bẫy của câu: Pod khoẻ không có nghĩa thành phần làm việc. Log nói thẳng lý do:
+
+\`\`\`bash
+k -n m2-q1 get pod; k -n m2-q1 describe pod -l app=nightly | tail -3      # Events: <none>
+k -n kube-system get pod kube-scheduler-cka-cp                             # 1/1 Running
+k -n kube-system logs kube-scheduler-cka-cp --tail=5
+# leaderelection.go:… "Error initially creating lease lock" err="namespaces \\"kube-sytem\\" not found" lock="kube-sytem/kube-scheduler"
+k -n kube-system get lease kube-scheduler        # RENEW cũ: không ai giữ lease
+sudo grep -n leader-elect /etc/kubernetes/manifests/kube-scheduler.yaml
+#   - --leader-elect=true
+#   - --leader-elect-resource-namespace=kube-sytem      ← namespace gõ sai
+echo -- --leader-elect-resource-namespace > /opt/m2/q1-flag.txt   # hay: printf '%s\\n' --leader-elect-resource-namespace
+sudo cp /etc/kubernetes/manifests/kube-scheduler.yaml ~/kube-scheduler.yaml.bak   # sao lưu NGOÀI thư mục manifests
+sudo sed -i '/--leader-elect-resource-namespace=/d' /etc/kubernetes/manifests/kube-scheduler.yaml
+# kubelet thấy tệp đổi (~20 giây), tạo lại Pod tĩnh; scheduler giành lease kube-system/kube-scheduler rồi mới xếp lịch.
+k -n kube-system get lease kube-scheduler -w     # HOLDER cka-cp_…, RENEW mới
+k -n m2-q1 get pod -o wide                       # Running trên một worker
+\`\`\`
+
+Scheduler (như controller-manager) chạy leader election: chỉ bản giữ lease mới làm việc, các bản khác chờ — để HA có ba scheduler mà không xếp lịch đôi. Không giành được lease thì nó chờ mãi, healthz vẫn ok. Sửa giá trị thành \`kube-system\` cũng đúng; **tạo namespace \`kube-sytem\`** thì scheduler chạy lại nhưng manifest vẫn sai — 0 cho phần manifest và phần xếp lịch.
+
+Chấm: tên cờ (1), manifest như bản kubeadm (hay chỉ thêm \`--leader-elect-resource-namespace=kube-system\`) (3), Pod \`nightly\` được xếp lịch và Ready (2), Pod scheduler Ready và giữ lease \`kube-system/kube-scheduler\` (2). Câu này đứng đầu đề vì mọi Pod **mới** của các câu khác (rollout, PVC chờ Pod, Job) đều cần scheduler.`,
+      },
+      {
+        id: "q2",
+        domain: "architecture",
+        weight: 6,
+        context: "cka-cp (đối tượng cluster-scoped, thư mục /opt/m2)",
+        text: `${M2_ALL}
+
+Một kiểm toán viên cần đọc Pod của mọi namespace bằng chứng chỉ riêng, không qua ServiceAccount.
+
+1. Tạo khoá riêng \`/opt/m2/auditor.key\` và CertificateSigningRequest \`m2-auditor\` (signer \`kubernetes.io/kube-apiserver-client\`) cho user \`m2-auditor\` thuộc nhóm \`m2-audit\`. Duyệt nó, lưu cert vào \`/opt/m2/auditor.crt\`.
+2. Tạo kubeconfig \`/opt/m2/auditor.kubeconfig\` (context \`m2-auditor\` là context hiện tại, trỏ apiserver của cluster) dùng ngay được: \`kubectl --kubeconfig /opt/m2/auditor.kubeconfig get pods -A\`.
+3. Tạo ClusterRole \`m2-pod-reader\` (\`get\`, \`list\`, \`watch\` trên \`pods\`) và ClusterRoleBinding \`m2-auditor\` gắn nó cho **nhóm** \`m2-audit\`. Không thêm quyền nào khác.`,
+        solution: `Thời gian mục tiêu: **8 phút**.
+
+CN của cert là tên user, mỗi O là một nhóm. Gắn quyền cho **nhóm** (\`--group\`) để người thứ hai của đội kiểm toán chỉ cần một cert mới, không cần binding mới. Không đặt \`expirationSeconds\` ngắn: cert hết hạn thì kubeconfig chết theo.
+
+\`\`\`bash
+cd /opt/m2
+openssl genrsa -out auditor.key 2048
+openssl req -new -key auditor.key -subj "/CN=m2-auditor/O=m2-audit" -out auditor.csr
+k apply -f - <<EOF
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata: {name: m2-auditor}
+spec:
+  request: $(base64 -w0 < auditor.csr)
+  signerName: kubernetes.io/kube-apiserver-client
+  usages: [client auth]
+EOF
+k certificate approve m2-auditor
+k get csr m2-auditor -o jsonpath='{.status.certificate}' | base64 -d > auditor.crt
+openssl x509 -in auditor.crt -noout -subject -issuer       # CN = m2-auditor, O = m2-audit; issuer CN = kubernetes
+KC=/opt/m2/auditor.kubeconfig
+k config set-cluster cka --server=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}') \\
+  --certificate-authority=/etc/kubernetes/pki/ca.crt --embed-certs --kubeconfig=$KC
+k config set-credentials m2-auditor --client-certificate=auditor.crt --client-key=auditor.key --embed-certs --kubeconfig=$KC
+k config set-context m2-auditor --cluster=cka --user=m2-auditor --kubeconfig=$KC
+k config use-context m2-auditor --kubeconfig=$KC
+k create clusterrole m2-pod-reader --verb=get,list,watch --resource=pods
+k create clusterrolebinding m2-auditor --clusterrole=m2-pod-reader --group=m2-audit
+k --kubeconfig=$KC auth whoami                    # m2-auditor, Groups [m2-audit system:authenticated]
+k --kubeconfig=$KC get pods -A | head -3
+k --kubeconfig=$KC auth can-i get secrets -A      # no
+\`\`\`
+
+Chấm: CSR Approved có cert (1), cert CN/O đúng do CA cluster ký (1), kubeconfig \`whoami\` ra \`m2-auditor\` trong nhóm \`m2-audit\` (1), list được pods \`-A\` (1), không thừa quyền: delete pods, get secrets, list nodes, create deployments đều \`no\` (1, chỉ tính khi list được), ClusterRoleBinding trỏ ClusterRole \`m2-pod-reader\` cho Group \`m2-audit\` (1). Gắn cho \`--user=m2-auditor\` thì vẫn chạy nhưng mất điểm binding: 5/6.`,
+      },
+      {
+        id: "q3",
+        domain: "workloads",
+        weight: 5,
+        context: "cka-cp, namespace m2-q3",
+        text: `${M2_ALL}
+
+Namespace \`m2-q3\` của một đội cần hạn mức.
+
+1. Tạo ResourceQuota \`team-quota\`: \`pods: 4\`, \`requests.cpu: 200m\`, \`requests.memory: 256Mi\`, \`limits.memory: 512Mi\`.
+2. Tạo LimitRange \`team-defaults\` (type \`Container\`): \`defaultRequest\` cpu \`25m\`, memory \`32Mi\`; \`default\` (limit) memory \`64Mi\`.
+3. Pod của Deployment \`batch\` (có sẵn, không khai resources) phải chạy lại và nhận các mặc định đó — **không** thêm \`resources\` vào template của \`batch\`. 2 Pod Ready.
+4. Ghi lượng \`requests.cpu\` mà quota đang tính là đã dùng (cột Used, ví dụ \`75m\`) vào \`/opt/m2/q3-used.txt\`.`,
+        solution: `Thời gian mục tiêu: **6 phút**.
+
+Quota có \`requests.cpu\`/\`limits.memory\` thì mọi Pod **mới** phải khai các trường đó, không thì bị từ chối lúc tạo (\`FailedCreate … must specify limits.memory\` ở Event của ReplicaSet — Deployment chỉ đứng yên). LimitRange điền mặc định **lúc admission**, nên phải có LimitRange trước khi tạo lại Pod; Pod đang chạy không bị đụng tới, vì vậy phải \`rollout restart\`.
+
+\`\`\`bash
+k -n m2-q3 create quota team-quota --hard=pods=4,requests.cpu=200m,requests.memory=256Mi,limits.memory=512Mi
+k apply -f - <<'EOF'
+apiVersion: v1
+kind: LimitRange
+metadata: {name: team-defaults, namespace: m2-q3}
+spec:
+  limits:
+  - type: Container
+    defaultRequest: {cpu: 25m, memory: 32Mi}
+    default: {memory: 64Mi}
+EOF
+k -n m2-q3 rollout restart deploy/batch
+k -n m2-q3 rollout status deploy/batch
+k -n m2-q3 get pod -l app=batch -o jsonpath='{.items[*].spec.containers[0].resources}'
+k -n m2-q3 describe quota team-quota          # requests.cpu  50m  200m
+echo 50m > /opt/m2/q3-used.txt
+\`\`\`
+
+Chấm: quota đúng bốn giá trị (1), LimitRange đúng ba mặc định (1), 2 Pod \`batch\` Ready mang đúng mặc định và template không có \`resources\` (2), Used đúng (1). \`rollout restart\` trước khi có LimitRange: Pod mới bị quota từ chối, rollout kẹt — đọc \`k -n m2-q3 get events\`.`,
+      },
+      {
+        id: "q4",
+        domain: "storage",
+        weight: 5,
+        context: "cka-cp, namespace m2-q4 (StorageClass là cluster-scoped)",
+        text: `${M2_ALL}
+
+1. Tạo StorageClass \`m2-standard\`: provisioner \`rancher.io/local-path\`, \`reclaimPolicy: Delete\`, \`volumeBindingMode: WaitForFirstConsumer\`.
+2. Đặt \`m2-standard\` làm StorageClass mặc định **duy nhất** của cluster.
+3. Trong \`m2-q4\`, tạo PVC \`logs\` (64Mi, \`ReadWriteOnce\`) **không ghi** \`storageClassName\`, để Pod \`log-writer\` có sẵn chạy được.`,
+        solution: `Thời gian mục tiêu: **5 phút**.
+
+Lớp mặc định là annotation \`storageclass.kubernetes.io/is-default-class: "true"\`. Hai lớp cùng mặc định thì admission chọn lớp tạo gần nhất — đề đòi "duy nhất" nên phải tắt cờ trên \`local-path\`. Thứ tự quan trọng: PVC không ghi class được admission **điền class mặc định lúc tạo**, và \`storageClassName\` của PVC không đổi được sau đó — tạo PVC trước khi đổi mặc định thì nó mang \`local-path\` mãi, phải xoá tạo lại.
+
+\`\`\`bash
+k get sc                                         # local-path (default)
+k apply -f - <<'EOF'
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata: {name: m2-standard}
+provisioner: rancher.io/local-path
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+EOF
+k patch sc local-path -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+k patch sc m2-standard -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+k get sc                                         # chỉ m2-standard (default)
+k apply -f - <<'EOF'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: logs, namespace: m2-q4}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 64Mi}}
+EOF
+k -n m2-q4 get pvc logs                          # STORAGECLASS m2-standard, Bound khi log-writer được xếp lịch
+\`\`\`
+
+Chấm: \`m2-standard\` đúng provisioner/reclaim/binding mode (1), là mặc định (1), không còn lớp mặc định nào khác (1), PVC \`logs\` mang \`m2-standard\`, 64Mi, RWO, Bound (1), \`log-writer\` Running (1). Sau đề, lớp mặc định của lab là \`m2-standard\` (cùng provisioner, không ảnh hưởng shop); \`mock … m2 start\` lần sau đưa về \`local-path\`.`,
+      },
+      {
+        id: "q5",
+        domain: "networking",
+        weight: 7,
+        context: "cka-cp, namespace m2-q5 và m2-q5-db",
+        text: `${M2_ALL}
+
+Pod \`app=fetcher\` trong \`m2-q5\` chỉ được phép gọi ra kho dữ liệu.
+
+Tạo NetworkPolicy \`fetcher-egress\` trong \`m2-q5\` sao cho Pod \`app=fetcher\`:
+
+- **được** gửi tới Pod \`app=store\` trong namespace \`m2-q5-db\`, cổng TCP 8080;
+- **được** phân giải DNS qua DNS của cluster (UDP và TCP 53);
+- **không** gửi được tới đâu khác (kể cả Pod \`app=cache\` trong \`m2-q5-db\`).
+
+Pod khác trong \`m2-q5\` không bị ảnh hưởng. Không tạo policy trong \`m2-q5-db\`.`,
+        solution: `Thời gian mục tiêu: **7 phút**.
+
+Policy chọn Pod và có \`policyTypes: [Egress]\` thì mọi egress của Pod đó bị chặn trừ những gì liệt kê. Hai bẫy: (1) \`namespaceSelector\` và \`podSelector\` **cùng một phần tử** \`to\` là "Pod store ở namespace m2-q5-db"; tách thành hai phần tử là "mọi Pod ở m2-q5-db **hoặc** Pod store ở chính m2-q5" — cache lọt qua; (2) quên DNS thì gọi theo tên chết mà gọi theo IP vẫn được — triệu chứng giống "Service hỏng".
+
+\`\`\`bash
+k get ns m2-q5-db --show-labels                   # kubernetes.io/metadata.name=m2-q5-db (nhãn tự có)
+k -n kube-system get pod -l k8s-app=kube-dns
+k apply -f - <<'EOF'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: fetcher-egress, namespace: m2-q5}
+spec:
+  podSelector: {matchLabels: {app: fetcher}}
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: m2-q5-db}}
+      podSelector: {matchLabels: {app: store}}
+    ports: [{protocol: TCP, port: 8080}]
+  - to:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+      podSelector: {matchLabels: {k8s-app: kube-dns}}
+    ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+EOF
+k -n m2-q5 exec deploy/fetcher -- wget -qO- -T 3 http://store.m2-q5-db:8080/    # trang store
+k -n m2-q5 exec deploy/fetcher -- wget -qO- -T 3 http://cache.m2-q5-db:8080/    # timeout
+k -n m2-q5 exec deploy/auditor -- wget -qO- -T 3 http://cache.m2-q5-db:8080/    # trang cache (Pod khác không bị chặn)
+\`\`\`
+
+Chấm: policy chọn \`app=fetcher\`, Egress (1); fetcher tới store theo ClusterIP (2) và theo tên — DNS mở (1); fetcher **không** tới cache (2, chỉ tính khi tới được store); Pod \`auditor\` vẫn tới cache (1). Các phép thử chỉ tính khi policy egress đã có. Mở cả namespace \`m2-q5-db\`: 5/7; quên DNS: 6/7.`,
+      },
+      {
+        id: "q6",
+        domain: "architecture",
+        weight: 7,
+        context: "cka-cp (etcd static pod — chỉ đọc; thư mục /var/lib/etcd-m2-check)",
+        text: `${M2_ALL}
+
+Bạn cần kiểm thử bản sao lưu etcd mà không đụng etcd đang chạy.
+
+1. Ghi output của \`etcdctl member list\` (bảng hay mặc định) vào \`/opt/m2/q6-members.txt\`.
+2. Bản sao lưu đêm qua nằm ở \`/opt/m2/etcd-backup.db\`. Ghi **revision** của nó (chỉ con số) vào \`/opt/m2/q6-revision.txt\`.
+3. Khôi phục bản đó vào thư mục mới \`/var/lib/etcd-m2-check\` để kiểm thử. **Không** sửa \`/etc/kubernetes/manifests/etcd.yaml\`, không dừng hay đổi data-dir của etcd đang chạy.`,
+        solution: `Thời gian mục tiêu: **6 phút**.
+
+\`etcdctl\` nói chuyện với server (cần endpoint và cert, đọc từ \`etcd.yaml\`); \`etcdutl\` làm việc trên **tệp**: \`snapshot status\` đọc revision, \`snapshot restore\` dựng một data-dir mới (\`member/snap/db\`, \`member/wal\`) — không khởi động etcd nào, không đụng etcd đang chạy. Restore thử vào thư mục riêng là cách kiểm một bản sao lưu có dùng được không trước ngày cần nó.
+
+\`\`\`bash
+sudo grep -E 'cert-file|key-file|trusted-ca-file|data-dir' /etc/kubernetes/manifests/etcd.yaml
+P=/etc/kubernetes/pki/etcd
+sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=$P/ca.crt --cert=$P/server.crt --key=$P/server.key \\
+  member list -w table > /opt/m2/q6-members.txt
+sudo etcdutl snapshot status /opt/m2/etcd-backup.db -w table      # HASH | REVISION | TOTAL KEYS | …
+echo <REVISION> > /opt/m2/q6-revision.txt
+sudo etcdutl snapshot restore /opt/m2/etcd-backup.db --data-dir /var/lib/etcd-m2-check
+sudo ls /var/lib/etcd-m2-check/member             # snap  wal
+sudo etcdutl snapshot status /var/lib/etcd-m2-check/member/snap/db -w table   # cùng revision
+\`\`\`
+
+Chấm: tệp member list có ID (hex), tên và peer URL của member (2); revision đúng của \`etcd-backup.db\` (2) — đọc revision của etcd đang chạy (\`endpoint status\`) là sai, nó đã đi tiếp; thư mục khôi phục có \`member/snap/db\` cùng revision với bản sao lưu và \`member/wal\` (2); etcd đang chạy vẫn \`--data-dir=/var/lib/etcd-restore\` và healthy (1, chỉ tính khi đã khôi phục). Chụp snapshot mới rồi khôi phục bản đó: 5/7.`,
+      },
+      {
+        id: "q7",
+        domain: "troubleshooting",
+        weight: 8,
+        context: "cka-cp, namespace m2-q7",
+        text: `${M2_ALL}
+
+Deployment \`importer\` trong \`m2-q7\` không bao giờ sẵn sàng, Pod của nó restart liên tục.
+
+1. **Trước khi sửa**, ghi **exit code** lần kết thúc gần nhất của container \`loader\` (chỉ con số) vào \`/opt/m2/q7-exitcode.txt\`.
+2. **Trước khi sửa**, ghi dòng log **cuối cùng** của lần chạy trước của \`loader\` vào \`/opt/m2/q7-last.log\`.
+3. Sửa: \`limits.memory\` của container \`loader\` đặt **64Mi**, giữ nguyên requests của nó và mọi thứ của container \`proxy\`. \`importer\` phải Available, Service \`importer\` trả trang.`,
+        solution: `Thời gian mục tiêu: **7 phút**.
+
+Pod hai container, \`RESTARTS\` tăng, \`describe\` cho thấy \`loader\`: \`Last State: Terminated, Reason: OOMKilled, Exit Code: 137\`. Exit code 137 = 128 + 9: tiến trình bị \`SIGKILL\` — ở đây do kernel giết khi cgroup của container vượt \`limits.memory\`. Đề hỏi exit code chứ không hỏi reason vì reason **có lúc là \`Error\`** dù đúng là OOM (containerd nhận sự kiện "tiến trình thoát" trước sự kiện OOM: đo 2/6 lần trên lab); 137 cộng limits 16Mi cộng log kernel trên node (\`journalctl -k | grep -i "out of memory"\`) mới là bằng chứng chắc. Log hiện tại của container đang chờ restart thường rỗng hay chỉ có phần đầu; \`--previous\` là log của lần chạy vừa chết — dòng cuối là bước nó đang làm khi bị giết.
+
+\`\`\`bash
+k -n m2-q7 get pod -l app=importer
+k -n m2-q7 describe pod -l app=importer | grep -A6 'loader:' | grep -E 'State|Reason|Exit|Limits'
+k -n m2-q7 get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="loader")].lastState.terminated.exitCode}' > /opt/m2/q7-exitcode.txt   # 137
+k -n m2-q7 logs deploy/importer -c loader --previous | tail -n1 > /opt/m2/q7-last.log   # importer: loading chunk …-20mb
+k -n m2-q7 set resources deploy/importer -c loader --limits=memory=64Mi    # -c: chỉ container loader
+k -n m2-q7 rollout status deploy/importer
+k -n m2-q7 get pod -l app=importer                 # 2/2 Running, RESTARTS 0
+k -n m2-q7 run t --rm -i --image=busybox:1.37 --restart=Never -- wget -qO- http://importer
+\`\`\`
+
+\`kubectl set resources\` không có \`-c\` sửa **mọi** container — \`proxy\` cũng nhận 64Mi: mất 2 điểm. Một container OOM không làm cả Pod chết, nhưng Pod chỉ Ready khi mọi container Ready.
+
+Chấm: exit code \`137\` (2), đúng dòng log cuối của lần chạy trước (1), \`loader\` limits 64Mi, requests và \`proxy\` giữ nguyên (2), Available với Pod mới Ready, không bị OOM kill lần nào (2, chỉ khi resources đúng), Service trả trang (1).`,
+      },
+      {
+        id: "q8",
+        domain: "workloads",
+        weight: 5,
+        context: "cka-cp, namespace m2-q8",
+        text: `${M2_ALL}
+
+Tạo CronJob \`rotate\` trong \`m2-q8\`:
+
+- lịch \`*/30 * * * *\`, \`concurrencyPolicy: Forbid\`, giữ tối đa 2 Job thành công và 1 Job lỗi;
+- Job: \`backoffLimit: 1\`, \`activeDeadlineSeconds: 60\`;
+- container \`rotate\` (image \`busybox:1.37\`) chạy \`echo rotate $TARGET\`, với biến \`TARGET\` lấy từ key \`target\` của ConfigMap \`rotate-config\` có sẵn;
+- CronJob ở trạng thái **tạm dừng** (\`suspend: true\`).
+
+Rồi chạy thử ngay bằng Job \`rotate-manual\` tạo **từ** CronJob đó. Job phải Complete.`,
+        solution: `Thời gian mục tiêu: **5 phút**.
+
+\`kubectl create cronjob\` không có cờ cho history limit, deadline hay env từ ConfigMap: tạo khung bằng lệnh rồi sửa YAML. \`backoffLimit\`/\`activeDeadlineSeconds\` nằm ở \`jobTemplate.spec\` (của Job), \`concurrencyPolicy\`/\`suspend\`/history ở \`spec\` của CronJob. \`suspend\` chỉ chặn lịch: \`create job --from\` vẫn chạy được.
+
+\`\`\`bash
+k -n m2-q8 create cronjob rotate --image=busybox:1.37 --schedule='*/30 * * * *' $do -- sh -c 'echo rotate $TARGET' > rotate.yaml
+# sửa rotate.yaml thành:
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: rotate, namespace: m2-q8}
+spec:
+  schedule: "*/30 * * * *"
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 60
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: rotate
+            image: busybox:1.37
+            command: ["sh", "-c", "echo rotate $TARGET"]
+            env:
+            - name: TARGET
+              valueFrom: {configMapKeyRef: {name: rotate-config, key: target}}
+k apply -f rotate.yaml
+k -n m2-q8 create job rotate-manual --from=cronjob/rotate
+k -n m2-q8 wait job rotate-manual --for=condition=Complete
+k -n m2-q8 logs job/rotate-manual                  # rotate bucket-…
+\`\`\`
+
+Chấm: lịch, \`Forbid\`, \`suspend: true\` (1); history 2/1, \`backoffLimit\` 1, \`activeDeadlineSeconds\` 60 (1); env \`TARGET\` từ \`rotate-config\`/\`target\` (1); Job \`rotate-manual\` tạo từ CronJob (annotation \`cronjob.kubernetes.io/instantiate: manual\`) và Complete (1); log có \`rotate <target>\` (1). Viết Job riêng cùng tên thay cho \`--from\`: 4/5.`,
+      },
+      {
+        id: "q9",
+        domain: "networking",
+        weight: 7,
+        context: "cka-cp, namespace m2-q9 (Gateway m2-gw có sẵn)",
+        text: `${M2_ALL}
+
+Namespace \`m2-q9\` có Gateway \`m2-gw\` (GatewayClass \`nginx\`, listener \`http\` cổng 8080, host \`app.m2.lab\`) và hai Service \`web-v1\`, \`web-v2\` (cổng 80).
+
+Tạo HTTPRoute \`web\` gắn listener \`http\` của \`m2-gw\` cho host \`app.m2.lab\`:
+
+1. request có header \`X-Canary: always\` → \`web-v2\`;
+2. request tới đường dẫn \`/old\` → trả **redirect 301** về đường dẫn \`/\`;
+3. mọi request khác → \`web-v1\`.
+
+Kiểm qua data plane của Gateway (Service \`m2-gw-nginx\`, cổng 8080).`,
+        solution: `Thời gian mục tiêu: **7 phút**.
+
+Một HTTPRoute nhiều \`rules\`; mỗi rule có \`matches\` (path, header, method…) và \`backendRefs\` hay \`filters\`. Rule có header match cụ thể hơn rule không match nên thắng, bất kể thứ tự viết. Redirect là \`filter\` \`RequestRedirect\` — rule đó không có backend.
+
+\`\`\`bash
+k -n m2-q9 get gateway m2-gw; k -n m2-q9 get svc
+k apply -f - <<'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata: {name: web, namespace: m2-q9}
+spec:
+  parentRefs: [{name: m2-gw, sectionName: http}]
+  hostnames: [app.m2.lab]
+  rules:
+  - matches: [{path: {type: PathPrefix, value: /old}}]
+    filters:
+    - type: RequestRedirect
+      requestRedirect: {path: {type: ReplaceFullPath, replaceFullPath: /}, statusCode: 301}
+  - matches: [{headers: [{name: X-Canary, value: always}]}]
+    backendRefs: [{name: web-v2, port: 80}]
+  - backendRefs: [{name: web-v1, port: 80}]
+EOF
+k -n m2-q9 get httproute web -o jsonpath='{.status.parents[0].conditions[*].type}'   # Accepted ResolvedRefs
+GW=$(k -n m2-q9 get svc m2-gw-nginx -o jsonpath='{.spec.clusterIP}')
+curl -s -H 'Host: app.m2.lab' http://$GW:8080/                        # web-v1-…
+curl -s -H 'Host: app.m2.lab' -H 'X-Canary: always' http://$GW:8080/  # web-v2-…
+curl -sI -H 'Host: app.m2.lab' http://$GW:8080/old | head -3          # 301, Location: http://app.m2.lab:8080/
+\`\`\`
+
+Chấm: route Accepted + ResolvedRefs (1), request thường → v1 (2), header → v2 và request thường không lọt sang v2 (2), \`/old\` → 301 về \`/\` (2). Data plane nạp route sau vài giây: kiểm bằng curl, không chỉ bằng \`status\`.`,
+      },
+      {
+        id: "q10",
+        domain: "architecture",
+        weight: 6,
+        context: "cka-cp, namespace m2-q10, thư mục /opt/m2/kustomize",
+        text: `${M2_ALL}
+
+\`/opt/m2/kustomize/base\` có Deployment \`api\`, Service \`api\` và \`configMapGenerator\` \`api-config\` (\`MODE=dev\`).
+
+Tạo overlay \`/opt/m2/kustomize/overlays/prod/kustomization.yaml\` dùng base đó, rồi áp bằng \`kubectl apply -k\`:
+
+- namespace \`m2-q10\`, \`namePrefix: prod-\`;
+- nhãn \`env: prod\` trên mọi đối tượng **và trong selector**;
+- \`api\` chạy 2 replica;
+- \`MODE\` của ConfigMap \`api-config\` thành \`prod\` (gộp vào generator của base, không viết ConfigMap tay).
+
+Không sửa thư mục \`base\`.`,
+        solution: `Thời gian mục tiêu: **7 phút**.
+
+Kustomize đổi tên (\`prod-api\`, \`prod-api-config-<hash>\`) **và sửa mọi chỗ tham chiếu** tới tên đó (\`envFrom.configMapRef\` của Deployment) — vì vậy không viết ConfigMap tay. Hash đổi khi nội dung đổi, nên đổi \`MODE\` là Deployment rollout lại. \`labels\` với \`includeSelectors: true\` (hay \`commonLabels\` cũ) gắn nhãn cả vào selector của Deployment và Service.
+
+\`\`\`bash
+mkdir -p /opt/m2/kustomize/overlays/prod
+cat > /opt/m2/kustomize/overlays/prod/kustomization.yaml <<'EOF'
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: m2-q10
+namePrefix: prod-
+resources:
+- ../../base
+labels:
+- pairs: {env: prod}
+  includeSelectors: true
+replicas:
+- name: api
+  count: 2
+configMapGenerator:
+- name: api-config
+  behavior: merge
+  literals:
+  - MODE=prod
+EOF
+k kustomize /opt/m2/kustomize/overlays/prod | less     # xem trước: prod-api, prod-api-config-<hash>, env: prod
+k apply -k /opt/m2/kustomize/overlays/prod
+k -n m2-q10 rollout status deploy/prod-api
+k -n m2-q10 exec deploy/prod-api -- printenv MODE        # prod
+\`\`\`
+
+Chấm: overlay build được và base không đổi (1); \`prod-api\` 2 replica sẵn sàng, Pod mang \`env=prod\` (2); Service \`prod-api\` chọn \`env=prod\` và có 2 endpoint (1); Pod dùng \`prod-api-config-<hash>\` và \`MODE=prod\` (2). \`behavior: merge\` thiếu thì kustomize báo trùng tên generator.`,
+      },
+      {
+        id: "q11",
+        domain: "troubleshooting",
+        weight: 7,
+        context: "cka-cp, namespace m2-q11",
+        text: `${M2_ALL}
+
+Pod của Deployment \`frontend\` trong \`m2-q11\` gọi \`http://orders\` (cổng 80) thì lỗi, dù Pod \`orders\` đang Running và Ready.
+
+Sửa **Service** \`orders\` để \`frontend\` nhận được trang của \`orders\`. Không sửa Deployment \`orders\` (nhãn, cổng, replica giữ nguyên).`,
+        solution: `Thời gian mục tiêu: **5 phút**.
+
+Service không trả lời mà Pod khoẻ: xem **EndpointSlice** trước. Rỗng → selector không khớp nhãn Pod; có địa chỉ mà vẫn lỗi → \`targetPort\`. Ở đây cả hai: selector \`app: order\` (Pod là \`app: orders\`) và \`targetPort: http\` trong khi cổng của container tên \`api\` (9090). \`targetPort\` dạng tên được tra trong \`ports[].name\` của **container** — tên không có thì endpoint không có cổng.
+
+\`\`\`bash
+k -n m2-q11 get endpointslice -l kubernetes.io/service-name=orders    # ENDPOINTS <unset>
+k -n m2-q11 get svc orders -o yaml | grep -A3 -E 'selector|ports'
+k -n m2-q11 get pod --show-labels                                     # app=orders,tier=backend
+k -n m2-q11 get deploy orders -o jsonpath='{.spec.template.spec.containers[0].ports}'   # name api, 9090
+k -n m2-q11 patch svc orders --type merge \\
+  -p '{"spec":{"selector":{"app":"orders","tier":"backend"},"ports":[{"name":"http","port":80,"targetPort":"api"}]}}'
+k -n m2-q11 get endpointslice -l kubernetes.io/service-name=orders    # <IP Pod>:9090
+k -n m2-q11 exec deploy/frontend -- wget -qO- http://orders           # orders-…
+\`\`\`
+
+Chấm: endpoint đúng các Pod \`orders\` (2), cổng 9090 (1), \`frontend\` nhận trang (3), Deployment \`orders\` không bị sửa (1, chỉ khi đã nhận trang). Đổi nhãn Pod cho khớp Service thì chạy được nhưng sai đề: mất điểm cuối.`,
+      },
+      {
+        id: "q12",
+        domain: "storage",
+        weight: 5,
+        context: "cka-cp, namespace m2-q12 (PV là cluster-scoped)",
+        text: `${M2_ALL}
+
+PV \`m2-archive\` (\`Retain\`, lớp \`m2-archive\`) chứa báo cáo tháng trước; PVC cũ của nó đã bị xoá. Pod \`reporter\` trong \`m2-q12\` đang chờ PVC \`archive\`.
+
+Tạo PVC \`archive\` (lớp \`m2-archive\`, 64Mi, \`ReadWriteOnce\`) gắn đúng vào PV \`m2-archive\`, sao cho \`reporter\` chạy và đọc được báo cáo cũ ở \`/data/report.txt\`. **Không** xoá hay tạo lại PV.`,
+        solution: `Thời gian mục tiêu: **6 phút**.
+
+PVC bị xoá, PV \`Retain\` chuyển sang \`Released\`: dữ liệu còn nguyên trên đĩa, nhưng \`spec.claimRef\` vẫn trỏ PVC cũ (uid cũ), nên PVC mới cùng lớp, cùng cỡ vẫn \`Pending\` mãi. Gỡ \`claimRef\` thì PV về \`Available\` và gắn được — đó là cách dùng lại dữ liệu của PV Retain.
+
+\`\`\`bash
+k get pv m2-archive                     # STATUS Released, CLAIM m2-q12/archive-2026-10
+k get pv m2-archive -o jsonpath='{.spec.claimRef}'
+k patch pv m2-archive --type json -p '[{"op":"remove","path":"/spec/claimRef"}]'
+k get pv m2-archive                     # Available
+k apply -f - <<'EOF'
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: archive, namespace: m2-q12}
+spec:
+  storageClassName: m2-archive
+  volumeName: m2-archive
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 64Mi}}
+EOF
+k -n m2-q12 get pvc archive; k -n m2-q12 get pod reporter -o wide     # Bound; Running trên cka-w2 (nodeAffinity của PV)
+k -n m2-q12 logs reporter                                             # report 2026-10 …
+\`\`\`
+
+Chấm: PVC \`archive\` Bound vào \`m2-archive\` (2), PV vẫn là PV cũ (cùng uid) và \`Retain\` (1, chỉ khi Bound), \`reporter\` Running (1), đọc đúng báo cáo cũ (1). Xoá rồi tạo lại PV cùng hostPath thì dữ liệu vẫn còn nhưng trái đề: 4/5.`,
+      },
+      {
+        id: "q13",
+        domain: "workloads",
+        weight: 5,
+        context: "cka-cp, namespace m2-q13 (PriorityClass là cluster-scoped)",
+        text: `${M2_ALL}
+
+1. Tạo PriorityClass \`m2-high\`: \`value: 50000\`, \`preemptionPolicy: Never\`, không phải mặc định của cluster, có \`description\`.
+2. Cho Pod của Deployment \`ledger\` trong \`m2-q13\` dùng class này (Pod đang chạy phải được thay bằng Pod mang priority mới).
+3. Ghi tên mọi PriorityClass có \`value\` ≥ 1000000000 (mỗi dòng một tên, sắp theo tên) vào \`/opt/m2/q13-system.txt\`.`,
+        solution: `Thời gian mục tiêu: **4 phút**.
+
+Priority quyết định thứ tự trong hàng chờ của scheduler và (với \`PreemptLowerPriority\`, mặc định) quyền đuổi Pod thấp hơn khi thiếu chỗ. \`preemptionPolicy: Never\` giữ phần đầu, bỏ phần sau: Pod được xếp trước nhưng không bao giờ đuổi ai — hợp với batch không được làm chết dịch vụ. Priority được ghi vào Pod **lúc admission** (\`spec.priority\`), nên đổi template là Pod mới mang giá trị mới.
+
+\`\`\`bash
+k get priorityclass                                     # system-cluster-critical, system-node-critical, shop-critical
+k create priorityclass m2-high --value=50000 --preemption-policy=Never --description="batch quan trọng, không đuổi Pod khác"
+k -n m2-q13 patch deploy ledger -p '{"spec":{"template":{"spec":{"priorityClassName":"m2-high"}}}}'
+k -n m2-q13 rollout status deploy/ledger
+k -n m2-q13 get pod -l app=ledger -o jsonpath='{.items[*].spec.priority}'    # 50000
+k get priorityclass --sort-by=.metadata.name -o jsonpath='{range .items[?(@.value>=1000000000)]}{.metadata.name}{"\\n"}{end}' > /opt/m2/q13-system.txt
+\`\`\`
+
+Chấm: \`m2-high\` đúng value, \`Never\`, không \`globalDefault\` (1); template dùng \`m2-high\` (1); Pod \`ledger\` Ready với \`priority\` 50000 (2); đúng hai class hệ thống (1).`,
+      },
+      {
+        id: "q14",
+        domain: "networking",
+        weight: 6,
+        context: "cka-cp, namespace m2-q14",
+        text: `${M2_ALL}
+
+StatefulSet \`kv\` trong \`m2-q14\` (2 Pod, cổng 8080) khai \`serviceName: kv\` nhưng Service đó chưa có.
+
+1. Tạo Service headless \`kv\` (cổng 8080) để từ Pod trong cluster, tên \`kv-0.kv.m2-q14.svc.cluster.local\` phân giải ra IP của Pod \`kv-0\`.
+2. Tạo Service \`kv-primary\` kiểu NodePort, \`nodePort: 30362\`, cổng 8080, chỉ tới Pod \`kv-0\` (không bao giờ tới \`kv-1\`).`,
+        solution: `Thời gian mục tiêu: **6 phút**.
+
+Service headless (\`clusterIP: None\`) không có IP ảo; DNS trả thẳng IP các Pod, và với Pod của StatefulSet (hostname \`kv-0\`, subdomain \`kv\` do controller đặt sẵn) thêm bản ghi riêng \`kv-0.kv.<ns>.svc\` — tạo Service sau Pod cũng được, không cần tạo lại Pod. Để chọn đúng một Pod, dùng nhãn controller tự gắn: \`statefulset.kubernetes.io/pod-name\`.
+
+\`\`\`bash
+k -n m2-q14 get pod --show-labels          # statefulset.kubernetes.io/pod-name=kv-0 …
+k apply -f - <<'EOF'
+apiVersion: v1
+kind: Service
+metadata: {name: kv, namespace: m2-q14}
+spec:
+  clusterIP: None
+  selector: {app: kv}
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: kv-primary, namespace: m2-q14}
+spec:
+  type: NodePort
+  selector: {statefulset.kubernetes.io/pod-name: kv-0}
+  ports: [{name: http, port: 8080, targetPort: 8080, nodePort: 30362}]
+EOF
+k -n m2-q14 exec deploy/probe -- nslookup kv-0.kv.m2-q14.svc.cluster.local     # IP của kv-0
+for i in 1 2 3 4; do curl -s http://<IP cka-w1>:30362/; done                    # kv-0 … (cả bốn lần)
+\`\`\`
+
+Chấm: \`kv\` headless chọn \`app=kv\` (1), \`kv-0.kv…\` ra đúng IP \`kv-0\` (2), \`kv-primary\` NodePort 30362 cổng 8080 (1), sáu request tới NodePort đều về \`kv-0\` (2). \`kv-primary\` chọn \`app=kv\` thì một nửa request về \`kv-1\`: 4/6.`,
+      },
+      {
+        id: "q15",
+        domain: "architecture",
+        weight: 6,
+        context: "cka-cp (kubeadm; không chạy join)",
+        text: `${M2_ALL}
+
+Sắp thêm một worker mới vào cluster.
+
+1. Tạo một bootstrap token **mới**, TTL **2 giờ**, description \`m2-q15\`. Ghi lệnh \`kubeadm join\` đầy đủ dùng token đó (endpoint apiserver, \`--token\`, \`--discovery-token-ca-cert-hash\`) vào \`/opt/m2/q15-join.sh\`. **Không** chạy lệnh đó.
+2. Hai token cũ có description \`m2-stale\` đã bị lộ: xoá chúng.`,
+        solution: `Thời gian mục tiêu: **4 phút**.
+
+Token bootstrap là Secret \`bootstrap-token-<id>\` trong \`kube-system\`; \`kubeadm token\` đọc/ghi chúng. \`--print-join-command\` in sẵn endpoint, token và hash của CA (SHA-256 khoá công khai của \`/etc/kubernetes/pki/ca.crt\` — node mới dùng nó để tin apiserver trước khi có CA). TTL mặc định 24 giờ: đề đòi 2 giờ thì phải ghi.
+
+\`\`\`bash
+sudo kubeadm token list
+sudo kubeadm token create --ttl 2h --description m2-q15 --print-join-command > /opt/m2/q15-join.sh
+cat /opt/m2/q15-join.sh     # kubeadm join 192.168.252.35:6443 --token <id>.<secret> --discovery-token-ca-cert-hash sha256:…
+for t in $(sudo kubeadm token list | awk '/m2-stale/ {print $1}'); do sudo kubeadm token delete $t; done
+sudo kubeadm token list     # chỉ còn token m2-q15
+# Tự tính lại hash để đối chiếu:
+openssl x509 -pubkey -noout -in /etc/kubernetes/pki/ca.crt | openssl pkey -pubin -outform der | openssl dgst -sha256
+\`\`\`
+
+Chấm: \`kubeadm join <IP cka-cp>:6443\` (1); token trong lệnh còn sống, description \`m2-q15\`, hết hạn trong 2 giờ kể từ lúc dựng đề (2; chấm sau 2 giờ thì token đã tự hết hạn — chỉ đòi đúng dạng); hash đúng CA (2); không còn token \`m2-stale\` (1, chỉ khi lệnh có token). Dùng TTL mặc định 24h: 4/6.`,
+      },
+      {
+        id: "q16",
+        domain: "troubleshooting",
+        weight: 7,
+        context: "cka-cp, namespace m2-q16; node cka-w2 (multipass shell cka-w2)",
+        text: `${M2_ALL}
+
+Pod của Deployment \`toolbox\` trong \`m2-q16\` (ghim \`cka-w2\`) không chạy.
+
+1. **Trước khi sửa**, ghi lý do Pod đang chờ (waiting reason của container, chỉ chuỗi reason) vào \`/opt/m2/q16-reason.txt\`.
+2. Image \`m2.lab/tools:1.0\` không nằm trên registry nào; bản xuất của nó là \`/opt/m2-images/tools.tar\` trên \`cka-w2\`. Nạp image vào container runtime của \`cka-w2\` để Pod chạy. **Không** đổi image, \`imagePullPolicy\` hay node của Deployment.`,
+        solution: `Thời gian mục tiêu: **5 phút**.
+
+\`imagePullPolicy: Never\` nghĩa là kubelet chỉ dùng image đã có trên node, không bao giờ kéo: thiếu thì \`ErrImageNeverPull\` (khác \`ErrImagePull\`/\`ImagePullBackOff\` là kéo mà hỏng). kubelet nói chuyện với containerd qua CRI trong **namespace \`k8s.io\`** của containerd; \`ctr\` mặc định dùng namespace \`default\` — nạp vào đó thì \`ctr images ls\` thấy mà kubelet không thấy. \`crictl images\` nhìn đúng như kubelet.
+
+\`\`\`bash
+k -n m2-q16 get pod -o wide                                            # ErrImageNeverPull trên cka-w2
+k -n m2-q16 get pod -l app=toolbox -o jsonpath='{.items[0].status.containerStatuses[0].state.waiting.reason}' > /opt/m2/q16-reason.txt
+# trên cka-w2 (multipass shell cka-w2):
+sudo ctr -n k8s.io images import /opt/m2-images/tools.tar
+sudo crictl images | grep m2.lab                                       # m2.lab/tools  1.0
+# lại trên cka-cp: tạo lại Pod cho kubelet thử ngay (không đổi gì của template)
+k -n m2-q16 rollout restart deploy/toolbox
+k -n m2-q16 rollout status deploy/toolbox
+\`\`\`
+
+Chấm: reason \`ErrImageNeverPull\` (2); Pod Ready trên \`cka-w2\` với image \`m2.lab/tools:1.0\` (3); Deployment Available, image/\`imagePullPolicy\`/nodeSelector như cũ (2). Đổi image sang \`busybox:1.37\` cho nhanh: 2/7.`,
       },
     ],
   },
