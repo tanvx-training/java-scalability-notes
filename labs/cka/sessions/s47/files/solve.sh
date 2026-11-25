@@ -57,10 +57,17 @@ print(yaml.safe_dump(docs[-1], sort_keys=False))
 PY
 k -n shop delete netpol allow-monitoring --ignore-not-found
 log "5. chờ CoreDNS nạp lại Corefile (mỗi Pod CoreDNS nạp riêng, đo tới ~1 phút), thử lại"
-# Từ cả hai worker (mỗi worker có thể hỏi một Pod CoreDNS khác) và từ mọi Pod order, tối đa 3 phút.
+# Từ cả hai worker và từ mọi Pod order, tối đa 3 phút. Hỏi qua Service kube-dns thì mỗi truy vấn rơi vào một Pod CoreDNS bất
+# kỳ: một lần đúng không chứng minh Pod kia đã nạp (đo trong selftest đợt 5: hai Pod nạp cách nhau 34 giây, verify rơi vào
+# giữa). Vì vậy hỏi thêm thẳng từng Pod CoreDNS.
 ok_all() {
-  local n o
-  for n in cka-w1 cka-w2; do k exec "s47-$n" -- nslookup catalog.shop.svc.cluster.local >/dev/null 2>&1 || return 1; done
+  local n o ip ips
+  ips=$(k -n kube-system get pod -l k8s-app=kube-dns -o jsonpath='{range .items[*]}{.status.podIP} {end}' 2>/dev/null) || return 1
+  [ -n "$ips" ] || return 1
+  for n in cka-w1 cka-w2; do
+    k exec "s47-$n" -- nslookup catalog.shop.svc.cluster.local >/dev/null 2>&1 || return 1
+    for ip in $ips; do k exec "s47-$n" -- nslookup catalog.shop.svc.cluster.local "$ip" >/dev/null 2>&1 || return 1; done
+  done
   for o in $(k -n shop get pod -l app=order -o name); do
     k -n shop exec "$o" -c order -- bash -c "timeout 4 bash -c '</dev/tcp/catalog/8080'" >/dev/null 2>&1 || return 1
   done
