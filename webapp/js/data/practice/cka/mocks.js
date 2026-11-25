@@ -564,7 +564,7 @@ k -n kube-system get lease kube-scheduler        # RENEW cũ: không ai giữ le
 sudo grep -n leader-elect /etc/kubernetes/manifests/kube-scheduler.yaml
 #   - --leader-elect=true
 #   - --leader-elect-resource-namespace=kube-sytem      ← namespace gõ sai
-echo -- --leader-elect-resource-namespace > /opt/m2/q1-flag.txt   # hay: printf '%s\\n' --leader-elect-resource-namespace
+printf '%s\\n' --leader-elect-resource-namespace > /opt/m2/q1-flag.txt   # không dùng echo: echo -- … ghi cả "--" vào tệp
 sudo cp /etc/kubernetes/manifests/kube-scheduler.yaml ~/kube-scheduler.yaml.bak   # sao lưu NGOÀI thư mục manifests
 sudo sed -i '/--leader-elect-resource-namespace=/d' /etc/kubernetes/manifests/kube-scheduler.yaml
 # kubelet thấy tệp đổi (~20 giây), tạo lại Pod tĩnh; scheduler giành lease kube-system/kube-scheduler rồi mới xếp lịch.
@@ -801,7 +801,7 @@ k -n m2-q7 get pod -l app=importer -o jsonpath='{.items[0].status.containerStatu
 k -n m2-q7 logs deploy/importer -c loader --previous | tail -n1 > /opt/m2/q7-last.log   # importer: loading chunk …-20mb
 k -n m2-q7 set resources deploy/importer -c loader --limits=memory=64Mi    # -c: chỉ container loader
 k -n m2-q7 rollout status deploy/importer
-k -n m2-q7 get pod -l app=importer                 # 2/2 Running, RESTARTS 0
+k -n m2-q7 get pod -l app=importer                 # 2/2 Running, không còn Last State OOMKilled / exit 137
 k -n m2-q7 run t --rm -i --image=busybox:1.37 --restart=Never -- wget -qO- http://importer
 \`\`\`
 
@@ -1111,7 +1111,7 @@ sudo kubeadm token list     # chỉ còn token m2-q15
 openssl x509 -pubkey -noout -in /etc/kubernetes/pki/ca.crt | openssl pkey -pubin -outform der | openssl dgst -sha256
 \`\`\`
 
-Chấm: \`kubeadm join <IP cka-cp>:6443\` (1); token trong lệnh còn sống, description \`m2-q15\`, hết hạn trong 2 giờ kể từ lúc dựng đề (2; chấm sau 2 giờ thì token đã tự hết hạn — chỉ đòi đúng dạng); hash đúng CA (2); không còn token \`m2-stale\` (1, chỉ khi lệnh có token). Dùng TTL mặc định 24h: 4/6.`,
+Chấm: \`kubeadm join <IP cka-cp>:6443\` (1); token trong lệnh là token thật của cluster (Secret \`bootstrap-token-<id>\` đúng secret, apiserver nhận nó: \`system:bootstrap:<id>\`), tạo sau lúc dựng đề, description \`m2-q15\`, TTL 2 giờ tính theo chính token (\`expiration\` − lúc tạo, sai số 5 phút) — làm câu này ở phút nào cũng được (2); hash đúng CA (2); không còn token \`m2-stale\` (1, chỉ khi lệnh có token thật). Dùng TTL mặc định 24h: 4/6. Token tự hết hạn sau 2 giờ và bị xoá: chấm sau đó thì phần token là 0 — chấm ngay khi làm xong đề.`,
       },
       {
         id: "q16",

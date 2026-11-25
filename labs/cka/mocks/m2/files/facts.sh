@@ -370,7 +370,7 @@ if API:
         f"NodePort 30362 trả: {', '.join(sorted(set(h.split()[0] if h.split() else 'lỗi' for h in hits)))} (cần chỉ kv-0)" if np_ else "")
 else: add("q14", 0, False, NOAPI)
 
-# q15 lệnh kubeadm join (token mới TTL ≤ 2h, description m2-q15, hash CA) và xoá token m2-stale.
+# q15 lệnh kubeadm join (token mới TTL 2h, description m2-q15, hash CA) và xoá token m2-stale.
 join = re.sub(r"\\\n", " ", ans("q15-join.sh") or "")
 ep = mark(H, "q15-endpoint") or "x"
 m = re.search(r"\bkubeadm\s+join\s+(\S+)", join)
@@ -380,17 +380,33 @@ secs = {}
 if API:
     for s in (kj("-n", "kube-system", "get", "secret", "--field-selector", "type=bootstrap.kubernetes.io/token") or {}).get("items") or []:
         dd = {k: base64.b64decode(v).decode(errors="replace") for k, v in (s.get("data") or {}).items()}
+        dd["_created"] = ts(s["metadata"].get("creationTimestamp"))
         secs[dd.get("token-id")] = dd
+# Chấm token theo chính nó, không theo giờ dựng đề: Secret bootstrap-token-<id> có thật, đúng token-secret, description
+# m2-q15, tạo sau lúc dựng đề, không phải token m2-stale của đề, TTL = expiration − creationTimestamp ≈ 2 giờ (±5 phút), và
+# apiserver nhận nó (`kubectl --token … auth whoami` ra system:bootstrap:<id>). Token đã hết hạn thì tokencleaner xoá Secret:
+# không kiểm được nữa thì 0 điểm phần này (không có nhánh "cho qua").
 t = secs.get(tok.group(1)) if tok else None
-exp = ts((t or {}).get("expiration"))
-add("q15", 2, bool(t) and t.get("token-secret") == tok.group(2) and t.get("description") == "m2-q15" and exp is not None and exp <= STARTED_AT + 2 * 3600 + 900
-    or bool(tok and not t and NOW > STARTED_AT + 2 * 3600 + 900),
-    ((NOAPI if not API else "token trong q15-join.sh không còn trong cluster") if not t else f"token: description '{t.get('description')}', hết hạn sau {int(((exp or NOW) - NOW) / 60)} phút (cần TTL 2h)") if tok else ("q15-join.sh chưa có --token hợp lệ" if join else ""))
+exp, made = ts((t or {}).get("expiration")), (t or {}).get("_created")
+ttl = (exp - made) if exp is not None and made is not None else None
+real = bool(t) and t.get("token-secret") == tok.group(2) and tok.group(1) not in (mark(H, "q15-stale") or "").split()
+who = ""
+if real:
+    rc, out, _ = run("kubectl", "--kubeconfig=/dev/null", f"--server=https://{ep}", "--certificate-authority=/etc/kubernetes/pki/ca.crt",
+                     f"--token={tok.group(1)}.{tok.group(2)}", "--request-timeout=8s", "auth", "whoami", "-o", "json", timeout=12)
+    try: who = json.loads(out)["status"]["userInfo"]["username"] if rc == 0 else ""
+    except Exception: who = ""
+tok_ok = (real and t.get("description") == "m2-q15" and made is not None and made >= STARTED_AT - 5
+          and ttl is not None and abs(ttl - 7200) <= 300 and who == f"system:bootstrap:{tok.group(1)}")
+add("q15", 2, tok_ok,
+    ("q15-join.sh chưa có --token hợp lệ" if join else "") if not tok else NOAPI if not API else
+    "token trong q15-join.sh không có trong cluster (hết hạn, bị xoá, hay không phải token thật)" if not real else
+    f"token: description '{t.get('description')}', TTL {int(ttl / 60) if ttl is not None else '?'} phút (cần 120), apiserver nhận: {who or 'không'}")
 hs = re.search(r"--discovery-token-ca-cert-hash[= ]+sha256:([0-9a-f]{64})\b", join)
 add("q15", 2, bool(hs) and hs.group(1) == mark(H, "q15-hash"), "q15-join.sh: --discovery-token-ca-cert-hash sha256:<hash> chưa đúng CA cluster" if join else "")
 stale = (mark(H, "q15-stale") or "").split()
 left = [x for x in stale if x in secs]
-add("q15", 1, API and bool(tok) and bool(stale) and not left and not any(v.get("description") == "m2-stale" for v in secs.values()),
+add("q15", 1, API and real and bool(stale) and not left and not any(v.get("description") == "m2-stale" for v in secs.values()),
     "còn token description m2-stale (kubeadm token list)" if left or any(v.get("description") == "m2-stale" for v in secs.values()) else "")
 
 # q16 toolbox: reason, image nạp vào containerd cka-w2 (Pod chạy, template không đổi).
