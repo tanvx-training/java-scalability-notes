@@ -59,11 +59,17 @@ if [ -z "$(k get pod s49-probe -o jsonpath='{.spec.nodeName}')" ]; then
 fi
 log "6. Deployment scale có tạo Pod không?"
 k delete deploy s49-scale --ignore-not-found --wait=true >/dev/null
+# Garbage collector nằm trong controller-manager: khi nó hỏng, xoá Deployment để lại ReplicaSet mồ côi (đo trong selftest đợt 5:
+# lần chạy trước dừng giữa bước này, RS cũ khiến lời giải tưởng controller-manager vẫn làm việc). Xoá RS cũ và chỉ tính RS
+# do chính Deployment vừa tạo sở hữu.
+k delete rs -l app=s49-scale --ignore-not-found --wait=false >/dev/null
 k create deploy s49-scale --image=busybox:1.37 --replicas=1 -- sleep 300 >/dev/null
+uid=$(k get deploy s49-scale -o jsonpath='{.metadata.uid}')
+[ -n "$uid" ] || die "không đọc được uid của Deployment s49-scale"
 k scale deploy s49-scale --replicas=2 >/dev/null
 sleep 10
 k get deploy,rs -l app=s49-scale
-if [ -z "$(k get rs -l app=s49-scale -o name)" ]; then
+if ! k get rs -l app=s49-scale -o jsonpath='{range .items[*]}{.metadata.ownerReferences[0].uid}{"\n"}{end}' | grep -qx "$uid"; then
   # Container dựng lúc apiserver còn chết chỉ chờ leader lease, chưa thoát: lỗi hiện ~20 giây sau khi apiserver lên (đo).
   e=""; end=$(($(date +%s) + 120))
   until [ -n "$e" ]; do
