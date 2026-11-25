@@ -1,6 +1,8 @@
 # Đề mock m1 — dựng đề (chạy bởi `./labs/lab mock cka m1 start`, và bởi s52/apply.sh). Không in lời giải: đề ở trang
 # #/practice/cka/mock/m1. Nạp bởi `lab` trên Mac (bash 3.2, set -e), SESSION_DIR = labs/cka/mocks/m1.
-#   1. cka-w1: kubelet về bản tốt nếu lần làm trước của m1 còn hỏng (files/node.sh STEP=restore).
+#   1. cka-w1: kubelet về bản tốt nếu lần làm trước của m1 còn hỏng (files/heal.sh m1_heal_kubelet: node.sh STEP=restore;
+#      m1_heal_pods: tạo lại Pod ngoài m1-* còn giữ nameserver sai); cka-cp: kube-scheduler về bản tốt nếu câu q1 của m2 còn hỏng
+#      (mocks/m2/files/cp.sh STEP=restore: không thì Pod mới của đề m1 không bao giờ được xếp lịch); xoá mốc started cũ.
 #   2. Lõi khoẻ (s46/files/core-facts.sh: ba node, control plane, shop trải hai worker) sau khi chờ như s26 (bootwait + wait.sh);
 #      chưa khoẻ thì dừng, không dựng gì, báo `restore cka s51`.
 #   3. cka-cp: dọn lần làm trước của **chính đề m1** (namespace m1-*, StorageClass/PV của m1, Corefile về bản tốt, /opt/m1) rồi
@@ -14,8 +16,13 @@
 cp="$LAB_CP"
 s46="$SESSION_DIR/../../sessions/s46/files"
 echo "m1: dọn lần làm trước và dựng đề, thường 1–3 phút (VM vừa bật: tới ~12 phút)…"
-vm cka-w1 "STEP=restore
-$(cat "$SESSION_DIR/files/node.sh")"
+M1="$SESSION_DIR"
+. "$SESSION_DIR/files/heal.sh"
+vm "$cp" 'sudo rm -f /root/.lab/m1/started'
+if [ -f "$SESSION_DIR/../m2/files/cp.sh" ]; then vm "$cp" "STEP=restore
+$(cat "$SESSION_DIR/../m2/files/cp.sh")"; fi
+m1_heal_kubelet
+m1_heal_pods
 vm "$cp" "$(cat "$s46/bootwait.sh")
 $(cat "$SESSION_DIR/../../sessions/s26/files/wait.sh")" >/dev/null 2>&1 || true
 vm "$cp" 'end=$(($(date +%s) + 120)); until [ "$(kubectl --request-timeout=5s get node -o jsonpath="{range .items[*]}{.status.conditions[?(@.type==\"Ready\")].status}{\"\n\"}{end}" 2>/dev/null | grep -c True)" = 3 ] || [ $(date +%s) -ge $end ]; do sleep 3; done' >/dev/null 2>&1 || true

@@ -210,7 +210,7 @@ for d in dns-probe dns-probe-w2; do
 done
 k -n m1-q12 rollout restart deploy/dns-probe >/dev/null
 
-log "chờ: rollout, PVC Bound, HPA đọc metric, route Accepted, CoreDNS phân giải legacy.m1.lab (tối đa ~5 phút)"
+log "chờ: rollout, PVC Bound, HPA đọc metric, route nạp vào data plane, policy có hiệu lực, CoreDNS phân giải legacy.m1.lab (tối đa ~7 phút)"
 for x in m1-q7/shopfront m1-q8/web m1-q16/worker m1-q12/dns-probe; do k -n "${x%/*}" rollout status deploy/"${x#*/}" --timeout=180s >/dev/null || die "rollout $x chưa xong"; done
 k -n m1-q3 wait pod cache-writer --for=condition=Ready --timeout=180s >/dev/null || die "q3: cache-writer chưa Ready"
 k -n m1-q13 wait pod logger --for=condition=Ready --timeout=120s >/dev/null || die "q13: logger chưa Ready"
@@ -219,6 +219,16 @@ hpa_ok() { [ "$(k -n m1-q2 get hpa web -o jsonpath='{.status.conditions[?(@.type
 until_t 240 hpa_ok || die "q2: HPA chưa đọc được CPU sau 4 phút"
 route_ok() { k -n m1-q9 get httproute echo -o jsonpath='{.status.parents[0].conditions[?(@.type=="Accepted")].status}' | grep -qx True; }
 until_t 120 route_ok || die "q9: HTTPRoute echo chưa Accepted"
+# Accepted chỉ là control plane của NGF đã nhận route; data plane nginx nạp cấu hình sau đó: chờ request thật qua m1-gw.
+dip=$(k -n m1-q9 get svc -l gateway.networking.k8s.io/gateway-name=m1-gw -o jsonpath='{.items[0].spec.clusterIP}')
+etok=$(k -n m1-q9 get deploy echo -o jsonpath='{.spec.template.spec.containers[0].env[0].value}')
+gw_ok() { curl -s --noproxy '*' -m 3 -H 'Host: echo.m1.lab' "http://$dip:8080/" | grep -q "$etok"; }
+until_t 120 gw_ok || die "q9: data plane m1-gw chưa nạp route echo"
+# q5: policy có hiệu lực ở dataplane (Calico) sau vài giây: client tới được api, other và Pod app=client ở m1-q14 bị chặn.
+aip=$(k -n m1-q5 get svc api -o jsonpath='{.spec.clusterIP}')
+w5() { k -n "$1" exec deploy/"$2" -- wget -qO- -T 3 "http://$aip:8080/" >/dev/null 2>&1; }
+pol_ok() { w5 m1-q5 client && ! w5 m1-q5 other && ! w5 m1-q14 dns-client; }
+until_t 120 pol_ok || die "q5: NetworkPolicy api-ingress chưa có hiệu lực"
 cli=$(k -n m1-q14 get pod -l app=client -o jsonpath='{.items[0].metadata.name}')
 # Hai Pod CoreDNS nạp Corefile mới độc lập: chờ 10 lần liền đúng (mỗi truy vấn rơi vào một Pod bất kỳ).
 dns1() { k -n m1-q14 exec "$cli" -- nslookup legacy.m1.lab 2>/dev/null | sed -n '/^Name:/,$p' | grep -q "$ip"; }

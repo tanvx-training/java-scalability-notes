@@ -2,7 +2,11 @@
 #   STEP=restore  (setup.sh, trước khi kiểm lõi khoẻ) đưa kubelet về bản tốt nếu lần làm trước của m1 còn để lại: cài lại
 #                 /var/lib/kubelet/config.yaml từ /root/.lab/m1/config.yaml (bản tốt), gỡ /etc/default/kubelet nếu nó do lần
 #                 làm trước thêm `--cluster-dns` (cách lách bằng cờ, xem facts), restart kubelet khi có đổi. Chưa từng gây (không
-#                 có bản tốt) thì không làm gì. Không in gì khi thành công.
+#                 có bản tốt) thì không làm gì. Gọi bởi setup.sh của m1 và của m2 (m2 không sửa kubelet: nó dọn giúp lần làm
+#                 dở của m1 để lõi khoẻ). Sau đó in `STALE=<namespace>/<Pod>` cho mỗi Pod sandbox đang chạy trên cka-w1 mà
+#                 nameserver là IP sai đã gây (/root/.lab/m1/dns-bad, break ghi): Pod tạo trong lúc lỗi còn đó (hay sau một lần
+#                 khởi động lại VM: sandbox tạo lại) giữ resolv.conf sai cho tới khi bị tạo lại — bên gọi xoá chúng (trừ m1-*).
+#                 Không in gì khác khi thành công.
 #   STEP=break    (setup.sh, sau khi dựng các câu khác; bên gửi đặt DNS_GOOD = ClusterIP của kube-dns, DNS_BAD = một IP không
 #                 Service nào dùng) lưu bản tốt nếu chưa có — chỉ khi clusterDNS hiện tại là DNS_GOOD và kubelet đang chạy —
 #                 rồi đổi clusterDNS trong config.yaml thành DNS_BAD và restart kubelet. Node vẫn Ready (kubelet chạy, không
@@ -37,6 +41,15 @@ case "$STEP" in
     S systemctl enable kubelet >/dev/null 2>&1 || true
     if [ "$changed" = 1 ] || ! active; then S systemctl restart kubelet || true; fi
     wait_active || exit 1
+    bad=$(S cat $H/dns-bad 2>/dev/null)
+    [ -n "$bad" ] && [ "$bad" != "$(dns_now)" ] || exit 0
+    for id in $(S crictl pods -q --state ready 2>/dev/null); do
+      S crictl inspectp "$id" 2>/dev/null | BAD="$bad" python3 -c '
+import json, os, sys
+c = json.load(sys.stdin)["info"]["config"]
+if os.environ["BAD"] in ((c.get("dns_config") or {}).get("servers") or []):
+    print("STALE=%s/%s" % (c["metadata"]["namespace"], c["metadata"]["name"]))' || true
+    done
     ;;
   break)
     [ -n "$DNS_GOOD" ] && [ -n "$DNS_BAD" ] || { echo "lab: thiếu DNS_GOOD/DNS_BAD" >&2; exit 1; }
@@ -45,6 +58,7 @@ case "$STEP" in
       [ "$(dns_now)" = "$DNS_GOOD" ] && active || { echo "lab: kubelet của cka-w1 không ở trạng thái tốt (clusterDNS $(dns_now)), không lưu bản tốt" >&2; exit 1; }
       S cp -p $CFG $H/config.yaml
     fi
+    printf '%s\n' "$DNS_BAD" | S tee $H/dns-bad >/dev/null
     S sed -i "/^clusterDNS:/{n;s/^- .*/- $DNS_BAD/;}" $CFG
     [ "$(dns_now)" = "$DNS_BAD" ] || { echo "lab: không gây được lỗi của câu q12" >&2; exit 1; }
     S systemctl restart kubelet

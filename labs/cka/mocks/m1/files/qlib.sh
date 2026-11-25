@@ -4,7 +4,9 @@
 #   vm "$LAB_CP" "$(cat "$SESSION_DIR/files/qlib.sh")          (m1; m2: "$SESSION_DIR/../m1/files/qlib.sh")
 #   $(cat "$SESSION_DIR/files/facts.sh")"
 # Tệp đặt biến môi trường MOCK_QLIB_PY (mã python3); facts nạp bằng `exec(os.environ["MOCK_QLIB_PY"])` rồi dùng:
-#   run(*args, timeout=20)         (mã, stdout, stderr); hết giờ hay lỗi chạy là mã 99, không ném lỗi.
+#   run(*args, timeout=20)         (mã, stdout, stderr); hết giờ hay lỗi chạy là mã 99, không ném lỗi. Hạn chót chung: quá
+#                                  MOCK_DEADLINE giây (mặc định 180) kể từ lúc nạp thì mọi lệnh còn lại trả 99 ngay, và không
+#                                  lệnh nào chạy quá hạn đó (apiserver chậm mà không chết: facts không kéo dài quá ~3 phút).
 #   kj(*args, timeout=15)          kubectl --request-timeout=8s <args> -o json → dict, None khi lỗi.
 #   API                            True khi apiserver trả /readyz = ok (hỏi tối đa 2 × 5 giây lúc nạp). Câu cần apiserver
 #                                  kiểm API trước: False thì 0 điểm cho phần đó, không gọi kubectl nữa (không treo).
@@ -22,10 +24,13 @@
 #   Q                              dict id câu → [điểm, [lý do]]; add(q, pts, ok, why) cộng pts khi ok, không thì ghi why.
 #   emit()                         in `GOT <q> <điểm>` rồi `WHY <q> <lý do; …>` (≤ 170 ký tự) cho mọi câu đã gọi add.
 read -r -d '' MOCK_QLIB_PY <<'PY' || true
-import json as _json, subprocess as _sp, time as _time
+import json as _json, os as _os, subprocess as _sp, time as _time
+_END = _time.time() + float(_os.environ.get("MOCK_DEADLINE") or 180)
 def run(*args, timeout=20):
+    left = _END - _time.time()
+    if left <= 1: return 99, "", "quá hạn chót của lần chấm"
     try:
-        p = _sp.run(args, capture_output=True, timeout=timeout)
+        p = _sp.run(args, capture_output=True, timeout=min(timeout, left))
         return p.returncode, p.stdout.decode(errors="replace"), p.stderr.decode(errors="replace")
     except Exception as e:
         return 99, "", str(e)
