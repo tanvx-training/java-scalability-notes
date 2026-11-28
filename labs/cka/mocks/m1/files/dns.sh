@@ -1,6 +1,6 @@
 # m1 — Corefile của CoreDNS (câu q14), bước "chữa" cho đề khác: chạy trên cka-cp (user ubuntu, sudo; kubectl, dig, python3).
-# Gọi bởi setup.sh của m2 qua files/heal.sh (m1_heal_dns) TRƯỚC khi kiểm lõi khoẻ; setup.sh của m1 không cần (stage.sh của m1
-# luôn đưa Corefile về bản tốt khi dọn).
+# Gọi bởi setup.sh của m1 và của m2 qua files/heal.sh (m1_heal_dns) TRƯỚC khi kiểm lõi khoẻ: stage.sh của m1 đưa Corefile về
+# bản tốt khi dọn, nhưng chạy SAU kiểm lõi, nên không cứu được một Corefile hỏng làm lõi đỏ.
 #   DNS của cluster khoẻ (hỏi ClusterIP kube-dns từ cka-cp: kubernetes.default và catalog.shop phân giải được, thử tới 60 giây)
 #   → không làm gì: Corefile người học đã sửa đúng ở q14 (dòng legacy.m1.lab) được giữ, m1 vẫn chấm được như cũ.
 #   DNS hỏng mà Corefile khác bản tốt của m1 (/root/.lab/m1/Corefile, stage.sh lưu ở lần dựng đầu) → q14 của m1 làm dở đã phá

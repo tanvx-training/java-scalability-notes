@@ -5,7 +5,7 @@
 #                namespace m2-q* (Pod xoá --force trước, chờ xoá xong); ClusterRole m2-pod-reader, ClusterRoleBinding
 #                m2-auditor, CSR m2-auditor, PriorityClass m2-high, StorageClass m2-standard; StorageClass mặc định về như lần
 #                dựng đầu (/root/.lab/m2/default-sc: tên các lớp có is-default-class=true lúc đó); PV m2-archive và PV có
-#                claimRef trong m2-* hay lớp m2-standard/m2-archive; bootstrap token có description m2-stale hay m2-q15;
+#                claimRef trong m2-* hay lớp m2-archive (không theo m2-standard: lớp mặc định sau m2); bootstrap token có description m2-stale hay m2-q15;
 #                /opt/m2; /var/lib/etcd-m2-check (thư mục restore thử của q6; chỉ khi etcd không dùng nó); mốc của lần trước.
 #   PHASE=main   (sau w2.sh STEP=prep trên cka-w2) dựng mọi câu, chờ mọi Pod của đề được xếp lịch (trừ hai Pod chờ PVC của q4,
 #                q12) và Pod lỗi đứng đúng trạng thái lỗi, ghi mốc chấm.
@@ -80,7 +80,9 @@ for s in json.load(sys.stdin)["items"]:
 import json, sys
 for p in json.load(sys.stdin)["items"]:
     n, s = p["metadata"]["name"], p["spec"]
-    if n.startswith("m2-") or s.get("storageClassName") in ("m2-standard", "m2-archive") or (s.get("claimRef") or {}).get("namespace", "").startswith("m2-"):
+    # Chỉ PV của m2: tên m2-*, hay claim ở namespace m2-*, hay class m2-archive. KHÔNG theo m2-standard (class mặc định sau m2:
+    # PV người học tạo sau đó bằng PVC không ghi class cũng mang class này).
+    if n.startswith("m2-") or s.get("storageClassName") == "m2-archive" or (s.get("claimRef") or {}).get("namespace", "").startswith("m2-"):
         print(n)'); do k delete pv "$pv" --wait=false >/dev/null; done
   # Bootstrap token của q15 (của đề và của người học): Secret bootstrap-token-<id> trong kube-system, description m2-*.
   for s in $(k -n kube-system get secret --field-selector type=bootstrap.kubernetes.io/token -o json | python3 -c '

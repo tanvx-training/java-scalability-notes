@@ -275,6 +275,7 @@ Thời gian đo khi soạn: \`mock … m2 start\` 58 giây (từ cuối s52), 4 
       ],
     },
     tips: [
+      "Token của q15 hết hạn sau 2 giờ kể từ lúc bạn tạo nó (tokencleaner xoá), và phần điểm token về 0 từ đó. Hãy chấm (`mock … m2 score`) hay chạy `./labs/lab verify cka s53` trong vòng 2 giờ sau khi làm xong q15, nếu không điểm có thể tụt dưới 75% dù bạn làm đúng.",
       "Đừng chạy lại `./labs/lab mock cka m2 start` giữa giờ: nó xoá cả 16 câu, mọi tệp trong `/opt/m2/` và đưa StorageClass mặc định về `local-path`.",
       "Câu q12 của m1 (kubelet `cka-w1`) hay q14 (Corefile) còn hỏng thì không cần sửa tay trước Mock 2: `mock … m2 start` đưa chúng về bản tốt của m1 (chỉ Corefile khi DNS đang hỏng), tạo lại Pod ngoài `m1-*` còn giữ nameserver sai, và không xoá gì của `m1-*`. `check cka s53` không đỏ vì riêng hai câu đó.",
       "Câu nào lỡ làm hỏng cluster (sửa nhầm `etcd.yaml`, xoá nhầm namespace `shop`): `./labs/lab restore cka s52` rồi làm lại đề — rẻ hơn gỡ tay trong giờ thi.",

@@ -21,9 +21,9 @@ facts="$(vm "$cp" "$(cat "$s46/core-facts.sh")" 2>/dev/null)
 $(vm "$cp" "$(cat "$SESSION_DIR/files/facts.sh")" 2>/dev/null)"
 fact() { printf '%s\n' "$facts" | sed -n "s/^$1=//p" | head -n1; }
 core_row() {
-  local r="" x
+  local r="" x v
   [ "$etcd" = ok ] || r="etcd: ${etcd:-không đọc được}"
-  for x in CORE_CP CORE_NODES CORE_SHOP; do [ "$(fact $x)" = "đạt" ] || r="${r:+$r; }$(fact $x)"; done
+  for x in CORE_CP CORE_NODES CORE_SHOP; do v="$(fact $x)"; [ "$v" = "đạt" ] || r="${r:+$r; }${v:-$x không đọc được}"; done
   [ -n "$r" ] && echo "$r" || echo "đạt"
 }
 expect_eq "Ba manifest (apiserver, scheduler, controller-manager) như bản tốt; /etc/kubernetes/manifests không có tệp thừa" "đạt" echo "$(fact MANIFESTS)"
