@@ -27,7 +27,12 @@ if [ "$PART" = 1 ]; then
   k -n m2-q7 get pod -l app=importer -o jsonpath='{.items[0].status.containerStatuses[?(@.name=="loader")].lastState.terminated.exitCode}' > $D/q7-exitcode.txt
   echo >> $D/q7-exitcode.txt
   grep -qx 137 $D/q7-exitcode.txt || die "q7: exit code đọc được là '$(cat $D/q7-exitcode.txt)'"
-  k -n m2-q7 logs deploy/importer -c loader --previous | tail -n1 > $D/q7-last.log
+  # Trong vòng OOM nhanh, kubelet có lúc trả "unable to retrieve container logs for containerd://…" cho --previous (container
+  # cũ vừa bị dọn) mà mã thoát vẫn 0 qua tail: đo trong `restore cka s53` của nghiệm thu đợt 5 (q7 7/8). Đọc lại tới khi được
+  # đúng một dòng log thật của loader.
+  q7_last() { k -n m2-q7 logs deploy/importer -c loader --previous 2>/dev/null | tail -n1 > /tmp/m2-q7-last && grep -q '^importer: loading chunk ' /tmp/m2-q7-last; }
+  until_t 90 q7_last || die "q7: không đọc được dòng log cuối của lần chạy trước của loader"
+  cp /tmp/m2-q7-last $D/q7-last.log; rm -f /tmp/m2-q7-last
 
   log "q16 lúc sự cố: reason Pod toolbox đang chờ"
   k -n m2-q16 get pod -l app=toolbox -o jsonpath='{.items[0].status.containerStatuses[0].state.waiting.reason}' > $D/q16-reason.txt
